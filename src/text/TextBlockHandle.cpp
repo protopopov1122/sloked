@@ -1,0 +1,100 @@
+#include "sloked/text/TextBlockHandle.h"
+#include <iostream>
+#include <cassert>
+#include "sloked/core/Error.h"
+
+namespace sloked {
+
+
+    TextBlockHandle::TextBlockHandle(std::string_view content, std::map<std::size_t, std::pair<std::size_t, std::size_t>> lines, const TextBlockFactory &factory)
+        : content(view {content, std::move(lines)}), factory(factory) {}
+
+    std::size_t TextBlockHandle::GetLastLine() const {
+        switch (this->content.index()) {
+            case 0:
+                return std::get<0>(this->content).lines.size() - 1;
+            case 1:
+                return std::get<1>(this->content)->GetLastLine();
+            default:
+                assert(false);
+        }
+    }
+
+    std::size_t TextBlockHandle::GetTotalLength() const {
+        switch (this->content.index()) {
+            case 0:
+                return std::get<0>(this->content).content.size();
+            case 1:
+                return std::get<1>(this->content)->GetTotalLength();
+            default:
+                assert(false);
+        }
+    }
+
+    const std::string_view TextBlockHandle::GetLine(std::size_t line) const {
+        switch (this->content.index()) {
+            case 0: {
+                const auto &content = std::get<0>(this->content);
+                if (content.lines.count(line)) {
+                    const auto &pos = content.lines.at(line);
+                    return content.content.substr(pos.first, pos.second);
+                } else {
+                    throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
+                }
+            }
+            case 1:
+                return std::get<1>(this->content)->GetLine(line);
+            default:
+                assert(false);
+        }
+    }
+
+    bool TextBlockHandle::Empty() const {
+        switch (this->content.index()) {
+            case 0:
+                return std::get<0>(this->content).content.empty();
+            case 1:
+                return std::get<1>(this->content)->Empty();
+            default:
+                assert(false);
+        }
+    }
+
+    void TextBlockHandle::SetLine(std::size_t line, const std::string &content) {
+        this->open_block();
+        std::get<1>(this->content)->SetLine(line, content);
+    }
+
+    void TextBlockHandle::EraseLine(std::size_t line) {
+        this->open_block();
+        std::get<1>(this->content)->EraseLine(line);
+    }
+
+    void TextBlockHandle::InsertLine(std::size_t line, const std::string &content) {
+        this->open_block();
+        std::get<1>(this->content)->InsertLine(line, content);
+    }
+
+    void TextBlockHandle::Optimize() {
+        if (this->content.index() == 1) {
+            std::get<1>(this->content)->Optimize();
+        }
+    }
+
+    std::ostream &operator<<(std::ostream &os, const TextBlockHandle &block) {
+        switch (block.content.index()) {
+            case 0:
+                return os << std::get<0>(block.content).content;
+            case 1:
+                return os << *std::get<1>(block.content);
+            default:
+                assert(false);
+        }
+    }
+
+    void TextBlockHandle::open_block() const {
+        if (this->content.index() == 0) {
+            this->content = this->factory.make(std::get<0>(this->content).content);
+        }
+    }
+}
