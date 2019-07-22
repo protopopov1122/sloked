@@ -1,18 +1,20 @@
 #ifndef SLOKED_TEXT_TEXTDOCUMENT_H_
 #define SLOKED_TEXT_TEXTDOCUMENT_H_
 
+#include "sloked/core/NewLine.h"
 #include "sloked/text/TextBlock.h"
 
 namespace sloked {
 
     class TextDocument : public TextBlockImpl<TextDocument> {
      public:
-        TextDocument(std::unique_ptr<TextBlock>);
+        TextDocument(const NewLine &, std::unique_ptr<TextBlock>);
 
         std::size_t GetLastLine() const override;
         std::size_t GetTotalLength() const override;
         const std::string_view GetLine(std::size_t) const override;
         bool Empty() const override;
+        void Visit(std::size_t, std::size_t, Visitor) const override;
         
         void SetLine(std::size_t, const std::string &) override;
         void EraseLine(std::size_t) override;
@@ -22,6 +24,7 @@ namespace sloked {
         friend std::ostream &operator<<(std::ostream &os, const TextDocument &);
     
      private:
+        const NewLine &newline;
         std::unique_ptr<TextBlock> content;
     };
 }

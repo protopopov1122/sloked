@@ -1,12 +1,15 @@
 #include "sloked/text/TextRegion.h"
 #include "sloked/core/Error.h"
+#include "sloked/core/NewLine.h"
 #include <iostream>
+#include <algorithm>
 
 namespace sloked {
 
 
-    TextRegion::TextRegion(std::unique_ptr<TextBlock> content)
+    TextRegion::TextRegion(const NewLine &newline, std::unique_ptr<TextBlock> content)
         : AVLNode(nullptr, nullptr),
+          newline(newline),
           content(std::move(content)),
           height(0), last_line(0) {
         this->UpdateStats();
@@ -54,6 +57,31 @@ namespace sloked {
         return (!this->content || this->content->Empty()) &&
             (!this->begin || this->begin->Empty()) &&
             (!this->end || this->end->Empty());
+    }
+
+    void TextRegion::Visit(std::size_t start, std::size_t count, Visitor visitor) const {
+        const std::size_t begin_length = this->begin ? this->begin->GetLastLine() + 1 : 0;
+        const std::size_t self_length = this->content ? this->content->GetLastLine() + 1 : 0;
+        if (count && this->begin && start <= this->begin->GetLastLine()) {
+            const std::size_t read = std::min(count, this->begin->GetLastLine() - start + 1);
+            this->begin->Visit(start, read, visitor);
+            count -= read;
+            start = 0;
+        }
+        if (count && this->content && start <= begin_length + this->content->GetLastLine()) {
+            const std::size_t read = std::min(count, this->content->GetLastLine() - start + 1);
+            this->content->Visit(start - begin_length, read, visitor);
+            count -= read;
+            start = 0;
+        }
+        if (count && this->end && start <= begin_length + self_length + this->end->GetLastLine()) {
+            const std::size_t read = std::min(count, this->end->GetLastLine() - start + 1);
+            this->end->Visit(start - begin_length - self_length, read, visitor);
+            count -= read;
+        }
+        if (count) {
+            throw SlokedError("Range exceeds total length of block");
+        }
     }
 
     void TextRegion::SetLine(std::size_t line, const std::string &content) {
@@ -129,13 +157,13 @@ namespace sloked {
         }
         if (region.content) {
             if (region.begin) {
-                os << std::endl;
+                os << region.newline;
             }
             os << *region.content;
         }
         if (region.end) {
             if (region.begin || region.content) {
-                os << std::endl;
+                os << region.newline;
             }
             os << *region.end;
         }

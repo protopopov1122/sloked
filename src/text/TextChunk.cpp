@@ -1,26 +1,28 @@
 #include "sloked/text/TextChunk.h"
 #include "sloked/core/Error.h"
+#include "sloked/core/NewLine.h"
 #include <iostream>
 #include <sstream>
 #include <algorithm>
 
 namespace sloked {
 
-    TextChunkFactory TextChunk::Factory;
+    TextChunkFactory::TextChunkFactory(const NewLine &newline)
+        : newline(newline) {}
 
     std::unique_ptr<TextBlock> TextChunkFactory::make(const std::string_view content) const {
-        return std::make_unique<TextChunk>(content);
+        return std::make_unique<TextChunk>(this->newline, content);
     }
 
-    TextChunk::TextChunk(const std::string_view content, std::size_t first_line)
+    TextChunk::TextChunk(const NewLine &newline, const std::string_view content, std::size_t first_line)
         : AVLNode(nullptr, nullptr),
-          has_content(true), height(0), first_line(first_line), content(content) {
+          newline(newline), has_content(true), height(0), first_line(first_line), content(content) {
         this->Remap();
     }
 
-    TextChunk::TextChunk(std::unique_ptr<TextChunk> begin, std::optional<std::string> content, std::unique_ptr<TextChunk> end, std::size_t first_line)
+    TextChunk::TextChunk(const NewLine &newline, std::unique_ptr<TextChunk> begin, std::optional<std::string> content, std::unique_ptr<TextChunk> end, std::size_t first_line)
         : AVLNode(std::move(begin), std::move(end)),
-          has_content(false), height(0), first_line(first_line), content(std::move(content)) {
+          newline(newline), has_content(false), height(0), first_line(first_line), content(std::move(content)) {
         this->Remap();
         this->UpdateStats();
     }
@@ -52,6 +54,30 @@ namespace sloked {
         return !this->has_content;
     }
 
+    void TextChunk::Visit(std::size_t start, std::size_t count, Visitor visitor) const {
+        start -= this->first_line;
+        std::size_t begin_count = 0, end_count = 0;
+        for (; begin_count < count && this->chunk_map->GetOffset(start + begin_count) == DefaultMap::AtBegin; begin_count++) {}
+        for (; end_count < count && this->chunk_map->GetOffset(start + count - end_count - 1) == DefaultMap::AtEnd; end_count++) {}
+        if (begin_count) {
+            this->begin->Visit(start, begin_count, visitor);
+        }
+        if (count - (begin_count + end_count)) {
+            std::string_view view(this->content.value());
+            for (std::size_t i = start + begin_count; i < start + begin_count + count - (begin_count + end_count); i++) {
+                std::size_t offset = this->chunk_map->GetOffset(i);
+                if (offset == DefaultMap::NotFound) {
+                    throw SlokedError("Line " + std::to_string(i) + " exceeds total length of block");
+                }
+                std::size_t length = this->chunk_map->GetLength(i);
+                visitor(view.substr(offset, length));
+            }
+        }
+        if (end_count) {
+            this->end->Visit(start + count - end_count, end_count, visitor);
+        }
+    }
+
     void TextChunk::SetLine(std::size_t line, const std::string &content) {
         line -= this->first_line;
         std::size_t offset = this->chunk_map->GetOffset(line);
@@ -59,24 +85,34 @@ namespace sloked {
             case DefaultMap::AtBegin:
                 this->begin->SetLine(line, content);
                 break;
+
             case DefaultMap::AtEnd:
                 this->end->SetLine(line, content);
                 break;
+
             case DefaultMap::NotFound:
                 throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
+
             default: {
                 std::size_t length = this->chunk_map->GetLength(line);
                 if (offset == 0 && length == this->content.value().size()) {
                     this->content = content;
                 } else {
-                    if (this->begin == nullptr) {
-                        this->begin = line > 0 ? std::make_unique<TextChunk>(this->content.value().substr(0, offset - 1)) : nullptr;
-                        this->content.value().erase(0, offset);
-                        offset = 0;
-                    }
+                    std::string_view view {this->content.value()};
                     if (this->end == nullptr) {
-                        this->end = line < this->GetLastLine() ? std::make_unique<TextChunk>(this->content.value().substr(offset + length + 1), line + 1) : nullptr;
+                        this->end = line < this->GetLastLine()
+                            ? std::make_unique<TextChunk>(this->newline, view.substr(offset + length + this->newline.Width), line + 1)
+                            : nullptr;
                         this->content.value().erase(offset + length);
+                        view = this->content.value();
+                    }
+                    if (this->begin == nullptr) {
+                        this->begin = line > 0
+                            ? std::make_unique<TextChunk>(this->newline, view.substr(0, offset - this->newline.Width))
+                            : nullptr;
+                        this->content.value().erase(0, offset);
+                        view = this->content.value();
+                        offset = 0;
                     }
                     this->content.value().replace(offset, length, content);
                     this->UpdateStats();
@@ -98,11 +134,14 @@ namespace sloked {
                     this->end->Remap();
                 }
                 break;
+
             case DefaultMap::AtEnd:
                 this->end->EraseLine(line);
                 break;
+
             case DefaultMap::NotFound:
                 throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
+
             default: {
                 std::size_t length = this->chunk_map->GetLength(line);
                 if (offset == 0 && length == this->content.value().size()) {
@@ -112,16 +151,22 @@ namespace sloked {
                         this->end->Remap();
                     }
                 } else {
+                    std::string_view view {this->content.value()};
+                    if (this->end == nullptr) {
+                        this->end = line < this->GetLastLine()
+                            ? std::make_unique<TextChunk>(this->newline, view.substr(offset + length + this->newline.Width), line + 1)
+                            : nullptr;
+                        this->content.value().erase(offset + length);
+                        view = this->content.value();
+                    }
                     if (this->begin == nullptr) {
-                        this->begin = line > 0 ? std::make_unique<TextChunk>(this->content.value().substr(0, offset - 1)) : nullptr;
+                        this->begin = line > 0
+                            ? std::make_unique<TextChunk>(this->newline, view.substr(0, offset - this->newline.Width))
+                            : nullptr;
                         this->content.value().erase(0, offset);
                         offset = 0;
                     }
-                    if (this->end == nullptr) {
-                        this->end = line < this->GetLastLine() ? std::make_unique<TextChunk>(this->content.value().substr(offset + length + 1), line + 1) : nullptr;
-                        this->content.value().erase(offset + length);
-                    }
-                    this->content.value().erase(offset, length + 1);
+                    this->content.value().erase(offset, length + this->newline.Width);
                     if (this->content.value().empty()) {
                         this->content.reset();
                         if (this->end) {
@@ -148,16 +193,19 @@ namespace sloked {
                     this->end->Remap();
                 }
                 break;
+
             case DefaultMap::AtEnd:
                 this->end->InsertLine(line, content);
                 break;
+
             case DefaultMap::NotFound:
                 throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
+                
             default:
                 std::size_t length = this->chunk_map->GetLength(line);
                 std::unique_ptr<TextChunk> tail = nullptr;
                 if (offset + length < this->content.value().size()) {
-                    tail = std::make_unique<TextChunk>(nullptr, this->content.value().substr(offset + length + 1), std::move(this->end));
+                    tail = std::make_unique<TextChunk>(this->newline, nullptr, this->content.value().substr(offset + length + this->newline.Width), std::move(this->end));
                     this->content.value().erase(offset + length);
                 } else {
                     tail = std::move(this->end);
@@ -165,7 +213,7 @@ namespace sloked {
                 if (tail) {
                     tail->Normalize();
                 }
-                this->end = std::make_unique<TextChunk>(nullptr, content, std::move(tail), line + 1);
+                this->end = std::make_unique<TextChunk>(this->newline, nullptr, content, std::move(tail), line + 1);
                 this->end->Normalize();
                 break;
         }
@@ -233,14 +281,14 @@ namespace sloked {
         }
         if (this->end) {
             if (this->content.has_value()) {
-                lines += std::count(this->content.value().begin(), this->content.value().end(), '\n') + 1;
+                lines += this->newline.Count(this->content.value());
             }
             this->end->first_line = lines;
         }
     }
 
     void TextChunk::Remap() {
-        this->chunk_map = std::make_unique<DefaultMap>(this->content, this->begin.get(), this->end.get());
+        this->chunk_map = std::make_unique<DefaultMap>(this->content, this->begin.get(), this->end.get(), this->newline);
     }
 
     void TextChunk::UpdateStats() {
@@ -262,13 +310,13 @@ namespace sloked {
         }
         if (chunk.content.has_value()) {
             if (chunk.begin) {
-                os << std::endl;
+                os << chunk.newline;
             }
             os << chunk.content.value();
         }
         if (chunk.end) {
             if (chunk.begin || chunk.content.has_value()) {
-                os << std::endl;
+                os << chunk.newline;
             }
             os << *chunk.end;
         }

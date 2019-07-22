@@ -8,12 +8,13 @@ namespace sloked {
 
     class TextBlockHandle : public TextBlockImpl<TextBlockHandle> {
      public:
-        TextBlockHandle(std::string_view, std::map<std::size_t, std::pair<std::size_t, std::size_t>>, const TextBlockFactory &factory = TextChunk::Factory);
+        TextBlockHandle(std::string_view, std::map<std::size_t, std::pair<std::size_t, std::size_t>>, const TextBlockFactory &);
 
         std::size_t GetLastLine() const override;
         std::size_t GetTotalLength() const override;
         const std::string_view GetLine(std::size_t) const override;
         bool Empty() const override;
+        void Visit(std::size_t, std::size_t, Visitor) const override;
 
         void SetLine(std::size_t, const std::string &) override;
         void EraseLine(std::size_t) override;

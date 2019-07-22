@@ -8,6 +8,8 @@ sloked_src = [
   'src/PosixAnsiConsole.cpp',
   'src/main.cpp',
   'src/core/Error.cpp',
+  'src/core/NewLine.cpp',
+  'src/text/TextBlock.cpp',
   'src/text/TextChunk.cpp',
   'src/text/posix/TextFile.cpp',
   'src/text/TextBlockHandle.cpp',

@@ -2,7 +2,9 @@
 #define SLOKED_TEXT_POSIX_TEXTFILE_H_
 
 #include "sloked/Base.h"
+#include "sloked/core/NewLine.h"
 #include "sloked/text/TextRegion.h"
+#include "sloked/text/TextChunk.h"
 #include <iosfwd>
 #include <variant>
 
@@ -10,7 +12,7 @@ namespace sloked {
 
     class PosixTextFile : public TextBlockImpl<PosixTextFile> {
      public:
-        PosixTextFile(int);
+        PosixTextFile(const NewLine &, int);
         virtual ~PosixTextFile();
         PosixTextFile(const PosixTextFile &) = delete;
         PosixTextFile(PosixTextFile &&) = default;
@@ -22,6 +24,7 @@ namespace sloked {
         std::size_t GetTotalLength() const override;
         const std::string_view GetLine(std::size_t) const override;
         bool Empty() const override;
+        void Visit(std::size_t, std::size_t, Visitor) const override;
         
         void SetLine(std::size_t, const std::string &) override;
         void EraseLine(std::size_t) override;
@@ -37,6 +40,8 @@ namespace sloked {
      private:
         void Scan();
 
+        TextChunkFactory blockFactory;
+        const NewLine &newline;
         int fd;
         void *data;
         std::size_t length;

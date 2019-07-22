@@ -4,8 +4,8 @@
 
 namespace sloked {
 
-    TextDocument::TextDocument(std::unique_ptr<TextBlock> content)
-        : content(std::move(content)) {}
+    TextDocument::TextDocument(const NewLine &newline, std::unique_ptr<TextBlock> content)
+        : newline(newline), content(std::move(content)) {}
 
     std::size_t TextDocument::GetLastLine() const {
         if (this->content) {
@@ -40,12 +40,22 @@ namespace sloked {
             return true;
         }
     }
+
+    void TextDocument::Visit(std::size_t start, std::size_t count, Visitor visitor) const {
+        if (this->content) {
+            this->content->Visit(start, count, visitor);
+        } else if (start == 0 && count == 1) {
+            visitor("");
+        } else {
+            throw SlokedError("Range exceeds total length of block");
+        }
+    }
     
     void TextDocument::SetLine(std::size_t line, const std::string &content) {
         if (this->content) {
             this->content->SetLine(line, content);
         } else if (line == 0) {
-            this->content = std::make_unique<TextChunk>(content);
+            this->content = std::make_unique<TextChunk>(this->newline, content);
         } else {
             throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
         }
@@ -66,7 +76,7 @@ namespace sloked {
         if (this->content) {
             this->content->InsertLine(line, content);
         } else if (line == 0) {
-            this->content = std::make_unique<TextChunk>("\n" + content);
+            this->content = std::make_unique<TextChunk>(this->newline, "\n" + content);
         } else {
             throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
         }

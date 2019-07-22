@@ -3,6 +3,8 @@
 
 #include "sloked/text/TextBlock.h"
 #include "sloked/core/AVL.h"
+#include "sloked/core/RangeMap.h"
+#include "sloked/core/NewLine.h"
 #include <map>
 #include <limits>
 #include <optional>
@@ -14,18 +16,23 @@ namespace sloked {
 
     class TextChunkFactory : public TextBlockFactory {
      public:
+        TextChunkFactory(const NewLine &);
         std::unique_ptr<TextBlock> make(const std::string_view) const override;
+    
+     private:
+        const NewLine &newline;
     };
 
     class TextChunk : public TextBlockImpl<TextChunk>, public AVLNode<TextChunk> {
      public:
-        TextChunk(const std::string_view, std::size_t = 0);
-        TextChunk(std::unique_ptr<TextChunk>, std::optional<std::string>, std::unique_ptr<TextChunk>, std::size_t = 0);
+        TextChunk(const NewLine &, const std::string_view, std::size_t = 0);
+        TextChunk(const NewLine &, std::unique_ptr<TextChunk>, std::optional<std::string>, std::unique_ptr<TextChunk>, std::size_t = 0);
 
         std::size_t GetLastLine() const override;
         std::size_t GetTotalLength() const override;
         const std::string_view GetLine(std::size_t) const override;
         bool Empty() const override;
+        void Visit(std::size_t, std::size_t, Visitor) const override;
         
         void SetLine(std::size_t, const std::string &) override;
         void EraseLine(std::size_t) override;
@@ -38,8 +45,6 @@ namespace sloked {
         std::size_t GetHeight() const;
 
         friend std::ostream &operator<<(std::ostream &, const TextChunk &);
-        
-        static TextChunkFactory Factory;
 
      protected:
         void AvlSwapContent(TextChunk &) override;
@@ -55,6 +60,7 @@ namespace sloked {
         void Remap();
         void UpdateStats();
 
+        const NewLine &newline;
         bool has_content;
         std::size_t height;
         std::size_t first_line;
@@ -65,8 +71,8 @@ namespace sloked {
     template <typename Line, typename Offset, typename Length = Offset>
     class TextChunk::Map {
      public:
-        Map(const std::optional<std::string> &content, TextChunk *begin, TextChunk *end)
-            : last_line(0), total_length(0) {
+        Map(const std::optional<std::string> &content, TextChunk *begin, TextChunk *end, const NewLine & newline)
+            : lines(0), last_line(0), total_length(0) {
             if (begin && !begin->Empty()) {
                 this->assign(0, begin->GetLastLine(), AtBegin, begin->GetTotalLength());
                 this->last_line = begin->GetLastLine();
@@ -77,16 +83,14 @@ namespace sloked {
                 if (begin && !begin->Empty()) {
                     this->last_line++;
                 }
-                Offset i = 0, start_offset = 0;
-                for (; i < content.value().size(); i++) {
-                    this->total_length++;
-                    if (content.value()[i] == '\n') {
-                        this->assign(this->last_line, this->last_line, start_offset, i - start_offset);
-                        this->last_line++;
-                        start_offset = i + 1;
-                    }
-                }
-                this->assign(this->last_line, this->last_line, start_offset, i - start_offset);
+                Offset start_offset = 0;
+                this->total_length += content.value().size();
+                newline.Iterate(content.value(), [&](std::size_t i) {
+                    this->assign(this->last_line, this->last_line, start_offset, i - start_offset);
+                    this->last_line++;
+                    start_offset = i + newline.Width;
+                });
+                this->assign(this->last_line, this->last_line, start_offset, content.value().size() - start_offset);
             }
 
             if (end && !end->Empty()) {
@@ -108,16 +112,16 @@ namespace sloked {
         }
 
         Offset GetOffset(Line l) const {
-            if (this->lines.count(l)) {
-                return this->lines.at(l).first;
+            if (this->lines.Has(l)) {
+                return this->lines.At(l).first;
             } else {
                 return NotFound;
             }
         }
 
         Length GetLength(Line l) const {
-            if (this->lines.count(l)) {
-                return this->lines.at(l).second;
+            if (this->lines.Has(l)) {
+                return this->lines.At(l).second;
             } else {
                 return 0;
             }
@@ -130,12 +134,10 @@ namespace sloked {
 
      private:
         void assign(Line begin, Line end, Offset start, Length length) {
-            for (Line i = begin; i <= end; i++) {
-                this->lines[i] = std::make_pair(start, length);
-            }
+            this->lines.Insert(begin, end + 1, std::make_pair(start, length));
         }
 
-        std::map<Line, std::pair<Offset, Length>> lines;
+        RangeMap<Line, std::pair<Offset, Length>> lines;
         Line last_line;
         Length total_length;
     };

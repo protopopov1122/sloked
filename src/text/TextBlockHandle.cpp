@@ -60,6 +60,27 @@ namespace sloked {
         }
     }
 
+    void TextBlockHandle::Visit(std::size_t start, std::size_t count, Visitor visitor) const {
+        switch (this->content.index()) {
+            case 0: {
+                const view &content = std::get<0>(this->content);
+                for (std::size_t i = start; i < start + count; i++) {
+                    if (content.lines.count(i)) {
+                        const auto &pos = content.lines.at(i);
+                        visitor(content.content.substr(pos.first, pos.second));
+                    } else {
+                        throw SlokedError("Line " + std::to_string(i) + " exceeds total length of block");   
+                    }
+                }
+            } break;
+            case 1:
+                std::get<1>(this->content)->Visit(start, count, visitor);
+                break;
+            default:
+                assert(false);
+        }
+    }
+
     void TextBlockHandle::SetLine(std::size_t line, const std::string &content) {
         this->open_block();
         std::get<1>(this->content)->SetLine(line, content);
