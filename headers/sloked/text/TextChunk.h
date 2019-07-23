@@ -17,7 +17,7 @@ namespace sloked {
     class TextChunkFactory : public TextBlockFactory {
      public:
         TextChunkFactory(const NewLine &);
-        std::unique_ptr<TextBlock> make(const std::string_view) const override;
+        std::unique_ptr<TextBlock> make(std::string_view) const override;
     
      private:
         const NewLine &newline;
@@ -25,18 +25,18 @@ namespace sloked {
 
     class TextChunk : public TextBlockImpl<TextChunk>, public AVLNode<TextChunk> {
      public:
-        TextChunk(const NewLine &, const std::string_view, std::size_t = 0);
+        TextChunk(const NewLine &, std::string_view, std::size_t = 0);
         TextChunk(const NewLine &, std::unique_ptr<TextChunk>, std::optional<std::string>, std::unique_ptr<TextChunk>, std::size_t = 0);
 
         std::size_t GetLastLine() const override;
         std::size_t GetTotalLength() const override;
-        const std::string_view GetLine(std::size_t) const override;
+        std::string_view GetLine(std::size_t) const override;
         bool Empty() const override;
         void Visit(std::size_t, std::size_t, Visitor) const override;
         
-        void SetLine(std::size_t, const std::string &) override;
+        void SetLine(std::size_t, std::string_view) override;
         void EraseLine(std::size_t) override;
-        void InsertLine(std::size_t, const std::string &) override;
+        void InsertLine(std::size_t, std::string_view) override;
         void Optimize() override;
 
         void Squash();

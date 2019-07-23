@@ -31,7 +31,7 @@ namespace sloked {
         }
     }
 
-    const std::string_view TextBlockHandle::GetLine(std::size_t line) const {
+    std::string_view TextBlockHandle::GetLine(std::size_t line) const {
         switch (this->content.index()) {
             case 0: {
                 const auto &content = std::get<0>(this->content);
@@ -81,7 +81,7 @@ namespace sloked {
         }
     }
 
-    void TextBlockHandle::SetLine(std::size_t line, const std::string &content) {
+    void TextBlockHandle::SetLine(std::size_t line, std::string_view content) {
         this->open_block();
         std::get<1>(this->content)->SetLine(line, content);
     }
@@ -91,7 +91,7 @@ namespace sloked {
         std::get<1>(this->content)->EraseLine(line);
     }
 
-    void TextBlockHandle::InsertLine(std::size_t line, const std::string &content) {
+    void TextBlockHandle::InsertLine(std::size_t line, std::string_view content) {
         this->open_block();
         std::get<1>(this->content)->InsertLine(line, content);
     }

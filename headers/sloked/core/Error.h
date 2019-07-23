@@ -9,7 +9,7 @@ namespace sloked {
 
     class SlokedError : public std::exception {
      public:
-        SlokedError(const std::string_view);
+        SlokedError(std::string_view);
         const char *what() const noexcept override;
      private:
         std::string message;

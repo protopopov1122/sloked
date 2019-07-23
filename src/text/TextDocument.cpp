@@ -23,7 +23,7 @@ namespace sloked {
         }
     }
 
-    const std::string_view TextDocument::GetLine(std::size_t line) const {
+    std::string_view TextDocument::GetLine(std::size_t line) const {
         if (this->content) {
             return this->content->GetLine(line);
         } else if (line == 0) {
@@ -51,7 +51,7 @@ namespace sloked {
         }
     }
     
-    void TextDocument::SetLine(std::size_t line, const std::string &content) {
+    void TextDocument::SetLine(std::size_t line, std::string_view content) {
         if (this->content) {
             this->content->SetLine(line, content);
         } else if (line == 0) {
@@ -72,11 +72,11 @@ namespace sloked {
         }
     }
 
-    void TextDocument::InsertLine(std::size_t line, const std::string &content) {
+    void TextDocument::InsertLine(std::size_t line, std::string_view content) {
         if (this->content) {
             this->content->InsertLine(line, content);
         } else if (line == 0) {
-            this->content = std::make_unique<TextChunk>(this->newline, "\n" + content);
+            this->content = std::make_unique<TextChunk>(this->newline, "\n" + std::string {content});
         } else {
             throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
         }

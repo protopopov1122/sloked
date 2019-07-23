@@ -2,7 +2,7 @@
 
 namespace sloked {
 
-    SlokedError::SlokedError(const std::string_view msg)
+    SlokedError::SlokedError(std::string_view msg)
         : message(msg) {
 
     }

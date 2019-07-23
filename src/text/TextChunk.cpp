@@ -10,11 +10,11 @@ namespace sloked {
     TextChunkFactory::TextChunkFactory(const NewLine &newline)
         : newline(newline) {}
 
-    std::unique_ptr<TextBlock> TextChunkFactory::make(const std::string_view content) const {
+    std::unique_ptr<TextBlock> TextChunkFactory::make(std::string_view content) const {
         return std::make_unique<TextChunk>(this->newline, content);
     }
 
-    TextChunk::TextChunk(const NewLine &newline, const std::string_view content, std::size_t first_line)
+    TextChunk::TextChunk(const NewLine &newline, std::string_view content, std::size_t first_line)
         : AVLNode(nullptr, nullptr),
           newline(newline), has_content(true), height(0), first_line(first_line), content(content) {
         this->Remap();
@@ -35,7 +35,7 @@ namespace sloked {
         return this->chunk_map->GetTotalLength();
     }
 
-    const std::string_view TextChunk::GetLine(std::size_t line) const {
+    std::string_view TextChunk::GetLine(std::size_t line) const {
         line -= this->first_line;
         std::size_t offset = this->chunk_map->GetOffset(line);
         switch (offset) {
@@ -78,7 +78,7 @@ namespace sloked {
         }
     }
 
-    void TextChunk::SetLine(std::size_t line, const std::string &content) {
+    void TextChunk::SetLine(std::size_t line, std::string_view content) {
         line -= this->first_line;
         std::size_t offset = this->chunk_map->GetOffset(line);
         switch (offset) {
@@ -182,7 +182,7 @@ namespace sloked {
         this->UpdateStats();
     }
 
-    void TextChunk::InsertLine(std::size_t line, const std::string &content) {
+    void TextChunk::InsertLine(std::size_t line, std::string_view content) {
         line -= this->first_line;
         std::size_t offset = this->chunk_map->GetOffset(line);
         switch (offset) {
@@ -213,7 +213,7 @@ namespace sloked {
                 if (tail) {
                     tail->Normalize();
                 }
-                this->end = std::make_unique<TextChunk>(this->newline, nullptr, content, std::move(tail), line + 1);
+                this->end = std::make_unique<TextChunk>(this->newline, nullptr, std::string {content}, std::move(tail), line + 1);
                 this->end->Normalize();
                 break;
         }

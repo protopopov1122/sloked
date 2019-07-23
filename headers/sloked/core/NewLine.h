@@ -20,8 +20,8 @@ namespace sloked {
         NewLine &operator=(const NewLine &) = delete;
         NewLine &operator=(NewLine &&) = delete;
 
-        virtual void Iterate(const std::string_view, Iterator) const = 0;
-        virtual std::size_t Count(const std::string_view) const = 0;
+        virtual void Iterate(std::string_view, Iterator) const = 0;
+        virtual std::size_t Count(std::string_view) const = 0;
 
         friend std::ostream &operator<<(std::ostream &, const NewLine &);
 

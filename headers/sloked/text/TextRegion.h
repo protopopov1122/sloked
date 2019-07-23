@@ -13,13 +13,13 @@ namespace sloked {
 
          std::size_t GetLastLine() const override;
          std::size_t GetTotalLength() const override;
-         const std::string_view GetLine(std::size_t) const override;
+         std::string_view GetLine(std::size_t) const override;
          bool Empty() const override;
          void Visit(std::size_t, std::size_t, Visitor) const override;
 
-         void SetLine(std::size_t, const std::string &) override;
+         void SetLine(std::size_t, std::string_view) override;
          void EraseLine(std::size_t) override;
-         void InsertLine(std::size_t, const std::string &) override;
+         void InsertLine(std::size_t, std::string_view) override;
          void Optimize() override;
 
          friend std::ostream &operator<<(std::ostream &, const TextRegion &);

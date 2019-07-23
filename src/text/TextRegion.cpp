@@ -39,7 +39,7 @@ namespace sloked {
         return length;
     }
 
-    const std::string_view TextRegion::GetLine(std::size_t line) const {
+    std::string_view TextRegion::GetLine(std::size_t line) const {
         const std::size_t begin_length = this->begin ? this->begin->GetLastLine() + 1 : 0;
         const std::size_t self_length = this->content ? this->content->GetLastLine() + 1 : 0;
         if (this->begin && line <= this->begin->GetLastLine()) {
@@ -86,7 +86,7 @@ namespace sloked {
         }
     }
 
-    void TextRegion::SetLine(std::size_t line, const std::string &content) {
+    void TextRegion::SetLine(std::size_t line, std::string_view content) {
         const std::size_t begin_length = this->begin ? this->begin->GetLastLine() + 1 : 0;
         const std::size_t self_length = this->content ? this->content->GetLastLine() + 1 : 0;
         if (this->begin && line <= this->begin->GetLastLine()) {
@@ -125,7 +125,7 @@ namespace sloked {
         this->UpdateStats();
     }
 
-    void TextRegion::InsertLine(std::size_t line, const std::string &content) {
+    void TextRegion::InsertLine(std::size_t line, std::string_view content) {
         const std::size_t begin_length = this->begin ? this->begin->GetLastLine() + 1 : 0;
         const std::size_t self_length = this->content ? this->content->GetLastLine() + 1 : 0;
         if (this->begin && line <= this->begin->GetLastLine()) {
