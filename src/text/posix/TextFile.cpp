@@ -10,108 +10,24 @@
 
 namespace sloked {
 
-    PosixTextFile::PosixTextFile(const NewLine &newline, int fd)
-        : blockFactory(newline), newline(newline), fd(fd) {
+    PosixTextView::PosixTextView(int fd)
+        : fd(fd) {
         struct stat file_stats;
         fstat(fd, &file_stats);
         this->length = file_stats.st_size;
         this->data =  mmap(nullptr, this->length, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fd, 0);
-        this->Scan();
     }
-
-    PosixTextFile::~PosixTextFile() {
-        this->content = nullptr;
+    
+    PosixTextView::~PosixTextView() {
         munmap(this->data, this->length);
         close(this->fd);
     }
 
-    std::size_t PosixTextFile::GetLastLine() const {
-        return this->content->GetLastLine();
+    std::string_view PosixTextView::GetView() const {
+        return std::string_view(static_cast<const char *>(this->data), this->length);
     }
 
-    std::size_t PosixTextFile::GetTotalLength() const {
-        return this->content->GetTotalLength();
-    }
-
-    const std::string_view PosixTextFile::GetLine(std::size_t line) const {
-        return this->content->GetLine(line);
-    }
-    
-    bool PosixTextFile::Empty() const {
-        return this->content->Empty();
-    }
-
-    void PosixTextFile::Visit(std::size_t start, std::size_t count, Visitor visitor) const {
-        this->content->Visit(start, count, visitor);
-    }
-    
-    void PosixTextFile::SetLine(std::size_t line, const std::string &content) {
-        this->content->SetLine(line, content);
-    }
-
-    void PosixTextFile::EraseLine(std::size_t line) {
-        this->content->EraseLine(line);
-    }
-
-    void PosixTextFile::InsertLine(std::size_t line, const std::string &content) {
-        this->content->InsertLine(line, content);
-    }
-
-    void PosixTextFile::Optimize() {
-        this->content->Optimize();
-    }
-
-    std::ostream &operator<<(std::ostream &os, const PosixTextFile &file) {
-        return os << *file.content;
-    }
-
-    void PosixTextFile::Scan() {
-        constexpr std::size_t MAX_CHUNK = 65536 * 32;
-        this->content = nullptr;
-        std::string_view str(static_cast<const char *>(this->data), this->length);
-        std::size_t chunk_offset = 0;
-        std::size_t last_line_offset = 0;
-        std::size_t line = 0;
-        std::map<std::size_t, std::pair<std::size_t, std::size_t>> chunk_lines;
-
-        this->newline.Iterate(str, [&](std::size_t i) {
-            std::size_t length = i - chunk_offset;
-            if (length < MAX_CHUNK) {
-                chunk_lines[chunk_lines.size()] = std::make_pair(last_line_offset, i - last_line_offset);
-                last_line_offset = i + this->newline.Width;
-            } else {
-                auto proxyBlock = std::make_unique<TextBlockHandle>(std::string_view {
-                    static_cast<const char *>(this->data) + chunk_offset,
-                    last_line_offset > chunk_offset
-                        ? last_line_offset - chunk_offset - this->newline.Width
-                        : 0
-                }, std::move(chunk_lines), this->blockFactory);
-                auto region = std::make_unique<TextRegion>(this->newline, std::move(proxyBlock));
-                if (this->content) {
-                    this->content->AppendRegion(std::move(region));
-                } else {
-                    this->content = std::move(region);
-                }
-                chunk_offset = last_line_offset;
-                last_line_offset = i + this->newline.Width;
-                chunk_lines.clear();
-                chunk_lines[chunk_lines.size()] = std::make_pair(last_line_offset, i - last_line_offset);
-            }
-            line++;
-        });
-        chunk_lines[chunk_lines.size()] = std::make_pair(last_line_offset, this->length - last_line_offset);
-        
-        if (chunk_offset != this->length) {
-            auto proxyBlock = std::make_unique<TextBlockHandle>(std::string_view {
-                static_cast<const char *>(this->data) + chunk_offset,
-                this->length - chunk_offset
-            }, std::move(chunk_lines), this->blockFactory);
-            auto region = std::make_unique<TextRegion>(this->newline, std::move(proxyBlock));
-            if (this->content) {
-                this->content->AppendRegion(std::move(region));
-            } else {
-                this->content = std::move(region);
-            }
-        }
+    PosixTextView::operator std::string_view() const {
+        return this->GetView();
     }
 }

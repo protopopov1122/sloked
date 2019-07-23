@@ -14,7 +14,8 @@ sloked_src = [
   'src/text/posix/TextFile.cpp',
   'src/text/TextBlockHandle.cpp',
   'src/text/TextRegion.cpp',
-  'src/text/TextDocument.cpp'
+  'src/text/TextDocument.cpp',
+  'src/text/TextView.cpp'
 ]
 
 sloked = executable('sloked', sloked_src,

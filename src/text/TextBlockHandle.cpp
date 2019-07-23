@@ -52,7 +52,7 @@ namespace sloked {
     bool TextBlockHandle::Empty() const {
         switch (this->content.index()) {
             case 0:
-                return std::get<0>(this->content).content.empty();
+                return std::get<0>(this->content).lines.empty();
             case 1:
                 return std::get<1>(this->content)->Empty();
             default:

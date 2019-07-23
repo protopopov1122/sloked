@@ -305,17 +305,17 @@ namespace sloked {
     }
 
     std::ostream &operator<<(std::ostream &os, const TextChunk &chunk) {
-        if (chunk.begin) {
+        if (chunk.begin && !chunk.begin->Empty()) {
             os << *chunk.begin;
         }
         if (chunk.content.has_value()) {
-            if (chunk.begin) {
+            if (chunk.begin && !chunk.begin->Empty()) {
                 os << chunk.newline;
             }
             os << chunk.content.value();
         }
-        if (chunk.end) {
-            if (chunk.begin || chunk.content.has_value()) {
+        if (chunk.end && !chunk.end->Empty()) {
+            if ((chunk.begin && !chunk.begin->Empty()) || chunk.content.has_value()) {
                 os << chunk.newline;
             }
             os << *chunk.end;

@@ -1,0 +1,54 @@
+#include "sloked/text/TextView.h"
+#include "sloked/text/TextRegion.h"
+#include "sloked/text/TextChunk.h"
+#include "sloked/text/TextBlockHandle.h"
+#include <map>
+#include <iostream>
+
+namespace sloked {
+
+
+    std::unique_ptr<TextBlock> TextView::Open(std::string_view str, const NewLine &newline, const TextBlockFactory &blockFactory) {
+        constexpr std::size_t MAX_CHUNK = 65536 * 32;
+        std::unique_ptr<TextRegion> content = nullptr;
+        std::size_t chunk_offset = 0;
+        std::size_t last_line_offset = 0;
+        std::size_t line = 0;
+        std::map<std::size_t, std::pair<std::size_t, std::size_t>> chunk_lines;
+
+        newline.Iterate(str, [&](std::size_t i) {
+            std::size_t length = i - chunk_offset;
+            if (length < MAX_CHUNK) {
+                chunk_lines[chunk_lines.size()] = std::make_pair(last_line_offset - chunk_offset, i - last_line_offset);
+                last_line_offset = i + newline.Width;
+            } else {
+                auto proxyBlock = std::make_unique<TextBlockHandle>(str.substr(chunk_offset, last_line_offset > chunk_offset
+                        ? last_line_offset - chunk_offset - newline.Width
+                        : 0), std::move(chunk_lines), blockFactory);
+                auto region = std::make_unique<TextRegion>(newline, std::move(proxyBlock));
+                if (content) {
+                    content->AppendRegion(std::move(region));
+                } else {
+                    content = std::move(region);
+                }
+                chunk_offset = last_line_offset;
+                chunk_lines.clear();
+                chunk_lines[chunk_lines.size()] = std::make_pair(last_line_offset - chunk_offset, i - last_line_offset);
+                last_line_offset = i + newline.Width;
+            }
+            line++;
+        });
+        chunk_lines[chunk_lines.size()] = std::make_pair(last_line_offset - chunk_offset, str.size() - last_line_offset);
+        
+        if (chunk_offset != str.size()) {
+            auto proxyBlock = std::make_unique<TextBlockHandle>(str.substr(chunk_offset), std::move(chunk_lines), blockFactory);
+            auto region = std::make_unique<TextRegion>(newline, std::move(proxyBlock));
+            if (content) {
+                content->AppendRegion(std::move(region));
+            } else {
+                content = std::move(region);
+            }
+        }
+        return content;
+    }
+}

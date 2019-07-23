@@ -10,42 +10,23 @@
 
 namespace sloked {
 
-    class PosixTextFile : public TextBlockImpl<PosixTextFile> {
+    class PosixTextView {
      public:
-        PosixTextFile(const NewLine &, int);
-        virtual ~PosixTextFile();
-        PosixTextFile(const PosixTextFile &) = delete;
-        PosixTextFile(PosixTextFile &&) = default;
+        PosixTextView(int);
+        virtual ~PosixTextView();
+        PosixTextView(const PosixTextView &) = delete;
+        PosixTextView(PosixTextView &&) = default;
 
-        PosixTextFile &operator=(const PosixTextFile &) = delete;
-        PosixTextFile &operator=(PosixTextFile &&) = default;
-    
-        std::size_t GetLastLine() const override;
-        std::size_t GetTotalLength() const override;
-        const std::string_view GetLine(std::size_t) const override;
-        bool Empty() const override;
-        void Visit(std::size_t, std::size_t, Visitor) const override;
-        
-        void SetLine(std::size_t, const std::string &) override;
-        void EraseLine(std::size_t) override;
-        void InsertLine(std::size_t, const std::string &) override;
-        void Optimize() override;
+        PosixTextView &operator=(const PosixTextView &) = delete;
+        PosixTextView &operator=(PosixTextView &&) = default;
 
-        std::size_t GetHeight() const {
-            return this->content->GetHeight();
-        }
+        std::string_view GetView() const;
+        operator std::string_view() const;
 
-        friend std::ostream &operator<<(std::ostream &, const PosixTextFile &);
-        
      private:
-        void Scan();
-
-        TextChunkFactory blockFactory;
-        const NewLine &newline;
         int fd;
         void *data;
         std::size_t length;
-        std::unique_ptr<TextRegion> content;
     };
 }
 

@@ -4,6 +4,7 @@
 #include "sloked/text/TextChunk.h"
 #include "sloked/text/TextBlockHandle.h"
 #include "sloked/text/TextDocument.h"
+#include "sloked/text/TextView.h"
 #include "sloked/text/posix/TextFile.h"
 #include <unistd.h>
 #include <cstdio>
@@ -34,9 +35,11 @@ int main(int argc, const char **argv) {
         std::cout << "Format: " << argv[0] << " source destination" << std::endl;
         return EXIT_FAILURE;
     }
-    PosixAnsiConsole console; 
-    TextDocument text(NewLine::LF, std::make_unique<PosixTextFile>(NewLine::LF, open(argv[1], O_RDONLY, 0)));
+    PosixTextView view(open(argv[1], O_RDONLY, 0));
+    TextChunkFactory blockFactory(NewLine::LF);
+    TextDocument text(NewLine::LF, TextView::Open(view, NewLine::LF, blockFactory));
 
+    PosixAnsiConsole console; 
     int chr;
     print(text, console);
     int line = 0;

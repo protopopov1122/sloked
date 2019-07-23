@@ -66,17 +66,19 @@ namespace sloked {
             const std::size_t read = std::min(count, this->begin->GetLastLine() - start + 1);
             this->begin->Visit(start, read, visitor);
             count -= read;
-            start = 0;
+            start += read;
         }
         if (count && this->content && start <= begin_length + this->content->GetLastLine()) {
-            const std::size_t read = std::min(count, this->content->GetLastLine() - start + 1);
-            this->content->Visit(start - begin_length, read, visitor);
+            const std::size_t node_start = start - begin_length;
+            const std::size_t read = std::min(count, this->content->GetLastLine() - node_start + 1);
+            this->content->Visit(node_start, read, visitor);
             count -= read;
-            start = 0;
+            start += read;
         }
         if (count && this->end && start <= begin_length + self_length + this->end->GetLastLine()) {
-            const std::size_t read = std::min(count, this->end->GetLastLine() - start + 1);
-            this->end->Visit(start - begin_length - self_length, read, visitor);
+            const std::size_t node_start = start - begin_length - self_length;
+            const std::size_t read = std::min(count, this->end->GetLastLine() - node_start + 1);
+            this->end->Visit(node_start, read, visitor);
             count -= read;
         }
         if (count) {
@@ -152,17 +154,18 @@ namespace sloked {
     }
 
     std::ostream &operator<<(std::ostream &os, const TextRegion &region) {
-        if (region.begin) {
+        if (region.begin && !region.begin->Empty()) {
             os << *region.begin;
         }
         if (region.content) {
-            if (region.begin) {
+            if (region.begin && !region.begin->Empty()) {
                 os << region.newline;
             }
             os << *region.content;
         }
-        if (region.end) {
-            if (region.begin || region.content) {
+        if (region.end && !region.end->Empty()) {
+            if ((region.begin && !region.begin->Empty()) ||
+                (region.content && !region.content->Empty())) {
                 os << region.newline;
             }
             os << *region.end;
