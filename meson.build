@@ -5,7 +5,7 @@ if meson.get_compiler('cpp').get_id() == 'gcc' or meson.get_compiler('cpp').get_
 endif
 
 sloked_src = [
-  'src/PosixAnsiConsole.cpp',
+  'src/screen/posix-term/PosixTerminal.cpp',
   'src/main.cpp',
   'src/core/Error.cpp',
   'src/core/NewLine.cpp',
@@ -18,5 +18,8 @@ sloked_src = [
   'src/text/TextView.cpp'
 ]
 
+ncurses = dependency('ncurses')
+
 sloked = executable('sloked', sloked_src,
-  include_directories : include_directories('headers'))
+  include_directories : include_directories('headers'),
+  dependencies : [ncurses])

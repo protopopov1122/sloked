@@ -1,10 +1,13 @@
-#ifndef SLOKED_ANSICONSOLE_H_
-#define SLOKED_ANSICONSOLE_H_
+#ifndef SLOKED_SCREEN_POSIXTERM_ANSICONSOLE_H_
+#define SLOKED_SCREEN_POSIXTERM_ANSICONSOLE_H_
 
 #include "sloked/Base.h"
 #include <cstdio>
 #include <string>
-#include <termios.h>
+#include <variant>
+#include <vector>
+#include <memory>
+#include <array>
 
 namespace sloked {
 
@@ -25,18 +28,31 @@ namespace sloked {
             AnsiGraphicsMode<C, B...>::Set(fd, modes...);
         }
     };
+
+    enum class PosixTerminalKey {
+        ArrowUp,
+        ArrowDown,
+        ArrowLeft,
+        ArrowRight,
+        Backspace,
+        Enter,
+        F1
+    };
+
+    using PosixTerminalInput = std::variant<std::string, PosixTerminalKey>;
     
-    class PosixAnsiConsole {
+    class PosixTerminal {
      public:
         using Line = unsigned int;
         using Column = unsigned int;
+        class Termcap;
 
         enum class Text;
         enum class Foreground;
         enum class Background;
 
-        PosixAnsiConsole(FILE * = stdout, FILE * = stdin);
-        ~PosixAnsiConsole();
+        PosixTerminal(FILE * = stdout, FILE * = stdin);
+        ~PosixTerminal();
     
         void SetPosition(Line, Column);
         void MoveUp(Line);
@@ -47,24 +63,26 @@ namespace sloked {
         void ClearScreen();
         void ClearLine();
 
-        void Write(const std::string &, bool = false);
-        void Flush();
+        void Write(const std::string &);
 
-        int GetChar();
+        std::vector<PosixTerminalInput> GetInput();
 
         template <typename ... T>
         void SetGraphicsMode(T ... modes) {
-            fprintf(this->fd, "\033[");
-            AnsiGraphicsMode<PosixAnsiConsole, T...>::Set(this->fd, modes...);
+            fprintf(this->GetOutputFile(), "\033[");
+            AnsiGraphicsMode<PosixTerminal, T...>::Set(this->GetOutputFile(), modes...);
         }
+
      private:
-        FILE *fd;
-        FILE *input;
-        termios out_state;
-        termios in_state;
+        struct State;
+        FILE *GetOutputFile();
+
+        std::unique_ptr<State> state;
+        std::unique_ptr<Termcap> termcap;
+        std::array<char, 2048> buffer;
     };
 
-    enum class PosixAnsiConsole::Text {
+    enum class PosixTerminal::Text {
         Off = 0,
         Bold = 1,
         Underscore = 4,
@@ -73,7 +91,7 @@ namespace sloked {
         Concealed = 8
     };
 
-    enum class PosixAnsiConsole::Foreground {
+    enum class PosixTerminal::Foreground {
         Black = 30,
         Red,
         Green,
@@ -84,7 +102,7 @@ namespace sloked {
         White
     };
 
-    enum class PosixAnsiConsole::Background {
+    enum class PosixTerminal::Background {
         Black = 40,
         Red,
         Green,
