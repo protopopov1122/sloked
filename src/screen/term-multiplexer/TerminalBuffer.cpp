@@ -170,18 +170,19 @@ namespace sloked {
             if (chr == '\n') {
                 this->ClearChars(this->width - line_width - 1);
                 line_width = 0;
+                if (this->line + 1 == this->height) {
+                    return;
+                }
                 this->SetPosition(this->line + 1, 0);
             } else {
-                if (line_width == this->width) {
-                    line_width = 0;
-                    this->SetPosition(this->line + 1, 0);
+                if (this->col + line_width < this->width - 1) {
+                    this->buffer[this->line * this->width + this->col].value = chr;
+                    this->buffer[this->line * this->width + this->col].updated = true;
+                    if (this->graphics) {
+                        this->buffer[this->line * this->width + this->col].graphics = std::make_unique<BufferedGraphicsMode>(*this->graphics);
+                    }
+                    this->col++;
                 }
-                this->buffer[this->line * this->width + this->col].value = chr;
-                this->buffer[this->line * this->width + this->col].updated = true;
-                if (this->graphics) {
-                    this->buffer[this->line * this->width + this->col].graphics = std::make_unique<BufferedGraphicsMode>(*this->graphics);
-                }
-                this->col++;
             }
         }
     }

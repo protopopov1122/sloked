@@ -3,6 +3,8 @@
 #include "sloked/screen/posix-term/PosixTerminal.h"
 #include "sloked/screen/term-multiplexer/TerminalWindow.h"
 #include "sloked/screen/term-multiplexer/TerminalBuffer.h"
+#include "sloked/screen/term-multiplexer/TerminalScreenView.h"
+#include "sloked/screen/term-multiplexer/TerminalSplitter.h"
 #include "sloked/text/TextChunk.h"
 #include "sloked/text/TextBlockHandle.h"
 #include "sloked/text/TextDocument.h"
@@ -42,27 +44,17 @@ int main(int argc, const char **argv) {
     TextDocument text(NewLine::LF, TextView::Open(view, NewLine::LF, blockFactory));
 
     PosixTerminal terminal;
-    BufferedTerminal console(terminal);
-
-    TerminalWindow console1(console, 10, 10, 90, 26, [&]() { return console.GetInput(); });
-    TerminalWindow console2(console, 20, 20, 90, 26, [&]() { return std::vector<SlokedKeyboardInput>{}; });
-    TerminalWindow console3(console, 95, 15, 90, 26, [&]() { return std::vector<SlokedKeyboardInput>{}; });
-
-    console.ClearScreen();
-    console1.SetGraphicsMode(SlokedTerminalBackground::Blue);
-    console1.ClearScreen();
+    BufferedTerminal buffConsole(terminal);
+    TerminalSplitter splitter(buffConsole, TerminalSplitter::Direction::Horizontal);
+    auto &console1 = splitter.NewWindow(TerminalSplitter::Constraints(0.3));
+    auto &console2 = splitter.NewWindow(TerminalSplitter::Constraints(0.4, 0, 15));
+    auto &temp = splitter.NewWindow(TerminalSplitter::Constraints(0.3));
+    TerminalSplitter splitter2(temp, TerminalSplitter::Direction::Vertical);
+    auto &console3 = splitter2.NewWindow(TerminalSplitter::Constraints(0.5));
     print(text, console1);
-    console2.SetGraphicsMode(SlokedTerminalText::Off);
-    console2.SetGraphicsMode(SlokedTerminalText::Bold);
-    console2.ClearScreen();
-    print(text, console2);
-    console3.SetGraphicsMode(SlokedTerminalText::Off);
-    console3.SetGraphicsMode(SlokedTerminalBackground::Red);
-    console3.ClearScreen();
-    print(text, console3);
-    
-    console.Flush();
-    buffer = console1.GetHeight() - 2;
+
+    buffConsole.Flush();
+    buffer = console1.GetHeight() - 3;
     console1.SetPosition(0, 0);
     int line = 0;
     int col = 0;
@@ -173,13 +165,13 @@ int main(int argc, const char **argv) {
         console1.SetGraphicsMode(SlokedTerminalBackground::Blue);
         print(text, console1);
         console2.SetGraphicsMode(SlokedTerminalText::Off);
-        console2.SetGraphicsMode(SlokedTerminalText::Bold);
+        console2.SetGraphicsMode(SlokedTerminalBackground::Yellow);
         print(text, console2);
         console3.SetGraphicsMode(SlokedTerminalText::Off);
         console3.SetGraphicsMode(SlokedTerminalBackground::Red);
         print(text, console3);
         console1.SetPosition(line, col);
-        console.Flush();
+        buffConsole.Flush();
     }
     return EXIT_SUCCESS;
 }

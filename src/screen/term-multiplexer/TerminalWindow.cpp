@@ -6,6 +6,16 @@ namespace sloked {
     TerminalWindow::TerminalWindow(SlokedTerminal &term, Column x, Line y, Column w, Line h, InputSource inputSource)
         : term(term), offset_x(x), offset_y(y), width(w), height(h), inputSource(std::move(inputSource)), col(0), line(0) {}
 
+    void TerminalWindow::Move(Column x, Line y) {
+        this->offset_x = x;
+        this->offset_y = y;
+    }
+
+    void TerminalWindow::Resize(Column w, Line h) {
+        this->width = w;
+        this->height = h;
+    }
+
     TerminalWindow::Column TerminalWindow::GetOffsetX() const {
         return this->offset_x;
     }
@@ -22,39 +32,33 @@ namespace sloked {
     }
 
     void TerminalWindow::SetPosition(Line y, Column x) {
-        if (y < this->height && x < this->width) {
-            this->line = y;
-            this->col = x;
-            this->term.SetPosition(this->offset_y + y, this->offset_x + x);
-        }
+        this->line = std::min(y, this->height - 1);
+        this->col = std::min(x, this->width - 1);
+        this->term.SetPosition(this->offset_y + this->line, this->offset_x + this->col);
     }
 
     void TerminalWindow::MoveUp(Line l) {
-        if (this->line >= l) {
-            this->line -= l;
-            this->term.MoveUp(l);
-        }
+        l = std::min(this->line, l);
+        this->line -= l;
+        this->term.MoveUp(l);
     }
 
     void TerminalWindow::MoveDown(Line l) {
-        if (this->line + l < this->height) {
-            this->line += l;
-            this->term.MoveDown(l);
-        }
+        l = std::min(this->line + l, this->height - 1) - this->line;
+        this->line += l;
+        this->term.MoveDown(l);
     }
 
     void TerminalWindow::MoveBackward(Column c) {
-        if (this->col >= c) {
-            this->col -= c;
-            this->term.MoveBackward(c);
-        }
+        c = std::min(this->col, c);
+        this->col -= c;
+        this->term.MoveBackward(c);
     }
 
     void TerminalWindow::MoveForward(Column c) {
-        if (this->col + c < this->width) {
-            this->col += c;
-            this->term.MoveForward(c);
-        }
+        c = std::min(this->col + c, this->width - 1) - this->col;
+        this->col += c;
+        this->term.MoveForward(c);
     }
 
     void TerminalWindow::ShowCursor(bool show) {
@@ -63,16 +67,15 @@ namespace sloked {
 
     void TerminalWindow::ClearScreen() {
         std::string cl(this->width, ' ');
-        for (std::size_t y = this->offset_y; y <= this->offset_y + this->height; y++) {
+        for (std::size_t y = this->offset_y; y < this->offset_y + this->height; y++) {
             this->term.SetPosition(y, this->offset_x);
             this->term.Write(cl);
         }
     }
 
     void TerminalWindow::ClearChars(Column c) {
-        if (this->col + c < this->width) {
-            this->term.ClearChars(c);
-        }
+        c = std::min(this->col + c, this->width - 1) - this->col;
+        this->term.ClearChars(c);
     }
 
     TerminalWindow::Column TerminalWindow::GetWidth() {
@@ -90,14 +93,14 @@ namespace sloked {
                 this->term.Write(buffer);
                 this->ClearChars(this->width - (this->col + buffer.size()) - 1);
                 buffer.clear();
+                if (this->line + 1 == this->height) {
+                    return;
+                }
                 this->SetPosition(this->line + 1, 0);
             } else {
-                if (buffer.size() == this->width) {
-                    this->term.Write(buffer);
-                    buffer.clear();
-                    this->SetPosition(this->line + 1, 0);
+                if (this->col + buffer.size() + 1 < this->width) {
+                    buffer.push_back(chr);
                 }
-                buffer.push_back(chr);
             }
         }
         if (!buffer.empty()) {
