@@ -40,7 +40,7 @@ int main(int argc, const char **argv) {
     TextDocument text(NewLine::LF, TextView::Open(view, NewLine::LF, blockFactory));
 
     PosixTerminal console;
-    int chr;
+    buffer = console.GetHeight() - 2;
     print(text, console);
     int line = 0;
     int col = 0;
@@ -53,7 +53,7 @@ int main(int argc, const char **argv) {
                 text.SetLine(offset + line, ln.substr(0, col) + std::get<0>(cmd) + ln.substr(col));
                 col += std::get<0>(cmd).size();
             } else switch (std::get<1>(cmd)) {
-                case PosixTerminalKey::ArrowUp:
+                case SlokedControlKey::ArrowUp:
                     line--;
                     if (line < 0) {
                         line = 0;
@@ -70,7 +70,7 @@ int main(int argc, const char **argv) {
                     }
                     break;
                 
-                case PosixTerminalKey::ArrowDown:
+                case SlokedControlKey::ArrowDown:
                     line++;
                     if (line > buffer) {
                         line = buffer;
@@ -87,14 +87,14 @@ int main(int argc, const char **argv) {
                     }
                     break;
                 
-                case PosixTerminalKey::ArrowLeft:
+                case SlokedControlKey::ArrowLeft:
                     col--;
                     if (col < 0) {
                         col = 0;
                     }
                     break;
                 
-                case PosixTerminalKey::ArrowRight:
+                case SlokedControlKey::ArrowRight:
                     col++;
                     if (col > text.GetLine(offset + line).size()) {
                         col = text.GetLine(offset + line).size();
@@ -104,7 +104,7 @@ int main(int argc, const char **argv) {
                     }
                     break;
 
-                case PosixTerminalKey::Enter: {
+                case SlokedControlKey::Enter: {
                     std::string ln{text.GetLine(offset + line)};
                     text.SetLine(offset + line, ln.substr(0, col));
                     text.InsertLine(offset + line, ln.substr(col));
@@ -116,7 +116,7 @@ int main(int argc, const char **argv) {
                     }
                 } break;
 
-                case PosixTerminalKey::Backspace:
+                case SlokedControlKey::Backspace:
                     if (col > 0) {
                         std::string ln{text.GetLine(offset + line)};
                         text.SetLine(offset + line, ln.substr(0, col - 1) + ln.substr(col));
@@ -137,11 +137,14 @@ int main(int argc, const char **argv) {
                     }
                     break;
                 
-                case PosixTerminalKey::F1: {
+                case SlokedControlKey::F1: {
                     std::ofstream of(argv[2]);
                     of << text;
                     return EXIT_SUCCESS;
                 }
+
+                default:
+                    break;
             }
         }
 
