@@ -1,20 +1,20 @@
-#ifndef SLOKED_SCREEN_POSIXTERM_ANSICONSOLE_H_
-#define SLOKED_SCREEN_POSIXTERM_ANSICONSOLE_H_
+#ifndef SLOKED_SCREEN_TERM_MULTIPLEXER_TERMINALWINDOW_H_
+#define SLOKED_SCREEN_TERM_MULTIPLEXER_TERMINALWINDOW_H_
 
-#include "sloked/Base.h"
 #include "sloked/screen/Terminal.h"
-#include <string>
-#include <memory>
+#include <functional>
 
 namespace sloked {
-    
-    class PosixTerminal : public SlokedTerminal {
-     public:
-        class Termcap;
 
-        PosixTerminal(FILE * = stdout, FILE * = stdin);
-        virtual ~PosixTerminal();
-    
+    class TerminalWindow : public SlokedTerminal {
+     public:
+        using InputSource = std::function<std::vector<SlokedKeyboardInput>()>;
+        TerminalWindow(SlokedTerminal &, Column, Line, Column, Line, InputSource);
+
+        Column GetOffsetX() const;
+        Line GetOffsetY() const;
+        TerminalWindow SubWindow(Column, Line, Column, Line, InputSource) const;
+
         void SetPosition(Line, Column) override;
         void MoveUp(Line) override;
         void MoveDown(Line) override;
@@ -35,11 +35,15 @@ namespace sloked {
         void SetGraphicsMode(SlokedTerminalForeground) override;
 
      private:
-        struct State;
-        FILE *GetOutputFile();
+        SlokedTerminal &term;
+        Column offset_x;
+        Line offset_y;
+        Column width;
+        Line height;
+        InputSource inputSource;
 
-        std::unique_ptr<State> state;
-        std::unique_ptr<Termcap> termcap;
+        Column col;
+        Line line;
     };
 }
 

@@ -6,6 +6,8 @@ endif
 
 sloked_src = [
   'src/screen/posix-term/PosixTerminal.cpp',
+  'src/screen/term-multiplexer/TerminalWindow.cpp',
+  'src/screen/term-multiplexer/TerminalBuffer.cpp',
   'src/main.cpp',
   'src/core/Error.cpp',
   'src/core/NewLine.cpp',

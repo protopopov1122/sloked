@@ -150,22 +150,39 @@ namespace sloked {
     }
 
     void PosixTerminal::MoveUp(Line l) {
-        fprintf(this->state->fd, this->termcap->GetString("UP"), l);
+        while (l--) {
+            fprintf(this->state->fd, this->termcap->GetString("up"));
+        }
         fflush(this->state->fd);
     }
 
     void PosixTerminal::MoveDown(Line l) {
-        fprintf(this->state->fd, this->termcap->GetString("DO"), l);
+        while (l--) {
+            fprintf(this->state->fd, this->termcap->GetString("do"));
+        }
         fflush(this->state->fd);
     }
 
     void PosixTerminal::MoveBackward(Column c) {
-        fprintf(this->state->fd, this->termcap->GetString("LE"), c);
+        while (c--) {
+            fprintf(this->state->fd, this->termcap->GetString("le"));
+        }
         fflush(this->state->fd);
     }
 
     void PosixTerminal::MoveForward(Column c) {
-        fprintf(this->state->fd, this->termcap->GetString("RI"), c);
+        while (c--) {
+            fprintf(this->state->fd, this->termcap->GetString("ri"));
+        }
+        fflush(this->state->fd);
+    }
+
+    void PosixTerminal::ShowCursor(bool show) {
+        if (show) {
+            fprintf(this->state->fd, this->termcap->GetString("ve"));
+        } else {
+            fprintf(this->state->fd, this->termcap->GetString("vi"));
+        }
         fflush(this->state->fd);
     }
 
@@ -174,9 +191,11 @@ namespace sloked {
         fflush(this->state->fd);
     }
 
-    void PosixTerminal::ClearLine() {
-        fprintf(this->state->fd, this->termcap->GetString("cd"));
+    void PosixTerminal::ClearChars(Column cols) {
+        std::string cl(cols, ' ');
+        fprintf(this->state->fd, cl.c_str());
         fflush(this->state->fd);
+        this->MoveBackward(cols);
     }
 
     unsigned int PosixTerminal::GetWidth() {

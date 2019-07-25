@@ -67,8 +67,9 @@ namespace sloked {
         virtual void MoveBackward(Column) = 0;
         virtual void MoveForward(Column) = 0;
 
+        virtual void ShowCursor(bool) = 0;
         virtual void ClearScreen() = 0;
-        virtual void ClearLine() = 0;
+        virtual void ClearChars(Column) = 0;
         virtual Column GetWidth() = 0;
         virtual Line GetHeight() = 0;
 
