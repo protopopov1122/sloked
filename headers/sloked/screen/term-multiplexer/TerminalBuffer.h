@@ -37,17 +37,17 @@ namespace sloked {
      private:
         void reset();
 
-        struct Grapheme {
+        struct Character {
             bool updated = false;
             std::unique_ptr<BufferedGraphicsMode> graphics;
-            std::string value;
+            char32_t value = '\0';
         };
 
         SlokedTerminal &term;
         const Encoding &encoding;
         bool cls;
         bool show_cursor;
-        Grapheme *buffer;
+        Character *buffer;
         std::unique_ptr<BufferedGraphicsMode> graphics;
         Line line;
         Column col;

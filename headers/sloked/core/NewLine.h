@@ -26,8 +26,8 @@ namespace sloked {
         friend std::ostream &operator<<(std::ostream &, const NewLine &);
 
         const std::size_t Width;
-        static const NewLine &LF;
-        static const NewLine &CRLF;
+        static const NewLine &AnsiLF;
+        static const NewLine &AnsiCRLF;
     
      private:
         std::string symbol;

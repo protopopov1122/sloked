@@ -4,25 +4,25 @@
 
 namespace sloked {
 
-    class LFNewLine : public NewLine {
+    class AnsiLFNewLine : public NewLine {
      public:
-        LFNewLine();
+        AnsiLFNewLine();
         void Iterate(std::string_view, Iterator) const override;
         std::size_t Count(std::string_view) const override;
     };
 
-    class CRLFNewLine : public NewLine {
+    class AnsiCRLFNewLine : public NewLine {
      public:
-        CRLFNewLine();
+        AnsiCRLFNewLine();
         void Iterate(std::string_view, Iterator) const override;
         std::size_t Count(std::string_view) const override;
     };
 
-    static LFNewLine LF_NewLine;
-    static CRLFNewLine CRLF_NewLine;
+    static AnsiLFNewLine AnsiLF_NewLine;
+    static AnsiCRLFNewLine AnsiCRLF_NewLine;
 
-    const NewLine &NewLine::LF = LF_NewLine;
-    const NewLine &NewLine::CRLF = CRLF_NewLine;
+    const NewLine &NewLine::AnsiLF = AnsiLF_NewLine;
+    const NewLine &NewLine::AnsiCRLF = AnsiCRLF_NewLine;
 
     NewLine::NewLine(const std::string &symbol)
         : Width(symbol.size()), symbol(symbol) {}
@@ -31,10 +31,10 @@ namespace sloked {
         return os << newline.symbol;
     }
 
-    LFNewLine::LFNewLine()
+    AnsiLFNewLine::AnsiLFNewLine()
         : NewLine("\n") {}
 
-    void LFNewLine::Iterate(std::string_view str, Iterator iter) const {
+    void AnsiLFNewLine::Iterate(std::string_view str, Iterator iter) const {
         for (std::size_t i = 0; i < str.size(); i++) {
             if (str[i] == '\n') {
                 iter(i);
@@ -42,14 +42,14 @@ namespace sloked {
         }
     }
 
-    std::size_t LFNewLine::Count(std::string_view str) const {
+    std::size_t AnsiLFNewLine::Count(std::string_view str) const {
         return std::count(str.begin(), str.end(), '\n') + 1;
     }
 
-    CRLFNewLine::CRLFNewLine()
+    AnsiCRLFNewLine::AnsiCRLFNewLine()
         : NewLine("\r\n") {}
 
-    void CRLFNewLine::Iterate(std::string_view str, Iterator iter) const {
+    void AnsiCRLFNewLine::Iterate(std::string_view str, Iterator iter) const {
         for (std::size_t i = 0; i < str.size(); i++) {
             if (i + 1 < str.size() && str[i] == '\r' && str[i + 1] == '\n') {
                 iter(i);
@@ -57,7 +57,7 @@ namespace sloked {
         }
     }
 
-    std::size_t CRLFNewLine::Count(std::string_view str) const {
+    std::size_t AnsiCRLFNewLine::Count(std::string_view str) const {
         std::size_t line = 1;
         for (std::size_t i = 0; i < str.size(); i++) {
             if (i + 1 < str.size() && str[i] == '\r' && str[i + 1] == '\n') {

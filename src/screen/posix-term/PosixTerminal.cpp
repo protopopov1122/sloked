@@ -44,11 +44,11 @@ namespace sloked {
     };
 
     static const std::vector<std::pair<std::string, std::string>> CompatConversions = {
-        // { "\033[A", "\033OA" },
-        // { "\033[B", "\033OB" },
-        // { "\033[C", "\033OC" },
-        // { "\033[D", "\033OD" },
-        // { "\033[H", "\033OH" }
+        { "\033[A", "\033OA" },
+        { "\033[B", "\033OB" },
+        { "\033[C", "\033OC" },
+        { "\033[D", "\033OD" },
+        { "\033[H", "\033OH" }
     };
 
     struct PosixTerminal::State {
@@ -262,7 +262,7 @@ namespace sloked {
     }    
 
     void PosixTerminal::SetGraphicsMode(SlokedTerminalText mode) {
-        unsigned int imode;
+        unsigned int imode = 0;
         switch (mode) {
             case SlokedTerminalText::Off:
                 imode = 0;

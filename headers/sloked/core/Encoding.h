@@ -18,7 +18,8 @@ namespace sloked {
 
         virtual std::size_t CodepointCount(const std::string &) const = 0;
         virtual std::pair<std::size_t, std::size_t> GetCodepoint(const std::string &, std::size_t) const = 0;
-        virtual bool IterateCodepoints(const std::string &, std::function<bool(std::size_t, std::size_t)>) const = 0;
+        virtual bool IterateCodepoints(const std::string &, std::function<bool(std::size_t, std::size_t, char32_t)>) const = 0;
+        virtual std::string Encode(char32_t) const = 0;
 
         static const Encoding &Utf8;
 

@@ -37,8 +37,8 @@ int main(int argc, const char **argv) {
         return EXIT_FAILURE;
     }
     PosixTextView view(open(argv[1], O_RDONLY, 0));
-    TextChunkFactory blockFactory(NewLine::LF);
-    TextDocument text(NewLine::LF, TextView::Open(view, NewLine::LF, blockFactory));
+    TextChunkFactory blockFactory(NewLine::AnsiLF);
+    TextDocument text(NewLine::AnsiLF, TextView::Open(view, NewLine::AnsiLF, blockFactory));
 
     PosixTerminal terminal;
     BufferedTerminal buffConsole(terminal, Encoding::Utf8);

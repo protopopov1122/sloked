@@ -43,7 +43,7 @@ namespace sloked {
         : term(term), encoding(encoding), cls(false), show_cursor(true), buffer(nullptr), graphics(nullptr), line(0), col(0) {
         this->width = term.GetWidth();
         this->height = term.GetHeight();
-        this->buffer = new Grapheme[this->width * this->height];
+        this->buffer = new Character[this->width * this->height];
     }
 
     BufferedTerminal::~BufferedTerminal() {
@@ -74,17 +74,17 @@ namespace sloked {
             if (i % this->width == 0) {
                 dump_buffer();
             }
-            const Grapheme &chr = this->buffer[i];
+            const Character &chr = this->buffer[i];
             if (chr.graphics != nullptr && (prev_g == nullptr || !(*chr.graphics == *prev_g))) {
                 dump_buffer();
                 chr.graphics->apply(term);
                 prev_g = chr.graphics.get();
             }
-            if (!chr.value.empty() && (chr.updated || forceUpdate)) {
+            if (chr.value != U'\0' && (chr.updated || forceUpdate)) {
                 if (buffer.empty()) {
                     buffer_start = i;
                 }
-                buffer.append(chr.value);
+                buffer.append(this->encoding.Encode(chr.value));
             } else {
                 dump_buffer();
             }
@@ -99,7 +99,7 @@ namespace sloked {
         this->width = term.GetWidth();
         this->height = term.GetHeight();
         delete[] this->buffer;
-        this->buffer = new Grapheme[this->width * this->height];
+        this->buffer = new Character[this->width * this->height];
     }
     
     void BufferedTerminal::SetPosition(Line l, Column c) {
@@ -140,7 +140,7 @@ namespace sloked {
     void BufferedTerminal::ClearScreen() {
         this->cls = true;
         for (std::size_t i = 0; i < this->width * this->height; i++) {
-            this->buffer[i] = Grapheme{};
+            this->buffer[i] = Character{};
             if (this->graphics) {
                 this->buffer[i].graphics = std::make_unique<BufferedGraphicsMode>(*this->graphics);
             }
@@ -149,9 +149,9 @@ namespace sloked {
 
     void BufferedTerminal::ClearChars(Column count) {
         for (Column col = 0; col < count && this->col + col < this->width; col++) {
-            Grapheme &chr = this->buffer[this->line * this->width + this->col + col];
-            if (!(chr.value != " ")) {
-                chr.value = " ";
+            Character &chr = this->buffer[this->line * this->width + this->col + col];
+            if (chr.value != U' ') {
+                chr.value = ' ';
                 chr.updated = true;
             }
         }
@@ -167,9 +167,8 @@ namespace sloked {
 
     void BufferedTerminal::Write(const std::string &str) {
         Column line_width = 0;
-        this->encoding.IterateCodepoints(str, [&](auto start, auto length) {
-            auto codepoint = str.substr(start, length);
-            if (codepoint == "\n") {
+        this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto codepoint) {
+            if (codepoint == U'\n') {
                 this->ClearChars(this->width - line_width - 1);
                 line_width = 0;
                 if (this->line + 1 == this->height) {

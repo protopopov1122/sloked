@@ -28,7 +28,7 @@ namespace sloked {
             }
         }
 
-        bool IterateCodepoints(const std::string &str, std::function<bool(std::size_t, std::size_t)> callback) const override {
+        bool IterateCodepoints(const std::string &str, std::function<bool(std::size_t, std::size_t, char32_t)> callback) const override {
             auto ustr = icu::UnicodeString::fromUTF8(str);
             std::size_t prev = 0;
             for (auto it = 0; it <= ustr.countChar32(); it++) {
@@ -42,12 +42,19 @@ namespace sloked {
                 buffer.clear();
                 icu::UnicodeString(ustr, 0, it).toUTF8String(buffer);
                 std::size_t end = buffer.size();
-                if (!callback(start, end - start)) {
+                if (!callback(start, end - start, ustr.char32At(prev))) {
                     return false;
                 }
                 prev = it;
             }
             return true;
+        }
+
+        std::string Encode(char32_t chr) const {
+            icu::UnicodeString ustr(static_cast<UChar32>(chr));
+            std::string str;
+            ustr.toUTF8String(str);
+            return str;
         }
     };
 
