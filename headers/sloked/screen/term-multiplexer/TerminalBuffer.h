@@ -1,6 +1,7 @@
 #ifndef SLOCKED_SCREEN_TERM_MULTIPLEXER_H_
 #define SLOCKED_SCREEN_TERM_MULTIPLEXER_H_
 
+#include "sloked/core/Encoding.h"
 #include "sloked/screen/Terminal.h"
 #include "sloked/screen/term-multiplexer/Graphics.h"
 #include <memory>
@@ -9,7 +10,7 @@ namespace sloked {
 
     class BufferedTerminal : public SlokedTerminal {
      public:
-        BufferedTerminal(SlokedTerminal &);
+        BufferedTerminal(SlokedTerminal &, const Encoding &);
         virtual ~BufferedTerminal();
 
         void Flush();
@@ -36,16 +37,17 @@ namespace sloked {
      private:
         void reset();
 
-        struct Character {
+        struct Grapheme {
             bool updated = false;
-            char value = '\0';
             std::unique_ptr<BufferedGraphicsMode> graphics;
+            std::string value;
         };
 
         SlokedTerminal &term;
+        const Encoding &encoding;
         bool cls;
         bool show_cursor;
-        Character *buffer;
+        Grapheme *buffer;
         std::unique_ptr<BufferedGraphicsMode> graphics;
         Line line;
         Column col;

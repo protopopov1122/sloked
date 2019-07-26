@@ -31,11 +31,11 @@ namespace sloked {
         return this->term == nullptr;
     }
 
-    std::unique_ptr<SlokedTerminal> TerminalScreenView::NewTerminal() {
+    std::unique_ptr<SlokedTerminal> TerminalScreenView::NewTerminal(const Encoding &encoding) {
         if (this->Empty()) {
             return nullptr;
         }
-        auto res = std::make_unique<TerminalWindow>(*this->term, 0, 0, this->columns, this->lines, [term = this->term]() {
+        auto res = std::make_unique<TerminalWindow>(*this->term, encoding, 0, 0, this->columns, this->lines, [term = this->term]() {
             return term->GetInput();
         });
         this->reset();

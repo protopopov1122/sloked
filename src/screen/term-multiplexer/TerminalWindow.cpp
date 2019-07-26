@@ -1,10 +1,11 @@
 #include "sloked/screen/term-multiplexer/TerminalWindow.h"
+#include "sloked/core/Encoding.h"
 #include <iostream>
 
 namespace sloked {
 
-    TerminalWindow::TerminalWindow(SlokedTerminal &term, Column x, Line y, Column w, Line h, InputSource inputSource)
-        : term(term), offset_x(x), offset_y(y), width(w), height(h), inputSource(std::move(inputSource)), col(0), line(0) {}
+    TerminalWindow::TerminalWindow(SlokedTerminal &term, const Encoding &encoding, Column x, Line y, Column w, Line h, InputSource inputSource)
+        : term(term), encoding(encoding), offset_x(x), offset_y(y), width(w), height(h), inputSource(std::move(inputSource)), col(0), line(0) {}
 
     void TerminalWindow::Move(Column x, Line y) {
         this->offset_x = x;
@@ -25,7 +26,7 @@ namespace sloked {
     }
 
     TerminalWindow TerminalWindow::SubWindow(Column x, Line y, Column w, Line h, InputSource inputSource) const {
-        return TerminalWindow(this->term,
+        return TerminalWindow(this->term, this->encoding,
             this->offset_x + x,
             this->offset_y + y,
             w, h, inputSource);
@@ -88,22 +89,27 @@ namespace sloked {
 
     void TerminalWindow::Write(const std::string &str) {
         std::string buffer;
-        for (const auto chr : str) {
-            if (chr == '\n') {
+        std::size_t count = 0;
+        bool res = this->encoding.IterateCodepoints(str, [&](auto start, auto length) {
+            std::string codepoint = str.substr(start, length);
+            if (codepoint == "\n") {
                 this->term.Write(buffer);
-                this->ClearChars(this->width - (this->col + buffer.size()) - 1);
                 buffer.clear();
+                this->ClearChars(this->width - (this->col + count) - 1);
+                count = 0;
                 if (this->line + 1 == this->height) {
-                    return;
+                    return false;
                 }
                 this->SetPosition(this->line + 1, 0);
             } else {
-                if (this->col + buffer.size() + 1 < this->width) {
-                    buffer.push_back(chr);
+                if (this->col + count + 1 < this->width) {
+                    buffer.append(codepoint);
+                    count++;
                 }
             }
-        }
-        if (!buffer.empty()) {
+            return true;
+        });
+        if (res && !buffer.empty()) {
             this->term.Write(buffer);
         }
     }

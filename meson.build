@@ -13,17 +13,21 @@ sloked_src = [
   'src/main.cpp',
   'src/core/Error.cpp',
   'src/core/NewLine.cpp',
+  'src/core/Encoding.cpp',
   'src/text/TextBlock.cpp',
   'src/text/TextChunk.cpp',
   'src/text/posix/TextFile.cpp',
   'src/text/TextBlockHandle.cpp',
   'src/text/TextRegion.cpp',
   'src/text/TextDocument.cpp',
-  'src/text/TextView.cpp'
+  'src/text/TextView.cpp',
+  'src/text/Cursor.cpp'
 ]
 
+cpp = meson.get_compiler('cpp')
 ncurses = dependency('ncurses')
+icu = cpp.find_library('icuuc')
 
 sloked = executable('sloked', sloked_src,
   include_directories : include_directories('headers'),
-  dependencies : [ncurses])
+  dependencies : [ncurses, icu])

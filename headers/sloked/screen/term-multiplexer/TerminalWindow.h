@@ -1,6 +1,7 @@
 #ifndef SLOKED_SCREEN_TERM_MULTIPLEXER_TERMINALWINDOW_H_
 #define SLOKED_SCREEN_TERM_MULTIPLEXER_TERMINALWINDOW_H_
 
+#include "sloked/core/Encoding.h"
 #include "sloked/screen/Terminal.h"
 #include "sloked/screen/term-multiplexer/Graphics.h"
 #include <functional>
@@ -10,7 +11,7 @@ namespace sloked {
     class TerminalWindow : public SlokedTerminal {
      public:
         using InputSource = std::function<std::vector<SlokedKeyboardInput>()>;
-        TerminalWindow(SlokedTerminal &, Column, Line, Column, Line, InputSource);
+        TerminalWindow(SlokedTerminal &, const Encoding &, Column, Line, Column, Line, InputSource);
 
         void Move(Column, Line);
         void Resize(Column, Line);
@@ -39,6 +40,7 @@ namespace sloked {
 
      private:
         SlokedTerminal &term;
+        const Encoding &encoding;
         Column offset_x;
         Line offset_y;
         Column width;

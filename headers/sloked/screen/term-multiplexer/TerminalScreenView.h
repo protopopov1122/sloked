@@ -1,6 +1,7 @@
 #ifndef SLOKED_SCREEN_TERM_MULTIPLEXER_TERMINALSCREENVIEW_H_
 #define SLOKED_SCREEN_TERM_MULTIPLEXER_TERMINALSCREENVIEW_H_
 
+#include "sloked/core/Encoding.h"
 #include "sloked/screen/Terminal.h"
 #include <memory>
 
@@ -17,7 +18,7 @@ namespace sloked {
         TerminalScreenView &operator=(TerminalScreenView &&);
 
         bool Empty() const;
-        std::unique_ptr<SlokedTerminal> NewTerminal();
+        std::unique_ptr<SlokedTerminal> NewTerminal(const Encoding &);
 
      private:
         void reset();

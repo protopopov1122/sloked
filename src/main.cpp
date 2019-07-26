@@ -10,12 +10,9 @@
 #include "sloked/text/TextDocument.h"
 #include "sloked/text/TextView.h"
 #include "sloked/text/posix/TextFile.h"
-#include <unistd.h>
-#include <cstdio>
-#include <sys/types.h>
+#include "sloked/text/Cursor.h"
 #include <fcntl.h>
 #include <fstream>
-#include <cstring>
 #include <sstream>
 
 using namespace sloked;
@@ -44,111 +41,53 @@ int main(int argc, const char **argv) {
     TextDocument text(NewLine::LF, TextView::Open(view, NewLine::LF, blockFactory));
 
     PosixTerminal terminal;
-    BufferedTerminal buffConsole(terminal);
-    TerminalSplitter splitter(buffConsole, TerminalSplitter::Direction::Horizontal);
+    BufferedTerminal buffConsole(terminal, Encoding::Utf8);
+    TerminalSplitter splitter(buffConsole, TerminalSplitter::Direction::Horizontal, Encoding::Utf8);
     auto &console1 = splitter.NewWindow(TerminalSplitter::Constraints(0.3));
     auto &console2 = splitter.NewWindow(TerminalSplitter::Constraints(0.4, 0, 15));
     auto &temp = splitter.NewWindow(TerminalSplitter::Constraints(0.3));
-    TerminalSplitter splitter2(temp, TerminalSplitter::Direction::Vertical);
+    TerminalSplitter splitter2(temp, TerminalSplitter::Direction::Vertical, Encoding::Utf8);
     auto &console3 = splitter2.NewWindow(TerminalSplitter::Constraints(0.5));
     print(text, console1);
 
+    console3.SetGraphicsMode(SlokedTerminalText::Off);
+    console3.SetGraphicsMode(SlokedTerminalBackground::Red);
+    console3.ClearScreen();
+
     buffConsole.Flush();
+    
     buffer = console1.GetHeight() - 3;
     console1.SetPosition(0, 0);
-    int line = 0;
-    int col = 0;
+    SlokedCursor cursor(text, Encoding::Utf8);
     while (true) {
         auto input = console1.GetInput();
 
         for (const auto &cmd : input) {
             if (cmd.index() == 0) {
-                std::string ln{text.GetLine(offset + line)};
-                text.SetLine(offset + line, ln.substr(0, col) + std::get<0>(cmd) + ln.substr(col));
-                col += std::get<0>(cmd).size();
+                cursor.Insert(std::get<0>(cmd));
             } else switch (std::get<1>(cmd)) {
                 case SlokedControlKey::ArrowUp:
-                    line--;
-                    if (line < 0) {
-                        line = 0;
-                        offset--;
-                        if (offset > text.GetLastLine()) {
-                            offset = 0;
-                        }
-                    }
-                    if (col > text.GetLine(offset + line).size()) {
-                        col = text.GetLine(offset + line).size();
-                    }
-                    if (col < 0) {
-                        col = 0;
-                    }
+                    cursor.MoveUp(1);
                     break;
                 
                 case SlokedControlKey::ArrowDown:
-                    line++;
-                    if (line > buffer) {
-                        line = buffer;
-                        offset++;
-                    }
-                    if (offset + line > text.GetLastLine()) {
-                        offset = text.GetLastLine() - line;
-                    }
-                    if (col > text.GetLine(offset + line).size()) {
-                        col = text.GetLine(offset + line).size();
-                    }
-                    if (col < 0) {
-                        col = 0;
-                    }
+                    cursor.MoveDown(1);
                     break;
                 
                 case SlokedControlKey::ArrowLeft:
-                    col--;
-                    if (col < 0) {
-                        col = 0;
-                    }
+                    cursor.MoveBackward(1);
                     break;
                 
                 case SlokedControlKey::ArrowRight:
-                    col++;
-                    if (col > text.GetLine(offset + line).size()) {
-                        col = text.GetLine(offset + line).size();
-                    }
-                    if (col < 0) {
-                        col = 0;
-                    }
+                    cursor.MoveForward(1);
                     break;
 
-                case SlokedControlKey::Enter: {
-                    std::string ln{text.GetLine(offset + line)};
-                    text.SetLine(offset + line, ln.substr(0, col));
-                    text.InsertLine(offset + line, ln.substr(col));
-                    line++;
-                    col = 0;
-                    if (line > buffer) {
-                        offset++;
-                        line--;
-                    }
-                } break;
+                case SlokedControlKey::Enter:
+                    cursor.NewLine();
+                    break;
 
                 case SlokedControlKey::Backspace:
-                    if (col > 0) {
-                        std::string ln{text.GetLine(offset + line)};
-                        text.SetLine(offset + line, ln.substr(0, col - 1) + ln.substr(col));
-                        if (col > 0) {
-                            col--;
-                        }
-                    } else if (offset + line > 0) {
-                        std::string ln1{text.GetLine(offset + line - 1)};
-                        std::string ln2{text.GetLine(offset + line)};
-                        text.SetLine(offset + line - 1, ln1 + ln2);
-                        text.EraseLine(offset + line);
-                        if (line == 0) {
-                            offset--;
-                        } else {
-                            line--;
-                        }
-                        col = ln1.size();
-                    }
+                    cursor.Remove();
                     break;
                 
                 case SlokedControlKey::F1: {
@@ -160,6 +99,12 @@ int main(int argc, const char **argv) {
                 default:
                     break;
             }
+            if (cursor.GetLine() - offset >= buffer && cursor.GetLine() >= buffer) {
+                offset = cursor.GetLine() - buffer;
+            }
+            if (cursor.GetLine() <= offset) {
+                offset -= offset - cursor.GetLine();
+            }
         }
 
         console1.SetGraphicsMode(SlokedTerminalBackground::Blue);
@@ -167,10 +112,10 @@ int main(int argc, const char **argv) {
         console2.SetGraphicsMode(SlokedTerminalText::Off);
         console2.SetGraphicsMode(SlokedTerminalBackground::Yellow);
         print(text, console2);
-        console3.SetGraphicsMode(SlokedTerminalText::Off);
-        console3.SetGraphicsMode(SlokedTerminalBackground::Red);
+        console2.SetGraphicsMode(SlokedTerminalText::Off);
+        console2.SetGraphicsMode(SlokedTerminalBackground::Red);
         print(text, console3);
-        console1.SetPosition(line, col);
+        console1.SetPosition(cursor.GetLine() - offset, cursor.GetColumn());
         buffConsole.Flush();
     }
     return EXIT_SUCCESS;

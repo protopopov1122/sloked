@@ -44,11 +44,11 @@ namespace sloked {
     };
 
     static const std::vector<std::pair<std::string, std::string>> CompatConversions = {
-        { "\033[A", "\033OA" },
-        { "\033[B", "\033OB" },
-        { "\033[C", "\033OC" },
-        { "\033[D", "\033OD" },
-        { "\033[H", "\033OH" }
+        // { "\033[A", "\033OA" },
+        // { "\033[B", "\033OB" },
+        // { "\033[C", "\033OC" },
+        // { "\033[D", "\033OD" },
+        // { "\033[H", "\033OH" }
     };
 
     struct PosixTerminal::State {
