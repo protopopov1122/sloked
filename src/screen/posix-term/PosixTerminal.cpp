@@ -1,6 +1,7 @@
 #include "sloked/screen/posix-term/PosixTerminal.h"
 #include <optional>
 #include <array>
+#include <cassert>
 #include <termcap.h>
 #include <termios.h>
 #include <sys/ioctl.h>
@@ -346,6 +347,10 @@ namespace sloked {
 
             case SlokedTerminalText::Concealed:
                 imode = 8;
+                break;
+            
+            default:
+                assert(false);
                 break;
         }
         if (!this->disable_flush) {

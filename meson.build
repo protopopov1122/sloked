@@ -26,8 +26,7 @@ sloked_src = [
 
 cpp = meson.get_compiler('cpp')
 ncurses = dependency('ncurses')
-icu = cpp.find_library('icuuc')
 
 sloked = executable('sloked', sloked_src,
   include_directories : include_directories('headers'),
-  dependencies : [ncurses, icu])
+  dependencies : [ncurses])
