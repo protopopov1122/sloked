@@ -3,7 +3,7 @@
 #include <iostream>
 
 namespace sloked {
-    
+
     void BufferedGraphicsMode::SetGraphicsMode(SlokedTerminalText mode) {
         if (mode == SlokedTerminalText::Off) {
             this->text.reset();
@@ -41,8 +41,8 @@ namespace sloked {
             this->foreground == g.foreground;
     }
 
-    BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding)
-        : term(term), encoding(encoding), cls(false), show_cursor(true), buffer(nullptr), line(0), col(0) {
+    BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding, const ScreenCharWidth &charWidth)
+        : term(term), encoding(encoding), charWidth(charWidth), cls(false), show_cursor(true), buffer(nullptr), line(0), col(0) {
         this->width = term.GetWidth();
         this->height = term.GetHeight();
         this->buffer = new Character[this->width * this->height];
@@ -166,14 +166,14 @@ namespace sloked {
                     return false;
                 }
                 this->SetPosition(this->line + 1, 0);
-            } else {
-                if (this->col < this->width) {
-                    Character &chr = this->buffer[this->line * this->width + this->col];
-                    chr.value = codepoint;
-                    chr.updated = true;
-                    chr.graphics = this->graphics;
-                    this->col++;
-                }
+            } else if (codepoint == U'\t') {
+                this->Write(this->charWidth.GetTab());
+            } else if (this->col < this->width) {
+                Character &chr = this->buffer[this->line * this->width + this->col];
+                chr.value = codepoint;
+                chr.updated = true;
+                chr.graphics = this->graphics;
+                this->col++;
             }
             return true;
         });

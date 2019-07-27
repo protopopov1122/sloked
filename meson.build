@@ -14,6 +14,7 @@ sloked_src = [
   'src/core/Error.cpp',
   'src/core/NewLine.cpp',
   'src/core/Encoding.cpp',
+  'src/screen/CharWidth.cpp',
   'src/text/TextBlock.cpp',
   'src/text/TextChunk.cpp',
   'src/text/posix/TextFile.cpp',

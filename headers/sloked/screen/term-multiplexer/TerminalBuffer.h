@@ -4,6 +4,7 @@
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/Terminal.h"
 #include "sloked/screen/term-multiplexer/Graphics.h"
+#include "sloked/screen/CharWidth.h"
 #include <memory>
 #include <optional>
 
@@ -11,7 +12,7 @@ namespace sloked {
 
     class BufferedTerminal : public SlokedTerminal {
      public:
-        BufferedTerminal(SlokedTerminal &, const Encoding &);
+        BufferedTerminal(SlokedTerminal &, const Encoding &, const ScreenCharWidth &);
         virtual ~BufferedTerminal();
 
         void Flush();
@@ -35,6 +36,7 @@ namespace sloked {
         void SetGraphicsMode(SlokedTerminalText) override;
         void SetGraphicsMode(SlokedTerminalBackground) override;
         void SetGraphicsMode(SlokedTerminalForeground) override;
+        
      private:
         void dump_buffer(std::u32string_view, std::size_t);
 
@@ -46,6 +48,7 @@ namespace sloked {
 
         SlokedTerminal &term;
         const Encoding &encoding;
+        const ScreenCharWidth &charWidth;
         bool cls;
         bool show_cursor;
         Character *buffer;

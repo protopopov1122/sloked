@@ -3,8 +3,8 @@
 
 namespace sloked {
 
-    TerminalSplitter::TerminalSplitter(SlokedTerminal &term, Direction dir, const Encoding &encoding)
-        : term(term), direction(dir), encoding(encoding) {}
+    TerminalSplitter::TerminalSplitter(SlokedTerminal &term, Direction dir, const Encoding &encoding, const ScreenCharWidth &charWidth)
+        : term(term), direction(dir), encoding(encoding), charWidth(charWidth) {}
 
     unsigned int TerminalSplitter::GetMinimum() const {
         unsigned int min = 0;
@@ -35,7 +35,7 @@ namespace sloked {
     }
 
     SlokedTerminal &TerminalSplitter::NewWindow(const Constraints &constraints) {
-        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, 0, 0, 0, 0, [&]() {
+        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charWidth, 0, 0, 0, 0, [&]() {
             return this->term.GetInput();
         });
         this->windows.push_back(std::make_pair(win, constraints));

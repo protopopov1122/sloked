@@ -3,6 +3,7 @@
 
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/Terminal.h"
+#include "sloked/screen/CharWidth.h"
 #include "sloked/screen/term-multiplexer/TerminalWindow.h"
 #include <vector>
 #include <memory>
@@ -14,7 +15,7 @@ namespace sloked {
         enum class Direction;
         class Constraints;
 
-        TerminalSplitter(SlokedTerminal &, Direction, const Encoding &);
+        TerminalSplitter(SlokedTerminal &, Direction, const Encoding &, const ScreenCharWidth &);
 
         unsigned int GetMinimum() const;
         unsigned int GetMaximum() const;
@@ -30,6 +31,7 @@ namespace sloked {
         SlokedTerminal &term;
         Direction direction;
         const Encoding &encoding;
+        const ScreenCharWidth &charWidth;
         std::vector<Window> windows;
     };
 

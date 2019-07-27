@@ -3,6 +3,7 @@
 
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/Terminal.h"
+#include "sloked/screen/CharWidth.h"
 #include "sloked/screen/term-multiplexer/Graphics.h"
 #include <functional>
 
@@ -11,7 +12,7 @@ namespace sloked {
     class TerminalWindow : public SlokedTerminal {
      public:
         using InputSource = std::function<std::vector<SlokedKeyboardInput>()>;
-        TerminalWindow(SlokedTerminal &, const Encoding &, Column, Line, Column, Line, InputSource);
+        TerminalWindow(SlokedTerminal &, const Encoding &, const ScreenCharWidth &, Column, Line, Column, Line, InputSource);
 
         void Move(Column, Line);
         void Resize(Column, Line);
@@ -43,6 +44,7 @@ namespace sloked {
      private:
         SlokedTerminal &term;
         const Encoding &encoding;
+        const ScreenCharWidth &charWidth;
         Column offset_x;
         Line offset_y;
         Column width;

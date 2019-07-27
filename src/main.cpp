@@ -11,6 +11,7 @@
 #include "sloked/text/TextView.h"
 #include "sloked/text/posix/TextFile.h"
 #include "sloked/text/Cursor.h"
+#include "sloked/screen/CharWidth.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
@@ -40,10 +41,11 @@ int main(int argc, const char **argv) {
     TextChunkFactory blockFactory(NewLine::AnsiLF);
     TextDocument text(NewLine::AnsiLF, TextView::Open(view, NewLine::AnsiLF, blockFactory));
     SlokedCursor cursor(text, Encoding::Utf8);
+    ScreenCharWidth charWidth;
 
     PosixTerminal terminal;
-    BufferedTerminal console(terminal, Encoding::Utf8);
-    TerminalSplitter splitter(console, TerminalSplitter::Direction::Horizontal, Encoding::Utf8);
+    BufferedTerminal console(terminal, Encoding::Utf8, charWidth);
+    TerminalSplitter splitter(console, TerminalSplitter::Direction::Horizontal, Encoding::Utf8, charWidth);
     TerminalTabber tabber(splitter.NewWindow(TerminalSplitter::Constraints(0.6)));
     auto &tab1 = tabber.NewTab();
     auto &tab2 = tabber.NewTab();
@@ -63,7 +65,7 @@ int main(int argc, const char **argv) {
         print(text, tab3);
         pane4.SetGraphicsMode(SlokedTerminalBackground::Magenta);
         print(text, pane4);
-        tabber.GetTab(tabber.GetCurrentTab())->SetPosition(cursor.GetLine() - offset, cursor.GetColumn());
+        tabber.GetTab(tabber.GetCurrentTab())->SetPosition(cursor.GetLine() - offset, charWidth.GetRealPosition(std::string {text.GetLine(cursor.GetLine())}, cursor.GetColumn(), Encoding::Utf8));
         console.Flush();
     };
     

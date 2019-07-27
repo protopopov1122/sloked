@@ -1,4 +1,5 @@
 #include "sloked/text/Cursor.h"
+#include <iostream>
 
 namespace sloked {
 
@@ -43,6 +44,7 @@ namespace sloked {
         current.insert(pos.first + pos.second, frag);
         this->column += this->encoding.CodepointCount(frag);
         this->text.SetLine(this->line, current);
+        this->UpdateCursor();
     }
 
     void SlokedCursor::NewLine() {

@@ -1,11 +1,12 @@
 #include "sloked/screen/term-multiplexer/TerminalWindow.h"
 #include "sloked/core/Encoding.h"
+#include "sloked/screen/CharWidth.h"
 #include <iostream>
 
 namespace sloked {
 
-    TerminalWindow::TerminalWindow(SlokedTerminal &term, const Encoding &encoding, Column x, Line y, Column w, Line h, InputSource inputSource)
-        : term(term), encoding(encoding), offset_x(x), offset_y(y), width(w), height(h), inputSource(std::move(inputSource)), col(0), line(0) {}
+    TerminalWindow::TerminalWindow(SlokedTerminal &term, const Encoding &encoding, const ScreenCharWidth &charWidth, Column x, Line y, Column w, Line h, InputSource inputSource)
+        : term(term), encoding(encoding), charWidth(charWidth), offset_x(x), offset_y(y), width(w), height(h), inputSource(std::move(inputSource)), col(0), line(0) {}
 
     void TerminalWindow::Move(Column x, Line y) {
         this->offset_x = x;
@@ -26,7 +27,7 @@ namespace sloked {
     }
 
     TerminalWindow TerminalWindow::SubWindow(Column x, Line y, Column w, Line h, InputSource inputSource) const {
-        return TerminalWindow(this->term, this->encoding,
+        return TerminalWindow(this->term, this->encoding, this->charWidth,
             this->offset_x + x,
             this->offset_y + y,
             w, h, inputSource);
@@ -104,7 +105,7 @@ namespace sloked {
             } else {
                 if (this->col + count + 1 < this->width) {;
                     buffer.append(view.substr(start, length));
-                    count++;
+                    count += this->charWidth.GetCharWidth(codepoint);
                 }
             }
             return true;

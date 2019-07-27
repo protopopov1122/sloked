@@ -3,6 +3,7 @@
 
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/Terminal.h"
+#include "sloked/screen/CharWidth.h"
 #include <memory>
 
 namespace sloked {
@@ -18,7 +19,7 @@ namespace sloked {
         TerminalScreenView &operator=(TerminalScreenView &&);
 
         bool Empty() const;
-        std::unique_ptr<SlokedTerminal> NewTerminal(const Encoding &);
+        std::unique_ptr<SlokedTerminal> NewTerminal(const Encoding &, const ScreenCharWidth &);
 
      private:
         void reset();
