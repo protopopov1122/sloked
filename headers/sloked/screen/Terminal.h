@@ -13,7 +13,8 @@ namespace sloked {
         Underscore,
         Blink,
         Reverse,
-        Concealed
+        Concealed,
+        Count
     };
 
     enum class SlokedTerminalForeground {
@@ -79,6 +80,8 @@ namespace sloked {
         virtual void SetGraphicsMode(SlokedTerminalText) = 0;
         virtual void SetGraphicsMode(SlokedTerminalBackground) = 0;
         virtual void SetGraphicsMode(SlokedTerminalForeground) = 0;
+
+        virtual void Flush(bool) {}
 
         template <typename ... M>
         void SetGraphicsMode(M ... modes) {

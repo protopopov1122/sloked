@@ -3,44 +3,46 @@
 #include <iostream>
 
 namespace sloked {
-
+    
     void BufferedGraphicsMode::SetGraphicsMode(SlokedTerminalText mode) {
         if (mode == SlokedTerminalText::Off) {
-            this->text.clear();
-            this->background.reset();
-            this->foreground.reset();
+            this->text.reset();
+            this->background = None;
+            this->foreground = None;
         }
-        this->text.insert(mode);
+        this->text.set(static_cast<int>(mode));
     }
 
     void BufferedGraphicsMode::SetGraphicsMode(SlokedTerminalBackground mode) {
-        this->background = mode;
+        this->background = static_cast<uint32_t>(mode);
     }
 
     void BufferedGraphicsMode::SetGraphicsMode(SlokedTerminalForeground mode) {
-        this->foreground = mode;
+        this->foreground = static_cast<uint32_t>(mode);
     }
 
-    void BufferedGraphicsMode::apply(SlokedTerminal &term) {
-        for (const auto mode : this->text) {
-            term.SetGraphicsMode(mode);
+    void BufferedGraphicsMode::apply(SlokedTerminal &term) const {
+        for (std::size_t i = 0; i < this->text.size(); i++) {
+            if (text[i]) {
+                term.SetGraphicsMode(static_cast<SlokedTerminalText>(i));
+            }
         }
-        if (this->background.has_value()) {
-            term.SetGraphicsMode(this->background.value());
+        if (this->background != None) {
+            term.SetGraphicsMode(static_cast<SlokedTerminalBackground>(this->background));
         }
-        if (this->foreground.has_value()) {
-            term.SetGraphicsMode(this->foreground.value());
+        if (this->foreground != None) {
+            term.SetGraphicsMode(static_cast<SlokedTerminalForeground>(this->foreground));
         }
     }
 
-    bool BufferedGraphicsMode::operator==(const BufferedGraphicsMode &g) {
+    bool BufferedGraphicsMode::operator==(const BufferedGraphicsMode &g) const {
         return this->text == g.text &&
             this->background == g.background &&
             this->foreground == g.foreground;
     }
 
     BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding)
-        : term(term), encoding(encoding), cls(false), show_cursor(true), buffer(nullptr), graphics(nullptr), line(0), col(0) {
+        : term(term), encoding(encoding), cls(false), show_cursor(true), buffer(nullptr), line(0), col(0) {
         this->width = term.GetWidth();
         this->height = term.GetHeight();
         this->buffer = new Character[this->width * this->height];
@@ -51,48 +53,38 @@ namespace sloked {
     }
 
     void BufferedTerminal::Flush() {
-        bool forceUpdate = false;
-        if (this->cls) {
-            this->term.ClearScreen();
-            forceUpdate = true;
-        }
-
+        this->term.Flush(false);
         this->term.ShowCursor(false);
-        std::string buffer;
+        std::unique_ptr<char32_t[]> buffer(new char32_t[this->width * this->height]);
+        std::size_t buffer_ptr = 0;
         std::size_t buffer_start = 0;
-        auto dump_buffer = [&]() {
-            if (!buffer.empty()) {
-                Line l = buffer_start / this->width;
-                Column c = buffer_start % this->width;
-                term.SetPosition(l, c);
-                term.Write(buffer);
-                buffer.clear();
-            }
-        };
-        BufferedGraphicsMode *prev_g = nullptr;
+
+        BufferedGraphicsMode prev_g;
         for (std::size_t i = 0; i < this->width * this->height; i++) {
-            if (i % this->width == 0) {
-                dump_buffer();
+            Character &chr = this->buffer[i];
+            if (chr.graphics.has_value() && !(chr.graphics.value() == prev_g)) {
+                this->dump_buffer(std::u32string_view(buffer.get(), buffer_ptr), buffer_start);
+                buffer_ptr = 0;
+                chr.graphics.value().apply(term);
+                prev_g = chr.graphics.value();
             }
-            const Character &chr = this->buffer[i];
-            if (chr.graphics != nullptr && (prev_g == nullptr || !(*chr.graphics == *prev_g))) {
-                dump_buffer();
-                chr.graphics->apply(term);
-                prev_g = chr.graphics.get();
-            }
-            if (chr.value != U'\0' && (chr.updated || forceUpdate)) {
-                if (buffer.empty()) {
+            if (chr.value != U'\0' && (chr.updated || this->cls)) {
+                if (!buffer_ptr) {
                     buffer_start = i;
                 }
-                buffer.append(this->encoding.Encode(chr.value));
+                buffer[buffer_ptr++] = chr.value;
             } else {
-                dump_buffer();
+                this->dump_buffer(std::u32string_view(buffer.get(), buffer_ptr), buffer_start);
+                buffer_ptr = 0;
             }
+            chr.updated = false;
+            chr.graphics.reset();
         }
-        dump_buffer();
+        this->cls = false;
+        this->dump_buffer(std::u32string_view(buffer.get(), buffer_ptr), buffer_start);
         this->term.SetPosition(this->line, this->col);
         this->term.ShowCursor(this->show_cursor);
-        this->reset();
+        this->term.Flush(true);
     }
 
     void BufferedTerminal::UpdateSize() {
@@ -140,16 +132,17 @@ namespace sloked {
     void BufferedTerminal::ClearScreen() {
         this->cls = true;
         for (std::size_t i = 0; i < this->width * this->height; i++) {
-            this->buffer[i] = Character{};
-            if (this->graphics) {
-                this->buffer[i].graphics = std::make_unique<BufferedGraphicsMode>(*this->graphics);
-            }
+            this->buffer[i].value = U' ';
+            this->buffer[i].updated = false;
+            this->buffer[i].graphics = this->graphics;
         }
     }
 
     void BufferedTerminal::ClearChars(Column count) {
-        for (Column col = 0; col < count && this->col + col < this->width; col++) {
-            Character &chr = this->buffer[this->line * this->width + this->col + col];
+        Column max = std::min(this->col + count, this->width) - this->col;
+        std::size_t idx = this->line * this->width + this->col;
+        while (max--) {
+            Character &chr = this->buffer[idx++];
             if (chr.value != U' ') {
                 chr.value = ' ';
                 chr.updated = true;
@@ -166,25 +159,21 @@ namespace sloked {
     }
 
     void BufferedTerminal::Write(const std::string &str) {
-        Column line_width = 0;
         this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto codepoint) {
             if (codepoint == U'\n') {
-                this->ClearChars(this->width - line_width - 1);
-                line_width = 0;
+                this->ClearChars(this->width - this->col);
                 if (this->line + 1 == this->height) {
                     return false;
                 }
                 this->SetPosition(this->line + 1, 0);
             } else {
-                if (this->col + line_width < this->width - 1) {
-                    this->buffer[this->line * this->width + this->col].value = codepoint;
-                    this->buffer[this->line * this->width + this->col].updated = true;
-                    if (this->graphics) {
-                        this->buffer[this->line * this->width + this->col].graphics = std::make_unique<BufferedGraphicsMode>(*this->graphics);
-                    }
+                if (this->col < this->width) {
+                    Character &chr = this->buffer[this->line * this->width + this->col];
+                    chr.value = codepoint;
+                    chr.updated = true;
+                    chr.graphics = this->graphics;
                     this->col++;
-                    line_width++;
-                }        
+                }
             }
             return true;
         });
@@ -195,31 +184,23 @@ namespace sloked {
     }
 
     void BufferedTerminal::SetGraphicsMode(SlokedTerminalText mode) {
-        if (this->graphics == nullptr) {
-            this->graphics = std::make_unique<BufferedGraphicsMode>();
-        }
-        this->graphics->SetGraphicsMode(mode);
+        this->graphics.SetGraphicsMode(mode);
     }
 
     void BufferedTerminal::SetGraphicsMode(SlokedTerminalBackground mode) {
-        if (this->graphics == nullptr) {
-            this->graphics = std::make_unique<BufferedGraphicsMode>();
-        }
-        this->graphics->SetGraphicsMode(mode);
+        this->graphics.SetGraphicsMode(mode);
     }
 
     void BufferedTerminal::SetGraphicsMode(SlokedTerminalForeground mode) {
-        if (this->graphics == nullptr) {
-            this->graphics = std::make_unique<BufferedGraphicsMode>();
-        }
-        this->graphics->SetGraphicsMode(mode);
+        this->graphics.SetGraphicsMode(mode);
     }
 
-    void BufferedTerminal::reset() {
-        this->cls = false;
-        for (std::size_t i = 0; i < this->width * this->height; i++) {
-            this->buffer[i].updated = false;
-            this->buffer[i].graphics = nullptr;
+    void BufferedTerminal::dump_buffer(std::u32string_view str, std::size_t buffer_start) {
+        if (!str.empty()) {
+            Line l = buffer_start / this->width;
+            Column c = buffer_start % this->width;
+            this->term.SetPosition(l, c);
+            this->term.Write(this->encoding.Encode(str));
         }
     }
 }

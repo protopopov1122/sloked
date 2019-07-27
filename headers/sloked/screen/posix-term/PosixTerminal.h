@@ -5,6 +5,7 @@
 #include "sloked/screen/Terminal.h"
 #include <string>
 #include <memory>
+#include <sstream>
 
 namespace sloked {
     
@@ -34,12 +35,16 @@ namespace sloked {
         void SetGraphicsMode(SlokedTerminalBackground) override;
         void SetGraphicsMode(SlokedTerminalForeground) override;
 
+        void Flush(bool) override;
+
      private:
         struct State;
         FILE *GetOutputFile();
 
         std::unique_ptr<State> state;
         std::unique_ptr<Termcap> termcap;
+        bool disable_flush;
+        std::stringstream buffer;
     };
 }
 

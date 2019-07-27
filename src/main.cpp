@@ -3,8 +3,8 @@
 #include "sloked/screen/posix-term/PosixTerminal.h"
 #include "sloked/screen/term-multiplexer/TerminalWindow.h"
 #include "sloked/screen/term-multiplexer/TerminalBuffer.h"
-#include "sloked/screen/term-multiplexer/TerminalScreenView.h"
 #include "sloked/screen/term-multiplexer/TerminalSplitter.h"
+#include "sloked/screen/term-multiplexer/TerminalTabber.h"
 #include "sloked/text/TextChunk.h"
 #include "sloked/text/TextBlockHandle.h"
 #include "sloked/text/TextDocument.h"
@@ -39,28 +39,38 @@ int main(int argc, const char **argv) {
     PosixTextView view(open(argv[1], O_RDONLY, 0));
     TextChunkFactory blockFactory(NewLine::AnsiLF);
     TextDocument text(NewLine::AnsiLF, TextView::Open(view, NewLine::AnsiLF, blockFactory));
+    SlokedCursor cursor(text, Encoding::Utf8);
 
     PosixTerminal terminal;
-    BufferedTerminal buffConsole(terminal, Encoding::Utf8);
-    TerminalSplitter splitter(buffConsole, TerminalSplitter::Direction::Horizontal, Encoding::Utf8);
-    auto &console1 = splitter.NewWindow(TerminalSplitter::Constraints(0.3));
-    auto &console2 = splitter.NewWindow(TerminalSplitter::Constraints(0.4, 0, 15));
-    auto &temp = splitter.NewWindow(TerminalSplitter::Constraints(0.3));
-    TerminalSplitter splitter2(temp, TerminalSplitter::Direction::Vertical, Encoding::Utf8);
-    auto &console3 = splitter2.NewWindow(TerminalSplitter::Constraints(0.5));
-    print(text, console1);
+    BufferedTerminal console(terminal, Encoding::Utf8);
+    TerminalSplitter splitter(console, TerminalSplitter::Direction::Horizontal, Encoding::Utf8);
+    TerminalTabber tabber(splitter.NewWindow(TerminalSplitter::Constraints(0.6)));
+    auto &tab1 = tabber.NewTab();
+    auto &tab2 = tabber.NewTab();
+    auto &tab3 = tabber.NewTab();
+    auto &pane4 = splitter.NewWindow(TerminalSplitter::Constraints(0.3));
 
-    console3.SetGraphicsMode(SlokedTerminalText::Off);
-    console3.SetGraphicsMode(SlokedTerminalBackground::Red);
-    console3.ClearScreen();
-
-    buffConsole.Flush();
+    const auto flush = [&]() {
+        console.SetGraphicsMode(SlokedTerminalText::Off);
+        console.ClearScreen();
+        tab1.SetGraphicsMode(SlokedTerminalBackground::Blue);
+        print(text, tab1);
+        tab2.SetGraphicsMode(SlokedTerminalText::Off);
+        tab2.SetGraphicsMode(SlokedTerminalBackground::Yellow);
+        print(text, tab2);
+        tab3.SetGraphicsMode(SlokedTerminalText::Off);
+        tab3.SetGraphicsMode(SlokedTerminalBackground::Red);
+        print(text, tab3);
+        pane4.SetGraphicsMode(SlokedTerminalBackground::Magenta);
+        print(text, pane4);
+        tabber.GetTab(tabber.GetCurrentTab())->SetPosition(cursor.GetLine() - offset, cursor.GetColumn());
+        console.Flush();
+    };
     
-    buffer = console1.GetHeight() - 3;
-    console1.SetPosition(0, 0);
-    SlokedCursor cursor(text, Encoding::Utf8);
+    buffer = terminal.GetHeight() - 1;
+    flush();
     while (true) {
-        auto input = console1.GetInput();
+        auto input = tabber.GetTab(tabber.GetCurrentTab())->GetInput();
 
         for (const auto &cmd : input) {
             if (cmd.index() == 0) {
@@ -90,11 +100,23 @@ int main(int argc, const char **argv) {
                     cursor.Remove();
                     break;
                 
-                case SlokedControlKey::F1: {
+                case SlokedControlKey::F9: {
                     std::ofstream of(argv[2]);
                     of << text;
                     return EXIT_SUCCESS;
                 }
+
+                case SlokedControlKey::F1:
+                    tabber.SelectTab(0);
+                    break;
+
+                case SlokedControlKey::F2:
+                    tabber.SelectTab(1);
+                    break;
+
+                case SlokedControlKey::F3:
+                    tabber.SelectTab(2);
+                    break;
 
                 default:
                     break;
@@ -107,16 +129,7 @@ int main(int argc, const char **argv) {
             }
         }
 
-        console1.SetGraphicsMode(SlokedTerminalBackground::Blue);
-        print(text, console1);
-        console2.SetGraphicsMode(SlokedTerminalText::Off);
-        console2.SetGraphicsMode(SlokedTerminalBackground::Yellow);
-        print(text, console2);
-        console2.SetGraphicsMode(SlokedTerminalText::Off);
-        console2.SetGraphicsMode(SlokedTerminalBackground::Red);
-        print(text, console3);
-        console1.SetPosition(cursor.GetLine() - offset, cursor.GetColumn());
-        buffConsole.Flush();
+        flush();
     }
     return EXIT_SUCCESS;
 }

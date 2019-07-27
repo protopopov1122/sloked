@@ -1,6 +1,7 @@
 #include "sloked/core/Encoding.h"
 #include <unicode/unistr.h>
 #include <unicode/brkiter.h>
+#include <iostream>
 
 namespace sloked {
 
@@ -51,10 +52,17 @@ namespace sloked {
         }
 
         std::string Encode(char32_t chr) const {
-            icu::UnicodeString ustr(static_cast<UChar32>(chr));
-            std::string str;
-            ustr.toUTF8String(str);
-            return str;
+            auto ustr = icu::UnicodeString(static_cast<UChar32>(chr));
+            std::string buffer;
+            ustr.toUTF8String(buffer);
+            return buffer;
+        }
+
+        std::string Encode(std::u32string_view u32str) const override {
+            auto ustr = icu::UnicodeString::fromUTF32(reinterpret_cast<const UChar32 *>(u32str.data()), u32str.size());
+            std::string buffer;
+            ustr.toUTF8String(buffer);
+            return buffer;
         }
     };
 

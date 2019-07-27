@@ -38,6 +38,8 @@ namespace sloked {
         void SetGraphicsMode(SlokedTerminalBackground) override;
         void SetGraphicsMode(SlokedTerminalForeground) override;
 
+        void Flush(bool) override;
+
      private:
         SlokedTerminal &term;
         const Encoding &encoding;

@@ -134,7 +134,8 @@ namespace sloked {
 
     PosixTerminal::PosixTerminal(FILE *fd, FILE *input)
         : state(std::make_unique<State>(fd, input)),
-          termcap(std::make_unique<Termcap>(std::string(getenv("TERM")))) {
+          termcap(std::make_unique<Termcap>(std::string(getenv("TERM")))),
+          disable_flush(false) {
         fprintf(this->state->fd, this->termcap->GetString("ti"));
         fflush(this->state->fd);
     }
@@ -145,56 +146,100 @@ namespace sloked {
     }
 
     void PosixTerminal::SetPosition(Line l, Column c) {
-        fprintf(this->state->fd, "%s", tgoto(this->termcap->GetString("cm"), c, l));
-        fflush(this->state->fd);
+        if (!this->disable_flush) {
+            fprintf(this->state->fd, "%s", tgoto(this->termcap->GetString("cm"), c, l));
+            fflush(this->state->fd);
+        } else {
+            this->buffer << tgoto(this->termcap->GetString("cm"), c, l);
+        }
     }
 
     void PosixTerminal::MoveUp(Line l) {
-        while (l--) {
-            fprintf(this->state->fd, this->termcap->GetString("up"));
+        if (!this->disable_flush) {
+            while (l--) {
+                fprintf(this->state->fd, this->termcap->GetString("up"));
+            }
+            fflush(this->state->fd);
+        } else {
+            while (l--) {
+                this->buffer << this->termcap->GetString("up");
+            }
         }
-        fflush(this->state->fd);
     }
 
     void PosixTerminal::MoveDown(Line l) {
-        while (l--) {
-            fprintf(this->state->fd, this->termcap->GetString("do"));
+        if (!this->disable_flush) {
+            while (l--) {
+                fprintf(this->state->fd, this->termcap->GetString("do"));
+            }
+            fflush(this->state->fd);
+        } else {
+            while (l--) {
+                this->buffer << this->termcap->GetString("do");
+            }
         }
-        fflush(this->state->fd);
     }
 
     void PosixTerminal::MoveBackward(Column c) {
-        while (c--) {
-            fprintf(this->state->fd, this->termcap->GetString("le"));
+        if (!this->disable_flush) {
+            while (c--) {
+                fprintf(this->state->fd, this->termcap->GetString("le"));
+            }
+            fflush(this->state->fd);
+        } else {
+            while (c--) {
+                this->buffer << this->termcap->GetString("le");
+            }
         }
-        fflush(this->state->fd);
     }
 
     void PosixTerminal::MoveForward(Column c) {
-        while (c--) {
-            fprintf(this->state->fd, this->termcap->GetString("ri"));
+        if (!this->disable_flush) {
+            while (c--) {
+                fprintf(this->state->fd, this->termcap->GetString("ri"));
+            }
+            fflush(this->state->fd);
+        } else {
+            while (c--) {
+                this->buffer << this->termcap->GetString("ri");
+            }
         }
-        fflush(this->state->fd);
     }
 
     void PosixTerminal::ShowCursor(bool show) {
-        if (show) {
-            fprintf(this->state->fd, this->termcap->GetString("ve"));
+        if (!this->disable_flush) {
+            if (show) {
+                fprintf(this->state->fd, this->termcap->GetString("ve"));
+            } else {
+                fprintf(this->state->fd, this->termcap->GetString("vi"));
+            }
+            fflush(this->state->fd);
         } else {
-            fprintf(this->state->fd, this->termcap->GetString("vi"));
+            if (show) {
+                this->buffer << this->termcap->GetString("ve");
+            } else {
+                this->buffer << this->termcap->GetString("vi");
+            }
         }
-        fflush(this->state->fd);
     }
 
     void PosixTerminal::ClearScreen() {
-        fprintf(this->state->fd, this->termcap->GetString("cl"));
-        fflush(this->state->fd);
+        if (!this->disable_flush) {
+            fprintf(this->state->fd, this->termcap->GetString("cl"));
+            fflush(this->state->fd);
+        } else {
+            this->buffer << this->termcap->GetString("cl");
+        }
     }
 
     void PosixTerminal::ClearChars(Column cols) {
         std::string cl(cols, ' ');
-        fprintf(this->state->fd, cl.c_str());
-        fflush(this->state->fd);
+        if (!this->disable_flush) {
+            fprintf(this->state->fd, cl.c_str());
+            fflush(this->state->fd);
+        } else {
+            this->buffer << cl;
+        }
         this->MoveBackward(cols);
     }
 
@@ -211,8 +256,24 @@ namespace sloked {
     }
 
     void PosixTerminal::Write(const std::string &str) {
-        fprintf(this->state->fd, "%s", str.c_str());
-        fflush(this->state->fd);
+        if (!this->disable_flush) {
+            fprintf(this->state->fd, "%s", str.c_str());
+            fflush(this->state->fd);
+        } else {
+            this->buffer << str;
+        }
+    }
+
+    void PosixTerminal::Flush(bool flush) {
+        if (flush) {
+            fprintf(this->state->fd, "%s", this->buffer.str().c_str());
+            fflush(this->state->fd);
+            this->buffer.clear();
+            this->buffer.str(std::string());
+            this->disable_flush = false;
+        } else {
+            this->disable_flush = true;
+        }
     }
 
     FILE *PosixTerminal::GetOutputFile() {
@@ -258,7 +319,6 @@ namespace sloked {
     }
 
     void set_terminal_mode(FILE *fd, unsigned int mode) {
-        fprintf(fd, "\033[%um", static_cast<unsigned int>(mode));
     }    
 
     void PosixTerminal::SetGraphicsMode(SlokedTerminalText mode) {
@@ -288,14 +348,26 @@ namespace sloked {
                 imode = 8;
                 break;
         }
-        set_terminal_mode(this->state->fd, imode);
+        if (!this->disable_flush) {
+            fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(imode));
+        } else {
+            this->buffer << "\033[" << imode << "m";
+        }
     }
 
     void PosixTerminal::SetGraphicsMode(SlokedTerminalBackground mode) {
-        set_terminal_mode(this->state->fd, static_cast<unsigned int>(mode) + 40);
+        if (!this->disable_flush) {
+            fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(mode) + 40);
+        } else {
+            this->buffer << "\033[" << static_cast<unsigned int>(mode) + 40 << "m";
+        }
     }
 
     void PosixTerminal::SetGraphicsMode(SlokedTerminalForeground mode) {
-        set_terminal_mode(this->state->fd, static_cast<unsigned int>(mode) + 30);
+        if (!this->disable_flush) {
+            fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(mode) + 30);
+        } else {
+            this->buffer << "\033[" << static_cast<unsigned int>(mode) + 30 << "m";
+        }
     }
 }

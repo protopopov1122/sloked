@@ -129,4 +129,8 @@ namespace sloked {
     void TerminalWindow::SetGraphicsMode(SlokedTerminalForeground mode) {
         this->term.SetGraphicsMode(mode);
     }
+
+    void TerminalWindow::Flush(bool f) {
+        this->term.Flush(f);
+    }
 }

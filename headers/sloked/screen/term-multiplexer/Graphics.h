@@ -4,6 +4,8 @@
 #include "sloked/screen/Terminal.h"
 #include <set>
 #include <optional>
+#include <bitset>
+#include <limits>
 
 namespace sloked {
 
@@ -12,13 +14,15 @@ namespace sloked {
         void SetGraphicsMode(SlokedTerminalText);
         void SetGraphicsMode(SlokedTerminalBackground);
         void SetGraphicsMode(SlokedTerminalForeground);
-        void apply(SlokedTerminal &);
-        bool operator==(const BufferedGraphicsMode &);
+        void apply(SlokedTerminal &) const;
+        bool operator==(const BufferedGraphicsMode &) const;
 
      private:
-        std::set<SlokedTerminalText> text;
-        std::optional<SlokedTerminalBackground> background;
-        std::optional<SlokedTerminalForeground> foreground;
+        std::bitset<static_cast<int>(SlokedTerminalText::Count)> text;
+        uint32_t background = None;
+        uint32_t foreground = None;
+
+        static constexpr std::size_t None = std::numeric_limits<uint32_t>::max();
     };
 }
 

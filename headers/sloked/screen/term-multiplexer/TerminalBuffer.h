@@ -5,6 +5,7 @@
 #include "sloked/screen/Terminal.h"
 #include "sloked/screen/term-multiplexer/Graphics.h"
 #include <memory>
+#include <optional>
 
 namespace sloked {
 
@@ -35,11 +36,11 @@ namespace sloked {
         void SetGraphicsMode(SlokedTerminalBackground) override;
         void SetGraphicsMode(SlokedTerminalForeground) override;
      private:
-        void reset();
+        void dump_buffer(std::u32string_view, std::size_t);
 
         struct Character {
             bool updated = false;
-            std::unique_ptr<BufferedGraphicsMode> graphics;
+            std::optional<BufferedGraphicsMode> graphics;
             char32_t value = '\0';
         };
 
@@ -48,7 +49,7 @@ namespace sloked {
         bool cls;
         bool show_cursor;
         Character *buffer;
-        std::unique_ptr<BufferedGraphicsMode> graphics;
+        BufferedGraphicsMode graphics;
         Line line;
         Column col;
         Column width;
