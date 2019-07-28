@@ -81,6 +81,7 @@ namespace sloked {
         virtual void SetGraphicsMode(SlokedTerminalBackground) = 0;
         virtual void SetGraphicsMode(SlokedTerminalForeground) = 0;
 
+        virtual void Update() {}
         virtual void Flush(bool) {}
 
         template <typename ... M>

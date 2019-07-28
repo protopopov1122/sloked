@@ -43,8 +43,7 @@ namespace sloked {
 
     BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding, const ScreenCharWidth &charWidth)
         : term(term), encoding(encoding), charWidth(charWidth), cls(false), show_cursor(true), buffer(nullptr), line(0), col(0) {
-        this->width = term.GetWidth();
-        this->height = term.GetHeight();
+        this->Update();
         this->buffer = new Character[this->width * this->height];
     }
 
@@ -202,5 +201,11 @@ namespace sloked {
             this->term.SetPosition(l, c);
             this->term.Write(this->encoding.Encode(str));
         }
+    }
+
+    void BufferedTerminal::Update() {
+        this->term.Update();
+        this->width = term.GetWidth();
+        this->height = term.GetHeight();
     }
 }

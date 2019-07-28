@@ -1,5 +1,6 @@
 #include "sloked/screen/posix-term/PosixTerminal.h"
 #include <optional>
+#include <map>
 #include <array>
 #include <cassert>
 #include <termcap.h>
@@ -44,12 +45,12 @@ namespace sloked {
         { "k9", SlokedControlKey::F9 }
     };
 
-    static const std::vector<std::pair<std::string, std::string>> CompatConversions = {
-        { "\033[A", "\033OA" },
-        { "\033[B", "\033OB" },
-        { "\033[C", "\033OC" },
-        { "\033[D", "\033OD" },
-        { "\033[H", "\033OH" }
+    static const std::map<std::string, std::string> CompatConversions = {
+        { "\033OA", "\033[A" },
+        { "\033OB", "\033[B" },
+        { "\033OC", "\033[C" },
+        { "\033OD", "\033[D" },
+        { "\033OH", "\033[H" }
     };
 
     struct PosixTerminal::State {
@@ -91,21 +92,17 @@ namespace sloked {
     };
 
     std::optional<SlokedControlKey> collectControlKey(PosixTerminal::Termcap &termcap, std::string &input) {
-        for (const auto &compat : CompatConversions) {
-            if (starts_with(input, compat.first)) {
-                input.replace(0, compat.first.size(), compat.second);
-                break;
-            }
-        }
-
         for (const auto &specialKey : TermcapSpecialKeys) {
             const char *str = termcap.GetString(specialKey.first);
             if (str == nullptr) {
                 continue;
             }
-            std::string_view view {str};
-            if (starts_with(input, view)) {
-                input.erase(0, view.size());
+            std::string value{str};
+            if (starts_with(input, value)) {
+                input.erase(0, value.size());
+                return specialKey.second;
+            } else if (CompatConversions.count(value) && starts_with(input, CompatConversions.at(value))) {
+                input.erase(0, CompatConversions.at(value).size());
                 return specialKey.second;
             }
         }
@@ -115,7 +112,11 @@ namespace sloked {
             case 127:
                 input.erase(0, 1);
                 return SlokedControlKey::Backspace;
-            
+                
+            case '\t':
+                input.erase(0, 1);
+                return SlokedControlKey::Tab;
+
             case '\n':
                 input.erase(0, 1);
                 return SlokedControlKey::Enter;
@@ -136,9 +137,11 @@ namespace sloked {
     PosixTerminal::PosixTerminal(FILE *fd, FILE *input)
         : state(std::make_unique<State>(fd, input)),
           termcap(std::make_unique<Termcap>(std::string(getenv("TERM")))),
-          disable_flush(false) {
+          disable_flush(false),
+          width(0), height(0) {
         fprintf(this->state->fd, this->termcap->GetString("ti"));
         fflush(this->state->fd);
+        this->Update();
     }
 
     PosixTerminal::~PosixTerminal() {
@@ -245,15 +248,11 @@ namespace sloked {
     }
 
     unsigned int PosixTerminal::GetWidth() {
-        struct winsize w;
-        ioctl(fileno(this->state->input), TIOCGWINSZ, &w);
-        return w.ws_col;
+        return this->width;
     }
 
     unsigned int PosixTerminal::GetHeight() {
-        struct winsize w;
-        ioctl(fileno(this->state->input), TIOCGWINSZ, &w);
-        return w.ws_row;
+        return this->height;
     }
 
     void PosixTerminal::Write(const std::string &str) {
@@ -262,18 +261,6 @@ namespace sloked {
             fflush(this->state->fd);
         } else {
             this->buffer << str;
-        }
-    }
-
-    void PosixTerminal::Flush(bool flush) {
-        if (flush) {
-            fprintf(this->state->fd, "%s", this->buffer.str().c_str());
-            fflush(this->state->fd);
-            this->buffer.clear();
-            this->buffer.str(std::string());
-            this->disable_flush = false;
-        } else {
-            this->disable_flush = true;
         }
     }
 
@@ -373,6 +360,25 @@ namespace sloked {
             fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(mode) + 30);
         } else {
             this->buffer << "\033[" << static_cast<unsigned int>(mode) + 30 << "m";
+        }
+    }
+
+    void PosixTerminal::Update() {
+        struct winsize w;
+        ioctl(fileno(this->state->input), TIOCGWINSZ, &w);
+        this->width = w.ws_col;
+        this->height = w.ws_row;
+    }
+
+    void PosixTerminal::Flush(bool flush) {
+        if (flush) {
+            fprintf(this->state->fd, "%s", this->buffer.str().c_str());
+            fflush(this->state->fd);
+            this->buffer.clear();
+            this->buffer.str(std::string());
+            this->disable_flush = false;
+        } else {
+            this->disable_flush = true;
         }
     }
 }

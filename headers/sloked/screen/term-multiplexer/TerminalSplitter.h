@@ -22,7 +22,7 @@ namespace sloked {
         SlokedTerminal *GetWindow(std::size_t) const;
         std::size_t GetWindowCount() const;
 
-        SlokedTerminal &NewWindow(const Constraints &);
+        SlokedTerminal &NewTerminal(const Constraints &);
         void Update();
 
      private:

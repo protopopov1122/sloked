@@ -21,6 +21,7 @@ namespace sloked {
         Home,
         End,
         Enter,
+        Tab,
         F1,
         F2,
         F3,

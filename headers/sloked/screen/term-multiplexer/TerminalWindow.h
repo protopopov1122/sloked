@@ -39,6 +39,7 @@ namespace sloked {
         void SetGraphicsMode(SlokedTerminalBackground) override;
         void SetGraphicsMode(SlokedTerminalForeground) override;
 
+        void Update() override;
         void Flush(bool) override;
 
      private:

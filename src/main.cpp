@@ -50,13 +50,14 @@ int main(int argc, const char **argv) {
     PosixTerminal terminal;
     BufferedTerminal console(terminal, Encoding::Utf8, charWidth);
     TerminalSplitter splitter(console, TerminalSplitter::Direction::Horizontal, Encoding::Utf8, charWidth);
-    TerminalTabber tabber(splitter.NewWindow(TerminalSplitter::Constraints(0.6)));
+    TerminalTabber tabber(splitter.NewTerminal(TerminalSplitter::Constraints(0.6)));
     auto &tab1 = tabber.NewTab();
     auto &tab2 = tabber.NewTab();
     auto &tab3 = tabber.NewTab();
-    auto &pane4 = splitter.NewWindow(TerminalSplitter::Constraints(0.3));
+    auto &pane4 = splitter.NewTerminal(TerminalSplitter::Constraints(0.3));
 
     const auto flush = [&]() {
+        splitter.Update();
         console.SetGraphicsMode(SlokedTerminalText::Off);
         console.ClearScreen();
         tab1.SetGraphicsMode(SlokedTerminalBackground::Blue);
@@ -102,6 +103,10 @@ int main(int argc, const char **argv) {
                     cursor.NewLine();
                     break;
 
+                case SlokedControlKey::Tab:
+                    cursor.Insert(fileEncoding.Encode(u'\t'));
+                    break;
+
                 case SlokedControlKey::Backspace:
                     cursor.Remove();
                     break;
@@ -130,8 +135,8 @@ int main(int argc, const char **argv) {
             if (cursor.GetLine() - offset >= buffer && cursor.GetLine() >= buffer) {
                 offset = cursor.GetLine() - buffer;
             }
-            if (cursor.GetLine() <= offset) {
-                offset -= offset - cursor.GetLine();
+            while (cursor.GetLine() + 1 <= offset && offset > 0) {
+                offset--;
             }
         }
 

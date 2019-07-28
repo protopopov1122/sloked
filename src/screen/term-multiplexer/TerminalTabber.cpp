@@ -96,6 +96,14 @@ namespace sloked {
             }
         }
 
+        void Update() override {
+            this->term.Update();
+        }
+
+        void Flush(bool f) override {
+            this->term.Flush(f);
+        }
+
      private:
         std::function<bool(const TerminalTab *)> is_current;
         SlokedTerminal &term;

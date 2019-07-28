@@ -35,6 +35,7 @@ namespace sloked {
         void SetGraphicsMode(SlokedTerminalBackground) override;
         void SetGraphicsMode(SlokedTerminalForeground) override;
 
+        void Update() override;
         void Flush(bool) override;
 
      private:
@@ -45,6 +46,8 @@ namespace sloked {
         std::unique_ptr<Termcap> termcap;
         bool disable_flush;
         std::stringstream buffer;
+        Column width;
+        Line height;
     };
 }
 

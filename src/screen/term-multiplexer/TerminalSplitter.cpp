@@ -34,7 +34,7 @@ namespace sloked {
         return this->windows.size();
     }
 
-    SlokedTerminal &TerminalSplitter::NewWindow(const Constraints &constraints) {
+    SlokedTerminal &TerminalSplitter::NewTerminal(const Constraints &constraints) {
         auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charWidth, 0, 0, 0, 0, [&]() {
             return this->term.GetInput();
         });
@@ -44,6 +44,7 @@ namespace sloked {
     }
 
     void TerminalSplitter::Update() {
+        this->term.Update();
         unsigned int current = 0;
         unsigned int max = this->direction == Direction::Horizontal
             ? this->term.GetWidth()

@@ -131,6 +131,10 @@ namespace sloked {
         this->term.SetGraphicsMode(mode);
     }
 
+    void TerminalWindow::Update() {
+        this->term.Update();
+    }
+
     void TerminalWindow::Flush(bool f) {
         this->term.Flush(f);
     }

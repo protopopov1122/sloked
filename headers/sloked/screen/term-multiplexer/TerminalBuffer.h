@@ -36,6 +36,8 @@ namespace sloked {
         void SetGraphicsMode(SlokedTerminalText) override;
         void SetGraphicsMode(SlokedTerminalBackground) override;
         void SetGraphicsMode(SlokedTerminalForeground) override;
+
+        void Update() override;
         
      private:
         void dump_buffer(std::u32string_view, std::size_t);
