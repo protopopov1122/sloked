@@ -1,4 +1,5 @@
 #include "sloked/core/Encoding.h"
+#include "sloked/core/Error.h"
 #include <iostream>
 
 namespace sloked {
@@ -31,8 +32,9 @@ namespace sloked {
             buffer[2] = 0x80 | ((code >> 6) & 0x3F);
             buffer[3] = 0x80 | (code & 0x3F);
             return 4;
+        } else {
+            throw SlokedError("UTF-8: Invalid codepoint");
         }
-        return 0;
     }
 
     class Utf8Encoding : public Encoding {
@@ -146,14 +148,25 @@ namespace sloked {
     class Utf32LEEncoding : public Encoding {
      public:
         std::size_t CodepointCount(std::string_view view) const override {
-            return view.size() / 4;
+            if (view.size() % 4 == 0) {
+                return view.size() / 4;
+            } else {
+                throw SlokedError("UTF-32LE: Invalid length");
+            }
         }
 
         std::pair<std::size_t, std::size_t> GetCodepoint(std::string_view view, std::size_t idx) const override {
-            return std::make_pair(idx * 4, 4);
+            if (view.size() % 4 == 0) {
+                return std::make_pair(idx * 4, 4);
+            } else {
+                throw SlokedError("UTF-32LE: Invalid length");
+            }
         }
 
         bool IterateCodepoints(std::string_view view, std::function<bool(std::size_t, std::size_t, char32_t)> iter) const override {
+            if (view.size() % 4 != 0) {
+                throw SlokedError("UTF-32LE: Invalid length");
+            }
             bool res = true;
             for (std::size_t i = 0; i < view.size() / 4 && res; i++) {
                 char32_t chr = view[4 * i]
