@@ -1,10 +1,10 @@
-#ifndef SLOCKED_SCREEN_TERM_MULTIPLEXER_H_
-#define SLOCKED_SCREEN_TERM_MULTIPLEXER_H_
+#ifndef SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALBUFFER_H_
+#define SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALBUFFER_H_
 
 #include "sloked/core/Encoding.h"
-#include "sloked/screen/Terminal.h"
-#include "sloked/screen/term-multiplexer/Graphics.h"
-#include "sloked/screen/CharWidth.h"
+#include "sloked/screen/terminal/Terminal.h"
+#include "sloked/screen/terminal/CharWidth.h"
+#include "sloked/screen/terminal/multiplexer/BufferedGraphics.h"
 #include <memory>
 #include <optional>
 
@@ -33,9 +33,9 @@ namespace sloked {
         void Write(const std::string &) override;
         std::vector<SlokedKeyboardInput> GetInput() override;
 
-        void SetGraphicsMode(SlokedTerminalText) override;
-        void SetGraphicsMode(SlokedTerminalBackground) override;
-        void SetGraphicsMode(SlokedTerminalForeground) override;
+        void SetGraphicsMode(SlokedTextGraphics) override;
+        void SetGraphicsMode(SlokedBackgroundGraphics) override;
+        void SetGraphicsMode(SlokedForegroundGraphics) override;
 
         void Update() override;
         

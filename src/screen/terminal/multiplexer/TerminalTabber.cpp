@@ -1,4 +1,4 @@
-#include "sloked/screen/term-multiplexer/TerminalTabber.h"
+#include "sloked/screen/terminal/multiplexer/TerminalTabber.h"
 #include <functional>
 
 namespace sloked {
@@ -78,19 +78,19 @@ namespace sloked {
             }
         }
 
-        void SetGraphicsMode(SlokedTerminalText m) override {
+        void SetGraphicsMode(SlokedTextGraphics m) override {
             if (this->is_current(this)) {
                 this->term.SetGraphicsMode(m);
             }
         }
 
-        void SetGraphicsMode(SlokedTerminalBackground m) override {
+        void SetGraphicsMode(SlokedBackgroundGraphics m) override {
             if (this->is_current(this)) {
                 this->term.SetGraphicsMode(m);
             }
         }
 
-        void SetGraphicsMode(SlokedTerminalForeground m) override {
+        void SetGraphicsMode(SlokedForegroundGraphics m) override {
             if (this->is_current(this)) {
                 this->term.SetGraphicsMode(m);
             }

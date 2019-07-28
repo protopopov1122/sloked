@@ -1,7 +1,7 @@
-#ifndef SLOKED_SCREEN_TERM_MULTIPLEXER_GRAPHICS_H_
-#define SLOKED_SCREEN_TERM_MULTIPLEXER_GRAPHICS_H_
+#ifndef SLOKED_SCREEN_TERMINAL_MULTIPLEXER_BUFFEREDGRAPHICS_H_
+#define SLOKED_SCREEN_TERMINAL_MULTIPLEXER_BUFFEREDGRAPHICS_H_
 
-#include "sloked/screen/Terminal.h"
+#include "sloked/screen/Graphics.h"
 #include <set>
 #include <optional>
 #include <bitset>
@@ -11,14 +11,14 @@ namespace sloked {
 
     class BufferedGraphicsMode {
      public:
-        void SetGraphicsMode(SlokedTerminalText);
-        void SetGraphicsMode(SlokedTerminalBackground);
-        void SetGraphicsMode(SlokedTerminalForeground);
+        void SetGraphicsMode(SlokedTextGraphics);
+        void SetGraphicsMode(SlokedBackgroundGraphics);
+        void SetGraphicsMode(SlokedForegroundGraphics);
         void apply(SlokedTerminal &) const;
         bool operator==(const BufferedGraphicsMode &) const;
 
      private:
-        std::bitset<static_cast<int>(SlokedTerminalText::Count)> text;
+        std::bitset<static_cast<int>(SlokedTextGraphics::Count)> text;
         uint32_t background = None;
         uint32_t foreground = None;
 

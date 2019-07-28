@@ -1,10 +1,10 @@
 #ifndef SLOKED_TEXT_TEXTCHUNK_H_
 #define SLOKED_TEXT_TEXTCHUNK_H_
 
-#include "sloked/text/TextBlock.h"
 #include "sloked/core/AVL.h"
 #include "sloked/core/RangeMap.h"
 #include "sloked/core/NewLine.h"
+#include "sloked/text/TextBlock.h"
 #include <map>
 #include <limits>
 #include <optional>

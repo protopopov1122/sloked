@@ -1,7 +1,7 @@
-#ifndef SLOKED_SCREEN_TERM_MULTIPLEXER_TERMINALTABBER_H_
-#define SLOKED_SCREEN_TERM_MULTIPLEXER_TERMINALTABBER_H_
+#ifndef SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALTABBER_H_
+#define SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALTABBER_H_
 
-#include "sloked/screen/Terminal.h"
+#include "sloked/screen/terminal/Terminal.h"
 #include <vector>
 #include <memory>
 

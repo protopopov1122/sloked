@@ -1,8 +1,8 @@
-#ifndef SLOKED_SCREEN_POSIXTERM_ANSICONSOLE_H_
-#define SLOKED_SCREEN_POSIXTERM_ANSICONSOLE_H_
+#ifndef SLOKED_SCREEN_TERMINAL_POSIX_POSIXTERMINAL_H_
+#define SLOKED_SCREEN_TERMINAL_POSIX_POSIXTERMINAL_H_
 
 #include "sloked/Base.h"
-#include "sloked/screen/Terminal.h"
+#include "sloked/screen/terminal/Terminal.h"
 #include <string>
 #include <memory>
 #include <sstream>
@@ -31,9 +31,9 @@ namespace sloked {
         void Write(const std::string &) override;
         std::vector<SlokedKeyboardInput> GetInput() override;
 
-        void SetGraphicsMode(SlokedTerminalText) override;
-        void SetGraphicsMode(SlokedTerminalBackground) override;
-        void SetGraphicsMode(SlokedTerminalForeground) override;
+        void SetGraphicsMode(SlokedTextGraphics) override;
+        void SetGraphicsMode(SlokedBackgroundGraphics) override;
+        void SetGraphicsMode(SlokedForegroundGraphics) override;
 
         void Update() override;
         void Flush(bool) override;

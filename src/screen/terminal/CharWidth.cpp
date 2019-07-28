@@ -1,4 +1,4 @@
-#include "sloked/screen/CharWidth.h"
+#include "sloked/screen/terminal/CharWidth.h"
 
 namespace sloked {
 

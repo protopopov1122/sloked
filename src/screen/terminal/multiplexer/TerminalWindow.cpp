@@ -1,6 +1,6 @@
-#include "sloked/screen/term-multiplexer/TerminalWindow.h"
+#include "sloked/screen/terminal/multiplexer/TerminalWindow.h"
 #include "sloked/core/Encoding.h"
-#include "sloked/screen/CharWidth.h"
+#include "sloked/screen/terminal/CharWidth.h"
 #include <iostream>
 
 namespace sloked {
@@ -116,18 +116,18 @@ namespace sloked {
     }
 
     std::vector<SlokedKeyboardInput> TerminalWindow::GetInput() {
-        return this->inputSource();
+        return this->inputSource(*this);
     }
 
-    void TerminalWindow::SetGraphicsMode(SlokedTerminalText mode) {
+    void TerminalWindow::SetGraphicsMode(SlokedTextGraphics mode) {
         this->term.SetGraphicsMode(mode);
     }
 
-    void TerminalWindow::SetGraphicsMode(SlokedTerminalBackground mode) {
+    void TerminalWindow::SetGraphicsMode(SlokedBackgroundGraphics mode) {
         this->term.SetGraphicsMode(mode);
     }
 
-    void TerminalWindow::SetGraphicsMode(SlokedTerminalForeground mode) {
+    void TerminalWindow::SetGraphicsMode(SlokedForegroundGraphics mode) {
         this->term.SetGraphicsMode(mode);
     }
 

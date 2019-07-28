@@ -2,8 +2,8 @@
 #define SLOKED_TEXT_TEXTREGION_H_
 
 #include "sloked/core/NewLine.h"
-#include "sloked/text/TextBlock.h"
 #include "sloked/core/AVL.h"
+#include "sloked/text/TextBlock.h"
 
 namespace sloked {
 

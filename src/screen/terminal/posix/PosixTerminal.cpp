@@ -1,4 +1,4 @@
-#include "sloked/screen/posix-term/PosixTerminal.h"
+#include "sloked/screen/terminal/posix/PosixTerminal.h"
 #include <optional>
 #include <map>
 #include <array>
@@ -309,30 +309,30 @@ namespace sloked {
     void set_terminal_mode(FILE *fd, unsigned int mode) {
     }    
 
-    void PosixTerminal::SetGraphicsMode(SlokedTerminalText mode) {
+    void PosixTerminal::SetGraphicsMode(SlokedTextGraphics mode) {
         unsigned int imode = 0;
         switch (mode) {
-            case SlokedTerminalText::Off:
+            case SlokedTextGraphics::Off:
                 imode = 0;
                 break;
 
-            case SlokedTerminalText::Bold:
+            case SlokedTextGraphics::Bold:
                 imode =  1;
                 break;
 
-            case SlokedTerminalText::Underscore:
+            case SlokedTextGraphics::Underscore:
                 imode = 4;
                 break;
 
-            case SlokedTerminalText::Blink:
+            case SlokedTextGraphics::Blink:
                 imode = 5;
                 break;
 
-            case SlokedTerminalText::Reverse:
+            case SlokedTextGraphics::Reverse:
                 imode =  7;
                 break;
 
-            case SlokedTerminalText::Concealed:
+            case SlokedTextGraphics::Concealed:
                 imode = 8;
                 break;
             
@@ -347,7 +347,7 @@ namespace sloked {
         }
     }
 
-    void PosixTerminal::SetGraphicsMode(SlokedTerminalBackground mode) {
+    void PosixTerminal::SetGraphicsMode(SlokedBackgroundGraphics mode) {
         if (!this->disable_flush) {
             fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(mode) + 40);
         } else {
@@ -355,7 +355,7 @@ namespace sloked {
         }
     }
 
-    void PosixTerminal::SetGraphicsMode(SlokedTerminalForeground mode) {
+    void PosixTerminal::SetGraphicsMode(SlokedForegroundGraphics mode) {
         if (!this->disable_flush) {
             fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(mode) + 30);
         } else {

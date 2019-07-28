@@ -2,8 +2,8 @@
 #define SLOKED_TEXT_CURSOR_H_
 
 #include "sloked/Base.h"
-#include "sloked/text/TextBlock.h"
 #include "sloked/core/Encoding.h"
+#include "sloked/text/TextBlock.h"
 
 namespace sloked {
 

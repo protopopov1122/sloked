@@ -3,41 +3,10 @@
 
 #include "sloked/Base.h"
 #include "sloked/screen/Keyboard.h"
+#include "sloked/screen/Graphics.h"
 #include <vector>
 
 namespace sloked {
-
-    enum class SlokedTerminalText {
-        Off = 0,
-        Bold,
-        Underscore,
-        Blink,
-        Reverse,
-        Concealed,
-        Count
-    };
-
-    enum class SlokedTerminalForeground {
-        Black = 0,
-        Red,
-        Green,
-        Yellow,
-        Blue,
-        Magenta,
-        Cyan,
-        White
-    };
-
-    enum class SlokedTerminalBackground {
-        Black = 0,
-        Red,
-        Green,
-        Yellow,
-        Blue,
-        Magenta,
-        Cyan,
-        White
-    };
 
     template <typename T, typename ... M>
     struct SlokedTerminalSetGraphicsMode {
@@ -54,11 +23,11 @@ namespace sloked {
 
     class SlokedTerminal {
      public:
-        using Line = unsigned int;
-        using Column = unsigned int;
-        using Text = SlokedTerminalText;
-        using Foreground = SlokedTerminalForeground;
-        using Background = SlokedTerminalBackground;
+        using Line = TextGraphics::Line;
+        using Column = TextGraphics::Column;
+        using Text = SlokedTextGraphics;
+        using Foreground = SlokedForegroundGraphics;
+        using Background = SlokedBackgroundGraphics;
 
         virtual ~SlokedTerminal() = default;
     
@@ -77,9 +46,9 @@ namespace sloked {
         virtual void Write(const std::string &) = 0;
         virtual std::vector<SlokedKeyboardInput> GetInput() = 0;
 
-        virtual void SetGraphicsMode(SlokedTerminalText) = 0;
-        virtual void SetGraphicsMode(SlokedTerminalBackground) = 0;
-        virtual void SetGraphicsMode(SlokedTerminalForeground) = 0;
+        virtual void SetGraphicsMode(SlokedTextGraphics) = 0;
+        virtual void SetGraphicsMode(SlokedBackgroundGraphics) = 0;
+        virtual void SetGraphicsMode(SlokedForegroundGraphics) = 0;
 
         virtual void Update() {}
         virtual void Flush(bool) {}

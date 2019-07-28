@@ -1,17 +1,17 @@
-#ifndef SLOKED_SCREEN_TERM_MULTIPLEXER_TERMINALWINDOW_H_
-#define SLOKED_SCREEN_TERM_MULTIPLEXER_TERMINALWINDOW_H_
+#ifndef SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALWINDOW_H_
+#define SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALWINDOW_H_
 
 #include "sloked/core/Encoding.h"
-#include "sloked/screen/Terminal.h"
-#include "sloked/screen/CharWidth.h"
-#include "sloked/screen/term-multiplexer/Graphics.h"
+#include "sloked/screen/terminal/Terminal.h"
+#include "sloked/screen/terminal/CharWidth.h"
+#include "sloked/screen/terminal/multiplexer/BufferedGraphics.h"
 #include <functional>
 
 namespace sloked {
 
     class TerminalWindow : public SlokedTerminal {
      public:
-        using InputSource = std::function<std::vector<SlokedKeyboardInput>()>;
+        using InputSource = std::function<std::vector<SlokedKeyboardInput>(const TerminalWindow &)>;
         TerminalWindow(SlokedTerminal &, const Encoding &, const ScreenCharWidth &, Column, Line, Column, Line, InputSource);
 
         void Move(Column, Line);
@@ -35,9 +35,9 @@ namespace sloked {
         void Write(const std::string &) override;
         std::vector<SlokedKeyboardInput> GetInput() override;
 
-        void SetGraphicsMode(SlokedTerminalText) override;
-        void SetGraphicsMode(SlokedTerminalBackground) override;
-        void SetGraphicsMode(SlokedTerminalForeground) override;
+        void SetGraphicsMode(SlokedTextGraphics) override;
+        void SetGraphicsMode(SlokedBackgroundGraphics) override;
+        void SetGraphicsMode(SlokedForegroundGraphics) override;
 
         void Update() override;
         void Flush(bool) override;

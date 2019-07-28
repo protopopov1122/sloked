@@ -1,11 +1,11 @@
-#include "sloked/screen/term-multiplexer/TerminalBuffer.h"
+#include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
 #include "sloked/core/Encoding.h"
 #include <iostream>
 
 namespace sloked {
 
-    void BufferedGraphicsMode::SetGraphicsMode(SlokedTerminalText mode) {
-        if (mode == SlokedTerminalText::Off) {
+    void BufferedGraphicsMode::SetGraphicsMode(SlokedTextGraphics mode) {
+        if (mode == SlokedTextGraphics::Off) {
             this->text.reset();
             this->background = None;
             this->foreground = None;
@@ -13,25 +13,25 @@ namespace sloked {
         this->text.set(static_cast<int>(mode));
     }
 
-    void BufferedGraphicsMode::SetGraphicsMode(SlokedTerminalBackground mode) {
+    void BufferedGraphicsMode::SetGraphicsMode(SlokedBackgroundGraphics mode) {
         this->background = static_cast<uint32_t>(mode);
     }
 
-    void BufferedGraphicsMode::SetGraphicsMode(SlokedTerminalForeground mode) {
+    void BufferedGraphicsMode::SetGraphicsMode(SlokedForegroundGraphics mode) {
         this->foreground = static_cast<uint32_t>(mode);
     }
 
     void BufferedGraphicsMode::apply(SlokedTerminal &term) const {
         for (std::size_t i = 0; i < this->text.size(); i++) {
             if (text[i]) {
-                term.SetGraphicsMode(static_cast<SlokedTerminalText>(i));
+                term.SetGraphicsMode(static_cast<SlokedTextGraphics>(i));
             }
         }
         if (this->background != None) {
-            term.SetGraphicsMode(static_cast<SlokedTerminalBackground>(this->background));
+            term.SetGraphicsMode(static_cast<SlokedBackgroundGraphics>(this->background));
         }
         if (this->foreground != None) {
-            term.SetGraphicsMode(static_cast<SlokedTerminalForeground>(this->foreground));
+            term.SetGraphicsMode(static_cast<SlokedForegroundGraphics>(this->foreground));
         }
     }
 
@@ -182,15 +182,15 @@ namespace sloked {
         return this->term.GetInput();
     }
 
-    void BufferedTerminal::SetGraphicsMode(SlokedTerminalText mode) {
+    void BufferedTerminal::SetGraphicsMode(SlokedTextGraphics mode) {
         this->graphics.SetGraphicsMode(mode);
     }
 
-    void BufferedTerminal::SetGraphicsMode(SlokedTerminalBackground mode) {
+    void BufferedTerminal::SetGraphicsMode(SlokedBackgroundGraphics mode) {
         this->graphics.SetGraphicsMode(mode);
     }
 
-    void BufferedTerminal::SetGraphicsMode(SlokedTerminalForeground mode) {
+    void BufferedTerminal::SetGraphicsMode(SlokedForegroundGraphics mode) {
         this->graphics.SetGraphicsMode(mode);
     }
 
