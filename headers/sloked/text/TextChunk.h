@@ -85,10 +85,10 @@ namespace sloked {
                 }
                 Offset start_offset = 0;
                 this->total_length += content.value().size();
-                newline.Iterate(content.value(), [&](std::size_t i) {
+                newline.Iterate(content.value(), [&](std::size_t i, std::size_t width) {
                     this->assign(this->last_line, this->last_line, start_offset, i - start_offset);
                     this->last_line++;
-                    start_offset = i + newline.Width;
+                    start_offset = i + width;
                 });
                 this->assign(this->last_line, this->last_line, start_offset, content.value().size() - start_offset);
             }

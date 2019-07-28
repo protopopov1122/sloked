@@ -40,8 +40,12 @@ namespace sloked {
 
     void SlokedCursor::Insert(const std::string &frag) {
         std::string current {this->text.GetLine(this->line)};
-        auto pos = this->encoding.GetCodepoint(current, this->column - 1);
-        current.insert(pos.first + pos.second, frag);
+        if (this->column < this->width) {
+            auto pos = this->encoding.GetCodepoint(current, this->column);
+            current.insert(pos.first, frag);
+        } else {
+            current.append(frag);
+        }
         this->column += this->encoding.CodepointCount(frag);
         this->text.SetLine(this->line, current);
         this->UpdateCursor();
@@ -49,12 +53,16 @@ namespace sloked {
 
     void SlokedCursor::NewLine() {
         std::string current {this->text.GetLine(this->line)};
-        auto pos = this->encoding.GetCodepoint(current, this->column - 1);
-        auto sub1 = current.substr(0, pos.first + pos.second);
-        auto sub2 = current.substr(pos.first + pos.second);
+        if (this->column < this->width) {
+            auto pos = this->encoding.GetCodepoint(current, this->column);
+            auto sub1 = current.substr(0, pos.first);
+            auto sub2 = current.substr(pos.first);
 
-        text.SetLine(line, sub1);
-        text.InsertLine(line, sub2);
+            text.SetLine(line, sub1);
+            text.InsertLine(line, sub2);
+        } else {
+            text.InsertLine(line, "");
+        }
         this->line++;
         this->column = 0;
         this->UpdateCursor();
@@ -62,13 +70,19 @@ namespace sloked {
 
     void SlokedCursor::Remove() {
         if (this->column > 0) {
-            std::string current {this->text.GetLine(this->line)};
-            auto pos1 = this->encoding.GetCodepoint(current, this->column - 2);
-            auto pos2 = this->encoding.GetCodepoint(current, this->column - 1);
-            auto sub1 = current.substr(0, pos1.first + pos1.second);
-            auto sub2 = current.substr(pos2.first + pos2.second);
+            if (this->column < this->width) {
+                std::string current {this->text.GetLine(this->line)};
+                auto pos1 = this->encoding.GetCodepoint(current, this->column - 1);
+                auto pos2 = this->encoding.GetCodepoint(current, this->column);
+                auto sub1 = current.substr(0, pos1.first);
+                auto sub2 = current.substr(pos2.first);
 
-            text.SetLine(this->line, sub1 + sub2);
+                text.SetLine(this->line, sub1 + sub2);
+            } else {
+                auto current = this->text.GetLine(this->line);
+                auto pos = this->encoding.GetCodepoint(current, this->column - 1);
+                text.SetLine(this->line, current.substr(0, pos.first));
+            }
             this->column--;
             this->UpdateCursor();
         } else if (this->line > 0) {

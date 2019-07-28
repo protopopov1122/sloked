@@ -16,14 +16,14 @@ namespace sloked {
         std::size_t line = 0;
         std::map<std::size_t, std::pair<std::size_t, std::size_t>> chunk_lines;
 
-        newline.Iterate(str, [&](std::size_t i) {
+        newline.Iterate(str, [&](std::size_t i, std::size_t width) {
             std::size_t length = i - chunk_offset;
             if (length < MAX_CHUNK) {
                 chunk_lines[chunk_lines.size()] = std::make_pair(last_line_offset - chunk_offset, i - last_line_offset);
-                last_line_offset = i + newline.Width;
+                last_line_offset = i + width;
             } else {
                 auto proxyBlock = std::make_unique<TextBlockHandle>(str.substr(chunk_offset, last_line_offset > chunk_offset
-                        ? last_line_offset - chunk_offset - newline.Width
+                        ? last_line_offset - chunk_offset - width
                         : 0), std::move(chunk_lines), blockFactory);
                 auto region = std::make_unique<TextRegion>(newline, std::move(proxyBlock));
                 if (content) {
@@ -34,7 +34,7 @@ namespace sloked {
                 chunk_offset = last_line_offset;
                 chunk_lines.clear();
                 chunk_lines[chunk_lines.size()] = std::make_pair(last_line_offset - chunk_offset, i - last_line_offset);
-                last_line_offset = i + newline.Width;
+                last_line_offset = i + width;
             }
             line++;
         });

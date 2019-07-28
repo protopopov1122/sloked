@@ -1,6 +1,16 @@
 #include "sloked/core/Encoding.h"
+#include <iostream>
 
 namespace sloked {
+
+    std::u32string Encoding::Decode(std::string_view view) const {
+        std::u32string res;
+        this->IterateCodepoints(view, [&](auto start, auto length, auto chr) {
+            res.push_back(chr);
+            return true;
+        });
+        return res;
+    }
 
     static size_t Char32ToUtf8(char *const buffer, const char32_t code) {
         if (code <= 0x7F) {
@@ -27,7 +37,7 @@ namespace sloked {
 
     class Utf8Encoding : public Encoding {
      public:
-        std::size_t CodepointCount(const std::string &str) const override {
+        std::size_t CodepointCount(std::string_view str) const override {
             std::size_t count = 0;
             for (std::size_t i = 0; i < str.size(); i++) {
                 char current = str[i];
@@ -44,7 +54,7 @@ namespace sloked {
             return count;
         }
 
-        std::pair<std::size_t, std::size_t> GetCodepoint(const std::string &str, std::size_t idx) const override {
+        std::pair<std::size_t, std::size_t> GetCodepoint(std::string_view str, std::size_t idx) const override {
 #define ASSERT_WIDTH(x) do { \
                 if (i + (x) - 1 >= str.size()) { \
                     return std::make_pair(0, 0); \
@@ -76,7 +86,7 @@ namespace sloked {
             return std::make_pair(0, 0);
         }
 
-        bool IterateCodepoints(const std::string &str, std::function<bool(std::size_t, std::size_t, char32_t)> callback) const override {
+        bool IterateCodepoints(std::string_view str, std::function<bool(std::size_t, std::size_t, char32_t)> callback) const override {
 #define ASSERT_WIDTH(x) do { \
                             if (i + (x) - 1 >= str.size()) { \
                                 return false; \
@@ -133,7 +143,66 @@ namespace sloked {
         }
     };
 
+    class Utf32LEEncoding : public Encoding {
+     public:
+        std::size_t CodepointCount(std::string_view view) const override {
+            return view.size() / 4;
+        }
+
+        std::pair<std::size_t, std::size_t> GetCodepoint(std::string_view view, std::size_t idx) const override {
+            return std::make_pair(idx * 4, 4);
+        }
+
+        bool IterateCodepoints(std::string_view view, std::function<bool(std::size_t, std::size_t, char32_t)> iter) const override {
+            bool res = true;
+            for (std::size_t i = 0; i < view.size() / 4 && res; i++) {
+                char32_t chr = view[4 * i]
+                    | (view[4 * i + 1] << 8)
+                    | (view[4 * i + 2] << 16)
+                    | (view[4 * i + 3] << 24);
+                res = iter(i * 4, 4, chr);
+            }
+            return res;
+        }
+
+        std::string Encode(char32_t chr) const {
+            char buffer[] = {
+                static_cast<char>(chr & 0xff),
+                static_cast<char>((chr >> 8) & 0xff),
+                static_cast<char>((chr >> 16) & 0xff),
+                static_cast<char>((chr >> 24) & 0xff)
+            };
+            return std::string(buffer, 4);
+        }
+
+        std::string Encode(std::u32string_view u32str) const {
+            std::unique_ptr<char[]> buffer(new char[u32str.size() * 4]);
+            char *buffer_ptr = buffer.get();
+            for (std::size_t i = 0; i < u32str.size(); i++) {
+                char32_t chr = u32str[i];
+                *buffer_ptr++ = static_cast<char>(chr & 0xff);
+                *buffer_ptr++ = static_cast<char>((chr >> 8) & 0xff);
+                *buffer_ptr++ = static_cast<char>((chr >> 16) & 0xff);
+                *buffer_ptr++ = static_cast<char>((chr >> 24) & 0xff);
+            }
+            return std::string(buffer.get(), buffer_ptr - buffer.get());
+        }
+    };
+
     static Utf8Encoding utf8Encoding;
+    static Utf32LEEncoding utf32Encoding;
 
     const Encoding &Encoding::Utf8 = utf8Encoding;
+    const Encoding &Encoding::Utf32LE = utf32Encoding;
+
+    EncodingConverter::EncodingConverter(const Encoding &from, const Encoding &to)
+        : from(from), to(to) {}
+
+    std::string EncodingConverter::Convert(std::string_view str) const {
+        return this->to.Encode(this->from.Decode(str));
+    }
+
+    std::string EncodingConverter::ReverseConvert(std::string_view str) const {
+        return this->from.Encode(this->to.Decode(str));
+    }
 }

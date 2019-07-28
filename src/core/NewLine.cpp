@@ -1,28 +1,72 @@
 #include "sloked/core/NewLine.h"
+#include "sloked/core/Encoding.h"
 #include <algorithm>
 #include <iostream>
 
 namespace sloked {
 
-    class AnsiLFNewLine : public NewLine {
+    class LFNewLine : public NewLine {
      public:
-        AnsiLFNewLine();
-        void Iterate(std::string_view, Iterator) const override;
-        std::size_t Count(std::string_view) const override;
+        LFNewLine(const Encoding &enc)
+            : NewLine(enc.Encode(U'\n')), encoding(enc) {}
+        
+        void Iterate(std::string_view str, Iterator iter) const override {
+            this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto chr) {
+                if (chr == U'\n') {
+                    iter(start, length);
+                }
+                return true;
+            });
+        }
+        std::size_t Count(std::string_view str) const override {
+            std::size_t count = 1;
+            this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto chr) {
+                if (chr == U'\n') {
+                    count++;
+                }
+                return true;
+            });
+            return count;
+        }
+    
+     private:
+        const Encoding &encoding;
     };
 
-    class AnsiCRLFNewLine : public NewLine {
+    class CRLFNewLine : public NewLine {
      public:
-        AnsiCRLFNewLine();
-        void Iterate(std::string_view, Iterator) const override;
-        std::size_t Count(std::string_view) const override;
+        CRLFNewLine(const Encoding &enc)
+            : NewLine(enc.Encode(U"\r\n")), encoding(enc) {}
+        
+        void Iterate(std::string_view str, Iterator iter) const override {
+            std::size_t last_char_pos = 0;
+            char32_t last_char = U'\0';
+            this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto chr) {
+                if (last_char == U'\r' && chr == U'\n') {
+                    iter(last_char_pos, start - last_char_pos + length);
+                }
+                last_char = chr;
+                last_char_pos = start;
+                return true;
+            });
+        }
+
+        std::size_t Count(std::string_view str) const override {
+            std::size_t count = 1;
+            char32_t last_char = U'\0';
+            this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto chr) {
+                if (last_char == U'\r' && chr == U'\n') {
+                    count++;
+                }
+                last_char = chr;
+                return true;
+            });
+            return count;
+        }
+    
+     private:
+        const Encoding &encoding;
     };
-
-    static AnsiLFNewLine AnsiLF_NewLine;
-    static AnsiCRLFNewLine AnsiCRLF_NewLine;
-
-    const NewLine &NewLine::AnsiLF = AnsiLF_NewLine;
-    const NewLine &NewLine::AnsiCRLF = AnsiCRLF_NewLine;
 
     NewLine::NewLine(const std::string &symbol)
         : Width(symbol.size()), symbol(symbol) {}
@@ -31,39 +75,11 @@ namespace sloked {
         return os << newline.symbol;
     }
 
-    AnsiLFNewLine::AnsiLFNewLine()
-        : NewLine("\n") {}
-
-    void AnsiLFNewLine::Iterate(std::string_view str, Iterator iter) const {
-        for (std::size_t i = 0; i < str.size(); i++) {
-            if (str[i] == '\n') {
-                iter(i);
-            }
-        }
+    std::unique_ptr<NewLine> NewLine::LF(const Encoding &enc) {
+        return std::make_unique<LFNewLine>(enc);
     }
 
-    std::size_t AnsiLFNewLine::Count(std::string_view str) const {
-        return std::count(str.begin(), str.end(), '\n') + 1;
-    }
-
-    AnsiCRLFNewLine::AnsiCRLFNewLine()
-        : NewLine("\r\n") {}
-
-    void AnsiCRLFNewLine::Iterate(std::string_view str, Iterator iter) const {
-        for (std::size_t i = 0; i < str.size(); i++) {
-            if (i + 1 < str.size() && str[i] == '\r' && str[i + 1] == '\n') {
-                iter(i);
-            }
-        }
-    }
-
-    std::size_t AnsiCRLFNewLine::Count(std::string_view str) const {
-        std::size_t line = 1;
-        for (std::size_t i = 0; i < str.size(); i++) {
-            if (i + 1 < str.size() && str[i] == '\r' && str[i + 1] == '\n') {
-                line++;
-            }
-        }
-        return line;
+    std::unique_ptr<NewLine> NewLine::CRLF(const Encoding &enc) {
+        return std::make_unique<CRLFNewLine>(enc);
     }
 }

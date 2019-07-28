@@ -21,12 +21,12 @@ using namespace sloked;
 static std::size_t offset = 0;
 static std::size_t buffer = 24;
 
-void print(TextBlock &text, SlokedTerminal &console) {
+void print(TextBlock &text, SlokedTerminal &console, const EncodingConverter &conv) {
     console.ClearScreen();
     console.SetPosition(0, 0);
     std::stringstream ss;
-    text.Visit(offset, std::min(buffer, text.GetLastLine() - offset) + 1, [&console, &ss](const auto line) {
-        ss << line << std::endl;
+    text.Visit(offset, std::min(buffer, text.GetLastLine() - offset) + 1, [&](const auto line) {
+        ss << conv.Convert(line) << std::endl;
     });
     console.Write(ss.str());
     console.SetPosition(0, 0);
@@ -38,9 +38,13 @@ int main(int argc, const char **argv) {
         return EXIT_FAILURE;
     }
     PosixTextView view(open(argv[1], O_RDONLY, 0));
-    TextChunkFactory blockFactory(NewLine::AnsiLF);
-    TextDocument text(NewLine::AnsiLF, TextView::Open(view, NewLine::AnsiLF, blockFactory));
-    SlokedCursor cursor(text, Encoding::Utf8);
+    const Encoding &fileEncoding = Encoding::Utf8;
+    const Encoding &terminalEncoding = Encoding::Utf8;
+    EncodingConverter conv(fileEncoding, terminalEncoding);
+    auto newline = NewLine::LF(fileEncoding);
+    TextChunkFactory blockFactory(*newline);
+    TextDocument text(*newline, TextView::Open(view, *newline, blockFactory));
+    SlokedCursor cursor(text, fileEncoding);
     ScreenCharWidth charWidth;
 
     PosixTerminal terminal;
@@ -56,16 +60,16 @@ int main(int argc, const char **argv) {
         console.SetGraphicsMode(SlokedTerminalText::Off);
         console.ClearScreen();
         tab1.SetGraphicsMode(SlokedTerminalBackground::Blue);
-        print(text, tab1);
+        print(text, tab1, conv);
         tab2.SetGraphicsMode(SlokedTerminalText::Off);
         tab2.SetGraphicsMode(SlokedTerminalBackground::Yellow);
-        print(text, tab2);
+        print(text, tab2, conv);
         tab3.SetGraphicsMode(SlokedTerminalText::Off);
         tab3.SetGraphicsMode(SlokedTerminalBackground::Red);
-        print(text, tab3);
+        print(text, tab3, conv);
         pane4.SetGraphicsMode(SlokedTerminalBackground::Magenta);
-        print(text, pane4);
-        tabber.GetTab(tabber.GetCurrentTab())->SetPosition(cursor.GetLine() - offset, charWidth.GetRealPosition(std::string {text.GetLine(cursor.GetLine())}, cursor.GetColumn(), Encoding::Utf8));
+        print(text, pane4, conv);
+        tabber.GetTab(tabber.GetCurrentTab())->SetPosition(cursor.GetLine() - offset, charWidth.GetRealPosition(std::string {text.GetLine(cursor.GetLine())}, cursor.GetColumn(), fileEncoding));
         console.Flush();
     };
     
@@ -76,7 +80,7 @@ int main(int argc, const char **argv) {
 
         for (const auto &cmd : input) {
             if (cmd.index() == 0) {
-                cursor.Insert(std::get<0>(cmd));
+                cursor.Insert(conv.ReverseConvert(std::get<0>(cmd)));
             } else switch (std::get<1>(cmd)) {
                 case SlokedControlKey::ArrowUp:
                     cursor.MoveUp(1);
