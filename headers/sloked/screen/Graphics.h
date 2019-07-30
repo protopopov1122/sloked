@@ -5,12 +5,6 @@
 
 namespace sloked {
 
-    class TextGraphics {
-     public:
-        using Line = unsigned int;
-        using Column = unsigned int;
-    };
-
     enum class SlokedTextGraphics {
         Off = 0,
         Bold,

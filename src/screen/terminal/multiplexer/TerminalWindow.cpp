@@ -18,11 +18,11 @@ namespace sloked {
         this->height = h;
     }
 
-    TerminalWindow::Column TerminalWindow::GetOffsetX() const {
+    TextPosition::Column TerminalWindow::GetOffsetX() const {
         return this->offset_x;
     }
 
-    TerminalWindow::Line TerminalWindow::GetOffsetY() const {
+    TextPosition::Line TerminalWindow::GetOffsetY() const {
         return this->offset_y;
     }
 

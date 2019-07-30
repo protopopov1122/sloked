@@ -5,31 +5,36 @@ if meson.get_compiler('cpp').get_id() == 'gcc' or meson.get_compiler('cpp').get_
 endif
 
 sloked_src = [
-  'src/screen/terminal/posix/PosixTerminal.cpp',
+  'src/main.cpp',
+  'src/core/Encoding.cpp',
+  'src/core/Error.cpp',
+  'src/core/NewLine.cpp',
+  'src/core/Position.cpp',
+  'src/screen/Component.cpp',
+  'src/screen/Splitter.cpp',
+  'src/screen/terminal/CharWidth.cpp',
   'src/screen/terminal/multiplexer/TerminalWindow.cpp',
   'src/screen/terminal/multiplexer/TerminalBuffer.cpp',
   'src/screen/terminal/multiplexer/TerminalSplitter.cpp',
   'src/screen/terminal/multiplexer/TerminalTabber.cpp',
+  'src/screen/terminal/posix/PosixTerminal.cpp',
   'src/screen/terminal/screen/ComponentHandle.cpp',
   'src/screen/terminal/screen/TextPaneComponent.cpp',
   'src/screen/terminal/screen/SplitterComponent.cpp',
   'src/screen/terminal/screen/TabberComponent.cpp',
   'src/screen/terminal/screen/TextPane.cpp',
-  'src/main.cpp',
-  'src/core/Error.cpp',
-  'src/core/NewLine.cpp',
-  'src/core/Encoding.cpp',
-  'src/screen/terminal/CharWidth.cpp',
-  'src/screen/Component.cpp',
-  'src/screen/Splitter.cpp',
+  'src/text/Bookmark.cpp',
   'src/text/TextBlock.cpp',
   'src/text/TextChunk.cpp',
-  'src/text/posix/TextFile.cpp',
   'src/text/TextBlockHandle.cpp',
   'src/text/TextRegion.cpp',
   'src/text/TextDocument.cpp',
   'src/text/TextView.cpp',
-  'src/text/Cursor.cpp'
+  'src/text/Watcher.cpp',
+  'src/text/cursor/Cursor.cpp',
+  'src/text/cursor/PlainCursor.cpp',
+  'src/text/cursor/TransactionCursor.cpp',
+  'src/text/posix/TextFile.cpp'
 ]
 
 cpp = meson.get_compiler('cpp')

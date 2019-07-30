@@ -2,6 +2,7 @@
 #define SLOKED_SCREEN_TERMINAL_H_
 
 #include "sloked/Base.h"
+#include "sloked/core/Position.h"
 #include "sloked/screen/Keyboard.h"
 #include "sloked/screen/Graphics.h"
 #include <vector>
@@ -23,8 +24,8 @@ namespace sloked {
 
     class SlokedTerminal {
      public:
-        using Line = TextGraphics::Line;
-        using Column = TextGraphics::Column;
+        using Line = TextPosition::Line;
+        using Column = TextPosition::Column;
         using Text = SlokedTextGraphics;
         using Foreground = SlokedForegroundGraphics;
         using Background = SlokedBackgroundGraphics;

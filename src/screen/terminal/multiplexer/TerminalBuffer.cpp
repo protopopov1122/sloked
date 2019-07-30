@@ -149,11 +149,11 @@ namespace sloked {
         }
     }
 
-    BufferedTerminal::Column BufferedTerminal::GetWidth() {
+    TextPosition::Column BufferedTerminal::GetWidth() {
         return this->width;
     }
 
-    BufferedTerminal::Line BufferedTerminal::GetHeight() {
+    TextPosition::Line BufferedTerminal::GetHeight() {
         return this->height;
     }
 

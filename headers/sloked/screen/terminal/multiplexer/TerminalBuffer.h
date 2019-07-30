@@ -1,6 +1,7 @@
 #ifndef SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALBUFFER_H_
 #define SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALBUFFER_H_
 
+#include "sloked/core/Position.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/terminal/Terminal.h"
 #include "sloked/screen/terminal/CharWidth.h"

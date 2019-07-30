@@ -247,11 +247,11 @@ namespace sloked {
         this->MoveBackward(cols);
     }
 
-    unsigned int PosixTerminal::GetWidth() {
+    TextPosition::Column PosixTerminal::GetWidth() {
         return this->width;
     }
 
-    unsigned int PosixTerminal::GetHeight() {
+    TextPosition::Line PosixTerminal::GetHeight() {
         return this->height;
     }
 

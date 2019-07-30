@@ -2,8 +2,10 @@
 #include <iostream>
 #include "sloked/text/TextDocument.h"
 #include "sloked/text/TextView.h"
+#include "sloked/text/Bookmark.h"
 #include "sloked/text/posix/TextFile.h"
-#include "sloked/text/Cursor.h"
+#include "sloked/text/cursor/PlainCursor.h"
+#include "sloked/text/cursor/TransactionCursor.h"
 #include "sloked/screen/terminal/posix/PosixTerminal.h"
 #include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
 #include "sloked/screen/terminal/screen/ComponentHandle.h"
@@ -26,7 +28,6 @@ void print(TextBlock &text, SlokedTextPane &console, const EncodingConverter &co
         ss << conv.Convert(line) << std::endl;
     });
     console.Write(ss.str());
-    console.SetPosition(0, 0);
 }
 
 int main(int argc, const char **argv) {
@@ -40,8 +41,11 @@ int main(int argc, const char **argv) {
     EncodingConverter conv(fileEncoding, terminalEncoding);
     auto newline = NewLine::LF(fileEncoding);
     TextChunkFactory blockFactory(*newline);
-    TextDocument text(*newline, TextView::Open(view, *newline, blockFactory));
-    SlokedCursor cursor(text, fileEncoding);
+    TextDocument document(*newline, TextView::Open(view, *newline, blockFactory));
+    TextWatcherBlock text(document);
+
+    PlainCursor plainCursor(text, fileEncoding);
+    TransactionCursor cursor(plainCursor, plainCursor);
     ScreenCharWidth charWidth;
 
     PosixTerminal terminal;
@@ -63,6 +67,7 @@ int main(int argc, const char **argv) {
             case SlokedControlKey::F9: {
                 std::ofstream of(argv[2]);
                 of << text;
+                of.close();
                 std::exit(EXIT_SUCCESS);
             }
 
@@ -105,7 +110,7 @@ int main(int argc, const char **argv) {
                 break;
 
             case SlokedControlKey::Enter:
-                cursor.NewLine();
+                cursor.NewLine("");
                 break;
 
             case SlokedControlKey::Tab:
@@ -113,7 +118,23 @@ int main(int argc, const char **argv) {
                 break;
 
             case SlokedControlKey::Backspace:
-                cursor.Remove();
+                cursor.DeleteBackward();
+                break;
+
+            case SlokedControlKey::Delete:
+                cursor.DeleteForward();
+                break;
+
+            case SlokedControlKey::F4:
+                cursor.ClearRegion(TextPosition{cursor.GetLine() + 5, cursor.GetColumn() + 2});
+                break;
+            
+            case SlokedControlKey::Escape:
+                cursor.Undo();
+                break;
+            
+            case SlokedControlKey::End:
+                cursor.Redo();
                 break;
 
             default:
@@ -133,7 +154,11 @@ int main(int argc, const char **argv) {
     tab1.SetRenderer([&](auto &term) {
         term.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
         print(text, term, conv);
-        term.SetPosition(cursor.GetLine() - offset, cursor.GetColumn());
+        term.SetPosition(cursor.GetLine() - offset, charWidth.GetRealPosition(
+            std::string {text.GetLine(cursor.GetLine())},
+            cursor.GetColumn(),
+            fileEncoding
+        ));
     });
 
     tab2.SetInputHandler(listener2);
@@ -141,7 +166,11 @@ int main(int argc, const char **argv) {
         term.SetGraphicsMode(SlokedTextGraphics::Off);
         term.SetGraphicsMode(SlokedBackgroundGraphics::Yellow);
         print(text, term, conv);
-        term.SetPosition(cursor.GetLine() - offset, cursor.GetColumn());
+        term.SetPosition(cursor.GetLine() - offset, charWidth.GetRealPosition(
+            std::string {text.GetLine(cursor.GetLine())},
+            cursor.GetColumn(),
+            fileEncoding
+        ));
     });
 
     tab3.SetInputHandler(listener2);
@@ -149,7 +178,11 @@ int main(int argc, const char **argv) {
         term.SetGraphicsMode(SlokedTextGraphics::Off);
         term.SetGraphicsMode(SlokedBackgroundGraphics::Red);
         print(text, term, conv);
-        term.SetPosition(cursor.GetLine() - offset, cursor.GetColumn());
+        term.SetPosition(cursor.GetLine() - offset, charWidth.GetRealPosition(
+            std::string {text.GetLine(cursor.GetLine())},
+            cursor.GetColumn(),
+            fileEncoding
+        ));
     });
 
     pane4.SetRenderer([&](auto &term) {

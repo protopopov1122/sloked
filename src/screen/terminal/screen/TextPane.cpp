@@ -37,11 +37,11 @@ namespace sloked {
         this->term.ClearChars(c);
     }
 
-    TerminalTextPane::Column TerminalTextPane::GetWidth() {
+    TextPosition::Column TerminalTextPane::GetWidth() {
         return this->term.GetWidth();
     }
 
-    TerminalTextPane::Line TerminalTextPane::GetHeight() {
+    TextPosition::Line TerminalTextPane::GetHeight() {
         return this->term.GetHeight();
     }
 

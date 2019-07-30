@@ -2,6 +2,7 @@
 #define SLOKED_SCREEN_WIDGETS_TEXTPANE_H_
 
 #include "sloked/Base.h"
+#include "sloked/core/Position.h"
 #include "sloked/screen/Component.h"
 #include "sloked/screen/Graphics.h"
 
@@ -9,8 +10,8 @@ namespace sloked {
 
     class SlokedTextPane {
      public:
-        using Line = TextGraphics::Line;
-        using Column = TextGraphics::Column;
+        using Line = TextPosition::Line;
+        using Column = TextPosition::Column;
 
         virtual ~SlokedTextPane() = default;
     
