@@ -41,7 +41,7 @@ namespace sloked {
             if (begin < this->minKey) {
                 throw SlokedError("Invalid range");
             }
-            if (begin >= end) {
+            if (!(begin < end)) {
                 throw SlokedError("Range with non-positive length");
             }
 
@@ -62,15 +62,15 @@ namespace sloked {
             
             if (!insertAtBegin && outerRangeBegin == rangesEnd) {
                 this->ranges.insert(outerRangeBegin, std::make_pair(begin, value));
-            } else if (!insertAtBegin && outerRangeBegin->second != value) {
+            } else if (!insertAtBegin && !(outerRangeBegin->second == value)) {
                 this->ranges.insert(std::next(outerRangeBegin), std::make_pair(begin, value));
             } else if (insertAtBegin) {
                 this->ranges.insert_or_assign(this->ranges.begin(), begin, value);
             }
 
             if ((rangeEnd == rangesEnd ||
-                std::prev(rangeEnd)->second != outerRangeTail) &&
-                outerRangeTail != value) {
+                !(std::prev(rangeEnd)->second == outerRangeTail)) &&
+                !(outerRangeTail == value)) {
                 this->ranges.insert(rangeEnd, std::make_pair(end, outerRangeTail));
             }
         }

@@ -1,281 +1,154 @@
 #include "sloked/text/cursor/TransactionCursor.h"
+#include "sloked/text/cursor/EditingPrimitives.h"
 #include <functional>
 #include <iostream>
 
 namespace sloked {
 
-    class TransactionCursor::Command {
-     public:
-        Command(SlokedCursor &cursor, const SlokedTextReader &reader)
-            : cursor(cursor), reader(reader) {}
-        virtual ~Command() = default;
-
-        virtual void apply() = 0;
-        virtual void undo() = 0;
-    
-     protected:
-        SlokedCursor &cursor;
-        const SlokedTextReader &reader;
-    };
-
-    class PositioningCommand : public TransactionCursor::Command {
-     public:
-        PositioningCommand(SlokedCursor &cursor, const SlokedTextReader &reader, std::function<void(SlokedCursor &)> action)
-            : Command(cursor, reader), action(action) {
-            this->previousPosition = TextPosition {this->cursor.GetLine(), this->cursor.GetColumn()};
-        }
-
-        void apply() override {
-            this->action(this->cursor);
-        }
-        
-        void undo() override {
-            this->cursor.SetPosition(this->previousPosition.line, this->previousPosition.column);
-        }
-
-     private:
-        TextPosition previousPosition;
-        std::function<void(SlokedCursor &)> action;
-    };
-
-    class InsertCommand : public TransactionCursor::Command {
-     public:
-        InsertCommand(SlokedCursor &cursor, const SlokedTextReader &reader, std::string_view content)
-            : Command(cursor, reader), content(content) {
-            this->position = TextPosition{cursor.GetLine(), cursor.GetColumn()};
-            this->end = TextPosition{cursor.GetLine(), cursor.GetColumn()};
-        }
-
-        void apply() override {
-            this->cursor.Insert(this->content);
-            this->end = TextPosition{cursor.GetLine(), cursor.GetColumn()};
-        }
-        
-        void undo() override {
-            this->cursor.SetPosition(this->position.line, this->position.column);
-            this->cursor.ClearRegion(this->end);
-        }
-
-     private:
-        TextPosition position;
-        TextPosition end;
-        std::string content;
-    };
-
-    class NewlineCommand : public TransactionCursor::Command {
-     public:
-        NewlineCommand(SlokedCursor &cursor, const SlokedTextReader &reader, std::string_view content)
-            : Command(cursor, reader), content(content) {
-            this->position = TextPosition{cursor.GetLine(), cursor.GetColumn()};
-        }
-
-        void apply() override {
-            this->cursor.NewLine(this->content);
-            this->end = TextPosition{cursor.GetLine(), cursor.GetColumn()};
-        }
-        
-        void undo() override {
-            this->cursor.SetPosition(this->position.line, this->reader.LineLength(this->position.line));
-            this->cursor.ClearRegion(this->end);
-            this->cursor.SetPosition(this->position.line, this->position.column);
-        }
-
-     private:
-        TextPosition position;
-        TextPosition end;
-        std::string content;
-    };
-
-    class DeleteBackCommand : public TransactionCursor::Command {
-     public:
-        DeleteBackCommand(SlokedCursor &cursor, const SlokedTextReader &reader)
-            : Command(cursor, reader) {
-            if (this->cursor.GetColumn() > 0) {
-                this->position = TextPosition{cursor.GetLine(), cursor.GetColumn()};
-                this->deleted = this->reader.Read(TextPosition{this->position.line, this->position.column - 1}, this->position)[0];
-                this->line_removed = false;
-            } else if (this->cursor.GetLine() > 0) {
-                this->position = TextPosition{this->cursor.GetLine() - 1, this->reader.LineLength(this->cursor.GetLine() - 1)};
-                this->line_removed = true;
-            }
-        }
-
-        void apply() override {
-            this->cursor.DeleteBackward();
-        }
-        
-        void undo() override {
-            if (!this->line_removed) {
-                this->cursor.SetPosition(this->position.line, this->position.column - 1);
-                this->cursor.Insert(this->deleted);
-            } else {
-                this->cursor.SetPosition(this->position.line, this->position.column);
-                this->cursor.NewLine("");
-            }
-        }
-    
-     private:
-        bool line_removed;
-        TextPosition position;
-        std::string deleted;
-    };
-
-    class DeleteFrontCommand : public TransactionCursor::Command {
-     public:
-        DeleteFrontCommand(SlokedCursor &cursor, const SlokedTextReader &reader)
-            : Command(cursor, reader) {
-            this->position = TextPosition{cursor.GetLine(), cursor.GetColumn()};
-            if (this->cursor.GetColumn() < this->reader.LineLength(this->cursor.GetLine())) {
-                this->deleted = this->reader.Read(this->position, TextPosition{this->position.line, this->position.column + 1})[0];
-                this->line_removed = false;
-            } else if (this->cursor.GetLine() > 0) {
-                this->line_removed = true;
-            }
-        }
-
-        void apply() override {
-            this->cursor.DeleteForward();
-        }
-        
-        void undo() override {
-            if (!this->line_removed) {
-                this->cursor.SetPosition(this->position.line, this->position.column);
-                this->cursor.Insert(this->deleted);
-                this->cursor.SetPosition(this->position.line, this->position.column);
-            } else {
-                this->cursor.SetPosition(this->position.line, this->position.column);
-                this->cursor.NewLine("");
-                this->cursor.SetPosition(this->position.line, this->position.column);
-            }
-        }
-    
-     private:
-        bool line_removed;
-        TextPosition position;
-        std::string deleted;
-    };
-
-    class ClearRegionCommand : public TransactionCursor::Command {
-     public:
-        ClearRegionCommand(SlokedCursor &cursor, const SlokedTextReader &reader, const TextPosition &from, const TextPosition &to)
-            : Command(cursor, reader), from(from), to(to) {
-            this->position = TextPosition{cursor.GetLine(), cursor.GetColumn()};
-            this->deleted = this->reader.Read(from, to);
-        }
-
-        void apply() override {
-            this->cursor.ClearRegion(this->from, this->to);
-        }
-
-        void undo() override {
-            this->cursor.SetPosition(this->from.line, this->from.column);
-            if (!this->deleted.empty()) {
-                this->cursor.Insert(this->deleted[0]);
-                for (std::size_t i = 1 ; i < this->deleted.size(); i++) {
-                    this->cursor.NewLine("");
-                    this->cursor.Insert(this->deleted[i]);
-                }
-            }
-            this->cursor.SetPosition(this->position.line, this->position.column);
-        }
-
-     private:
-        TextPosition position;
-        TextPosition from;
-        TextPosition to;
-        std::vector<std::string> deleted;
-    };
-
-    TransactionCursor::TransactionCursor(SlokedCursor &base, const SlokedTextReader &reader)
-        : base(base), reader(reader) {}
+    TransactionCursor::TransactionCursor(TextBlock &text, const Encoding &encoding, SlokedTransactionStream &stream)
+        : text(text), encoding(encoding), stream(stream), line(0), column(0) {}
 
     void TransactionCursor::Undo() {
-        if (!this->history.empty()) {
-            auto cmd = this->history.back();
-            cmd->undo();
-            this->history.pop_back();
-            this->redo.push_back(cmd);
+        if (this->stream.HasRollback()) {
+            auto pos = this->stream.Rollback();
+            this->line = pos.line;
+            this->column = pos.column;
         }
     }
 
     bool TransactionCursor::HasUndoable() const {
-        return !this->history.empty();
+        return this->stream.HasRollback();
     }
 
     void TransactionCursor::Redo() {
-        if (!this->redo.empty()) {
-            auto cmd = this->redo.back();
-            cmd->apply();
-            this->redo.pop_back();
-            this->history.push_back(cmd);
+        if (this->stream.HasRevertable()) {
+            auto pos = this->stream.RevertRollback();
+            this->line = pos.line;
+            this->column = pos.column;
         }
     }
 
     bool TransactionCursor::HasRedoable() const {
-        return !this->redo.empty();
+        return this->stream.HasRevertable();
     }
     
     TextPosition::Line TransactionCursor::GetLine() const {
-        return this->base.GetLine();
+        return this->line;
     }
 
     TextPosition::Column TransactionCursor::GetColumn() const {
-        return this->base.GetColumn();
+        return this->column;
     }
 
     void TransactionCursor::SetPosition(Line l, Column c) {
-        this->applyCommand(std::make_shared<PositioningCommand>(this->base, this->reader, [l, c](SlokedCursor &cursor) {
-            cursor.SetPosition(l, c);
-        }));
+        if (l <= this->text.GetLastLine()) {
+            auto columns = this->encoding.CodepointCount(this->text.GetLine(l));
+            if (c <= columns) {
+                this->line = l;
+                this->column = c;
+            }
+        }
     }
 
     void TransactionCursor::MoveUp(Line l) {
-        this->applyCommand(std::make_shared<PositioningCommand>(this->base, this->reader, [l](SlokedCursor &cursor) {
-            cursor.MoveUp(l);
-        }));
+        this->line -= std::min(l, this->line);
+        this->column = std::min(this->column, static_cast<TextPosition::Column>(this->encoding.CodepointCount(this->text.GetLine(this->line))));
     }
 
     void TransactionCursor::MoveDown(Line l) {
-        this->applyCommand(std::make_shared<PositioningCommand>(this->base, this->reader, [l](SlokedCursor &cursor) {
-            cursor.MoveDown(l);
-        }));
+        this->line += std::min(this->line + l, static_cast<TextPosition::Line>(this->text.GetLastLine())) - this->line;
+        this->column = std::min(this->column, static_cast<TextPosition::Column>(this->encoding.CodepointCount(this->text.GetLine(this->line))));
     }
 
     void TransactionCursor::MoveForward(Column c) {
-        this->applyCommand(std::make_shared<PositioningCommand>(this->base, this->reader, [c](SlokedCursor &cursor) {
-            cursor.MoveForward(c);
-        }));
+        this->column = std::min(this->column + c, static_cast<TextPosition::Column>(this->encoding.CodepointCount(this->text.GetLine(this->line))));
     }
 
     void TransactionCursor::MoveBackward(Column c) {
-        this->applyCommand(std::make_shared<PositioningCommand>(this->base, this->reader, [c](SlokedCursor &cursor) {
-            cursor.MoveBackward(c);
-        }));
+        this->column -= std::min(c, this->column);
     }
 
     void TransactionCursor::Insert(std::string_view view) {
-        this->applyCommand(std::make_shared<InsertCommand>(this->base, this->reader, view));
+        this->applyCommand(SlokedEditTransaction {
+            SlokedEditTransaction::Action::Insert,
+            SlokedEditTransaction::Content {
+                TextPosition {this->line, this->column},
+                std::string {view}
+            }
+        });
     }
     
     void TransactionCursor::NewLine(std::string_view view) {
-        this->applyCommand(std::make_shared<NewlineCommand>(this->base, this->reader, view));
+        this->applyCommand(SlokedEditTransaction {
+            SlokedEditTransaction::Action::Newline,
+            SlokedEditTransaction::Content {
+                TextPosition {this->line, this->column},
+                std::string {view}
+            }
+        });
     }
 
     void TransactionCursor::DeleteBackward() {
-        this->applyCommand(std::make_shared<DeleteBackCommand>(this->base, this->reader));
+        std::string content = "";
+        Column width = 0;
+        if (this->column > 0) {
+            std::string_view view = this->text.GetLine(this->line);
+            auto pos = this->encoding.GetCodepoint(view, this->column - 1);
+            content = view.substr(pos.first, pos.second);
+        } else {
+            width = this->encoding.CodepointCount(this->text.GetLine(this->line - 1));
+        }
+        this->applyCommand(SlokedEditTransaction {
+            SlokedEditTransaction::Action::DeleteBackward,
+            SlokedEditTransaction::DeletePosition {
+                TextPosition {this->line, this->column},
+                content,
+                width
+            }
+        });
     }
 
     void TransactionCursor::DeleteForward() {
-        this->applyCommand(std::make_shared<DeleteFrontCommand>(this->base, this->reader));
+        std::string content = "";
+        Column width = this->encoding.CodepointCount(this->text.GetLine(this->line));
+        if (this->column < width) {
+            std::string_view view = this->text.GetLine(this->line);
+            auto pos = this->encoding.GetCodepoint(view, this->column);
+            content = view.substr(pos.first, pos.second);
+        }
+        this->applyCommand(SlokedEditTransaction {
+            SlokedEditTransaction::Action::DeleteForward,
+            SlokedEditTransaction::DeletePosition {
+                TextPosition {this->line, this->column},
+                content,
+                width
+            }
+        });
+    }
+
+    static TextPosition ClampPosition(const TextBlock &text, const Encoding &encoding, const TextPosition &position) {
+        TextPosition res;
+        res.line = std::min(position.line, static_cast<TextPosition::Line>(text.GetLastLine()));
+        res.column = std::min(position.column, static_cast<TextPosition::Column>(encoding.CodepointCount(text.GetLine(res.line))));
+        return res;
     }
 
     void TransactionCursor::ClearRegion(const TextPosition &from, const TextPosition &to) {
-        this->applyCommand(std::make_shared<ClearRegionCommand>(this->base, this->reader, from, to));
+        auto cfrom = ClampPosition(this->text, this->encoding, from);
+        auto cto = ClampPosition(this->text, this->encoding, to);
+        this->applyCommand(SlokedEditTransaction {
+            SlokedEditTransaction::Action::Clear,
+            SlokedEditTransaction::Range {
+                cfrom,
+                cto,
+                SlokedEditingPrimitives::Read(this->text, this->encoding, cfrom, cto)
+            }
+        });
     }
 
-    void TransactionCursor::applyCommand(std::shared_ptr<Command> cmd) {
-        this->redo.clear();
-        cmd->apply();
-        this->history.push_back(cmd);
+    void TransactionCursor::applyCommand(const SlokedEditTransaction &trans) {
+        auto pos = this->stream.Commit(trans);
+        this->line = pos.line;
+        this->column = pos.column;
     }
 }

@@ -1,11 +1,13 @@
 #include <cstdlib>
 #include <iostream>
 #include "sloked/text/TextDocument.h"
+#include "sloked/text/Watcher.h"
 #include "sloked/text/TextView.h"
-#include "sloked/text/Bookmark.h"
 #include "sloked/text/posix/TextFile.h"
 #include "sloked/text/cursor/PlainCursor.h"
 #include "sloked/text/cursor/TransactionCursor.h"
+#include "sloked/text/cursor/TransactionBatch.h"
+#include "sloked/text/cursor/TransactionStreamMultiplexer.h"
 #include "sloked/screen/terminal/posix/PosixTerminal.h"
 #include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
 #include "sloked/screen/terminal/screen/ComponentHandle.h"
@@ -44,8 +46,12 @@ int main(int argc, const char **argv) {
     TextDocument document(*newline, TextView::Open(view, *newline, blockFactory));
     TextWatcherBlock text(document);
 
-    PlainCursor plainCursor(text, fileEncoding);
-    TransactionCursor cursor(plainCursor, plainCursor);
+    TransactionStreamMultiplexer multiplexer(text, fileEncoding);
+    auto stream1 = multiplexer.NewStream();
+    auto stream2 = multiplexer.NewStream();
+    TransactionCursor cursor1(text, fileEncoding, *stream1);
+    TransactionCursor cursor2(text, fileEncoding, *stream2);
+    TransactionCursor *cursor = &cursor1;
     ScreenCharWidth charWidth;
 
     PosixTerminal terminal;
@@ -91,59 +97,75 @@ int main(int argc, const char **argv) {
 
     auto listener2 = [&](const SlokedKeyboardInput &cmd) {
         if (cmd.index() == 0) {
-            cursor.Insert(conv.ReverseConvert(std::get<0>(cmd)));
+            cursor->Insert(conv.ReverseConvert(std::get<0>(cmd)));
         } else switch (std::get<1>(cmd)) {
             case SlokedControlKey::ArrowUp:
-                cursor.MoveUp(1);
+                cursor->MoveUp(1);
                 break;
             
             case SlokedControlKey::ArrowDown:
-                cursor.MoveDown(1);
+                cursor->MoveDown(1);
                 break;
             
             case SlokedControlKey::ArrowLeft:
-                cursor.MoveBackward(1);
+                cursor->MoveBackward(1);
                 break;
             
             case SlokedControlKey::ArrowRight:
-                cursor.MoveForward(1);
+                cursor->MoveForward(1);
                 break;
 
             case SlokedControlKey::Enter:
-                cursor.NewLine("");
+                cursor->NewLine("");
                 break;
 
             case SlokedControlKey::Tab:
-                cursor.Insert(fileEncoding.Encode(u'\t'));
+                cursor->Insert(fileEncoding.Encode(u'\t'));
                 break;
 
             case SlokedControlKey::Backspace:
-                cursor.DeleteBackward();
+                cursor->DeleteBackward();
                 break;
 
             case SlokedControlKey::Delete:
-                cursor.DeleteForward();
+                cursor->DeleteForward();
                 break;
 
             case SlokedControlKey::F4:
-                cursor.ClearRegion(TextPosition{cursor.GetLine() + 5, cursor.GetColumn() + 2});
+                cursor->ClearRegion(TextPosition{cursor->GetLine() + 5, cursor->GetColumn() + 2});
                 break;
+
+            case SlokedControlKey::F5: {
+                TransactionBatch batch(*stream2, TextPosition{cursor->GetLine(), cursor->GetColumn()});
+                TransactionCursor crs(text, fileEncoding, batch);
+                crs.ClearRegion(TextPosition{cursor->GetLine() + 10, cursor->GetColumn() + 2}, TextPosition{cursor->GetLine() + 15, cursor->GetColumn() + 2});
+                crs.ClearRegion(TextPosition{cursor->GetLine(), cursor->GetColumn() + 2}, TextPosition{cursor->GetLine() + 5, cursor->GetColumn() + 2});
+                batch.Finish();
+            } break;
             
             case SlokedControlKey::Escape:
-                cursor.Undo();
+                cursor->Undo();
                 break;
             
             case SlokedControlKey::End:
-                cursor.Redo();
+                cursor->Redo();
+                break;
+
+            case SlokedControlKey::PageUp:
+                cursor = &cursor1;
+                break;
+
+            case SlokedControlKey::PageDown:
+                cursor = &cursor2;
                 break;
 
             default:
                 break;
         }
-        if (cursor.GetLine() - offset >= buffer && cursor.GetLine() >= buffer) {
-            offset = cursor.GetLine() - buffer;
+        if (cursor->GetLine() - offset >= buffer && cursor->GetLine() >= buffer) {
+            offset = cursor->GetLine() - buffer;
         }
-        while (cursor.GetLine() + 1 <= offset && offset > 0) {
+        while (cursor->GetLine() + 1 <= offset && offset > 0) {
             offset--;
         }
         return true;
@@ -154,9 +176,9 @@ int main(int argc, const char **argv) {
     tab1.SetRenderer([&](auto &term) {
         term.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
         print(text, term, conv);
-        term.SetPosition(cursor.GetLine() - offset, charWidth.GetRealPosition(
-            std::string {text.GetLine(cursor.GetLine())},
-            cursor.GetColumn(),
+        term.SetPosition(cursor->GetLine() - offset, charWidth.GetRealPosition(
+            std::string {text.GetLine(cursor->GetLine())},
+            cursor->GetColumn(),
             fileEncoding
         ));
     });
@@ -166,9 +188,9 @@ int main(int argc, const char **argv) {
         term.SetGraphicsMode(SlokedTextGraphics::Off);
         term.SetGraphicsMode(SlokedBackgroundGraphics::Yellow);
         print(text, term, conv);
-        term.SetPosition(cursor.GetLine() - offset, charWidth.GetRealPosition(
-            std::string {text.GetLine(cursor.GetLine())},
-            cursor.GetColumn(),
+        term.SetPosition(cursor->GetLine() - offset, charWidth.GetRealPosition(
+            std::string {text.GetLine(cursor->GetLine())},
+            cursor->GetColumn(),
             fileEncoding
         ));
     });
@@ -178,9 +200,9 @@ int main(int argc, const char **argv) {
         term.SetGraphicsMode(SlokedTextGraphics::Off);
         term.SetGraphicsMode(SlokedBackgroundGraphics::Red);
         print(text, term, conv);
-        term.SetPosition(cursor.GetLine() - offset, charWidth.GetRealPosition(
-            std::string {text.GetLine(cursor.GetLine())},
-            cursor.GetColumn(),
+        term.SetPosition(cursor->GetLine() - offset, charWidth.GetRealPosition(
+            std::string {text.GetLine(cursor->GetLine())},
+            cursor->GetColumn(),
             fileEncoding
         ));
     });

@@ -23,7 +23,6 @@ sloked_src = [
   'src/screen/terminal/screen/SplitterComponent.cpp',
   'src/screen/terminal/screen/TabberComponent.cpp',
   'src/screen/terminal/screen/TextPane.cpp',
-  'src/text/Bookmark.cpp',
   'src/text/TextBlock.cpp',
   'src/text/TextChunk.cpp',
   'src/text/TextBlockHandle.cpp',
@@ -31,9 +30,14 @@ sloked_src = [
   'src/text/TextDocument.cpp',
   'src/text/TextView.cpp',
   'src/text/Watcher.cpp',
+  'src/text/Bookmark.cpp',
   'src/text/cursor/Cursor.cpp',
+  'src/text/cursor/EditingPrimitives.cpp',
   'src/text/cursor/PlainCursor.cpp',
+  'src/text/cursor/Transaction.cpp',
+  'src/text/cursor/TransactionBatch.cpp',
   'src/text/cursor/TransactionCursor.cpp',
+  'src/text/cursor/TransactionStreamMultiplexer.cpp',
   'src/text/posix/TextFile.cpp'
 ]
 

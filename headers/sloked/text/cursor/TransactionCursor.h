@@ -1,8 +1,11 @@
 #ifndef SLOKED_TEXT_CURSOR_TRANSACTIONCURSOR_H_
 #define SLOKED_TEXT_CURSOR_TRANSACTIONCURSOR_H_
 
+#include "sloked/core/Encoding.h"
+#include "sloked/text/TextBlock.h"
 #include "sloked/text/cursor/Cursor.h"
-#include "sloked/text/cursor/Reader.h"
+#include "sloked/text/cursor/Transaction.h"
+#include "sloked/text/cursor/TransactionStream.h"
 #include "sloked/text/cursor/TransactionHistory.h"
 #include <vector>
 #include <memory>
@@ -11,7 +14,7 @@ namespace sloked {
 
     class TransactionCursor : public SlokedCursor, public SlokedTransactionHistory {
      public:
-        TransactionCursor(SlokedCursor &, const SlokedTextReader &);
+        TransactionCursor(TextBlock &, const Encoding &, SlokedTransactionStream &);
 
         void Undo() override;
         bool HasUndoable() const override;
@@ -34,15 +37,14 @@ namespace sloked {
         using SlokedCursor::ClearRegion;
         void ClearRegion(const TextPosition &, const TextPosition &) override;
 
-        class Command;
-
      private:
-        void applyCommand(std::shared_ptr<Command>);
+        void applyCommand(const SlokedEditTransaction &);
     
-        SlokedCursor &base;
-        const SlokedTextReader &reader;
-        std::vector<std::shared_ptr<Command>> history;
-        std::vector<std::shared_ptr<Command>> redo;
+        TextBlock &text;
+        const Encoding &encoding;
+        SlokedTransactionStream &stream;
+        Line line;
+        Column column;
     };
 }
 
