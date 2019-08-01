@@ -23,7 +23,8 @@ namespace sloked {
         std::vector<RangeMap<TextPosition, TextPositionDelta>> patch;
     };
 
-    struct SlokedEditTransaction {
+    class SlokedCursorTransaction {
+     public:
         enum class Action {
             Insert,
             Newline,
@@ -50,18 +51,26 @@ namespace sloked {
             std::vector<std::string> content;
         };
 
+        using Batch = std::pair<TextPosition, std::vector<SlokedCursorTransaction>>;
+
+        SlokedCursorTransaction(Action, const Content &);
+        SlokedCursorTransaction(Action, const DeletePosition &);
+        SlokedCursorTransaction(const Range &);
+        SlokedCursorTransaction(const Batch &);
+
         TextPosition Commit(TextBlock &, const Encoding &) const;
         TextPosition Rollback(TextBlock &, const Encoding &) const;
         SlokedTransactionPatch CommitPatch(const Encoding &) const;
         SlokedTransactionPatch RollbackPatch(const Encoding &) const;
         void Apply(const SlokedTransactionPatch &);
-
-        Action action;
-        std::variant<DeletePosition, Content, Range, std::pair<TextPosition, std::vector<SlokedEditTransaction>>> argument;
+        void Update(TextBlock &, const Encoding &);
 
      private:
         void CommitPatch(const Encoding &, SlokedTransactionPatch &) const;
         void RollbackPatch(const Encoding &, SlokedTransactionPatch &) const;
+
+        Action action;
+        std::variant<DeletePosition, Content, Range, Batch> argument;
     };
 }
 

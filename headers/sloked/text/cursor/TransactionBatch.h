@@ -5,10 +5,10 @@
 
 namespace sloked {
 
-    class TransactionBatch : public SlokedTransactionStream {
+    class TransactionBatch : public virtual SlokedTransactionStream {
      public:
         TransactionBatch(SlokedTransactionStream &, const TextPosition &);
-        TextPosition Commit(const SlokedEditTransaction &) override;
+        TextPosition Commit(const SlokedCursorTransaction &) override;
         bool HasRollback() const override;
         TextPosition Rollback() override;
         bool HasRevertable() const override;
@@ -16,12 +16,16 @@ namespace sloked {
         void Finish();
         void Finish(const TextPosition &);
 
+        void AddListener(std::shared_ptr<Listener>) override;
+        void RemoveListener(const Listener &) override;
+        void ClearListeners() override;
+
      private:
         SlokedTransactionStream &stream;
         bool start;
         TextPosition position;
-        std::vector<SlokedEditTransaction> batch;
-        std::vector<SlokedEditTransaction> rollback;
+        std::vector<SlokedCursorTransaction> batch;
+        std::vector<SlokedCursorTransaction> rollback;
     };
 }
 

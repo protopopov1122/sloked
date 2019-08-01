@@ -41,7 +41,19 @@ namespace sloked {
         };
     }
 
-    TextPosition SlokedEditTransaction::Commit(TextBlock &text, const Encoding &encoding) const {
+    SlokedCursorTransaction::SlokedCursorTransaction(Action action, const Content &content)
+        : action(action), argument(content) {}
+
+    SlokedCursorTransaction::SlokedCursorTransaction(Action action, const DeletePosition &pos)
+        : action(action), argument(pos) {}
+    
+    SlokedCursorTransaction::SlokedCursorTransaction(const Range &range)
+        : action(Action::Clear), argument(range) {}
+
+    SlokedCursorTransaction::SlokedCursorTransaction(const Batch &batch)
+        : action(Action::Batch), argument(batch) {}
+
+    TextPosition SlokedCursorTransaction::Commit(TextBlock &text, const Encoding &encoding) const {
         switch (this->action) {
             case Action::Insert:
                 return SlokedEditingPrimitives::Insert(text, encoding, std::get<1>(this->argument).position, std::get<1>(this->argument).content);
@@ -69,7 +81,7 @@ namespace sloked {
         return TextPosition{};
     }
 
-    TextPosition SlokedEditTransaction::Rollback(TextBlock &text, const Encoding &encoding) const {
+    TextPosition SlokedCursorTransaction::Rollback(TextBlock &text, const Encoding &encoding) const {
         switch (this->action) {
             case Action::Insert: {
                 const auto &arg = std::get<1>(this->argument);
@@ -131,19 +143,19 @@ namespace sloked {
         return TextPosition{};
     }
 
-    SlokedTransactionPatch SlokedEditTransaction::CommitPatch(const Encoding &encoding) const {
+    SlokedTransactionPatch SlokedCursorTransaction::CommitPatch(const Encoding &encoding) const {
         SlokedTransactionPatch patch;
         this->CommitPatch(encoding, patch);
         return patch;
     }
 
-    SlokedTransactionPatch SlokedEditTransaction::RollbackPatch(const Encoding &encoding) const {
+    SlokedTransactionPatch SlokedCursorTransaction::RollbackPatch(const Encoding &encoding) const {
         SlokedTransactionPatch patch;
         this->RollbackPatch(encoding, patch);
         return patch;
     }
 
-    void SlokedEditTransaction::Apply(const SlokedTransactionPatch &impact) {
+    void SlokedCursorTransaction::Apply(const SlokedTransactionPatch &impact) {
         switch (this->action) {
             case Action::Newline:
             case Action::Insert: {
@@ -193,7 +205,50 @@ namespace sloked {
         }
     }
 
-    void SlokedEditTransaction::CommitPatch(const Encoding &encoding, SlokedTransactionPatch &patch) const {
+    void SlokedCursorTransaction::Update(TextBlock &text, const Encoding &encoding) {
+        switch (this->action) {
+            case Action::DeleteBackward: {
+                auto &arg = std::get<0>(this->argument);
+                arg.content = "";
+                arg.width = 0;
+                if (arg.position.column > 0) {
+                    std::string_view view = text.GetLine(arg.position.line);
+                    auto pos = encoding.GetCodepoint(view, arg.position.column - 1);
+                    arg.content = view.substr(pos.first, pos.second);
+                } else {
+                    arg.width = encoding.CodepointCount(text.GetLine(arg.position.line - 1));
+                }
+            } break;
+
+            case Action::DeleteForward: {
+                auto &arg = std::get<0>(this->argument);
+                arg.content = "";
+                arg.width = encoding.CodepointCount(text.GetLine(arg.position.line));
+                if (arg.position.column < arg.width) {
+                    std::string_view view = text.GetLine(arg.position.line);
+                    auto pos = encoding.GetCodepoint(view, arg.position.column);
+                    arg.content = view.substr(pos.first, pos.second);
+                }
+            } break;
+
+            case Action::Clear: {
+                auto &arg = std::get<2>(this->argument);
+                arg.content = SlokedEditingPrimitives::Read(text, encoding, arg.from, arg.to);
+            } break;
+
+            case Action::Batch: {
+                auto &batch = std::get<3>(this->argument);
+                for (auto &trans : batch.second) {
+                    trans.Update(text, encoding);
+                }
+            } break;
+
+            default:
+                break;
+        }
+    }
+
+    void SlokedCursorTransaction::CommitPatch(const Encoding &encoding, SlokedTransactionPatch &patch) const {
         TextPosition::Line max_line = std::numeric_limits<TextPosition::Line>::max();
         TextPosition::Column max_column = std::numeric_limits<TextPosition::Column>::max();
         switch (this->action) {
@@ -202,7 +257,7 @@ namespace sloked {
                 std::size_t content_len = encoding.CodepointCount(arg.content);
                 patch.Insert(TextPosition{arg.position.line, arg.position.column},
                     TextPosition{arg.position.line, max_column},
-                    TextPositionDelta{0, content_len});
+                    TextPositionDelta{0, static_cast<TextPositionDelta::Column>(content_len)});
             } break;
 
             case Action::Newline: {
@@ -210,7 +265,7 @@ namespace sloked {
                 std::size_t content_len = encoding.CodepointCount(arg.content);
                 patch.Insert(TextPosition{arg.position.line, arg.position.column},
                     TextPosition{arg.position.line, max_column},
-                    TextPositionDelta{1, -arg.position.column + content_len});
+                    TextPositionDelta{1, -static_cast<TextPositionDelta::Column>(arg.position.column) + -static_cast<TextPositionDelta::Column>(content_len)});
                 patch.Insert(TextPosition{arg.position.line + 1, 0},
                     TextPosition{max_line, max_column},
                     TextPositionDelta{1, 0});
@@ -248,11 +303,12 @@ namespace sloked {
                     std::size_t newlines = arg.content.size() - 1;
                     patch.Insert(TextPosition{arg.to.line, arg.to.column},
                         TextPosition{arg.to.line, max_column},
-                        TextPositionDelta{-newlines, arg.from.column - encoding.CodepointCount(arg.content.at(arg.content.size() - 1))});
+                        TextPositionDelta{-static_cast<TextPositionDelta::Column>(newlines),
+                        static_cast<TextPositionDelta::Column>(arg.from.column) - static_cast<TextPositionDelta::Column>(encoding.CodepointCount(arg.content.at(arg.content.size() - 1)))});
                     if (newlines > 0) {
                         patch.Insert(TextPosition{arg.to.line + 1, 0},
                             TextPosition{max_line, max_column},
-                            TextPositionDelta{-newlines, 0});
+                            TextPositionDelta{-static_cast<TextPositionDelta::Column>(newlines), 0});
                     }
                 }
             } break;
@@ -267,24 +323,24 @@ namespace sloked {
         }
     }
 
-    void SlokedEditTransaction::RollbackPatch(const Encoding &encoding, SlokedTransactionPatch &patch) const {
+    void SlokedCursorTransaction::RollbackPatch(const Encoding &encoding, SlokedTransactionPatch &patch) const {
         TextPosition::Line max_line = std::numeric_limits<TextPosition::Line>::max();
         TextPosition::Column max_column = std::numeric_limits<TextPosition::Column>::max();
         switch (this->action) {
             case Action::Insert: {
                 const auto &arg = std::get<1>(this->argument);
                 std::size_t content_len = encoding.CodepointCount(arg.content);
-                patch.Insert(TextPosition{arg.position.line, arg.position.column + content_len},
+                patch.Insert(TextPosition{arg.position.line, arg.position.column + static_cast<TextPosition::Column>(content_len)},
                     TextPosition{arg.position.line, max_column},
-                    TextPositionDelta{0, -content_len});
+                    TextPositionDelta{0, -static_cast<TextPositionDelta::Column>(content_len)});
             } break;
 
             case Action::Newline: {
                 const auto &arg = std::get<1>(this->argument);
                 std::size_t content_len = encoding.CodepointCount(arg.content);
-                patch.Insert(TextPosition{arg.position.line + 1, content_len},
+                patch.Insert(TextPosition{arg.position.line + 1, static_cast<TextPosition::Column>(content_len)},
                     TextPosition{arg.position.line + 1, max_column},
-                    TextPositionDelta{-1, arg.position.column - content_len});
+                    TextPositionDelta{-1, static_cast<TextPositionDelta::Column>(arg.position.column) - static_cast<TextPositionDelta::Column>(content_len)});
                 patch.Insert(TextPosition{arg.position.line + 2, 0},
                     TextPosition{max_line, max_column},
                     TextPositionDelta{-1, 0});
@@ -319,10 +375,10 @@ namespace sloked {
             case Action::Clear: {
                 const auto &arg = std::get<2>(this->argument);
                 if (arg.content.size() > 0) {
-                    std::size_t newlines = arg.content.size() - 1;
+                    auto newlines = static_cast<TextPositionDelta::Line>(arg.content.size()) - 1;
                     patch.Insert(TextPosition{arg.from.line, arg.from.column},
                         TextPosition{arg.from.line, max_column},
-                        TextPositionDelta{newlines, encoding.CodepointCount(arg.content.at(arg.content.size() - 1))});
+                        TextPositionDelta{newlines, static_cast<TextPositionDelta::Column>(encoding.CodepointCount(arg.content.at(arg.content.size() - 1)))});
                     if (newlines > 0) {
                         patch.Insert(TextPosition{arg.from.line + 1, 0},
                             TextPosition{max_line, max_column},

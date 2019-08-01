@@ -5,8 +5,56 @@
 
 namespace sloked {
 
+    class TransactionListener : public SlokedTransactionStream::Listener {
+     public:
+        TransactionListener(const Encoding &encoding, TransactionCursor::Line &line, TransactionCursor::Column &column)
+            : encoding(encoding), line(line), column(column) {}
+
+        void OnCommit(const SlokedCursorTransaction &trans) override {
+            auto patch = trans.CommitPatch(this->encoding);
+            TextPosition pos{this->line, this->column};
+            if (patch.Has(pos)) {
+                const auto &delta = patch.At(pos);
+                this->line += delta.line;
+                this->column += delta.column;
+            }
+        }
+
+        void OnRollback(const SlokedCursorTransaction &trans) override {
+            auto patch = trans.RollbackPatch(this->encoding);
+            TextPosition pos{this->line, this->column};
+            if (patch.Has(pos)) {
+                const auto &delta = patch.At(pos);
+                this->line += delta.line;
+                this->column += delta.column;
+            }
+        }
+
+        void OnRevert(const SlokedCursorTransaction &trans) override {
+            auto patch = trans.CommitPatch(this->encoding);
+            TextPosition pos{this->line, this->column};
+            if (patch.Has(pos)) {
+                const auto &delta = patch.At(pos);
+                this->line += delta.line;
+                this->column += delta.column;
+            }
+        }
+
+     private:
+        const Encoding &encoding;
+        TransactionCursor::Line &line;
+        TransactionCursor::Column &column;
+    };
+
     TransactionCursor::TransactionCursor(TextBlock &text, const Encoding &encoding, SlokedTransactionStream &stream)
-        : text(text), encoding(encoding), stream(stream), line(0), column(0) {}
+        : text(text), encoding(encoding), stream(stream), line(0), column(0) {
+        this->listener = std::make_shared<TransactionListener>(this->encoding, this->line, this->column);
+        this->stream.AddListener(this->listener);
+    }
+
+    TransactionCursor::~TransactionCursor() {
+        this->stream.RemoveListener(*this->listener);
+    }
 
     void TransactionCursor::Undo() {
         if (this->stream.HasRollback()) {
@@ -69,9 +117,9 @@ namespace sloked {
     }
 
     void TransactionCursor::Insert(std::string_view view) {
-        this->applyCommand(SlokedEditTransaction {
-            SlokedEditTransaction::Action::Insert,
-            SlokedEditTransaction::Content {
+        this->applyCommand(SlokedCursorTransaction {
+            SlokedCursorTransaction::Action::Insert,
+            SlokedCursorTransaction::Content {
                 TextPosition {this->line, this->column},
                 std::string {view}
             }
@@ -79,9 +127,9 @@ namespace sloked {
     }
     
     void TransactionCursor::NewLine(std::string_view view) {
-        this->applyCommand(SlokedEditTransaction {
-            SlokedEditTransaction::Action::Newline,
-            SlokedEditTransaction::Content {
+        this->applyCommand(SlokedCursorTransaction {
+            SlokedCursorTransaction::Action::Newline,
+            SlokedCursorTransaction::Content {
                 TextPosition {this->line, this->column},
                 std::string {view}
             }
@@ -98,9 +146,9 @@ namespace sloked {
         } else {
             width = this->encoding.CodepointCount(this->text.GetLine(this->line - 1));
         }
-        this->applyCommand(SlokedEditTransaction {
-            SlokedEditTransaction::Action::DeleteBackward,
-            SlokedEditTransaction::DeletePosition {
+        this->applyCommand(SlokedCursorTransaction {
+            SlokedCursorTransaction::Action::DeleteBackward,
+            SlokedCursorTransaction::DeletePosition {
                 TextPosition {this->line, this->column},
                 content,
                 width
@@ -116,9 +164,9 @@ namespace sloked {
             auto pos = this->encoding.GetCodepoint(view, this->column);
             content = view.substr(pos.first, pos.second);
         }
-        this->applyCommand(SlokedEditTransaction {
-            SlokedEditTransaction::Action::DeleteForward,
-            SlokedEditTransaction::DeletePosition {
+        this->applyCommand(SlokedCursorTransaction {
+            SlokedCursorTransaction::Action::DeleteForward,
+            SlokedCursorTransaction::DeletePosition {
                 TextPosition {this->line, this->column},
                 content,
                 width
@@ -136,9 +184,8 @@ namespace sloked {
     void TransactionCursor::ClearRegion(const TextPosition &from, const TextPosition &to) {
         auto cfrom = ClampPosition(this->text, this->encoding, from);
         auto cto = ClampPosition(this->text, this->encoding, to);
-        this->applyCommand(SlokedEditTransaction {
-            SlokedEditTransaction::Action::Clear,
-            SlokedEditTransaction::Range {
+        this->applyCommand(SlokedCursorTransaction {
+            SlokedCursorTransaction::Range {
                 cfrom,
                 cto,
                 SlokedEditingPrimitives::Read(this->text, this->encoding, cfrom, cto)
@@ -146,7 +193,7 @@ namespace sloked {
         });
     }
 
-    void TransactionCursor::applyCommand(const SlokedEditTransaction &trans) {
+    void TransactionCursor::applyCommand(const SlokedCursorTransaction &trans) {
         auto pos = this->stream.Commit(trans);
         this->line = pos.line;
         this->column = pos.column;

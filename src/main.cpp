@@ -1,10 +1,8 @@
 #include <cstdlib>
 #include <iostream>
 #include "sloked/text/TextDocument.h"
-#include "sloked/text/Watcher.h"
 #include "sloked/text/TextView.h"
 #include "sloked/text/posix/TextFile.h"
-#include "sloked/text/cursor/PlainCursor.h"
 #include "sloked/text/cursor/TransactionCursor.h"
 #include "sloked/text/cursor/TransactionBatch.h"
 #include "sloked/text/cursor/TransactionStreamMultiplexer.h"
@@ -43,8 +41,7 @@ int main(int argc, const char **argv) {
     EncodingConverter conv(fileEncoding, terminalEncoding);
     auto newline = NewLine::LF(fileEncoding);
     TextChunkFactory blockFactory(*newline);
-    TextDocument document(*newline, TextView::Open(view, *newline, blockFactory));
-    TextWatcherBlock text(document);
+    TextDocument text(*newline, TextView::Open(view, *newline, blockFactory));
 
     TransactionStreamMultiplexer multiplexer(text, fileEncoding);
     auto stream1 = multiplexer.NewStream();

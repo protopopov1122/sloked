@@ -5,15 +5,14 @@ namespace sloked {
     TransactionBatch::TransactionBatch(SlokedTransactionStream &stream, const TextPosition &position)
         : stream(stream), start(true), position(position) {}
 
-    TextPosition TransactionBatch::Commit(const SlokedEditTransaction &trans) {
+    TextPosition TransactionBatch::Commit(const SlokedCursorTransaction &trans) {
         this->rollback.clear();
         if (!this->start) {
             this->stream.Rollback();
         }
         this->batch.push_back(trans);
         this->start = false;
-        return this->stream.Commit(SlokedEditTransaction {
-            SlokedEditTransaction::Action::Batch,
+        return this->stream.Commit(SlokedCursorTransaction {
             std::make_pair(this->position, this->batch)
         });
     }
@@ -31,8 +30,7 @@ namespace sloked {
             }
             this->batch.pop_back();
             this->start = false;
-            return this->stream.Commit(SlokedEditTransaction {
-                SlokedEditTransaction::Action::Batch,
+            return this->stream.Commit(SlokedCursorTransaction {
                 std::make_pair(this->position, this->batch)
             });
         }
@@ -52,8 +50,7 @@ namespace sloked {
                 this->stream.Rollback();
             }
             this->start = false;
-            return this->stream.Commit(SlokedEditTransaction {
-                SlokedEditTransaction::Action::Batch,
+            return this->stream.Commit(SlokedCursorTransaction {
                 std::make_pair(this->position, this->batch)
             });
         }
@@ -68,5 +65,17 @@ namespace sloked {
     void TransactionBatch::Finish(const TextPosition &position) {
         this->Finish();
         this->position = position;
+    }
+
+    void TransactionBatch::AddListener(std::shared_ptr<Listener> l) {
+        this->stream.AddListener(l);
+    }
+
+    void TransactionBatch::RemoveListener(const Listener &l) {
+        this->stream.RemoveListener(l);
+    }
+
+    void TransactionBatch::ClearListeners() {
+        this->stream.ClearListeners();
     }
 }

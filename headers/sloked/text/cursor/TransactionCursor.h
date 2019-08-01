@@ -6,15 +6,16 @@
 #include "sloked/text/cursor/Cursor.h"
 #include "sloked/text/cursor/Transaction.h"
 #include "sloked/text/cursor/TransactionStream.h"
-#include "sloked/text/cursor/TransactionHistory.h"
+#include "sloked/text/cursor/TransactionJournal.h"
 #include <vector>
 #include <memory>
 
 namespace sloked {
 
-    class TransactionCursor : public SlokedCursor, public SlokedTransactionHistory {
+    class TransactionCursor : public SlokedCursor, public SlokedTransactionJournal {
      public:
         TransactionCursor(TextBlock &, const Encoding &, SlokedTransactionStream &);
+        virtual ~TransactionCursor();
 
         void Undo() override;
         bool HasUndoable() const override;
@@ -38,13 +39,14 @@ namespace sloked {
         void ClearRegion(const TextPosition &, const TextPosition &) override;
 
      private:
-        void applyCommand(const SlokedEditTransaction &);
+        void applyCommand(const SlokedCursorTransaction &);
     
         TextBlock &text;
         const Encoding &encoding;
         SlokedTransactionStream &stream;
         Line line;
         Column column;
+        std::shared_ptr<SlokedTransactionStream::Listener> listener;
     };
 }
 
