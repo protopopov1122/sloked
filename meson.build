@@ -34,6 +34,7 @@ sloked_src = [
   'src/text/cursor/Transaction.cpp',
   'src/text/cursor/TransactionBatch.cpp',
   'src/text/cursor/TransactionCursor.cpp',
+  'src/text/cursor/TransactionFactory.cpp',
   'src/text/cursor/TransactionStreamMultiplexer.cpp',
   'src/text/posix/TextFile.cpp'
 ]

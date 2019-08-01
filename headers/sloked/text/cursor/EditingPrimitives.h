@@ -15,7 +15,7 @@ namespace sloked {
         static TextPosition DeleteForward(TextBlock &, const Encoding &, const TextPosition &);
         static TextPosition ClearRegion(TextBlock &, const Encoding &, const TextPosition &, const TextPosition &);
         static std::size_t GetOffset(std::string_view, TextPosition::Column, const Encoding &);
-        static std::vector<std::string> Read(TextBlock &, const Encoding &, const TextPosition &, const TextPosition &);
+        static std::vector<std::string> Read(const TextBlock &, const Encoding &, const TextPosition &, const TextPosition &);
     };
 }
 

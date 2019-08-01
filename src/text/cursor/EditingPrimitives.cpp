@@ -129,7 +129,7 @@ namespace sloked {
         }
     }
 
-    std::vector<std::string> SlokedEditingPrimitives::Read(TextBlock &text, const Encoding &encoding, const TextPosition &from, const TextPosition &to) {
+    std::vector<std::string> SlokedEditingPrimitives::Read(const TextBlock &text, const Encoding &encoding, const TextPosition &from, const TextPosition &to) {
         std::vector<std::string> result;
         if (from.line == to.line) {
             if (from.line <= text.GetLastLine()) {

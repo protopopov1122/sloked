@@ -47,6 +47,7 @@ namespace sloked {
         Line line;
         Column column;
         std::shared_ptr<SlokedTransactionStream::Listener> listener;
+        std::vector<TextPositionDelta> cursors;
     };
 }
 

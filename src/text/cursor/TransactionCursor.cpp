@@ -1,5 +1,6 @@
 #include "sloked/text/cursor/TransactionCursor.h"
 #include "sloked/text/cursor/EditingPrimitives.h"
+#include "sloked/text/cursor/TransactionFactory.h"
 #include <functional>
 #include <iostream>
 
@@ -117,80 +118,23 @@ namespace sloked {
     }
 
     void TransactionCursor::Insert(std::string_view view) {
-        this->applyCommand(SlokedCursorTransaction {
-            SlokedCursorTransaction::Action::Insert,
-            SlokedCursorTransaction::Content {
-                TextPosition {this->line, this->column},
-                std::string {view}
-            }
-        });
+        this->applyCommand(SlokedTransactionFactory::Insert(TextPosition {this->line, this->column}, view));
     }
     
     void TransactionCursor::NewLine(std::string_view view) {
-        this->applyCommand(SlokedCursorTransaction {
-            SlokedCursorTransaction::Action::Newline,
-            SlokedCursorTransaction::Content {
-                TextPosition {this->line, this->column},
-                std::string {view}
-            }
-        });
+        this->applyCommand(SlokedTransactionFactory::Newline(TextPosition {this->line, this->column}, view));
     }
 
     void TransactionCursor::DeleteBackward() {
-        std::string content = "";
-        Column width = 0;
-        if (this->column > 0) {
-            std::string_view view = this->text.GetLine(this->line);
-            auto pos = this->encoding.GetCodepoint(view, this->column - 1);
-            content = view.substr(pos.first, pos.second);
-        } else {
-            width = this->encoding.CodepointCount(this->text.GetLine(this->line - 1));
-        }
-        this->applyCommand(SlokedCursorTransaction {
-            SlokedCursorTransaction::Action::DeleteBackward,
-            SlokedCursorTransaction::DeletePosition {
-                TextPosition {this->line, this->column},
-                content,
-                width
-            }
-        });
+        this->applyCommand(SlokedTransactionFactory::DeleteBackward(this->text, this->encoding, TextPosition {this->line, this->column}));
     }
 
     void TransactionCursor::DeleteForward() {
-        std::string content = "";
-        Column width = this->encoding.CodepointCount(this->text.GetLine(this->line));
-        if (this->column < width) {
-            std::string_view view = this->text.GetLine(this->line);
-            auto pos = this->encoding.GetCodepoint(view, this->column);
-            content = view.substr(pos.first, pos.second);
-        }
-        this->applyCommand(SlokedCursorTransaction {
-            SlokedCursorTransaction::Action::DeleteForward,
-            SlokedCursorTransaction::DeletePosition {
-                TextPosition {this->line, this->column},
-                content,
-                width
-            }
-        });
-    }
-
-    static TextPosition ClampPosition(const TextBlock &text, const Encoding &encoding, const TextPosition &position) {
-        TextPosition res;
-        res.line = std::min(position.line, static_cast<TextPosition::Line>(text.GetLastLine()));
-        res.column = std::min(position.column, static_cast<TextPosition::Column>(encoding.CodepointCount(text.GetLine(res.line))));
-        return res;
+        this->applyCommand(SlokedTransactionFactory::DeleteForward(this->text, this->encoding, TextPosition {this->line, this->column}));
     }
 
     void TransactionCursor::ClearRegion(const TextPosition &from, const TextPosition &to) {
-        auto cfrom = ClampPosition(this->text, this->encoding, from);
-        auto cto = ClampPosition(this->text, this->encoding, to);
-        this->applyCommand(SlokedCursorTransaction {
-            SlokedCursorTransaction::Range {
-                cfrom,
-                cto,
-                SlokedEditingPrimitives::Read(this->text, this->encoding, cfrom, cto)
-            }
-        });
+        this->applyCommand(SlokedTransactionFactory::ClearRegion(this->text, this->encoding, from, to));
     }
 
     void TransactionCursor::applyCommand(const SlokedCursorTransaction &trans) {
