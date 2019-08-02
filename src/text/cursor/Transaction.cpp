@@ -53,61 +53,91 @@ namespace sloked {
     SlokedCursorTransaction::SlokedCursorTransaction(const Batch &batch)
         : action(Action::Batch), argument(batch) {}
 
-    TextPosition SlokedCursorTransaction::Commit(TextBlock &text, const Encoding &encoding) const {
+    TextPosition SlokedCursorTransaction::GetPosition() const {
         switch (this->action) {
             case Action::Insert:
-                return SlokedEditingPrimitives::Insert(text, encoding, std::get<1>(this->argument).position, std::get<1>(this->argument).content);
-
-            case Action::Newline:
-                return SlokedEditingPrimitives::Newline(text, encoding, std::get<1>(this->argument).position, std::get<1>(this->argument).content);
-
-            case Action::DeleteBackward:
-                return SlokedEditingPrimitives::DeleteBackward(text, encoding, std::get<0>(this->argument).position);
+            case Action::Newline: {
+                const auto &arg = std::get<1>(this->argument);
+                return arg.position;
+            }
 
             case Action::DeleteForward:
-                return SlokedEditingPrimitives::DeleteForward(text, encoding, std::get<0>(this->argument).position);
+            case Action::DeleteBackward: {
+                const auto &arg = std::get<0>(this->argument);
+                return arg.position;
+            }
 
-            case Action::Clear:
-                return SlokedEditingPrimitives::ClearRegion(text, encoding, std::get<2>(this->argument).from, std::get<2>(this->argument).to);
-            
+            case Action::Clear: {
+                const auto &arg = std::get<2>(this->argument);
+                return arg.from;
+            }
+
             case Action::Batch: {
                 const auto &batch = std::get<3>(this->argument);
-                for (const auto &trans : batch.second) {
-                    trans.Commit(text, encoding);
+                if (!batch.empty()) {
+                    return batch.at(0).GetPosition();
                 }
-                return batch.first;
-            };
+            } break;
         }
         return TextPosition{};
     }
 
-    TextPosition SlokedCursorTransaction::Rollback(TextBlock &text, const Encoding &encoding) const {
+    void SlokedCursorTransaction::Commit(TextBlock &text, const Encoding &encoding) const {
+        switch (this->action) {
+            case Action::Insert:
+                SlokedEditingPrimitives::Insert(text, encoding, std::get<1>(this->argument).position, std::get<1>(this->argument).content);
+                break;
+
+            case Action::Newline:
+                SlokedEditingPrimitives::Newline(text, encoding, std::get<1>(this->argument).position, std::get<1>(this->argument).content);
+                break;
+
+            case Action::DeleteBackward:
+                SlokedEditingPrimitives::DeleteBackward(text, encoding, std::get<0>(this->argument).position);
+                break;
+
+            case Action::DeleteForward:
+                SlokedEditingPrimitives::DeleteForward(text, encoding, std::get<0>(this->argument).position);
+                break;
+
+            case Action::Clear:
+                SlokedEditingPrimitives::ClearRegion(text, encoding, std::get<2>(this->argument).from, std::get<2>(this->argument).to);
+                break;
+            
+            case Action::Batch: {
+                const auto &batch = std::get<3>(this->argument);
+                for (const auto &trans : batch) {
+                    trans.Commit(text, encoding);
+                }
+            } break;
+        }
+    }
+
+    void SlokedCursorTransaction::Rollback(TextBlock &text, const Encoding &encoding) const {
         switch (this->action) {
             case Action::Insert: {
                 const auto &arg = std::get<1>(this->argument);
                 TextPosition from = arg.position;
                 TextPosition to {from.line, static_cast<TextPosition::Column>(from.column + encoding.CodepointCount(arg.content))};
-                return SlokedEditingPrimitives::ClearRegion(text, encoding, from, to);
-            }
+                SlokedEditingPrimitives::ClearRegion(text, encoding, from, to);
+            } break;
 
             case Action::Newline: {
                 const auto &arg = std::get<1>(this->argument);
                 TextPosition from = arg.position;
                 TextPosition to {from.line + 1, static_cast<TextPosition::Column>(encoding.CodepointCount(arg.content))};
-                return SlokedEditingPrimitives::ClearRegion(text, encoding, from, to);
-            }
+                SlokedEditingPrimitives::ClearRegion(text, encoding, from, to);
+            } break;
 
             case Action::DeleteBackward: {
                 const auto &arg = std::get<0>(this->argument);
                 if (arg.position.column > 0) {
                     TextPosition from {arg.position.line, arg.position.column - 1};
-                    return SlokedEditingPrimitives::Insert(text, encoding, from, arg.content);
+                    SlokedEditingPrimitives::Insert(text, encoding, from, arg.content);
                 } else if (arg.position.line > 0) {
-                    return SlokedEditingPrimitives::Newline(text, encoding, TextPosition{arg.position.line - 1, arg.width}, "");
-                } else {
-                    return arg.position;
+                    SlokedEditingPrimitives::Newline(text, encoding, TextPosition{arg.position.line - 1, arg.width}, "");
                 }
-            }
+            } break;
 
             case Action::DeleteForward: {
                 const auto &arg = std::get<0>(this->argument);
@@ -116,8 +146,7 @@ namespace sloked {
                 } else {
                     SlokedEditingPrimitives::Newline(text, encoding, arg.position, "");
                 }
-                return arg.position;
-            }
+            } break;
 
             case Action::Clear: {
                 const auto &arg = std::get<2>(this->argument);
@@ -128,19 +157,15 @@ namespace sloked {
                         pos = SlokedEditingPrimitives::Insert(text, encoding, pos, arg.content[i]);
                     }
                 }
-                return arg.from;
-            }
+            } break;
 
             case Action::Batch: {
                 const auto &batch = std::get<3>(this->argument);
-                for (std::size_t i = 0; i < batch.second.size(); i++) {
-                    batch.second.at(batch.second.size() - i - 1).Rollback(text, encoding);
+                for (std::size_t i = 0; i < batch.size(); i++) {
+                    batch.at(batch.size() - i - 1).Rollback(text, encoding);
                 }
-                return batch.first;
-            }
+            } break;
         }
-
-        return TextPosition{};
     }
 
     SlokedTransactionPatch SlokedCursorTransaction::CommitPatch(const Encoding &encoding) const {
@@ -193,12 +218,7 @@ namespace sloked {
 
             case Action::Batch: {
                 auto &batch = std::get<3>(this->argument);
-                if (impact.Has(batch.first)) {
-                    const auto &delta = impact.At(batch.first);
-                    batch.first.line += delta.line;
-                    batch.first.column += delta.column;
-                }
-                for (auto &trans : batch.second) {
+                for (auto &trans : batch) {
                     trans.Apply(impact);
                 }
             } break;
@@ -238,7 +258,7 @@ namespace sloked {
 
             case Action::Batch: {
                 auto &batch = std::get<3>(this->argument);
-                for (auto &trans : batch.second) {
+                for (auto &trans : batch) {
                     trans.Update(text, encoding);
                 }
             } break;
@@ -284,7 +304,7 @@ namespace sloked {
             case Action::DeleteForward: {
                 const auto &arg = std::get<0>(this->argument);
                 if (arg.position.column < arg.width) {
-                    patch.Insert(TextPosition{arg.position.line, arg.position.column},
+                    patch.Insert(TextPosition{arg.position.line, arg.position.column + 1},
                         TextPosition{arg.position.line, max_column},
                         TextPositionDelta{0, -1});
                 } else {
@@ -315,7 +335,7 @@ namespace sloked {
 
             case Action::Batch: {
                 const auto &batch = std::get<3>(this->argument);
-                for (const auto &trans : batch.second) {
+                for (const auto &trans : batch) {
                     trans.CommitPatch(encoding, patch);
                     patch.NextTransaction();
                 }
@@ -376,7 +396,7 @@ namespace sloked {
                 const auto &arg = std::get<2>(this->argument);
                 if (arg.content.size() > 0) {
                     auto newlines = static_cast<TextPositionDelta::Line>(arg.content.size()) - 1;
-                    patch.Insert(TextPosition{arg.from.line, arg.from.column},
+                    patch.Insert(TextPosition{arg.from.line, arg.from.column + 1},
                         TextPosition{arg.from.line, max_column},
                         TextPositionDelta{newlines, static_cast<TextPositionDelta::Column>(encoding.CodepointCount(arg.content.at(arg.content.size() - 1)))});
                     if (newlines > 0) {
@@ -389,7 +409,7 @@ namespace sloked {
 
             case Action::Batch: {
                 const auto &batch = std::get<3>(this->argument);
-                for (const auto &trans : batch.second) {
+                for (const auto &trans : batch) {
                     trans.RollbackPatch(encoding, patch);
                     patch.NextTransaction();
                 }

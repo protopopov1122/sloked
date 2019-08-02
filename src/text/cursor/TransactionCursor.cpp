@@ -138,8 +138,6 @@ namespace sloked {
     }
 
     void TransactionCursor::applyCommand(const SlokedCursorTransaction &trans) {
-        auto pos = this->stream.Commit(trans);
-        this->line = pos.line;
-        this->column = pos.column;
+        this->stream.Commit(trans);
     }
 }

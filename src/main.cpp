@@ -133,7 +133,7 @@ int main(int argc, const char **argv) {
                 break;
 
             case SlokedControlKey::F5: {
-                TransactionBatch batch(*stream2, TextPosition{cursor->GetLine(), cursor->GetColumn()});
+                TransactionBatch batch(*stream2, fileEncoding);
                 TransactionCursor crs(text, fileEncoding, batch);
                 crs.ClearRegion(TextPosition{cursor->GetLine() + 10, cursor->GetColumn() + 2}, TextPosition{cursor->GetLine() + 15, cursor->GetColumn() + 2});
                 crs.ClearRegion(TextPosition{cursor->GetLine(), cursor->GetColumn() + 2}, TextPosition{cursor->GetLine() + 5, cursor->GetColumn() + 2});

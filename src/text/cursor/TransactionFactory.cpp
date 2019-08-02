@@ -30,7 +30,7 @@ namespace sloked {
             std::string_view view = text.GetLine(position.line);
             auto pos = encoding.GetCodepoint(view, position.column - 1);
             content = view.substr(pos.first, pos.second);
-        } else {
+        } else if (position.line > 0) {
             width = encoding.CodepointCount(text.GetLine(position.line - 1));
         }
         return SlokedCursorTransaction {

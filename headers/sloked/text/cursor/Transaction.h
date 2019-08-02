@@ -51,15 +51,16 @@ namespace sloked {
             std::vector<std::string> content;
         };
 
-        using Batch = std::pair<TextPosition, std::vector<SlokedCursorTransaction>>;
+        using Batch = std::vector<SlokedCursorTransaction>;
 
         SlokedCursorTransaction(Action, const Content &);
         SlokedCursorTransaction(Action, const DeletePosition &);
         SlokedCursorTransaction(const Range &);
         SlokedCursorTransaction(const Batch &);
 
-        TextPosition Commit(TextBlock &, const Encoding &) const;
-        TextPosition Rollback(TextBlock &, const Encoding &) const;
+        TextPosition GetPosition() const;
+        void Commit(TextBlock &, const Encoding &) const;
+        void Rollback(TextBlock &, const Encoding &) const;
         SlokedTransactionPatch CommitPatch(const Encoding &) const;
         SlokedTransactionPatch RollbackPatch(const Encoding &) const;
         void Apply(const SlokedTransactionPatch &);

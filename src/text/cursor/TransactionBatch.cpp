@@ -2,19 +2,21 @@
 
 namespace sloked {
 
-    TransactionBatch::TransactionBatch(SlokedTransactionStream &stream, const TextPosition &position)
-        : stream(stream), start(true), position(position) {}
+    TransactionBatch::TransactionBatch(SlokedTransactionStream &stream, const Encoding &encoding)
+        : stream(stream), encoding(encoding) {}
 
     TextPosition TransactionBatch::Commit(const SlokedCursorTransaction &trans) {
         this->rollback.clear();
-        if (!this->start) {
-            this->stream.Rollback();
-        }
         this->batch.push_back(trans);
-        this->start = false;
-        return this->stream.Commit(SlokedCursorTransaction {
-            std::make_pair(this->position, this->batch)
-        });
+        this->TriggerListeners(&SlokedTransactionStream::Listener::OnCommit, trans);
+        auto pos = trans.GetPosition();
+        auto patch = trans.CommitPatch(this->encoding);
+        if (patch.Has(pos)) {
+            const auto &delta = patch.At(pos);
+            pos.line += delta.line;
+            pos.column += delta.column;
+        }
+        return pos;
     }
 
     bool TransactionBatch::HasRollback() const {
@@ -25,14 +27,9 @@ namespace sloked {
         if (!this->batch.empty()) {
             auto trans = this->batch.back();
             this->rollback.push_back(trans);
-            if (!this->start) {
-                this->stream.Rollback();
-            }
             this->batch.pop_back();
-            this->start = false;
-            return this->stream.Commit(SlokedCursorTransaction {
-                std::make_pair(this->position, this->batch)
-            });
+            this->TriggerListeners(&SlokedTransactionStream::Listener::OnRollback, trans);
+            return trans.GetPosition();
         }
         return TextPosition{};
     }
@@ -46,36 +43,24 @@ namespace sloked {
             auto trans = this->rollback.back();
             this->batch.push_back(trans);
             this->rollback.pop_back();
-            if (!this->start) {
-                this->stream.Rollback();
+            this->TriggerListeners(&SlokedTransactionStream::Listener::OnRevert, trans);
+            auto patch = trans.CommitPatch(this->encoding);
+            auto pos = trans.GetPosition();
+            if (patch.Has(pos)) {
+                const auto &delta = patch.At(pos);
+                pos.line += delta.line;
+                pos.column += delta.column;
             }
-            this->start = false;
-            return this->stream.Commit(SlokedCursorTransaction {
-                std::make_pair(this->position, this->batch)
-            });
+            return pos;
         }
         return TextPosition{};
     }
 
     void TransactionBatch::Finish() {
+        this->stream.Commit(SlokedCursorTransaction {
+            this->batch
+        });
         this->batch.clear();
-        this->start = false;
-    }
-
-    void TransactionBatch::Finish(const TextPosition &position) {
-        this->Finish();
-        this->position = position;
-    }
-
-    void TransactionBatch::AddListener(std::shared_ptr<Listener> l) {
-        this->stream.AddListener(l);
-    }
-
-    void TransactionBatch::RemoveListener(const Listener &l) {
-        this->stream.RemoveListener(l);
-    }
-
-    void TransactionBatch::ClearListeners() {
-        this->stream.ClearListeners();
+        this->rollback.clear();
     }
 }

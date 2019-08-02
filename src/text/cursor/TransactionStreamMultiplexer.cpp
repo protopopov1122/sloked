@@ -87,8 +87,15 @@ namespace sloked {
         if (this->backtrack.count(stream)) {
             this->backtrack[stream].clear();
         }
-        auto pos = transaction.Commit(this->text, this->encoding);
+        transaction.Commit(this->text, this->encoding);
         this->TriggerListeners(&SlokedTransactionStream::Listener::OnCommit, transaction);
+        auto pos = transaction.GetPosition();
+        auto patch = transaction.CommitPatch(this->encoding);
+        if (patch.Has(pos)) {
+            const auto &delta = patch.At(pos);
+            pos.line += delta.line;
+            pos.column += delta.column;
+        }
         return pos;
     }
 
@@ -113,10 +120,10 @@ namespace sloked {
         idx = this->journal.size() - idx - 1;
 
         this->backtrack[streamId].push_back(this->journal[idx]);
-        TextPosition pos;
         for (std::size_t i = this->journal.size() - 1; i >= idx && i < this->journal.size(); i--) {
-            pos = this->journal[i].transaction.Rollback(this->text, this->encoding);
+            this->journal[i].transaction.Rollback(this->text, this->encoding);
         }
+        auto pos = this->journal[idx].transaction.GetPosition();
         auto patch = this->journal[idx].transaction.RollbackPatch(this->encoding);
         this->journal.erase(this->journal.begin() + idx);
         for (std::size_t i = idx; i < this->journal.size(); i++) {
@@ -124,11 +131,6 @@ namespace sloked {
             this->journal[i].transaction.Update(this->text, this->encoding);
             this->journal[i].transaction.Commit(this->text, this->encoding);
             auto commitPatch = this->journal[i].transaction.CommitPatch(this->encoding);
-            if (commitPatch.Has(pos)) {
-                const auto &delta = commitPatch.At(pos);
-                pos.line += delta.line;
-                pos.column += delta.column;
-            }
         }
 
         this->TriggerListeners(&SlokedTransactionStream::Listener::OnRollback, this->backtrack[streamId].back().transaction);
@@ -161,26 +163,27 @@ namespace sloked {
         for (std::size_t i = this->journal.size() - 1; i >= idx && i < this->journal.size(); i--) {
             this->journal[i].transaction.Rollback(this->text, this->encoding);
         }
+        auto pos = transaction.transaction.GetPosition();
         auto patch = transaction.transaction.CommitPatch(this->encoding);
         if (idx < this->journal.size()) {
             this->journal.insert(this->journal.begin() + idx, transaction);
         } else {
             this->journal.push_back(transaction);
         }
-        TextPosition pos = transaction.transaction.Commit(this->text, this->encoding);
+        transaction.transaction.Commit(this->text, this->encoding);
         for (std::size_t i = idx + 1; i < this->journal.size(); i++) {
             this->journal[i].transaction.Apply(patch);
             this->journal[i].transaction.Update(this->text, this->encoding);
             this->journal[i].transaction.Commit(this->text, this->encoding);
             auto commitPatch = this->journal[i].transaction.CommitPatch(this->encoding);
-            if (commitPatch.Has(pos)) {
-                const auto &delta = commitPatch.At(pos);
-                pos.line += delta.line;
-                pos.column += delta.column;
-            }
         }
 
         this->TriggerListeners(&SlokedTransactionStream::Listener::OnRevert, transaction.transaction);
+        if (patch.Has(pos)) {
+            const auto &delta = patch.At(pos);
+            pos.line += delta.line;
+            pos.column += delta.column;
+        }
         return pos;
     }
 

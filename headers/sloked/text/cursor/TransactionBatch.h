@@ -1,29 +1,25 @@
 #ifndef SLOKED_TEXT_CURSOR_TRANSACTIONBATCH_H_
 #define SLOKED_TEXT_CURSOR_TRANSACTIONBATCH_H_
 
+#include "sloked/core/Listener.h"
 #include "sloked/text/cursor/TransactionStream.h"
 
 namespace sloked {
 
-    class TransactionBatch : public virtual SlokedTransactionStream {
+    class TransactionBatch : public virtual SlokedTransactionStream,
+                             public SlokedListenerManager<SlokedTransactionStream::Listener, SlokedCursorTransaction, SlokedTransactionStream> {
      public:
-        TransactionBatch(SlokedTransactionStream &, const TextPosition &);
+        TransactionBatch(SlokedTransactionStream &, const Encoding &);
         TextPosition Commit(const SlokedCursorTransaction &) override;
         bool HasRollback() const override;
         TextPosition Rollback() override;
         bool HasRevertable() const override;
         TextPosition RevertRollback() override;
         void Finish();
-        void Finish(const TextPosition &);
-
-        void AddListener(std::shared_ptr<Listener>) override;
-        void RemoveListener(const Listener &) override;
-        void ClearListeners() override;
 
      private:
         SlokedTransactionStream &stream;
-        bool start;
-        TextPosition position;
+        const Encoding &encoding;
         std::vector<SlokedCursorTransaction> batch;
         std::vector<SlokedCursorTransaction> rollback;
     };
