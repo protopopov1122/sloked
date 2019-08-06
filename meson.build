@@ -10,6 +10,13 @@ sloked_src = [
   'src/core/Error.cpp',
   'src/core/NewLine.cpp',
   'src/core/Position.cpp',
+  'src/filesystem/File.cpp',
+  'src/filesystem/FileIO.cpp',
+  'src/filesystem/posix/File.cpp',
+  'src/filesystem/posix/FileIO.cpp',
+  'src/filesystem/posix/Reader.cpp',
+  'src/filesystem/posix/View.cpp',
+  'src/filesystem/posix/Writer.cpp',
   'src/screen/Component.cpp',
   'src/screen/Splitter.cpp',
   'src/screen/terminal/CharWidth.cpp',
@@ -35,8 +42,7 @@ sloked_src = [
   'src/text/cursor/TransactionBatch.cpp',
   'src/text/cursor/TransactionCursor.cpp',
   'src/text/cursor/TransactionFactory.cpp',
-  'src/text/cursor/TransactionStreamMultiplexer.cpp',
-  'src/text/posix/TextFile.cpp'
+  'src/text/cursor/TransactionStreamMultiplexer.cpp'
 ]
 
 cpp = meson.get_compiler('cpp')

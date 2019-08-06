@@ -2,7 +2,7 @@
 #include <iostream>
 #include "sloked/text/TextDocument.h"
 #include "sloked/text/TextView.h"
-#include "sloked/text/posix/TextFile.h"
+#include "sloked/text/TextChunk.h"
 #include "sloked/text/cursor/TransactionCursor.h"
 #include "sloked/text/cursor/TransactionBatch.h"
 #include "sloked/text/cursor/TransactionStreamMultiplexer.h"
@@ -11,6 +11,7 @@
 #include "sloked/screen/terminal/screen/ComponentHandle.h"
 #include "sloked/screen/terminal/screen/SplitterComponent.h"
 #include "sloked/screen/terminal/screen/TabberComponent.h"
+#include "sloked/filesystem/posix/File.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
@@ -35,13 +36,16 @@ int main(int argc, const char **argv) {
         std::cout << "Format: " << argv[0] << " source destination" << std::endl;
         return EXIT_FAILURE;
     }
-    PosixTextView view(open(argv[1], O_RDONLY, 0));
+
+    SlokedPosixFile file(argv[1]);
+    auto view = file.View();
+
     const Encoding &fileEncoding = Encoding::Utf8;
     const Encoding &terminalEncoding = Encoding::Utf8;
     EncodingConverter conv(fileEncoding, terminalEncoding);
     auto newline = NewLine::LF(fileEncoding);
     TextChunkFactory blockFactory(*newline);
-    TextDocument text(*newline, TextView::Open(view, *newline, blockFactory));
+    TextDocument text(*newline, TextView::Open(*view, *newline, blockFactory));
 
     TransactionStreamMultiplexer multiplexer(text, fileEncoding);
     auto stream1 = multiplexer.NewStream();
