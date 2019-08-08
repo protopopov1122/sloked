@@ -5,7 +5,7 @@
 
 namespace sloked {
 
-    class SlokedPosixFileWriter : public SlokedPosixFileIO, public SlokedFileWriter {
+    class SlokedPosixFileWriter : public SlokedPosixFileIO, public SlokedIOWriter {
      public:
         SlokedPosixFileWriter(FILE *);
         SlokedPosixFileWriter(SlokedPosixFileWriter &&) = default;

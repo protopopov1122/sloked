@@ -1,13 +1,13 @@
 #ifndef SLOKED_FILESYSTEM_POSIX_FILEIO_H_
 #define SLOKED_FILESYSTEM_POSIX_FILEIO_H_
 
-#include "sloked/filesystem/FileIO.h"
+#include "sloked/core/IO.h"
 #include <cstdio>
 
 namespace sloked {
 
 
-    class SlokedPosixFileIO : public virtual SlokedFileIO {
+    class SlokedPosixFileIO : public virtual SlokedBaseIO {
      public:
         SlokedPosixFileIO(FILE *);
         virtual ~SlokedPosixFileIO();

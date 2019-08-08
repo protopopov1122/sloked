@@ -5,7 +5,7 @@
 
 namespace sloked {
 
-    class SlokedPosixFileReader : public SlokedPosixFileIO, public SlokedFileReader {
+    class SlokedPosixFileReader : public SlokedPosixFileIO, public SlokedIOReader {
      public:
         SlokedPosixFileReader(FILE *);
         SlokedPosixFileReader(SlokedPosixFileReader &&) = default;

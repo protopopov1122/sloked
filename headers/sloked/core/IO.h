@@ -1,5 +1,5 @@
-#ifndef SLOKED_FILESYSTEM_FILEIO_H_
-#define SLOKED_FILESYSTEM_FILEIO_H_
+#ifndef SLOKED_CORE_IO_H_
+#define SLOKED_CORE_IO_H_
 
 #include "sloked/Base.h"
 #include <cinttypes>
@@ -7,7 +7,7 @@
 
 namespace sloked {
 
-    class SlokedFileIO {
+    class SlokedBaseIO {
      public:
         using Char = int;
         using Offset = uint64_t;
@@ -17,7 +17,7 @@ namespace sloked {
             End
         };
 
-        virtual ~SlokedFileIO() = default;
+        virtual ~SlokedBaseIO() = default;
         virtual void Close() = 0;
         virtual Offset Tell() = 0;
         virtual bool Seek(Offset, Origin) = 0;
@@ -25,7 +25,7 @@ namespace sloked {
         virtual void ClearErrors() = 0;
     };
 
-    class SlokedFileReader : public virtual SlokedFileIO {
+    class SlokedIOReader : public virtual SlokedBaseIO {
      public:
         virtual std::string Read(std::size_t) = 0;
         virtual Char Read() = 0;
@@ -33,16 +33,16 @@ namespace sloked {
         virtual bool Eof() = 0;
     };
 
-    class SlokedFileWriter : public virtual SlokedFileIO {
+    class SlokedIOWriter : public virtual SlokedBaseIO {
      public:
         virtual std::size_t Write(std::string_view) = 0;
         virtual bool Write(Char) = 0;
         virtual bool Flush() = 0;
     };
 
-    class SlokedFileView {
+    class SlokedIOView {
      public:
-        virtual ~SlokedFileView() = default;
+        virtual ~SlokedIOView() = default;
         virtual std::string_view GetView() const = 0;
         operator std::string_view() const;
     };

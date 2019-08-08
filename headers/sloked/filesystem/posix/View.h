@@ -1,11 +1,11 @@
 #ifndef SLOKED_FILESYSTEM_POSIX_VIEW_H_
 #define SLOKED_FILESYSTEM_POSIX_VIEW_H_
 
-#include "sloked/filesystem/FileIO.h"
+#include "sloked/core/IO.h"
 
 namespace sloked {
 
-    class SlokedPosixFileView : public SlokedFileView {
+    class SlokedPosixFileView : public SlokedIOView {
      public:
         SlokedPosixFileView(FILE *);
         virtual ~SlokedPosixFileView();

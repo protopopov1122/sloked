@@ -1,8 +1,8 @@
-#include "sloked/filesystem/FileIO.h"
+#include "sloked/core/IO.h"
 
 namespace sloked {
 
-    SlokedFileView::operator std::string_view() const {
+    SlokedIOView::operator std::string_view() const {
         return this->GetView();
     }
 }

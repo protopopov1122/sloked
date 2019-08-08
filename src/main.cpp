@@ -12,6 +12,8 @@
 #include "sloked/screen/terminal/screen/SplitterComponent.h"
 #include "sloked/screen/terminal/screen/TabberComponent.h"
 #include "sloked/filesystem/posix/File.h"
+#include "sloked/namespace/Filesystem.h"
+#include "sloked/namespace/posix/Filesystem.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
@@ -37,7 +39,10 @@ int main(int argc, const char **argv) {
         return EXIT_FAILURE;
     }
 
-    SlokedPosixFile file(argv[1]);
+    char BUFFER[1024];
+    realpath(argv[1], BUFFER);
+    SlokedPosixFilesystemAdapter adapter("/");
+    SlokedFilesystemObject file(SlokedPath(BUFFER), adapter);
     auto view = file.View();
 
     const Encoding &fileEncoding = Encoding::Utf8;

@@ -3,7 +3,10 @@
 #include "sloked/filesystem/posix/View.h"
 #include "sloked/filesystem/posix/Writer.h"
 #include <cstdio>
+#include <cstring>
 #include <dirent.h>
+#include <libgen.h>
+#include <ftw.h>
 #include <sys/stat.h>
 
 namespace sloked {
@@ -11,8 +14,24 @@ namespace sloked {
     SlokedPosixFile::SlokedPosixFile(const std::string &path)
         : path(path) {}
 
+    bool SlokedPosixFile::IsFile() const {
+        struct stat stats;
+        return stat(this->path.c_str(), &stats) == 0 && S_ISREG(stats.st_mode);
+    }
+
+    bool SlokedPosixFile::IsDirectory() const {
+        struct stat stats;
+        return stat(this->path.c_str(), &stats) == 0 && S_ISDIR(stats.st_mode);
+    }
+
     const std::string &SlokedPosixFile::GetPath() const {
         return this->path;
+    }
+
+    std::string SlokedPosixFile::GetName() const {
+        std::unique_ptr<char[]> buffer(new char[this->path.size() + 1]);
+        strcpy(buffer.get(), this->path.c_str());
+        return std::string{basename(buffer.get())};
     }
 
     uint64_t SlokedPosixFile::GetSize() const {
@@ -29,21 +48,37 @@ namespace sloked {
         return stat(this->path.c_str(), &stats) == 0;
     }
 
-    SlokedPosixFile::Type SlokedPosixFile::GetType() const {
-        struct stat stats;
-        if (stat(this->path.c_str(), &stats)) {
-            return Type::Unsupported;
-        }
-        if (S_ISREG(stats.st_mode)) {
-            return Type::RegularFile;
-        } else if (S_IFDIR) {
-            return Type::Directory;
+    std::string SlokedPosixFile::GetParent() const {
+        std::unique_ptr<char[]> buffer(new char[this->path.size() + 1]);
+        strcpy(buffer.get(), this->path.c_str());
+        return std::string{dirname(buffer.get())};
+    }
+
+
+    static int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
+        int rv = remove(fpath);
+        return rv;
+    }
+
+    void SlokedPosixFile::Delete() const {
+        if (this->IsFile()) {
+            remove(this->path.c_str());
         } else {
-            return Type::Unsupported;
+            nftw(this->path.c_str(), unlink_cb, 64, FTW_DEPTH | FTW_PHYS);
         }
     }
 
-    std::unique_ptr<SlokedFileReader> SlokedPosixFile::Reader() const {
+    void SlokedPosixFile::Rename(const std::string &name) const {
+        rename(this->path.c_str(), name.c_str());
+    }
+
+    void SlokedPosixFile::Mkdir() const {
+        if (!this->Exists()) {
+            mkdir(this->path.c_str(), 0755);
+        }
+    }
+
+    std::unique_ptr<SlokedIOReader> SlokedPosixFile::Reader() const {
         FILE *fp = fopen(this->path.c_str(), "r");
         if (fp) {
             return std::make_unique<SlokedPosixFileReader>(fp);
@@ -52,7 +87,7 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedFileWriter> SlokedPosixFile::Writer() const {
+    std::unique_ptr<SlokedIOWriter> SlokedPosixFile::Writer() const {
         FILE *fp = fopen(this->path.c_str(), "w");
         if (fp) {
             return std::make_unique<SlokedPosixFileWriter>(fp);
@@ -61,7 +96,7 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedFileView> SlokedPosixFile::View() const {
+    std::unique_ptr<SlokedIOView> SlokedPosixFile::View() const {
         FILE *fp = fopen(this->path.c_str(), "r");
         if (fp) {
             return std::make_unique<SlokedPosixFileView>(fp);
@@ -70,7 +105,7 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedFSObject> SlokedPosixFile::GetFile(std::string_view name) const {
+    std::unique_ptr<SlokedFile> SlokedPosixFile::GetFile(std::string_view name) const {
         std::string path {this->path};
         path.push_back('/');
         path.append(name);
@@ -83,7 +118,10 @@ namespace sloked {
             return;
         }
         for (dirent *entry = readdir(directory); entry != nullptr; entry = readdir(directory)) {
-            visitor(entry->d_name);
+            std::string str(entry->d_name);
+            if (str != ".." && str != ".") {
+                visitor(str);
+            }
         }
     }
 }
