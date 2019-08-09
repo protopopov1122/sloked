@@ -9,12 +9,12 @@ namespace sloked {
      public:
         SlokedPosixFilesystemAdapter(std::string_view);
 
-        SlokedPath GetRoot() override;
-        SlokedPath ToPath(const std::string &) override;
-        std::unique_ptr<SlokedFile> NewFile(const SlokedPath &) override;
+        const SlokedPath &GetRoot() const override;
+        SlokedPath ToPath(std::string_view) const override;
+        std::unique_ptr<SlokedFile> NewFile(const SlokedPath &) const override;
 
      private:
-        std::string root;
+        SlokedPath rootPath;
     };
 }
 

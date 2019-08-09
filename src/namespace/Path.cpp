@@ -77,7 +77,7 @@ namespace sloked {
         return path;
     }
 
-    bool SlokedPath::IsChildOrSibling(const SlokedPath &path) const {
+    bool SlokedPath::IsChildOrSelf(const SlokedPath &path) const {
         if (this->IsAbsolute() == path.IsAbsolute()) {
             if (path.path.size() < this->path.size()) {
                 return false;
@@ -89,10 +89,10 @@ namespace sloked {
             }
             return true;
         } else if (this->IsAbsolute()) {
-            return this->IsChildOrSibling(path.RelativeTo(*this));
+            return this->IsChildOrSelf(path.RelativeTo(*this));
         } else {
             SlokedPath self = this->RelativeTo(path);
-            return self.IsChildOrSibling(path);
+            return self.IsChildOrSelf(path);
         }
     }
 

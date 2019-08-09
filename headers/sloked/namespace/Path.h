@@ -25,7 +25,7 @@ namespace sloked {
         void Iterate(Visitor) const;
         SlokedPath GetParent() const;
         SlokedPath GetChild(std::string_view) const;
-        bool IsChildOrSibling(const SlokedPath &) const;
+        bool IsChildOrSelf(const SlokedPath &) const;
 
         static constexpr auto Separator = '/';
         static constexpr auto CurrentDir = ".";

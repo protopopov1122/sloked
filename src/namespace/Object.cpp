@@ -2,17 +2,9 @@
 
 namespace sloked {
 
-    SlokedNSDocument *SlokedNamespaceObject::AsDocument() {
+    SlokedNamespaceDocument *SlokedNamespaceObject::AsDocument() {
         if (this->GetType() == Type::Document) {
-            return dynamic_cast<SlokedNSDocument *>(this);
-        } else {
-            return nullptr;
-        }
-    }
-
-    SlokedNamespace *SlokedNamespaceObject::AsNamespace() {
-        if (this->GetType() == Type::Namespace) {
-            return dynamic_cast<SlokedNamespace *>(this);
+            return dynamic_cast<SlokedNamespaceDocument *>(this);
         } else {
             return nullptr;
         }

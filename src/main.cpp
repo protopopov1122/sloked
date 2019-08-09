@@ -42,8 +42,8 @@ int main(int argc, const char **argv) {
     char BUFFER[1024];
     realpath(argv[1], BUFFER);
     SlokedPosixFilesystemAdapter adapter("/");
-    SlokedFilesystemObject file(SlokedPath(BUFFER), adapter);
-    auto view = file.View();
+    SlokedFilesystemNamespace ns(adapter);
+    auto view = ns.GetObject(SlokedPath(BUFFER))->AsDocument()->View();
 
     const Encoding &fileEncoding = Encoding::Utf8;
     const Encoding &terminalEncoding = Encoding::Utf8;

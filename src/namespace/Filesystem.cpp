@@ -2,30 +2,32 @@
 
 namespace sloked {
 
-    SlokedFilesystemObject::SlokedFilesystemObject(const SlokedPath &path, SlokedFilesystemAdapter &adapter)
-        : adapter(adapter) {
-        this->file = adapter.NewFile(path);
-    }
+    SlokedFilesystemDocument::SlokedFilesystemDocument(std::unique_ptr<SlokedFile> file, const SlokedPath &path)
+        : file(std::move(file)), path(path) {}
     
-    SlokedFilesystemObject::Type SlokedFilesystemObject::GetType() const {
+    SlokedNamespaceObject::Type SlokedFilesystemDocument::GetType() const {
         if (this->file && this->file->IsFile()) {
             return Type::Document;
-        } else if (this->file) {
-            return Type::Namespace;
+        } else  if (this->file && this->file->IsDirectory()) {
+            return Type::Directory;
         } else {
-            return Type::Unknown;
+            return Type::None;
         }
     }
-
-    SlokedPath SlokedFilesystemObject::GetPath() const {
-        if (this->file) {
-            return this->adapter.ToPath(this->file->GetPath()).RelativeTo(this->adapter.GetRoot()).RelativeTo(SlokedPath("/"));
-        } else {
-            return SlokedPath("");
-        }
+    
+    const SlokedPath &SlokedFilesystemDocument::GetPath() const {
+        return this->path;
     }
 
-    std::unique_ptr<SlokedIOReader> SlokedFilesystemObject::Reader() const {
+    SlokedNamespaceDocument *SlokedFilesystemDocument::AsDocument() {
+        if (this->file && this->file->IsFile()) {
+            return this;
+        } else {
+            return nullptr;
+        }
+    }
+    
+    std::unique_ptr<SlokedIOReader> SlokedFilesystemDocument::Reader() const {
         if (this->file && this->file->IsFile()) {
             return this->file->Reader();
         } else {
@@ -33,7 +35,7 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedIOWriter> SlokedFilesystemObject::Writer() const {
+    std::unique_ptr<SlokedIOWriter> SlokedFilesystemDocument::Writer() {
         if (this->file && this->file->IsFile()) {
             return this->file->Writer();
         } else {
@@ -41,7 +43,7 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedIOView> SlokedFilesystemObject::View() const {
+    std::unique_ptr<SlokedIOView> SlokedFilesystemDocument::View() const {
         if (this->file && this->file->IsFile()) {
             return this->file->View();
         } else {
@@ -49,60 +51,58 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedNamespaceObject> SlokedFilesystemObject::GetObject(const std::string &name) {
-        return std::make_unique<SlokedFilesystemObject>(this->GetPath().GetChild(name), this->adapter);
-    }
-
-    bool SlokedFilesystemObject::HasObject(const std::string &name) {
-        if (!this->file) {
-            return false;
-        }
-        auto file = this->file->GetFile(name);
-        return file != nullptr && file->Exists();
-    }
-
-    void SlokedFilesystemObject::Iterate(Visitor v) {
-        if (this->file) {
-            this->file->ListFiles(v);
-        }
-    }
-
-    std::unique_ptr<SlokedNamespaceObject> SlokedFilesystemObject::Find(const SlokedPath &path) {
-        if (path.IsAbsolute()) {
-            return std::make_unique<SlokedFilesystemObject>(path, this->adapter);
+    SlokedFilesystemNamespace::SlokedFilesystemNamespace(const SlokedFilesystemAdapter &fs)
+        : filesystem(fs) {}
+    
+    std::unique_ptr<SlokedNamespaceObject> SlokedFilesystemNamespace::GetObject(const SlokedPath &path) const {
+        auto file = this->filesystem.NewFile(path);
+        if (file && file->IsFile()) {
+            return std::make_unique<SlokedFilesystemDocument>(std::move(file), path);
         } else {
-            return std::make_unique<SlokedFilesystemObject>(this->GetPath().RelativeTo(path), this->adapter);
+            return nullptr;
         }
     }
 
-    std::unique_ptr<SlokedNamespace> SlokedFilesystemObject::MakeNamespace(const std::string &name) {
-        if (this->file && this->file->IsDirectory()) {
-            auto file = this->file->GetFile(name);
-            if (!file->Exists()) {
-                file->Mkdir();
-                return std::make_unique<SlokedFilesystemObject>(this->GetPath().GetChild(name), this->adapter);
-            }
-        }
-        return nullptr;
+    bool SlokedFilesystemNamespace::HasObject(const SlokedPath &path) const {
+        auto file = this->filesystem.NewFile(path);
+        return file && file->IsFile();
     }
 
-    void SlokedFilesystemObject::Delete(const std::string &name) {
-        if (this->file && this->file->IsDirectory()) {
-            auto file = this->file->GetFile(name);
-            if (file->Exists()) {
-                file->Delete();
-            }
+    void SlokedFilesystemNamespace::Iterate(const SlokedPath &path, Visitor visitor) const {
+        auto file = this->filesystem.NewFile(path);
+        if (file && file->IsDirectory()) {
+            file->ListFiles([&](const std::string &name) {
+                auto child = file->GetFile(name);
+                if (child && child->IsFile()) {
+                    visitor(name, SlokedNamespaceObject::Type::Document);
+                } else if (child && child->IsDirectory()) {
+                    visitor(name, SlokedNamespaceObject::Type::Directory);
+                } else if (child) {
+                    visitor(name, SlokedNamespaceObject::Type::None);
+                }
+            });
+        }
+    }
+    
+    void SlokedFilesystemNamespace::MakeDir(const SlokedPath &path) {
+        auto file = this->filesystem.NewFile(path);
+        if (file && !file->Exists()) {
+            file->Mkdir();
         }
     }
 
-    void SlokedFilesystemObject::Rename(const std::string &name, const SlokedPath &to) {
-        SlokedPath realTo(to);
-        if (!realTo.IsAbsolute()) {
-            realTo = realTo.RelativeTo(this->GetPath());
+    void SlokedFilesystemNamespace::Delete(const SlokedPath &path) {
+        auto file = this->filesystem.NewFile(path);
+        if (file && file->Exists()) {
+            file->Delete();
         }
-        auto newFile = this->adapter.NewFile(realTo);
-        if (newFile) {
-            this->file->GetFile(name)->Rename(newFile->GetPath());
+    }
+
+    void SlokedFilesystemNamespace::Rename(const SlokedPath &from, const SlokedPath &to) {
+        auto file = this->filesystem.NewFile(from);
+        auto fileTo = this->filesystem.NewFile(to);
+        if (file && file->Exists() && fileTo) {
+            file->Rename(fileTo->GetPath());
         }
     }
 }

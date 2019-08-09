@@ -9,33 +9,38 @@ namespace sloked {
     class SlokedFilesystemAdapter {
      public:
         virtual ~SlokedFilesystemAdapter() = default;
-        virtual SlokedPath GetRoot() = 0;
-        virtual SlokedPath ToPath(const std::string &) = 0;
-        virtual std::unique_ptr<SlokedFile> NewFile(const SlokedPath &) = 0;
+        virtual const SlokedPath &GetRoot() const = 0;
+        virtual SlokedPath ToPath(std::string_view) const = 0;
+        virtual std::unique_ptr<SlokedFile> NewFile(const SlokedPath &) const = 0;
     };
 
-    class SlokedFilesystemObject : public SlokedNSDocument, public SlokedNamespace {
+    class SlokedFilesystemDocument : public SlokedNamespaceDocument {
      public:
-        SlokedFilesystemObject(const SlokedPath &, SlokedFilesystemAdapter &);
-        
+        SlokedFilesystemDocument(std::unique_ptr<SlokedFile>, const SlokedPath &);
         Type GetType() const override;
-        SlokedPath GetPath() const override;
-
+        const SlokedPath &GetPath() const override;
+        SlokedNamespaceDocument *AsDocument() override;
         std::unique_ptr<SlokedIOReader> Reader() const override;
-        std::unique_ptr<SlokedIOWriter> Writer() const override;
+        std::unique_ptr<SlokedIOWriter> Writer() override;
         std::unique_ptr<SlokedIOView> View() const override;
-
-        std::unique_ptr<SlokedNamespaceObject> GetObject(const std::string &) override;
-        bool HasObject(const std::string &) override;
-        void Iterate(Visitor) override;
-        std::unique_ptr<SlokedNamespaceObject> Find(const SlokedPath &) override;
-        std::unique_ptr<SlokedNamespace> MakeNamespace(const std::string &) override;
-        void Delete(const std::string &) override;
-        void Rename(const std::string &, const SlokedPath &) override;
 
      private:
         std::unique_ptr<SlokedFile> file;
-        SlokedFilesystemAdapter &adapter;
+        SlokedPath path;
+    };
+
+    class SlokedFilesystemNamespace : public SlokedNamespace {
+     public:
+        SlokedFilesystemNamespace(const SlokedFilesystemAdapter &);
+        std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) const override;
+        bool HasObject(const SlokedPath &) const override;
+        void Iterate(const SlokedPath &, Visitor) const override;
+        void MakeDir(const SlokedPath &) override;
+        void Delete(const SlokedPath &) override;
+        void Rename(const SlokedPath &, const SlokedPath &) override;
+
+     private:
+        const SlokedFilesystemAdapter &filesystem;
     };
 }
 
