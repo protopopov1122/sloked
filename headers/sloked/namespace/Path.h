@@ -20,15 +20,12 @@ namespace sloked {
         SlokedPath &operator=(SlokedPath &&) = default;
 
         bool IsAbsolute() const;
-        bool IsNormalized() const;
-        std::string ToString() const;
+        const std::string &ToString() const;
         SlokedPath RelativeTo(const SlokedPath &) const;
         void Iterate(Visitor) const;
         SlokedPath GetParent() const;
         SlokedPath GetChild(std::string_view) const;
-        bool IsDescendent(const SlokedPath &) const;
-
-        SlokedPath &Normalize();
+        bool IsChildOrSibling(const SlokedPath &) const;
 
         static constexpr auto Separator = '/';
         static constexpr auto CurrentDir = ".";
@@ -36,8 +33,10 @@ namespace sloked {
 
      private:
         SlokedPath() = default;
+        SlokedPath &Normalize();
 
         std::vector<std::string> path;
+        std::string literal;
     };
 }
 

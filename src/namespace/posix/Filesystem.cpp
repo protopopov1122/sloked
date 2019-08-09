@@ -21,7 +21,7 @@ namespace sloked {
         } else {
             realPath = this->GetRoot().RelativeTo(path);
         }
-        if (!this->GetRoot().IsDescendent(realPath)) {
+        if (!this->GetRoot().IsChildOrSibling(realPath)) {
             return nullptr;
         } else {
             return std::make_unique<SlokedPosixFile>(realPath.ToString());

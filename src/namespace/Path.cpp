@@ -4,7 +4,8 @@
 
 namespace sloked {
 
-    SlokedPath::SlokedPath(std::string_view str) {
+    SlokedPath::SlokedPath(std::string_view str)
+        : path({""}), literal("") {
         this->path = {""};
         for (char chr : str) {
             if (chr == SlokedPath::Separator) {
@@ -13,43 +14,15 @@ namespace sloked {
                 this->path.back().push_back(chr);
             }
         }
+        this->Normalize();
     }
 
     bool SlokedPath::IsAbsolute() const {
         return this->path.front().empty();
     }
 
-    bool SlokedPath::IsNormalized() const {
-        bool parentRow = false;
-        for (auto it = this->path.begin(); it != this->path.end(); ++it) {
-            const auto &name = *it;
-            if (it == this->path.begin()) {
-                if (name == SlokedPath::ParentDir) {
-                    parentRow = true;
-                }
-            } else if (name.empty() ||
-                name == SlokedPath::CurrentDir ||
-                (name == SlokedPath::ParentDir && !parentRow)) {
-                return false;
-            } else if (name == SlokedPath::ParentDir) {
-                parentRow = true;
-            } else {
-                parentRow = false;
-            }
-        }
-        return true;
-    }
-
-    std::string SlokedPath::ToString() const {
-        std::string path {this->path.front()};
-        if (this->path.size() == 1 && this->path.front().empty()) {
-            path.push_back(SlokedPath::Separator);
-        }
-        for (auto it = std::next(this->path.begin()); it != this->path.end(); ++it) {
-            path.push_back(SlokedPath::Separator);
-            path.append(*it);
-        }
-        return path;
+    const std::string &SlokedPath::ToString() const {
+        return this->literal;
     }
 
     SlokedPath SlokedPath::RelativeTo(const SlokedPath &root) const {
@@ -61,20 +34,17 @@ namespace sloked {
         } else if (root.IsAbsolute()) {
             SlokedPath path;
             path.path = {"."};
-            SlokedPath normRoot(root);
-            normRoot.Normalize();
-            SlokedPath normSelf(*this);
-            normSelf.Normalize();
             std::size_t i = 0;
-            for (; i < std::min(normRoot.path.size(), normSelf.path.size()); i++) {
-                if (normRoot.path[i] != normSelf.path[i]) {
+            for (; i < std::min(root.path.size(), this->path.size()); i++) {
+                if (root.path[i] != this->path[i]) {
                     break;
                 }
             }
-            if (i < normRoot.path.size()) {
-                path.path = {normRoot.path.size() - i, SlokedPath::ParentDir};
+            if (i < root.path.size()) {
+                path.path = {root.path.size() - i, SlokedPath::ParentDir};
             }
-            path.path.insert(path.path.end(), normSelf.path.begin() + i, normSelf.path.end());
+            path.path.insert(path.path.end(), this->path.begin() + i, this->path.end());
+            path.Normalize();
             return path;
         } else {
             SlokedPath path(root);
@@ -107,27 +77,22 @@ namespace sloked {
         return path;
     }
 
-    bool SlokedPath::IsDescendent(const SlokedPath &path) const {
+    bool SlokedPath::IsChildOrSibling(const SlokedPath &path) const {
         if (this->IsAbsolute() == path.IsAbsolute()) {
-            SlokedPath normSelf(*this);
-            normSelf.Normalize();
-            SlokedPath normPath(path);
-            normPath.Normalize();
-
-            if (normPath.path.size() < normSelf.path.size()) {
+            if (path.path.size() < this->path.size()) {
                 return false;
             }
-            for (std::size_t i = 0; i < normSelf.path.size(); i++) {
-                if (normSelf.path[i] != normPath.path[i]) {
+            for (std::size_t i = 0; i < this->path.size(); i++) {
+                if (this->path[i] != path.path[i]) {
                     return false;
                 }
             }
             return true;
         } else if (this->IsAbsolute()) {
-            return this->IsDescendent(path.RelativeTo(*this));
+            return this->IsChildOrSibling(path.RelativeTo(*this));
         } else {
             SlokedPath self = this->RelativeTo(path);
-            return self.IsDescendent(path);
+            return self.IsChildOrSibling(path);
         }
     }
 
@@ -157,6 +122,16 @@ namespace sloked {
                 this->path.erase(this->path.begin() + (i - 1));
                 i -= 2;
             }
+        }
+
+        // Update literal path
+        this->literal = this->path.front();
+        if (this->path.size() == 1 && this->path.front().empty()) {
+            this->literal.push_back(SlokedPath::Separator);
+        }
+        for (auto it = std::next(this->path.begin()); it != this->path.end(); ++it) {
+            this->literal.push_back(SlokedPath::Separator);
+            this->literal.append(*it);
         }
         return *this;
     }
