@@ -51,11 +51,11 @@ namespace sloked {
         }
     }
 
-    SlokedFilesystemNamespace::SlokedFilesystemNamespace(const SlokedFilesystemAdapter &fs)
-        : filesystem(fs) {}
+    SlokedFilesystemNamespace::SlokedFilesystemNamespace(std::unique_ptr<SlokedFilesystemAdapter> filesystem)
+        : filesystem(std::move(filesystem)) {}
     
     std::unique_ptr<SlokedNamespaceObject> SlokedFilesystemNamespace::GetObject(const SlokedPath &path) const {
-        auto file = this->filesystem.NewFile(path);
+        auto file = this->filesystem->NewFile(path);
         if (file && file->IsFile()) {
             return std::make_unique<SlokedFilesystemDocument>(std::move(file), path);
         } else {
@@ -64,12 +64,12 @@ namespace sloked {
     }
 
     bool SlokedFilesystemNamespace::HasObject(const SlokedPath &path) const {
-        auto file = this->filesystem.NewFile(path);
+        auto file = this->filesystem->NewFile(path);
         return file && file->IsFile();
     }
 
     void SlokedFilesystemNamespace::Iterate(const SlokedPath &path, Visitor visitor) const {
-        auto file = this->filesystem.NewFile(path);
+        auto file = this->filesystem->NewFile(path);
         if (file && file->IsDirectory()) {
             file->ListFiles([&](const std::string &name) {
                 auto child = file->GetFile(name);
@@ -85,22 +85,22 @@ namespace sloked {
     }
     
     void SlokedFilesystemNamespace::MakeDir(const SlokedPath &path) {
-        auto file = this->filesystem.NewFile(path);
+        auto file = this->filesystem->NewFile(path);
         if (file && !file->Exists()) {
             file->Mkdir();
         }
     }
 
     void SlokedFilesystemNamespace::Delete(const SlokedPath &path) {
-        auto file = this->filesystem.NewFile(path);
+        auto file = this->filesystem->NewFile(path);
         if (file && file->Exists()) {
             file->Delete();
         }
     }
 
     void SlokedFilesystemNamespace::Rename(const SlokedPath &from, const SlokedPath &to) {
-        auto file = this->filesystem.NewFile(from);
-        auto fileTo = this->filesystem.NewFile(to);
+        auto file = this->filesystem->NewFile(from);
+        auto fileTo = this->filesystem->NewFile(to);
         if (file && file->Exists() && fileTo) {
             file->Rename(fileTo->GetPath());
         }

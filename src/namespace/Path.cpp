@@ -17,6 +17,9 @@ namespace sloked {
         this->Normalize();
     }
 
+    SlokedPath::SlokedPath(const char *path)
+        : SlokedPath(std::string_view{path}) {}
+
     bool SlokedPath::IsAbsolute() const {
         return this->path.front().empty();
     }
@@ -56,8 +59,14 @@ namespace sloked {
 
     void SlokedPath::Iterate(Visitor visitor) const {
         for (const auto &name : this->path) {
-            visitor(name);
+            if (!name.empty()) {
+                visitor(name);
+            }
         }
+    }
+
+    const std::vector<std::string> &SlokedPath::Components() const {
+        return this->path;
     }
 
     SlokedPath SlokedPath::GetParent() const {
@@ -66,6 +75,7 @@ namespace sloked {
         } else {
             SlokedPath path;
             path.path.insert(path.path.end(), this->path.begin(), std::prev(this->path.end()));
+            path.Normalize();
             return path;
         }
     }
@@ -74,6 +84,7 @@ namespace sloked {
         SlokedPath path;
         path.path = this->path;
         path.path.push_back(std::string{name});
+        path.Normalize();
         return path;
     }
 
@@ -94,6 +105,37 @@ namespace sloked {
             SlokedPath self = this->RelativeTo(path);
             return self.IsChildOrSelf(path);
         }
+    }
+
+    bool SlokedPath::IsChild(const SlokedPath &path) const {
+        if (this->IsAbsolute() == path.IsAbsolute()) {
+            if (path.path.size() <= this->path.size()) {
+                return false;
+            }
+            for (std::size_t i = 0; i < this->path.size(); i++) {
+                if (this->path[i] != path.path[i]) {
+                    return false;
+                }
+            }
+            return true;
+        } else if (this->IsAbsolute()) {
+            return this->IsChildOrSelf(path.RelativeTo(*this));
+        } else {
+            SlokedPath self = this->RelativeTo(path);
+            return self.IsChildOrSelf(path);
+        }
+    }
+
+    bool SlokedPath::operator==(const SlokedPath &path) const {
+        if (this->path.size() != path.path.size()) {
+            return false;
+        }
+        for (std::size_t i = 0; i < this->path.size(); i++) {
+            if (this->path[i] != path.path[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     SlokedPath &SlokedPath::Normalize() {

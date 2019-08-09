@@ -10,10 +10,6 @@ namespace sloked {
         return this->rootPath;
     }
 
-    SlokedPath SlokedPosixFilesystemAdapter::ToPath(std::string_view name) const {
-        return SlokedPath(name);
-    }
-
     std::unique_ptr<SlokedFile> SlokedPosixFilesystemAdapter::NewFile(const SlokedPath &path) const {
         SlokedPath realPath("/");
         if (path.IsAbsolute()) {
