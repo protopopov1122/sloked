@@ -35,6 +35,7 @@ namespace sloked {
         static constexpr auto Separator = '/';
         static constexpr auto CurrentDir = ".";
         static constexpr auto ParentDir = "..";
+        static const SlokedPath Root;
 
      private:
         SlokedPath() = default;

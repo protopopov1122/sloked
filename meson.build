@@ -19,6 +19,7 @@ sloked_src = [
   'src/namespace/Filesystem.cpp',
   'src/namespace/Object.cpp',
   'src/namespace/Path.cpp',
+  'src/namespace/View.cpp',
   'src/namespace/Virtual.cpp',
   'src/namespace/posix/Filesystem.cpp',
   'src/screen/Component.cpp',

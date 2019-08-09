@@ -27,6 +27,7 @@ namespace sloked {
         virtual bool Exists() const = 0;
         virtual void Delete() const = 0;
         virtual void Rename(const std::string &) const = 0;
+        virtual void Create() const = 0;
         virtual void Mkdir() const = 0;
 
         virtual Size GetSize() const = 0;

@@ -4,6 +4,8 @@
 
 namespace sloked {
 
+    const SlokedPath SlokedPath::Root("/");
+
     SlokedPath::SlokedPath(std::string_view str)
         : path({""}), literal("") {
         this->path = {""};

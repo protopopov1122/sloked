@@ -14,6 +14,7 @@
 #include "sloked/filesystem/posix/File.h"
 #include "sloked/namespace/Filesystem.h"
 #include "sloked/namespace/Virtual.h"
+#include "sloked/namespace/View.h"
 #include "sloked/namespace/posix/Filesystem.h"
 #include <fcntl.h>
 #include <fstream>
@@ -43,7 +44,7 @@ int main(int argc, const char **argv) {
     char BUFFER[1024];
     realpath(argv[1], BUFFER);
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
-    auto view = root.GetObject(BUFFER)->AsDocument()->View();
+    auto view = root.GetObject(BUFFER)->AsFile()->View();
 
     const Encoding &fileEncoding = Encoding::Utf8;
     const Encoding &terminalEncoding = Encoding::Utf8;

@@ -10,12 +10,13 @@
 
 namespace sloked {
 
-    class SlokedNamespaceDocument;
+    class SlokedNamespaceFile;
+    class SlokedNamespace;
 
     class SlokedNamespaceObject {
      public:
         enum class Type {
-            Document,
+            File,
             Directory,
             None
         };
@@ -23,10 +24,10 @@ namespace sloked {
         virtual ~SlokedNamespaceObject() = default;
         virtual Type GetType() const = 0;
         virtual const SlokedPath &GetPath() const = 0;
-        virtual SlokedNamespaceDocument *AsDocument();
+        virtual SlokedNamespaceFile *AsFile();
     };
 
-    class SlokedNamespaceDocument : public SlokedNamespaceObject {
+    class SlokedNamespaceFile : public SlokedNamespaceObject {
      public:
         virtual std::unique_ptr<SlokedIOReader> Reader() const = 0;
         virtual std::unique_ptr<SlokedIOWriter> Writer() = 0;
@@ -43,6 +44,7 @@ namespace sloked {
         virtual void Iterate(const SlokedPath &, Visitor) const = 0;
 
         virtual void MakeDir(const SlokedPath &) = 0;
+        virtual void MakeFile(const SlokedPath &) = 0;
         virtual void Delete(const SlokedPath &) = 0;
         virtual void Rename(const SlokedPath &, const SlokedPath &) = 0;
     };

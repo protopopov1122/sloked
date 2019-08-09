@@ -4,12 +4,16 @@
 #include "sloked/filesystem/posix/Writer.h"
 #include <cstdio>
 #include <cstring>
+#include <unistd.h>
 #include <dirent.h>
 #include <libgen.h>
 #include <ftw.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 
 namespace sloked {
+
+    static constexpr auto MODE = 0755;
 
     SlokedPosixFile::SlokedPosixFile(const std::string &path)
         : path(path) {}
@@ -72,9 +76,15 @@ namespace sloked {
         rename(this->path.c_str(), name.c_str());
     }
 
+    void SlokedPosixFile::Create() const {
+        if (!this->Exists()) {
+            close(creat(this->path.c_str(), MODE));
+        }
+    }
+
     void SlokedPosixFile::Mkdir() const {
         if (!this->Exists()) {
-            mkdir(this->path.c_str(), 0755);
+            mkdir(this->path.c_str(), MODE);
         }
     }
 

@@ -16,13 +16,14 @@ namespace sloked {
         std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) const override;
         bool HasObject(const SlokedPath &) const override;
         void Iterate(const SlokedPath &, Visitor) const override;
+        void MakeFile(const SlokedPath &) override;
         void MakeDir(const SlokedPath &) override;
         void Delete(const SlokedPath &) override;
         void Rename(const SlokedPath &, const SlokedPath &) override;
 
      private:
         struct Entry {
-            std::shared_ptr<SlokedNamespace> ns;
+            std::unique_ptr<SlokedNamespace> ns;
             SlokedPath path {"/"};
             std::map<std::string, Entry> subentries;
         };

@@ -17,6 +17,7 @@ namespace sloked {
         bool Exists() const override;
         void Delete() const override;
         void Rename(const std::string &) const override;
+        void Create() const override;
         void Mkdir() const override;
 
         uint64_t GetSize() const override;

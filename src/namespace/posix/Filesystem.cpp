@@ -13,7 +13,7 @@ namespace sloked {
     std::unique_ptr<SlokedFile> SlokedPosixFilesystemAdapter::NewFile(const SlokedPath &path) const {
         SlokedPath realPath("/");
         if (path.IsAbsolute()) {
-            realPath = this->GetRoot().RelativeTo(path.RelativeTo(SlokedPath("/")));
+            realPath = this->GetRoot().RelativeTo(path.RelativeTo(SlokedPath::Root));
         } else {
             realPath = this->GetRoot().RelativeTo(path);
         }

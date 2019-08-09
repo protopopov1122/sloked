@@ -7,7 +7,7 @@ namespace sloked {
     
     SlokedNamespaceObject::Type SlokedFilesystemDocument::GetType() const {
         if (this->file && this->file->IsFile()) {
-            return Type::Document;
+            return Type::File;
         } else  if (this->file && this->file->IsDirectory()) {
             return Type::Directory;
         } else {
@@ -19,7 +19,7 @@ namespace sloked {
         return this->path;
     }
 
-    SlokedNamespaceDocument *SlokedFilesystemDocument::AsDocument() {
+    SlokedNamespaceFile *SlokedFilesystemDocument::AsFile() {
         if (this->file && this->file->IsFile()) {
             return this;
         } else {
@@ -74,13 +74,20 @@ namespace sloked {
             file->ListFiles([&](const std::string &name) {
                 auto child = file->GetFile(name);
                 if (child && child->IsFile()) {
-                    visitor(name, SlokedNamespaceObject::Type::Document);
+                    visitor(name, SlokedNamespaceObject::Type::File);
                 } else if (child && child->IsDirectory()) {
                     visitor(name, SlokedNamespaceObject::Type::Directory);
                 } else if (child) {
                     visitor(name, SlokedNamespaceObject::Type::None);
                 }
             });
+        }
+    }
+
+    void SlokedFilesystemNamespace::MakeFile(const SlokedPath &path) {
+        auto file = this->filesystem->NewFile(path);
+        if (file && !file->Exists()) {
+            file->Create();
         }
     }
     

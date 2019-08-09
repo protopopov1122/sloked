@@ -4,10 +4,10 @@
 namespace sloked {
 
     SlokedVirtualNamespace::SlokedVirtualNamespace(std::unique_ptr<SlokedNamespace> ns)
-        : root{std::move(ns), SlokedPath("/"), {}} {}
+        : root{std::move(ns), SlokedPath::Root, {}} {}
 
     void SlokedVirtualNamespace::Mount(const SlokedPath &path, std::unique_ptr<SlokedNamespace> ns) {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath("/"));
+        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath::Root);
         Entry *entry = &this->root;
         SlokedPath entryPath("/");
         if (realPath == entryPath) {
@@ -26,7 +26,7 @@ namespace sloked {
     }
 
     void SlokedVirtualNamespace::Umount(const SlokedPath &path) {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath("/"));
+        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath::Root);
         Entry *entry = &this->root;
         SlokedPath entryPath("/");
         if (realPath == entryPath) {
@@ -50,47 +50,54 @@ namespace sloked {
     }
 
     std::unique_ptr<SlokedNamespaceObject> SlokedVirtualNamespace::GetObject(const SlokedPath &path) const {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath("/"));
+        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath::Root);
         const Entry &entry = this->find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath("/"));
+        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
         return entry.ns->GetObject(nsPath);
     }
 
     bool SlokedVirtualNamespace::HasObject(const SlokedPath &path) const {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath("/"));
+        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath::Root);
         const Entry &entry = this->find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath("/"));
+        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
         return entry.ns->HasObject(nsPath);
     }
     
     void SlokedVirtualNamespace::Iterate(const SlokedPath &path, Visitor visitor) const {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath("/"));
+        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath::Root);
         const Entry &entry = this->find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath("/"));
+        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
         entry.ns->Iterate(nsPath, visitor);
     }
 
-    void SlokedVirtualNamespace::MakeDir(const SlokedPath &path) {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath("/"));
+    void SlokedVirtualNamespace::MakeFile(const SlokedPath &path) {
+        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath::Root);
         const Entry &entry = this->find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath("/"));
+        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
+        entry.ns->MakeFile(nsPath);
+    }
+
+    void SlokedVirtualNamespace::MakeDir(const SlokedPath &path) {
+        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath::Root);
+        const Entry &entry = this->find(realPath);
+        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
         entry.ns->MakeDir(nsPath);
     }
 
     void SlokedVirtualNamespace::Delete(const SlokedPath &path) {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath("/"));
+        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath::Root);
         const Entry &entry = this->find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath("/"));
+        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
         entry.ns->Delete(nsPath);
     }
 
     void SlokedVirtualNamespace::Rename(const SlokedPath &from, const SlokedPath &to) {
-        SlokedPath realFrom = from.IsAbsolute() ? from : from.RelativeTo(SlokedPath("/"));
-        SlokedPath realTo = to.IsAbsolute() ? to : to.RelativeTo(SlokedPath("/"));
+        SlokedPath realFrom = from.IsAbsolute() ? from : from.RelativeTo(SlokedPath::Root);
+        SlokedPath realTo = to.IsAbsolute() ? to : to.RelativeTo(SlokedPath::Root);
         const Entry &entry = this->find(realFrom);
         if (entry.path.IsChildOrSelf(realTo)) {
-            SlokedPath nsFromPath = realFrom.RelativeTo(entry.path).RelativeTo(SlokedPath("/"));
-            SlokedPath nsToPath = realTo.RelativeTo(entry.path).RelativeTo(SlokedPath("/"));
+            SlokedPath nsFromPath = realFrom.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
+            SlokedPath nsToPath = realTo.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
             entry.ns->Rename(nsFromPath, nsToPath);
         }
     }
