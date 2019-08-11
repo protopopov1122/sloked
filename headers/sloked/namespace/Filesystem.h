@@ -16,7 +16,7 @@ namespace sloked {
    class SlokedFilesystemNamespace : public SlokedNamespace {
    public:
       SlokedFilesystemNamespace(std::unique_ptr<SlokedFilesystemAdapter>);
-      std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) const override;
+      std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) override;
       bool HasObject(const SlokedPath &) const override;
       void Iterate(const SlokedPath &, Visitor) const override;
       std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(const SlokedPath &) override;

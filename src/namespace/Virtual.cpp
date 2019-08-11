@@ -1,5 +1,6 @@
 #include "sloked/namespace/Virtual.h"
 #include "sloked/core/Error.h"
+#include "sloked/namespace/Directory.h"
 
 namespace sloked {
 
@@ -7,6 +8,8 @@ namespace sloked {
      public:
         using Entry = SlokedVirtualNamespace::Entry;
         SlokedVirtualObjectHandle(SlokedVirtualNamespace &, const SlokedPath &);
+        bool HasPermission(SlokedNamespacePermission) const override;
+        bool Exists() const override;
         void MakeDir() override;
         void MakeFile() override;
         void Delete() override;
@@ -18,7 +21,18 @@ namespace sloked {
     };
 
     SlokedVirtualObjectHandle::SlokedVirtualObjectHandle(SlokedVirtualNamespace &ns, const SlokedPath &path)
-        : ns(ns), path(path) {}
+        : ns(ns), path(path) {}\
+    
+    bool SlokedVirtualObjectHandle::HasPermission(SlokedNamespacePermission perm) const {
+        SlokedPath realPath = this->path.IsAbsolute() ? this->path : this->path.RelativeTo(SlokedPath::Root);
+        const Entry &entry = this->ns.find(realPath);
+        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
+        return entry.ns->GetHandle(nsPath)->HasPermission(perm);
+    }
+
+    bool SlokedVirtualObjectHandle::Exists() const {
+        return this->ns.HasObject(this->path);
+    }
 
     void SlokedVirtualObjectHandle::MakeDir() {
         SlokedPath realPath = this->path.IsAbsolute() ? this->path : this->path.RelativeTo(SlokedPath::Root);
@@ -100,11 +114,16 @@ namespace sloked {
         this->cleanup(this->root);
     }
 
-    std::unique_ptr<SlokedNamespaceObject> SlokedVirtualNamespace::GetObject(const SlokedPath &path) const {
+    std::unique_ptr<SlokedNamespaceObject> SlokedVirtualNamespace::GetObject(const SlokedPath &path) {
         SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath::Root);
         const Entry &entry = this->find(realPath);
         SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
-        return entry.ns->GetObject(nsPath);
+        auto obj = entry.ns->GetObject(nsPath);
+        if (obj->GetType() == SlokedNamespaceObject::Type::Directory) {
+            return std::make_unique<SlokedNamespaceDefaultDirectory>(*this, path);
+        } else {
+            return obj;
+        }
     }
 
     bool SlokedVirtualNamespace::HasObject(const SlokedPath &path) const {

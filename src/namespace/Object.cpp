@@ -5,4 +5,8 @@ namespace sloked {
     SlokedNamespaceFile *SlokedNamespaceObject::AsFile() {
         return nullptr;
     }
+
+    SlokedNamespaceDirectory *SlokedNamespaceObject::AsDirectory() {
+        return nullptr;
+    }
 }

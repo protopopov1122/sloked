@@ -9,7 +9,7 @@ namespace sloked {
      public:
         SlokedNamespaceView(SlokedNamespace &, const SlokedPath &);
 
-        std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) const override;
+        std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) override;
         bool HasObject(const SlokedPath &) const override;
         void Iterate(const SlokedPath &, Visitor) const override;
         std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(const SlokedPath &) override;

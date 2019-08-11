@@ -40,6 +40,7 @@ int main(int argc, const char **argv) {
         std::cout << "Format: " << argv[0] << " source destination" << std::endl;
         return EXIT_FAILURE;
     }
+    
 
     char BUFFER[1024];
     realpath(argv[1], BUFFER);

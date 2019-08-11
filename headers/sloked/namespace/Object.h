@@ -3,6 +3,7 @@
 
 #include "sloked/Base.h"
 #include "sloked/core/IO.h"
+#include "sloked/core/Permission.h"
 #include "sloked/namespace/Path.h"
 #include <memory>
 #include <string>
@@ -11,6 +12,7 @@
 namespace sloked {
 
     class SlokedNamespaceFile;
+    class SlokedNamespaceDirectory;
     class SlokedNamespace;
 
     class SlokedNamespaceObject {
@@ -25,6 +27,7 @@ namespace sloked {
         virtual Type GetType() const = 0;
         virtual const SlokedPath &GetPath() const = 0;
         virtual SlokedNamespaceFile *AsFile();
+        virtual SlokedNamespaceDirectory *AsDirectory();
     };
 
     class SlokedNamespaceFile : public SlokedNamespaceObject {
@@ -34,9 +37,15 @@ namespace sloked {
         virtual std::unique_ptr<SlokedIOView> View() const = 0;
     };
 
-    class SlokedNamespaceObjectHandle {
+    enum class SlokedNamespacePermission {
+        Read = 0,
+        Write
+    };
+
+    class SlokedNamespaceObjectHandle : public SlokedPermissionAuthority<SlokedNamespacePermission> {
      public:
         virtual ~SlokedNamespaceObjectHandle() = default;
+        virtual bool Exists() const = 0;
         virtual void MakeDir() = 0;
         virtual void MakeFile() = 0;
         virtual void Delete() = 0;
@@ -48,11 +57,13 @@ namespace sloked {
         using Visitor = std::function<void(const std::string &, SlokedNamespaceObject::Type)>;
 
         virtual ~SlokedNamespace() = default;
-        virtual std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) const = 0;
+        virtual std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) = 0;
         virtual bool HasObject(const SlokedPath &) const = 0;
         virtual void Iterate(const SlokedPath &, Visitor) const = 0;
         virtual std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(const SlokedPath &) = 0;
     };
+
+    class SlokedNamespaceDirectory : public SlokedNamespace, public SlokedNamespaceObject {};
 }
 
 #endif

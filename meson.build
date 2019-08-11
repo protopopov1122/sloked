@@ -16,6 +16,7 @@ sloked_src = [
   'src/filesystem/posix/Reader.cpp',
   'src/filesystem/posix/View.cpp',
   'src/filesystem/posix/Writer.cpp',
+  'src/namespace/Directory.cpp',
   'src/namespace/Filesystem.cpp',
   'src/namespace/Object.cpp',
   'src/namespace/Path.cpp',

@@ -10,7 +10,7 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedNamespaceObject> SlokedNamespaceView::GetObject(const SlokedPath &path) const {
+    std::unique_ptr<SlokedNamespaceObject> SlokedNamespaceView::GetObject(const SlokedPath &path) {
         return this->base.GetObject(this->MakePath(path));
     }
 
