@@ -2,12 +2,14 @@
 #define SLOKED_FILESYSTEM_FILE_H_
 
 #include "sloked/core/IO.h"
+#include "sloked/core/Permission.h"
+#include "sloked/filesystem/Permissions.h"
 #include <memory>
 #include <functional>
 
 namespace sloked {
 
-    class SlokedFile {
+    class SlokedFile : public SlokedPermissionAuthority<SlokedFilesystemPermission> {
      public:
         using Size = uint64_t;
         using FileVisitor = std::function<void(const std::string &)>;

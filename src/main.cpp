@@ -43,7 +43,7 @@ int main(int argc, const char **argv) {
 
     char BUFFER[1024];
     realpath(argv[1], BUFFER);
-    SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>(SlokedPath::Root)));
+    SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     auto view = root.GetObject(BUFFER)->AsFile()->View();
 
     const Encoding &fileEncoding = Encoding::Utf8;

@@ -11,6 +11,7 @@ namespace sloked {
 
         bool IsFile() const override;
         bool IsDirectory() const override;
+        bool HasPermission(SlokedFilesystemPermission) const override;
         const std::string &GetPath() const override;
         std::string GetName() const override;
         std::string GetParent() const override;

@@ -28,6 +28,21 @@ namespace sloked {
         return stat(this->path.c_str(), &stats) == 0 && S_ISDIR(stats.st_mode);
     }
 
+    bool SlokedPosixFile::HasPermission(SlokedFilesystemPermission permission) const {
+        std::unique_ptr<char[]> pathClone(new char[this->path.size() + 1]);
+        strcpy(pathClone.get(), this->path.c_str());
+        switch (permission) {
+            case SlokedFilesystemPermission::Read:
+                return access(this->path.c_str(), R_OK) == 0;
+
+            case SlokedFilesystemPermission::Write:
+                return access(this->path.c_str(), W_OK) == 0;
+
+            default:
+                return false;
+        }
+    }
+
     const std::string &SlokedPosixFile::GetPath() const {
         return this->path;
     }
