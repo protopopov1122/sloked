@@ -12,11 +12,7 @@ namespace sloked {
         std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) const override;
         bool HasObject(const SlokedPath &) const override;
         void Iterate(const SlokedPath &, Visitor) const override;
-
-        void MakeDir(const SlokedPath &) override;
-        void MakeFile(const SlokedPath &) override;
-        void Delete(const SlokedPath &) override;
-        void Rename(const SlokedPath &, const SlokedPath &) override;
+        std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(const SlokedPath &) override;
 
      private:
         SlokedPath MakePath(const SlokedPath &) const;

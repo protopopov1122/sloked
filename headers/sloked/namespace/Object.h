@@ -34,6 +34,15 @@ namespace sloked {
         virtual std::unique_ptr<SlokedIOView> View() const = 0;
     };
 
+    class SlokedNamespaceObjectHandle {
+     public:
+        virtual ~SlokedNamespaceObjectHandle() = default;
+        virtual void MakeDir() = 0;
+        virtual void MakeFile() = 0;
+        virtual void Delete() = 0;
+        virtual void Rename(const SlokedPath &) = 0;
+    };
+
     class SlokedNamespace {
      public:
         using Visitor = std::function<void(const std::string &, SlokedNamespaceObject::Type)>;
@@ -42,11 +51,7 @@ namespace sloked {
         virtual std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) const = 0;
         virtual bool HasObject(const SlokedPath &) const = 0;
         virtual void Iterate(const SlokedPath &, Visitor) const = 0;
-
-        virtual void MakeDir(const SlokedPath &) = 0;
-        virtual void MakeFile(const SlokedPath &) = 0;
-        virtual void Delete(const SlokedPath &) = 0;
-        virtual void Rename(const SlokedPath &, const SlokedPath &) = 0;
+        virtual std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(const SlokedPath &) = 0;
     };
 }
 

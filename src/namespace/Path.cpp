@@ -109,25 +109,6 @@ namespace sloked {
         }
     }
 
-    bool SlokedPath::IsChild(const SlokedPath &path) const {
-        if (this->IsAbsolute() == path.IsAbsolute()) {
-            if (path.path.size() <= this->path.size()) {
-                return false;
-            }
-            for (std::size_t i = 0; i < this->path.size(); i++) {
-                if (this->path[i] != path.path[i]) {
-                    return false;
-                }
-            }
-            return true;
-        } else if (this->IsAbsolute()) {
-            return this->IsChildOrSelf(path.RelativeTo(*this));
-        } else {
-            SlokedPath self = this->RelativeTo(path);
-            return self.IsChildOrSelf(path);
-        }
-    }
-
     bool SlokedPath::operator==(const SlokedPath &path) const {
         if (this->path.size() != path.path.size()) {
             return false;

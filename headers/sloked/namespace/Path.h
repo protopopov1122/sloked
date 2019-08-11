@@ -28,7 +28,6 @@ namespace sloked {
         SlokedPath GetParent() const;
         SlokedPath GetChild(std::string_view) const;
         bool IsChildOrSelf(const SlokedPath &) const;
-        bool IsChild(const SlokedPath &) const;
 
         bool operator==(const SlokedPath &) const;
 
