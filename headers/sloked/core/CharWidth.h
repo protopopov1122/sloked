@@ -1,5 +1,5 @@
-#ifndef SLOKED_SCREEN_CHARWIDTH_H_
-#define SLOKED_SCREEN_CHARWIDTH_H_
+#ifndef SLOKED_CORE_CHARWIDTH_H_
+#define SLOKED_CORE_CHARWIDTH_H_
 
 #include "sloked/Base.h"
 #include "sloked/core/Encoding.h"
@@ -7,9 +7,9 @@
 
 namespace sloked {
 
-    class ScreenCharWidth {
+    class SlokedCharWidth {
      public:
-        ScreenCharWidth();
+        SlokedCharWidth();
         std::size_t GetCharWidth(char32_t) const;
         std::size_t GetRealPosition(const std::string &, std::size_t, const Encoding &) const;
         std::string GetTab() const;

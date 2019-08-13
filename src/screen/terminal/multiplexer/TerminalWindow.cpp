@@ -1,11 +1,11 @@
 #include "sloked/screen/terminal/multiplexer/TerminalWindow.h"
 #include "sloked/core/Encoding.h"
-#include "sloked/screen/terminal/CharWidth.h"
+#include "sloked/core/CharWidth.h"
 #include <iostream>
 
 namespace sloked {
 
-    TerminalWindow::TerminalWindow(SlokedTerminal &term, const Encoding &encoding, const ScreenCharWidth &charWidth, Column x, Line y, Column w, Line h, InputSource inputSource)
+    TerminalWindow::TerminalWindow(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth, Column x, Line y, Column w, Line h, InputSource inputSource)
         : term(term), encoding(encoding), charWidth(charWidth), offset_x(x), offset_y(y), width(w), height(h), inputSource(std::move(inputSource)), col(0), line(0) {}
 
     void TerminalWindow::Move(Column x, Line y) {

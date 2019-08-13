@@ -4,16 +4,17 @@
 #include "sloked/Base.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/text/TextBlock.h"
+#include "sloked/text/TextFrame.h"
 #include "sloked/text/cursor/Cursor.h"
 #include "sloked/text/cursor/TransactionJournal.h"
-#include "sloked/screen/terminal/CharWidth.h"
+#include "sloked/core/CharWidth.h"
 #include "sloked/screen/widgets/TextPaneComponent.h"
 
 namespace sloked {
 
     class SlokedTextEditor : public SlokedTextPaneWidget {
      public:
-        SlokedTextEditor(TextBlock &, SlokedCursor &, SlokedTransactionJournal &, const EncodingConverter &, const ScreenCharWidth &);
+        SlokedTextEditor(TextBlock &, SlokedCursor &, SlokedTransactionJournal &, const EncodingConverter &, const SlokedCharWidth &);
 
         bool ProcessInput(const SlokedKeyboardInput &) override;
         void Render(SlokedTextPane &) override;
@@ -23,9 +24,9 @@ namespace sloked {
         SlokedCursor &cursor;
         SlokedTransactionJournal &journal;
         const EncodingConverter &conv;
-        const ScreenCharWidth &charWidth;
+        const SlokedCharWidth &charWidth;
 
-        TextPosition offset;
+        TextFrameView frame;
     };
 }
 

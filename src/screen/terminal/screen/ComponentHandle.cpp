@@ -4,7 +4,7 @@
 
 namespace sloked {
 
-    TerminalComponentHandle::TerminalComponentHandle(SlokedTerminal &term, const Encoding &encoding, const ScreenCharWidth &charWidth)
+    TerminalComponentHandle::TerminalComponentHandle(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
         : terminal(term), encoding(encoding), charWidth(charWidth), component(nullptr) {}
 
     void TerminalComponentHandle::ProcessInput(const SlokedKeyboardInput &input) {

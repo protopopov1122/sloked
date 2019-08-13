@@ -4,7 +4,7 @@
 
 namespace sloked {
 
-    TerminalSplitter::TerminalSplitter(SlokedTerminal &term, Splitter::Direction dir, const Encoding &encoding, const ScreenCharWidth &charWidth)
+    TerminalSplitter::TerminalSplitter(SlokedTerminal &term, Splitter::Direction dir, const Encoding &encoding, const SlokedCharWidth &charWidth)
         : term(term), direction(dir), encoding(encoding), charWidth(charWidth), focus(0) {}
 
     void TerminalSplitter::SetFocus(std::size_t focus) {

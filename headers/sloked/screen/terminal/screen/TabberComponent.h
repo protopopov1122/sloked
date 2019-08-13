@@ -4,7 +4,7 @@
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/widgets/TabberComponent.h"
 #include "sloked/screen/terminal/Terminal.h"
-#include "sloked/screen/terminal/CharWidth.h"
+#include "sloked/core/CharWidth.h"
 #include "sloked/screen/terminal/multiplexer/TerminalTabber.h"
 #include "sloked/screen/terminal/screen/ComponentHandle.h"
 #include <vector>
@@ -14,7 +14,7 @@ namespace sloked {
 
     class TerminalTabberComponent : public SlokedTabberComponent {
      public:
-        TerminalTabberComponent(SlokedTerminal &, const Encoding &, const ScreenCharWidth &);
+        TerminalTabberComponent(SlokedTerminal &, const Encoding &, const SlokedCharWidth &);
 
         SlokedComponentHandle &NewTab() override;
         SlokedComponentHandle &NewTab(std::size_t) override;
@@ -28,7 +28,7 @@ namespace sloked {
      private:
         TerminalTabber tabber;
         const Encoding &encoding;
-        const ScreenCharWidth &charWidth;
+        const SlokedCharWidth &charWidth;
         std::vector<std::shared_ptr<TerminalComponentHandle>> components;
     };
 }

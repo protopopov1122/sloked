@@ -4,7 +4,7 @@
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/widgets/ComponentHandle.h"
 #include "sloked/screen/terminal/Terminal.h"
-#include "sloked/screen/terminal/CharWidth.h"
+#include "sloked/core/CharWidth.h"
 #include "sloked/screen/terminal/screen/TextPaneComponent.h"
 #include <memory>
 
@@ -12,7 +12,7 @@ namespace sloked {
 
     class TerminalComponentHandle : public SlokedComponentHandle {
      public:
-        TerminalComponentHandle(SlokedTerminal &, const Encoding &, const ScreenCharWidth &);
+        TerminalComponentHandle(SlokedTerminal &, const Encoding &, const SlokedCharWidth &);
 
         void ProcessInput(const SlokedKeyboardInput &) override;
         void Render() override;
@@ -23,7 +23,7 @@ namespace sloked {
      private:
         SlokedTerminal &terminal;
         const Encoding &encoding;
-        const ScreenCharWidth &charWidth;
+        const SlokedCharWidth &charWidth;
         std::unique_ptr<SlokedScreenComponent> component;
     };
 }

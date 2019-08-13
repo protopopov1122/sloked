@@ -3,8 +3,8 @@
 
 #include "sloked/core/Position.h"
 #include "sloked/core/Encoding.h"
+#include "sloked/core/CharWidth.h"
 #include "sloked/screen/terminal/Terminal.h"
-#include "sloked/screen/terminal/CharWidth.h"
 #include "sloked/screen/terminal/multiplexer/BufferedGraphics.h"
 #include <memory>
 #include <optional>
@@ -13,7 +13,7 @@ namespace sloked {
 
     class BufferedTerminal : public SlokedTerminal {
      public:
-        BufferedTerminal(SlokedTerminal &, const Encoding &, const ScreenCharWidth &);
+        BufferedTerminal(SlokedTerminal &, const Encoding &, const SlokedCharWidth &);
         virtual ~BufferedTerminal();
 
         void Flush();
@@ -51,7 +51,7 @@ namespace sloked {
 
         SlokedTerminal &term;
         const Encoding &encoding;
-        const ScreenCharWidth &charWidth;
+        const SlokedCharWidth &charWidth;
         bool cls;
         bool show_cursor;
         Character *buffer;

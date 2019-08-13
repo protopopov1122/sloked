@@ -2,7 +2,7 @@
 
 namespace sloked {
 
-    TerminalTabberComponent::TerminalTabberComponent(SlokedTerminal &term, const Encoding &encoding, const ScreenCharWidth &charWidth)
+    TerminalTabberComponent::TerminalTabberComponent(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
         : tabber(term), encoding(encoding), charWidth(charWidth) {}
 
     SlokedComponentHandle &TerminalTabberComponent::NewTab() {

@@ -4,7 +4,7 @@
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/widgets/SplitterComponent.h"
 #include "sloked/screen/terminal/Terminal.h"
-#include "sloked/screen/terminal/CharWidth.h"
+#include "sloked/core/CharWidth.h"
 #include "sloked/screen/terminal/multiplexer/TerminalSplitter.h"
 #include "sloked/screen/terminal/screen/ComponentHandle.h"
 #include <vector>
@@ -14,7 +14,7 @@ namespace sloked {
 
     class TerminalSplitterComponent : public SlokedSplitterComponent {
      public:        
-        TerminalSplitterComponent(SlokedTerminal &, Splitter::Direction, const Encoding &, const ScreenCharWidth &);
+        TerminalSplitterComponent(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharWidth &);
 
         void SetFocus(std::size_t) override;
         std::size_t GetFocus() const override;
@@ -28,7 +28,7 @@ namespace sloked {
      private:
         TerminalSplitter splitter;
         const Encoding &encoding;
-        const ScreenCharWidth &charWidth;
+        const SlokedCharWidth &charWidth;
         std::vector<std::shared_ptr<TerminalComponentHandle>> components;
     };
 }

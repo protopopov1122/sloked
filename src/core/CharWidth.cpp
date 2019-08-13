@@ -1,11 +1,11 @@
-#include "sloked/screen/terminal/CharWidth.h"
+#include "sloked/core/CharWidth.h"
 
 namespace sloked {
 
-    ScreenCharWidth::ScreenCharWidth()
+    SlokedCharWidth::SlokedCharWidth()
         : tab_width(4) {}
 
-    std::size_t ScreenCharWidth::GetCharWidth(char32_t chr) const {
+    std::size_t SlokedCharWidth::GetCharWidth(char32_t chr) const {
         switch (chr) {
             case '\t':
                 return this->tab_width;
@@ -15,7 +15,7 @@ namespace sloked {
         }
     }
     
-    std::size_t ScreenCharWidth::GetRealPosition(const std::string &str, std::size_t idx, const Encoding &encoding) const {
+    std::size_t SlokedCharWidth::GetRealPosition(const std::string &str, std::size_t idx, const Encoding &encoding) const {
         std::size_t pos = 0;
         if (idx == 0) {
             return pos;
@@ -28,11 +28,11 @@ namespace sloked {
         return pos;
     }
 
-    std::string ScreenCharWidth::GetTab() const {
+    std::string SlokedCharWidth::GetTab() const {
         return std::string(this->tab_width, ' ');
     }
 
-    void ScreenCharWidth::SetTabWidth(std::size_t width) {
+    void SlokedCharWidth::SetTabWidth(std::size_t width) {
         this->tab_width = width;
     }
 }

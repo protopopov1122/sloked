@@ -41,7 +41,7 @@ namespace sloked {
             this->foreground == g.foreground;
     }
 
-    BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding, const ScreenCharWidth &charWidth)
+    BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
         : term(term), encoding(encoding), charWidth(charWidth), cls(false), show_cursor(true), buffer(nullptr), line(0), col(0) {
         this->Update();
         this->buffer = new Character[this->width * this->height];

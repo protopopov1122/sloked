@@ -58,7 +58,7 @@ int main(int argc, const char **argv) {
     TransactionStreamMultiplexer multiplexer(text, fileEncoding);
     auto stream1 = multiplexer.NewStream();
     TransactionCursor cursor(text, fileEncoding, *stream1);
-    ScreenCharWidth charWidth;
+    SlokedCharWidth charWidth;
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, Encoding::Utf8, charWidth);

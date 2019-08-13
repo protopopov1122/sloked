@@ -4,7 +4,7 @@
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/Splitter.h"
 #include "sloked/screen/terminal/Terminal.h"
-#include "sloked/screen/terminal/CharWidth.h"
+#include "sloked/core/CharWidth.h"
 #include "sloked/screen/terminal/multiplexer/TerminalWindow.h"
 #include <vector>
 #include <memory>
@@ -14,7 +14,7 @@ namespace sloked {
 
     class TerminalSplitter {
      public:
-        TerminalSplitter(SlokedTerminal &, Splitter::Direction, const Encoding &, const ScreenCharWidth &);
+        TerminalSplitter(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharWidth &);
 
         void SetFocus(std::size_t);
         std::size_t GetFocus() const;
@@ -32,7 +32,7 @@ namespace sloked {
         SlokedTerminal &term;
         Splitter::Direction direction;
         const Encoding &encoding;
-        const ScreenCharWidth &charWidth;
+        const SlokedCharWidth &charWidth;
         std::vector<Window> windows;
         std::size_t focus;
     };

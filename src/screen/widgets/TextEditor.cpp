@@ -5,8 +5,8 @@
 
 namespace sloked {
 
-    SlokedTextEditor::SlokedTextEditor(TextBlock &text, SlokedCursor &cursor, SlokedTransactionJournal &journal, const EncodingConverter &conv, const ScreenCharWidth &charWidth)
-        : text(text), cursor(cursor), journal(journal), conv(conv), charWidth(charWidth), offset{0, 0} {}
+    SlokedTextEditor::SlokedTextEditor(TextBlock &text, SlokedCursor &cursor, SlokedTransactionJournal &journal, const EncodingConverter &conv, const SlokedCharWidth &charWidth)
+        : text(text), cursor(cursor), journal(journal), conv(conv), charWidth(charWidth), frame(text, conv.GetSource(), charWidth) {}
 
     bool SlokedTextEditor::ProcessInput(const SlokedKeyboardInput &cmd) {
         if (cmd.index() == 0) {
@@ -59,47 +59,17 @@ namespace sloked {
     }
 
     void SlokedTextEditor::Render(SlokedTextPane &pane) {
-        if (offset.line + pane.GetHeight() - 1 < cursor.GetLine()) {
-            offset.line = cursor.GetLine() - pane.GetHeight() + 1;
-        }
-        if (cursor.GetLine() < offset.line) {
-            offset.line = cursor.GetLine();
-        }
-
-        auto realColumn = this->charWidth.GetRealPosition(std::string {this->text.GetLine(cursor.GetLine())}, cursor.GetColumn(), this->conv.GetSource());
-        if (offset.column + pane.GetWidth() - 1 < realColumn) {
-            offset.column = realColumn - pane.GetWidth() + 1;
-        }
-        if (realColumn < offset.column) {
-            offset.column = realColumn;
-        }
-
-        std::vector<std::string> lines;
-        text.Visit(offset.line, std::min(pane.GetHeight(), static_cast<TextPosition::Line>(text.GetLastLine() - offset.line)), [&](const auto line) {
-            std::stringstream ss;
-            this->conv.GetSource().IterateCodepoints(line, [&](auto start, auto length, auto chr) {
-                if (chr != u'\t') {
-                    ss << line.substr(start, length);
-                } else {
-                    ss << this->charWidth.GetTab();
-                }
-                return true;
-            });
-            lines.push_back(ss.str());
-        });
+        this->frame.Update(TextPosition{pane.GetHeight(), pane.GetWidth()}, TextPosition{this->cursor.GetLine(), this->cursor.GetColumn()});
 
         pane.ClearScreen();
         pane.SetPosition(0, 0);
 
-        for (const auto line : lines) {
-            std::stringstream ss;
-            auto offsetLine = this->conv.GetSource().GetCodepoint(line, offset.column);
-            if (offsetLine.second != 0) {
-                ss << line.substr(offsetLine.first);
-            }
-            ss << std::endl;
-            pane.Write(ss.str());
-        }
-        pane.SetPosition(cursor.GetLine() - offset.line, realColumn - offset.column);
+        std::stringstream ss;
+        ss << this->frame << std::endl;
+        pane.Write(ss.str());
+        
+        auto realColumn = this->charWidth.GetRealPosition(std::string {this->text.GetLine(this->cursor.GetLine())}, this->cursor.GetColumn(), this->conv.GetSource());
+        const auto &offset = this->frame.GetOffset();
+        pane.SetPosition(this->cursor.GetLine() - offset.line, realColumn - offset.column);
     }
 }
