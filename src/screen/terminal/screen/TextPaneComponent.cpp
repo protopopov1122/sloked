@@ -3,23 +3,21 @@
 
 namespace sloked {
 
-    TerminalTextPaneComponent::TerminalTextPaneComponent(SlokedTerminal &term)
-        : term(term), renderer([](auto &) {}) {}
+    TerminalTextPaneComponent::TerminalTextPaneComponent(SlokedTerminal &term, std::unique_ptr<SlokedTextPaneWidget> widget)
+        : term(term), widget(std::move(widget)) {}
     
     void TerminalTextPaneComponent::ProcessInput(const SlokedKeyboardInput &input) {
+        bool res = false;
         if (this->inputHandler) {
-            this->inputHandler(input);
+            res = this->inputHandler(input);
+        }
+        if (!res) {
+            this->widget->ProcessInput(input);
         }
     }
 
     void TerminalTextPaneComponent::Render() {
         TerminalTextPane screen(this->term);
-        this->renderer(screen);
-    }
-
-    void TerminalTextPaneComponent::SetRenderer(Renderer renderer) {
-        if (this->renderer) {
-            this->renderer = renderer;
-        }
+        this->widget->Render(screen);
     }
 }

@@ -23,8 +23,8 @@ namespace sloked {
         }
     }
 
-    SlokedTextPaneComponent &TerminalComponentHandle::NewTextPane() {
-        auto component = std::make_unique<TerminalTextPaneComponent>(this->terminal);
+    SlokedTextPaneComponent &TerminalComponentHandle::NewTextPane(std::unique_ptr<SlokedTextPaneWidget> widget) {
+        auto component = std::make_unique<TerminalTextPaneComponent>(this->terminal, std::move(widget));
         TerminalTextPaneComponent &ref = *component;
         this->component = std::move(component);
         return ref;

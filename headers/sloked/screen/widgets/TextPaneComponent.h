@@ -6,11 +6,14 @@
 
 namespace sloked {
 
-    class SlokedTextPaneComponent : public SlokedScreenComponent {
+    class SlokedTextPaneWidget {
      public:
-        using Renderer = std::function<void(SlokedTextPane &)>;
-        virtual void SetRenderer(Renderer) = 0;
+        virtual ~SlokedTextPaneWidget() = default;
+        virtual bool ProcessInput(const SlokedKeyboardInput &) = 0;
+        virtual void Render(SlokedTextPane &) = 0;
     };
+
+    class SlokedTextPaneComponent : public SlokedScreenComponent {};
 }
 
 #endif

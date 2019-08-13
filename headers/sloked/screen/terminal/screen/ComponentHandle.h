@@ -16,7 +16,7 @@ namespace sloked {
 
         void ProcessInput(const SlokedKeyboardInput &) override;
         void Render() override;
-        SlokedTextPaneComponent &NewTextPane() override;
+        SlokedTextPaneComponent &NewTextPane(std::unique_ptr<SlokedTextPaneWidget>) override;
         SlokedSplitterComponent &NewSplitter(Splitter::Direction) override;
         SlokedTabberComponent &NewTabber() override;
 

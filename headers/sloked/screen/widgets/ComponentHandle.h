@@ -12,7 +12,7 @@ namespace sloked {
 
     class SlokedComponentHandle : public SlokedScreenComponent {
      public:
-        virtual SlokedTextPaneComponent &NewTextPane() = 0;
+        virtual SlokedTextPaneComponent &NewTextPane(std::unique_ptr<SlokedTextPaneWidget>) = 0;
         virtual SlokedSplitterComponent &NewSplitter(Splitter::Direction) = 0;
         virtual SlokedTabberComponent &NewTabber() = 0;
     };

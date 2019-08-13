@@ -36,6 +36,7 @@ sloked_src = [
   'src/screen/terminal/screen/SplitterComponent.cpp',
   'src/screen/terminal/screen/TabberComponent.cpp',
   'src/screen/terminal/screen/TextPane.cpp',
+  'src/screen/widgets/TextEditor.cpp',
   'src/text/TextBlock.cpp',
   'src/text/TextChunk.cpp',
   'src/text/TextBlockHandle.cpp',

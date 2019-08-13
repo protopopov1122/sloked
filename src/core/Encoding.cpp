@@ -218,4 +218,12 @@ namespace sloked {
     std::string EncodingConverter::ReverseConvert(std::string_view str) const {
         return this->from.Encode(this->to.Decode(str));
     }
+
+    const Encoding &EncodingConverter::GetSource() const {
+        return this->from;
+    }
+
+    const Encoding &EncodingConverter::GetDestination() const {
+        return this->to;
+    }
 }

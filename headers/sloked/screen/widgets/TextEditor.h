@@ -2,21 +2,30 @@
 #define SLOKED_SCREEN_WIDGETS_TEXTEDITOR_H_
 
 #include "sloked/Base.h"
+#include "sloked/core/Encoding.h"
 #include "sloked/text/TextBlock.h"
 #include "sloked/text/cursor/Cursor.h"
-#include "sloked/screen/widgets/TextPane.h"
+#include "sloked/text/cursor/TransactionJournal.h"
+#include "sloked/screen/terminal/CharWidth.h"
+#include "sloked/screen/widgets/TextPaneComponent.h"
 
 namespace sloked {
 
-    class SlokedTextEditor {
+    class SlokedTextEditor : public SlokedTextPaneWidget {
      public:
-        SlokedTextEditor(TextBlock &, SlokedCursor &);
+        SlokedTextEditor(TextBlock &, SlokedCursor &, SlokedTransactionJournal &, const EncodingConverter &, const ScreenCharWidth &);
 
-        void Draw(SlokedTextPane &);
+        bool ProcessInput(const SlokedKeyboardInput &) override;
+        void Render(SlokedTextPane &) override;
+
      private:
         TextBlock &text;
         SlokedCursor &cursor;
-        TextPosition::Line offset;
+        SlokedTransactionJournal &journal;
+        const EncodingConverter &conv;
+        const ScreenCharWidth &charWidth;
+
+        TextPosition offset;
     };
 }
 

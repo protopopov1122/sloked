@@ -3,19 +3,19 @@
 
 #include "sloked/screen/widgets/TextPaneComponent.h"
 #include "sloked/screen/terminal/Terminal.h"
+#include <memory>
 
 namespace sloked {
 
     class TerminalTextPaneComponent : public SlokedTextPaneComponent {
      public:
-        TerminalTextPaneComponent(SlokedTerminal &);
+        TerminalTextPaneComponent(SlokedTerminal &, std::unique_ptr<SlokedTextPaneWidget>);
         void ProcessInput(const SlokedKeyboardInput &) override;
         void Render() override;
-        void SetRenderer(Renderer) override;
 
      private:
         SlokedTerminal &term;
-        Renderer renderer;
+        std::unique_ptr<SlokedTextPaneWidget> widget;
     };
 }
 

@@ -11,6 +11,7 @@
 #include "sloked/screen/terminal/screen/ComponentHandle.h"
 #include "sloked/screen/terminal/screen/SplitterComponent.h"
 #include "sloked/screen/terminal/screen/TabberComponent.h"
+#include "sloked/screen/widgets/TextEditor.h"
 #include "sloked/filesystem/posix/File.h"
 #include "sloked/namespace/Filesystem.h"
 #include "sloked/namespace/Virtual.h"
@@ -56,10 +57,7 @@ int main(int argc, const char **argv) {
 
     TransactionStreamMultiplexer multiplexer(text, fileEncoding);
     auto stream1 = multiplexer.NewStream();
-    auto stream2 = multiplexer.NewStream();
-    TransactionCursor cursor1(text, fileEncoding, *stream1);
-    TransactionCursor cursor2(text, fileEncoding, *stream2);
-    TransactionCursor *cursor = &cursor1;
+    TransactionCursor cursor(text, fileEncoding, *stream1);
     ScreenCharWidth charWidth;
 
     PosixTerminal terminal;
@@ -69,10 +67,10 @@ int main(int argc, const char **argv) {
     TerminalComponentHandle screen(console, terminalEncoding, charWidth);
     auto &splitter = screen.NewSplitter(Splitter::Direction::Horizontal);
     auto &tabber = splitter.NewWindow(Splitter::Constraints(0.6)).NewTabber();
-    auto &tab1 = tabber.NewTab().NewTextPane();
-    auto &tab2 = tabber.NewTab().NewTextPane();
-    auto &tab3 = tabber.NewTab().NewTextPane();
-    auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.3)).NewTextPane();
+    auto &tab1 = tabber.NewTab().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
+    auto &tab2 = tabber.NewTab().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
+    auto &tab3 = tabber.NewTab().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
+    auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.3)).NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
 
     auto listener1 = [&](const SlokedKeyboardInput &cmd) {
         if (cmd.index() == 0) {
@@ -103,123 +101,7 @@ int main(int argc, const char **argv) {
         return true;
     };
 
-    auto listener2 = [&](const SlokedKeyboardInput &cmd) {
-        if (cmd.index() == 0) {
-            cursor->Insert(conv.ReverseConvert(std::get<0>(cmd)));
-        } else switch (std::get<1>(cmd)) {
-            case SlokedControlKey::ArrowUp:
-                cursor->MoveUp(1);
-                break;
-            
-            case SlokedControlKey::ArrowDown:
-                cursor->MoveDown(1);
-                break;
-            
-            case SlokedControlKey::ArrowLeft:
-                cursor->MoveBackward(1);
-                break;
-            
-            case SlokedControlKey::ArrowRight:
-                cursor->MoveForward(1);
-                break;
-
-            case SlokedControlKey::Enter:
-                cursor->NewLine("");
-                break;
-
-            case SlokedControlKey::Tab:
-                cursor->Insert(fileEncoding.Encode(u'\t'));
-                break;
-
-            case SlokedControlKey::Backspace:
-                cursor->DeleteBackward();
-                break;
-
-            case SlokedControlKey::Delete:
-                cursor->DeleteForward();
-                break;
-
-            case SlokedControlKey::F4:
-                cursor->ClearRegion(TextPosition{cursor->GetLine() + 5, cursor->GetColumn() + 2});
-                break;
-
-            case SlokedControlKey::F5: {
-                TransactionBatch batch(*stream2, fileEncoding);
-                TransactionCursor crs(text, fileEncoding, batch);
-                crs.ClearRegion(TextPosition{cursor->GetLine() + 10, cursor->GetColumn() + 2}, TextPosition{cursor->GetLine() + 15, cursor->GetColumn() + 2});
-                crs.ClearRegion(TextPosition{cursor->GetLine(), cursor->GetColumn() + 2}, TextPosition{cursor->GetLine() + 5, cursor->GetColumn() + 2});
-                batch.Finish();
-            } break;
-            
-            case SlokedControlKey::Escape:
-                cursor->Undo();
-                break;
-            
-            case SlokedControlKey::End:
-                cursor->Redo();
-                break;
-
-            case SlokedControlKey::PageUp:
-                cursor = &cursor1;
-                break;
-
-            case SlokedControlKey::PageDown:
-                cursor = &cursor2;
-                break;
-
-            default:
-                break;
-        }
-        if (cursor->GetLine() - offset >= buffer && cursor->GetLine() >= buffer) {
-            offset = cursor->GetLine() - buffer;
-        }
-        while (cursor->GetLine() + 1 <= offset && offset > 0) {
-            offset--;
-        }
-        return true;
-    };
     screen.SetInputHandler(listener1);
-
-    tab1.SetInputHandler(listener2);
-    tab1.SetRenderer([&](auto &term) {
-        term.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
-        print(text, term, conv);
-        term.SetPosition(cursor->GetLine() - offset, charWidth.GetRealPosition(
-            std::string {text.GetLine(cursor->GetLine())},
-            cursor->GetColumn(),
-            fileEncoding
-        ));
-    });
-
-    tab2.SetInputHandler(listener2);
-    tab2.SetRenderer([&](auto &term) {
-        term.SetGraphicsMode(SlokedTextGraphics::Off);
-        term.SetGraphicsMode(SlokedBackgroundGraphics::Yellow);
-        print(text, term, conv);
-        term.SetPosition(cursor->GetLine() - offset, charWidth.GetRealPosition(
-            std::string {text.GetLine(cursor->GetLine())},
-            cursor->GetColumn(),
-            fileEncoding
-        ));
-    });
-
-    tab3.SetInputHandler(listener2);
-    tab3.SetRenderer([&](auto &term) {
-        term.SetGraphicsMode(SlokedTextGraphics::Off);
-        term.SetGraphicsMode(SlokedBackgroundGraphics::Red);
-        print(text, term, conv);
-        term.SetPosition(cursor->GetLine() - offset, charWidth.GetRealPosition(
-            std::string {text.GetLine(cursor->GetLine())},
-            cursor->GetColumn(),
-            fileEncoding
-        ));
-    });
-
-    pane4.SetRenderer([&](auto &term) {
-        term.SetGraphicsMode(SlokedTextGraphics::Off);
-        term.SetGraphicsMode(SlokedBackgroundGraphics::Magenta);
-        print(text, term, conv);
-    });
 
     do {
         console.Update();

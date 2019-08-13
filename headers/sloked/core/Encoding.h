@@ -35,6 +35,9 @@ namespace sloked {
         EncodingConverter(const Encoding &, const Encoding &);
         std::string Convert(std::string_view) const;
         std::string ReverseConvert(std::string_view) const;
+
+        const Encoding &GetSource() const;
+        const Encoding &GetDestination() const;
         
      private:
         const Encoding &from;

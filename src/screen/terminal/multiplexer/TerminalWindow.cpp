@@ -103,7 +103,7 @@ namespace sloked {
                 }
                 this->SetPosition(this->line + 1, 0);
             } else {
-                if (this->col + count + 1 < this->width) {;
+                if (this->col + count + 1 < this->width) {
                     buffer.append(view.substr(start, length));
                     count += this->charWidth.GetCharWidth(codepoint);
                 }
