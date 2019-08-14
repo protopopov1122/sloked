@@ -1,14 +1,14 @@
 #ifndef SLOKED_SCREEN_WIDGETS_TEXTEDITOR_H_
 #define SLOKED_SCREEN_WIDGETS_TEXTEDITOR_H_
 
-#include "sloked/Base.h"
+#include "sloked/core/CharWidth.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/text/TextBlock.h"
 #include "sloked/text/TextFrame.h"
 #include "sloked/text/cursor/Cursor.h"
 #include "sloked/text/cursor/TransactionJournal.h"
-#include "sloked/core/CharWidth.h"
-#include "sloked/screen/widgets/TextPaneComponent.h"
+#include "sloked/screen/widgets/TextPane.h"
+#include "sloked/screen/widgets/TextPaneWidget.h"
 
 namespace sloked {
 

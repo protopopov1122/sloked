@@ -1,10 +1,10 @@
 #ifndef SLOKED_SCREEN_TERMINAL_SCREEN_TABBERCOMPONENT_H_
 #define SLOKED_SCREEN_TERMINAL_SCREEN_TABBERCOMPONENT_H_
 
-#include "sloked/core/Encoding.h"
-#include "sloked/screen/widgets/TabberComponent.h"
-#include "sloked/screen/terminal/Terminal.h"
 #include "sloked/core/CharWidth.h"
+#include "sloked/core/Encoding.h"
+#include "sloked/screen/components/TabberComponent.h"
+#include "sloked/screen/terminal/Terminal.h"
 #include "sloked/screen/terminal/multiplexer/TerminalTabber.h"
 #include "sloked/screen/terminal/screen/ComponentHandle.h"
 #include <vector>
@@ -16,11 +16,14 @@ namespace sloked {
      public:
         TerminalTabberComponent(SlokedTerminal &, const Encoding &, const SlokedCharWidth &);
 
-        SlokedComponentHandle &NewTab() override;
-        SlokedComponentHandle &NewTab(std::size_t) override;
-        void SelectTab(std::size_t) override;
-        std::size_t GetCurrentTab() const override;
-        SlokedComponentHandle *GetTab(std::size_t) const override;
+        TabId GetTabCount() const override;
+        std::optional<TabId> GetCurrentTab() const override;
+        SlokedComponentHandle &GetTab(TabId) const override;
+
+        SlokedIndexed<SlokedComponentHandle &, TabId> NewTab() override;
+        SlokedIndexed<SlokedComponentHandle &, TabId> NewTab(TabId) override;
+        bool SelectTab(TabId) override;
+        bool CloseTab(TabId) override;
 
         void ProcessInput(const SlokedKeyboardInput &) override;
         void Render() override;

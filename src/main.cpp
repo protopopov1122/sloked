@@ -11,6 +11,7 @@
 #include "sloked/screen/terminal/screen/ComponentHandle.h"
 #include "sloked/screen/terminal/screen/SplitterComponent.h"
 #include "sloked/screen/terminal/screen/TabberComponent.h"
+#include "sloked/screen/terminal/screen/MultiplexerComponent.h"
 #include "sloked/screen/widgets/TextEditor.h"
 #include "sloked/filesystem/posix/File.h"
 #include "sloked/namespace/Filesystem.h"
@@ -66,11 +67,11 @@ int main(int argc, const char **argv) {
 
     TerminalComponentHandle screen(console, terminalEncoding, charWidth);
     auto &splitter = screen.NewSplitter(Splitter::Direction::Horizontal);
-    auto &tabber = splitter.NewWindow(Splitter::Constraints(0.6)).NewTabber();
-    auto &tab1 = tabber.NewTab().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
-    auto &tab2 = tabber.NewTab().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
-    auto &tab3 = tabber.NewTab().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
-    auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.3)).NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
+    auto &tabber = splitter.NewWindow(Splitter::Constraints(0.6)).value.NewTabber();
+    auto &tab1 = tabber.NewTab().value.NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
+    auto &tab2 = tabber.NewTab().value.NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
+    auto &tab3 = tabber.NewTab().value.NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
+    auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.3)).value.NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
 
     auto listener1 = [&](const SlokedKeyboardInput &cmd) {
         if (cmd.index() == 0) {

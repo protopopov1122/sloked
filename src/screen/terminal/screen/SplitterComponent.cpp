@@ -1,3 +1,4 @@
+#include "sloked/core/Error.h"
 #include "sloked/screen/terminal/screen/SplitterComponent.h"
 
 namespace sloked {
@@ -5,31 +6,47 @@ namespace sloked {
     TerminalSplitterComponent::TerminalSplitterComponent(SlokedTerminal &term, Splitter::Direction dir, const Encoding &enc, const SlokedCharWidth &chWidth)
         : splitter(term, dir, enc, chWidth), encoding(enc), charWidth(chWidth) {}
     
-    void TerminalSplitterComponent::SetFocus(std::size_t idx) {
-        this->splitter.SetFocus(idx);
+    bool TerminalSplitterComponent::SetFocus(std::size_t idx) {
+        return this->splitter.SetFocus(idx);
     }
 
-    std::size_t TerminalSplitterComponent::GetFocus() const {
+    std::optional<TerminalSplitterComponent::WinId> TerminalSplitterComponent::GetFocus() const {
         return this->splitter.GetFocus();
     }
 
-    SlokedComponentHandle *TerminalSplitterComponent::GetWindow(std::size_t idx) const {
+    SlokedComponentHandle &TerminalSplitterComponent::GetWindow(std::size_t idx) const {
         if (idx < this->components.size()) {
-            return this->components.at(idx).get();
+            return *this->components.at(idx);
         } else {
-            return nullptr;
+            throw SlokedError("Window #" + std::to_string(idx) + " not found");
         }
     }
 
-    std::size_t TerminalSplitterComponent::GetWindowCount() const {
+    TerminalSplitterComponent::WinId TerminalSplitterComponent::GetWindowCount() const {
         return this->components.size();
     }
 
-    SlokedComponentHandle &TerminalSplitterComponent::NewWindow(const Splitter::Constraints &constraints) {
-        SlokedTerminal &term = this->splitter.NewTerminal(constraints);
-        auto component = std::make_shared<TerminalComponentHandle>(term, this->encoding, this->charWidth);
+    SlokedIndexed<SlokedComponentHandle &, TerminalSplitterComponent::WinId> TerminalSplitterComponent::NewWindow(const Splitter::Constraints &constraints) {
+        auto term = this->splitter.NewTerminal(constraints);
+        auto component = std::make_shared<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
         this->components.push_back(component);
-        return *component;
+        return {term.index, *component};
+    }
+
+    SlokedIndexed<SlokedComponentHandle &, TerminalSplitterComponent::WinId> TerminalSplitterComponent::NewWindow(WinId idx, const Splitter::Constraints &constraints) {
+        auto term = this->splitter.NewTerminal(idx, constraints);
+        auto component = std::make_shared<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
+        this->components.insert(this->components.begin() + idx, component);
+        return {idx, *component};
+    }
+    
+    bool TerminalSplitterComponent::CloseWindow(WinId idx) {
+        if (idx < this->components.size()) {
+            this->components.erase(this->components.begin() + idx);
+            return this->splitter.CloseTerminal(idx);
+        } else {
+            return false;
+        }
     }
 
     void TerminalSplitterComponent::ProcessInput(const SlokedKeyboardInput &input) {
@@ -37,8 +54,8 @@ namespace sloked {
         if (this->inputHandler) {
             processed = this->inputHandler(input);
         }
-        if (!processed && this->GetFocus() < this->components.size()) {
-            this->components.at(this->GetFocus())->ProcessInput(input);
+        if (!processed && this->GetFocus().has_value()) {
+            this->components.at(this->GetFocus().value())->ProcessInput(input);
         }
     }
 
@@ -48,8 +65,8 @@ namespace sloked {
                 this->components.at(i)->Render();
             }
         }
-        if (this->GetFocus() < this->components.size()) {
-            this->components.at(this->GetFocus())->Render();
+        if (this->GetFocus().has_value()) {
+            this->components.at(this->GetFocus().value())->Render();
         }
     }
 }

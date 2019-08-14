@@ -1,7 +1,7 @@
 #ifndef SLOKED_SCREEN_COMPONENT_H_
 #define SLOKED_SCREEN_COMPONENT_H_
 
-#include "sloked/Base.h"
+#include "sloked/core/Position.h"
 #include "sloked/screen/Keyboard.h"
 #include <functional>
 

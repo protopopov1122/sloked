@@ -2,6 +2,7 @@
 #define SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALSPLITTER_H_
 
 #include "sloked/core/Encoding.h"
+#include "sloked/core/Indexed.h"
 #include "sloked/screen/Splitter.h"
 #include "sloked/screen/terminal/Terminal.h"
 #include "sloked/core/CharWidth.h"
@@ -9,21 +10,26 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <optional>
 
 namespace sloked {
 
     class TerminalSplitter {
      public:
+        using WinId = std::size_t;
+
         TerminalSplitter(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharWidth &);
 
-        void SetFocus(std::size_t);
-        std::size_t GetFocus() const;
+        std::optional<WinId> GetFocus() const;
         unsigned int GetMinimum() const;
         unsigned int GetMaximum() const;
-        SlokedTerminal *GetTerminal(std::size_t) const;
-        std::size_t GetTerminalCount() const;
+        SlokedTerminal &GetTerminal(WinId) const;
+        WinId GetTerminalCount() const;
 
-        SlokedTerminal &NewTerminal(const Splitter::Constraints &);
+        bool SetFocus(WinId);
+        SlokedIndexed<SlokedTerminal &, WinId> NewTerminal(const Splitter::Constraints &);
+        SlokedIndexed<SlokedTerminal &, WinId> NewTerminal(WinId, const Splitter::Constraints &);
+        bool CloseTerminal(WinId);
         void Update();
 
      private:

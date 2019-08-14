@@ -1,3 +1,4 @@
+#include "sloked/core/Error.h"
 #include "sloked/screen/terminal/multiplexer/TerminalTabber.h"
 #include <functional>
 
@@ -112,7 +113,27 @@ namespace sloked {
     TerminalTabber::TerminalTabber(SlokedTerminal &term)
         : term(term), current_tab(0) {}
 
-    SlokedTerminal &TerminalTabber::NewTab() {
+    TerminalTabber::TabId TerminalTabber::GetTabCount() const {
+        return this->tabs.size();
+    }
+    
+    std::optional<TerminalTabber::TabId> TerminalTabber::GetCurrentTab() const {
+        if (this->current_tab < this->tabs.size()) {
+            return this->current_tab;
+        } else {
+            return std::optional<TabId>{};
+        }
+    }
+
+    SlokedTerminal &TerminalTabber::GetTab(TabId idx) const {
+        if (idx < this->tabs.size()) {
+            return *this->tabs.at(idx);
+        } else {
+            throw SlokedError("Tab #" + std::to_string(idx) + " not found");
+        }
+    }
+
+    SlokedIndexed<SlokedTerminal &, TerminalTabber::TabId> TerminalTabber::NewTab() {
         auto tab = std::make_shared<TerminalTab>([this](auto tabPtr) {
             if (this->current_tab < this->tabs.size()) {
                 return tabPtr == this->tabs.at(this->current_tab).get();
@@ -121,10 +142,13 @@ namespace sloked {
             }
         }, this->term);
         this->tabs.push_back(tab);
-        return *tab;
+        return {this->tabs.size() - 1, *tab};
     }
 
-    SlokedTerminal &TerminalTabber::NewTab(std::size_t idx) {
+    SlokedIndexed<SlokedTerminal &, TerminalTabber::TabId> TerminalTabber::NewTab(TabId idx) {
+        if (idx > this->tabs.size()) {
+            throw SlokedError("Invalid tab index " + std::to_string(idx));
+        }
         auto tab = std::make_shared<TerminalTab>([this](auto tabPtr) {
             if (this->current_tab < this->tabs.size()) {
                 return tabPtr == this->tabs.at(this->current_tab).get();
@@ -133,22 +157,24 @@ namespace sloked {
             }
         }, this->term);
         this->tabs.insert(this->tabs.begin() + idx, tab);
-        return *tab;
+        return {idx, *tab};
     }
 
-    void TerminalTabber::SelectTab(std::size_t tab) {
-        this->current_tab = tab;
-    }
-    
-    std::size_t TerminalTabber::GetCurrentTab() const {
-        return this->current_tab;
-    }
-
-    SlokedTerminal *TerminalTabber::GetTab(std::size_t idx) const {
-        if (idx < this->tabs.size()) {
-            return this->tabs.at(idx).get();
+    bool TerminalTabber::SelectTab(TabId tab) {
+        if (tab <= this->tabs.size()) {
+            this->current_tab = tab;
+            return true;
         } else {
-            return nullptr;
+            return false;
+        }
+    }
+
+    bool TerminalTabber::CloseTab(TabId tab) {
+        if (tab < this->tabs.size()) {
+            this->tabs.erase(this->tabs.begin() + tab);
+            return true;
+        } else {
+            return false;
         }
     }
 }

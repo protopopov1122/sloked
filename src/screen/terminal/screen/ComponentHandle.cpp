@@ -1,6 +1,7 @@
 #include "sloked/screen/terminal/screen/ComponentHandle.h"
 #include "sloked/screen/terminal/screen/SplitterComponent.h"
 #include "sloked/screen/terminal/screen/TabberComponent.h"
+#include "sloked/screen/terminal/screen/MultiplexerComponent.h"
 
 namespace sloked {
 
@@ -23,7 +24,7 @@ namespace sloked {
         }
     }
 
-    SlokedTextPaneComponent &TerminalComponentHandle::NewTextPane(std::unique_ptr<SlokedTextPaneWidget> widget) {
+    SlokedScreenComponent &TerminalComponentHandle::NewTextPane(std::unique_ptr<SlokedTextPaneWidget> widget) {
         auto component = std::make_unique<TerminalTextPaneComponent>(this->terminal, std::move(widget));
         TerminalTextPaneComponent &ref = *component;
         this->component = std::move(component);
@@ -40,6 +41,13 @@ namespace sloked {
     SlokedTabberComponent &TerminalComponentHandle::NewTabber() {
         auto component = std::make_unique<TerminalTabberComponent>(this->terminal, this->encoding, this->charWidth);
         TerminalTabberComponent &ref = *component;
+        this->component = std::move(component);
+        return ref;
+    }
+
+    SlokedMultiplexerComponent &TerminalComponentHandle::NewMultiplexer() {
+        auto component = std::make_unique<TerminalMultiplexerComponent>(this->terminal, this->encoding, this->charWidth);
+        TerminalMultiplexerComponent &ref = *component;
         this->component = std::move(component);
         return ref;
     }
