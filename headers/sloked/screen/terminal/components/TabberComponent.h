@@ -1,12 +1,12 @@
-#ifndef SLOKED_SCREEN_TERMINAL_SCREEN_TABBERCOMPONENT_H_
-#define SLOKED_SCREEN_TERMINAL_SCREEN_TABBERCOMPONENT_H_
+#ifndef SLOKED_SCREEN_TERMINAL_COMPONENTS_TABBERCOMPONENT_H_
+#define SLOKED_SCREEN_TERMINAL_COMPONENTS_TABBERCOMPONENT_H_
 
 #include "sloked/core/CharWidth.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/components/TabberComponent.h"
 #include "sloked/screen/terminal/Terminal.h"
 #include "sloked/screen/terminal/multiplexer/TerminalTabber.h"
-#include "sloked/screen/terminal/screen/ComponentHandle.h"
+#include "sloked/screen/terminal/components/ComponentHandle.h"
 #include <vector>
 #include <memory>
 
@@ -25,9 +25,12 @@ namespace sloked {
         bool SelectTab(TabId) override;
         bool CloseTab(TabId) override;
 
-        void ProcessInput(const SlokedKeyboardInput &) override;
         void Render() override;
+        void Update() override;
 
+     protected:
+        void ProcessComponentInput(const SlokedKeyboardInput &) override;
+        
      private:
         TerminalTabber tabber;
         const Encoding &encoding;

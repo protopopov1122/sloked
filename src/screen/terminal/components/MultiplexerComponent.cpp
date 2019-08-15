@@ -1,5 +1,5 @@
 #include "sloked/core/Error.h"
-#include "sloked/screen/terminal/screen/MultiplexerComponent.h"
+#include "sloked/screen/terminal/components/MultiplexerComponent.h"
 
 namespace sloked {
 
@@ -36,9 +36,7 @@ namespace sloked {
     }
 
     SlokedIndexed<SlokedComponentHandle &, TerminalMultiplexerComponent::WinId> TerminalMultiplexerComponent::NewWindow(const TextPosition &pos, const TextPosition &dim) {
-        auto terminal = std::make_shared<TerminalWindow>(this->terminal, this->encoding, this->charWidth, pos.column, pos.line, dim.column, dim.line, [](const TerminalWindow &) {
-            return std::vector<SlokedKeyboardInput>{};
-        });
+        auto terminal = std::make_shared<TerminalWindow>(this->terminal, this->encoding, this->charWidth, pos.column, pos.line, dim.column, dim.line);
         auto handle = std::make_shared<TerminalComponentHandle>(*terminal, this->encoding, this->charWidth);
         this->windows.push_back(std::make_pair(handle, terminal));
         return {this->windows.size() - 1, *handle};
@@ -52,20 +50,27 @@ namespace sloked {
             return false;
         }
     }
-    
-    void TerminalMultiplexerComponent::ProcessInput(const SlokedKeyboardInput &input) {
-        bool res = false;
-        if (this->inputHandler) {
-            res = this->inputHandler(input);
+
+    void TerminalMultiplexerComponent::Render() {
+        for (std::size_t i = 0; i < this->windows.size(); i++) {
+            if (i != this->focus) {
+                this->windows.at(i).first->Render();
+            }
         }
-        if (!res && this->focus < this->windows.size()) {
-            this->windows.at(this->focus).first->ProcessInput(input);
+        if (this->focus < this->windows.size()) {
+            this->windows.at(this->focus).first->Render();
         }
     }
 
-    void TerminalMultiplexerComponent::Render() {
+    void TerminalMultiplexerComponent::Update() {
         for (auto &win : this->windows) {
-            win.first->Render();
+            win.first->Update();
+        }
+    }
+    
+    void TerminalMultiplexerComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {
+        if (this->focus < this->windows.size()) {
+            this->windows.at(this->focus).first->ProcessInput(input);
         }
     }
 }

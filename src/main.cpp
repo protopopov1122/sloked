@@ -8,10 +8,10 @@
 #include "sloked/text/cursor/TransactionStreamMultiplexer.h"
 #include "sloked/screen/terminal/posix/PosixTerminal.h"
 #include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
-#include "sloked/screen/terminal/screen/ComponentHandle.h"
-#include "sloked/screen/terminal/screen/SplitterComponent.h"
-#include "sloked/screen/terminal/screen/TabberComponent.h"
-#include "sloked/screen/terminal/screen/MultiplexerComponent.h"
+#include "sloked/screen/terminal/components/ComponentHandle.h"
+#include "sloked/screen/terminal/components/SplitterComponent.h"
+#include "sloked/screen/terminal/components/TabberComponent.h"
+#include "sloked/screen/terminal/components/MultiplexerComponent.h"
 #include "sloked/screen/widgets/TextEditor.h"
 #include "sloked/filesystem/posix/File.h"
 #include "sloked/namespace/Filesystem.h"
@@ -23,19 +23,6 @@
 #include <sstream>
 
 using namespace sloked;
-
-static std::size_t offset = 0;
-static std::size_t buffer = 24;
-
-void print(TextBlock &text, SlokedTextPane &console, const EncodingConverter &conv) {
-    console.ClearScreen();
-    console.SetPosition(0, 0);
-    std::stringstream ss;
-    text.Visit(offset, std::min(buffer, text.GetLastLine() - offset) + 1, [&](const auto line) {
-        ss << conv.Convert(line) << std::endl;
-    });
-    console.Write(ss.str());
-}
 
 int main(int argc, const char **argv) {
     if (argc < 3) {
@@ -63,7 +50,6 @@ int main(int argc, const char **argv) {
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, Encoding::Utf8, charWidth);
-    buffer = console.GetHeight() - 3;
 
     TerminalComponentHandle screen(console, terminalEncoding, charWidth);
     auto &splitter = screen.NewSplitter(Splitter::Direction::Horizontal);
@@ -73,7 +59,7 @@ int main(int argc, const char **argv) {
     auto &tab3 = tabber.NewTab().value.NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
     auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.3)).value.NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
 
-    auto listener1 = [&](const SlokedKeyboardInput &cmd) {
+    screen.SetInputHandler([&](const SlokedKeyboardInput &cmd) {
         if (cmd.index() == 0) {
             return false;
         } else switch (std::get<1>(cmd)) {            
@@ -100,21 +86,19 @@ int main(int argc, const char **argv) {
                 return false;
         }
         return true;
-    };
+    });
 
-    screen.SetInputHandler(listener1);
-
-    do {
-        console.Update();
+    while (true) {
+        screen.Update();
         console.SetGraphicsMode(SlokedTextGraphics::Off);
         console.ClearScreen();
         screen.Render();
         console.Flush();
-        auto input = console.GetInput();
+        auto input = terminal.GetInput();
         for (const auto &evt : input) {
             screen.ProcessInput(evt);
         }
-    } while (true);
+    }
 
     return EXIT_SUCCESS;
 }

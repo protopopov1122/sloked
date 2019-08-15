@@ -1,4 +1,4 @@
-#include "sloked/screen/terminal/screen/TextPane.h"
+#include "sloked/screen/terminal/components/TextPane.h"
 
 namespace sloked {
 

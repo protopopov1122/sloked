@@ -11,14 +11,13 @@ namespace sloked {
 
     class TerminalWindow : public SlokedTerminal {
      public:
-        using InputSource = std::function<std::vector<SlokedKeyboardInput>(const TerminalWindow &)>;
-        TerminalWindow(SlokedTerminal &, const Encoding &, const SlokedCharWidth &, Column, Line, Column, Line, InputSource);
+        TerminalWindow(SlokedTerminal &, const Encoding &, const SlokedCharWidth &, Column, Line, Column, Line);
 
         void Move(Column, Line);
         void Resize(Column, Line);
         Column GetOffsetX() const;
         Line GetOffsetY() const;
-        TerminalWindow SubWindow(Column, Line, Column, Line, InputSource) const;
+        TerminalWindow SubWindow(Column, Line, Column, Line) const;
 
         void SetPosition(Line, Column) override;
         void MoveUp(Line) override;
@@ -33,7 +32,6 @@ namespace sloked {
         Line GetHeight() override;
 
         void Write(const std::string &) override;
-        std::vector<SlokedKeyboardInput> GetInput() override;
 
         void SetGraphicsMode(SlokedTextGraphics) override;
         void SetGraphicsMode(SlokedBackgroundGraphics) override;
@@ -50,7 +48,6 @@ namespace sloked {
         Line offset_y;
         Column width;
         Line height;
-        InputSource inputSource;
 
         Column col;
         Line line;

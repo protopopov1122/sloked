@@ -14,12 +14,17 @@ namespace sloked {
         SlokedScreenComponent();
         virtual ~SlokedScreenComponent() = default;
 
-        virtual void ProcessInput(const SlokedKeyboardInput &) = 0;
-        virtual void Render() = 0;
-
+        void ProcessInput(const SlokedKeyboardInput &);
         void SetInputHandler(InputHandler);
-    
+        void ResetInputHandler();
+        
+        virtual void Render() = 0;
+        virtual void Update() = 0;
+
      protected:
+        virtual void ProcessComponentInput(const SlokedKeyboardInput &) = 0;
+
+     private:
         InputHandler inputHandler;
     };
 }

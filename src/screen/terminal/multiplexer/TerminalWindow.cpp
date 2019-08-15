@@ -5,8 +5,8 @@
 
 namespace sloked {
 
-    TerminalWindow::TerminalWindow(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth, Column x, Line y, Column w, Line h, InputSource inputSource)
-        : term(term), encoding(encoding), charWidth(charWidth), offset_x(x), offset_y(y), width(w), height(h), inputSource(std::move(inputSource)), col(0), line(0) {}
+    TerminalWindow::TerminalWindow(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth, Column x, Line y, Column w, Line h)
+        : term(term), encoding(encoding), charWidth(charWidth), offset_x(x), offset_y(y), width(w), height(h), col(0), line(0) {}
 
     void TerminalWindow::Move(Column x, Line y) {
         this->offset_x = x;
@@ -26,11 +26,11 @@ namespace sloked {
         return this->offset_y;
     }
 
-    TerminalWindow TerminalWindow::SubWindow(Column x, Line y, Column w, Line h, InputSource inputSource) const {
+    TerminalWindow TerminalWindow::SubWindow(Column x, Line y, Column w, Line h) const {
         return TerminalWindow(this->term, this->encoding, this->charWidth,
             this->offset_x + x,
             this->offset_y + y,
-            w, h, inputSource);
+            w, h);
     }
 
     void TerminalWindow::SetPosition(Line y, Column x) {
@@ -93,15 +93,19 @@ namespace sloked {
         std::string_view view = str;
         std::size_t count = 0;
         bool res = this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto codepoint) {
+            if (this->line >= this->height || this->line + this->offset_y >= this->term.GetHeight()) {
+                return false;
+            }
             if (codepoint == U'\n') {
                 this->term.Write(buffer);
                 buffer.clear();
                 this->ClearChars(this->width - (this->col + count) - 1);
-                count = 0;
-                if (this->line + 1 == this->height) {
+                if (this->line + 1 >= this->height || this->line + this->offset_y >= this->term.GetHeight()) {
                     return false;
+                } else {
+                    count = 0;
+                    this->SetPosition(this->line + 1, 0);
                 }
-                this->SetPosition(this->line + 1, 0);
             } else {
                 if (this->col + count + 1 < this->width) {
                     buffer.append(view.substr(start, length));
@@ -110,13 +114,9 @@ namespace sloked {
             }
             return true;
         });
-        if (res && !buffer.empty()) {
+        if (!buffer.empty()) {
             this->term.Write(buffer);
         }
-    }
-
-    std::vector<SlokedKeyboardInput> TerminalWindow::GetInput() {
-        return this->inputSource(*this);
     }
 
     void TerminalWindow::SetGraphicsMode(SlokedTextGraphics mode) {

@@ -178,10 +178,6 @@ namespace sloked {
         });
     }
 
-    std::vector<SlokedKeyboardInput> BufferedTerminal::GetInput() {
-        return this->term.GetInput();
-    }
-
     void BufferedTerminal::SetGraphicsMode(SlokedTextGraphics mode) {
         this->graphics.SetGraphicsMode(mode);
     }
@@ -205,7 +201,6 @@ namespace sloked {
 
     void BufferedTerminal::Update() {
         this->term.Update();
-        this->width = term.GetWidth();
-        this->height = term.GetHeight();
+        this->UpdateSize();
     }
 }

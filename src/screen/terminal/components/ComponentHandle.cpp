@@ -1,28 +1,12 @@
-#include "sloked/screen/terminal/screen/ComponentHandle.h"
-#include "sloked/screen/terminal/screen/SplitterComponent.h"
-#include "sloked/screen/terminal/screen/TabberComponent.h"
-#include "sloked/screen/terminal/screen/MultiplexerComponent.h"
+#include "sloked/screen/terminal/components/ComponentHandle.h"
+#include "sloked/screen/terminal/components/SplitterComponent.h"
+#include "sloked/screen/terminal/components/TabberComponent.h"
+#include "sloked/screen/terminal/components/MultiplexerComponent.h"
 
 namespace sloked {
 
     TerminalComponentHandle::TerminalComponentHandle(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
         : terminal(term), encoding(encoding), charWidth(charWidth), component(nullptr) {}
-
-    void TerminalComponentHandle::ProcessInput(const SlokedKeyboardInput &input) {
-        bool processed = false;
-        if (this->inputHandler) {
-            processed = this->inputHandler(input);
-        }
-        if (!processed && this->component) {
-            this->component->ProcessInput(input);
-        }
-    }
-
-    void TerminalComponentHandle::Render() {
-        if (this->component) {
-            this->component->Render();
-        }
-    }
 
     SlokedScreenComponent &TerminalComponentHandle::NewTextPane(std::unique_ptr<SlokedTextPaneWidget> widget) {
         auto component = std::make_unique<TerminalTextPaneComponent>(this->terminal, std::move(widget));
@@ -50,5 +34,24 @@ namespace sloked {
         TerminalMultiplexerComponent &ref = *component;
         this->component = std::move(component);
         return ref;
+    }
+
+    void TerminalComponentHandle::Render() {
+        if (this->component) {
+            this->component->Render();
+        }
+    }
+
+    void TerminalComponentHandle::Update() {
+        this->terminal.Update();
+        if (this->component) {
+            this->component->Update();
+        }
+    }
+
+    void TerminalComponentHandle::ProcessComponentInput(const SlokedKeyboardInput &input) {
+        if (this->component) {
+            this->component->ProcessInput(input);
+        }
     }
 }

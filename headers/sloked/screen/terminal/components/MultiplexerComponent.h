@@ -1,9 +1,9 @@
-#ifndef SLOKED_SCREEN_TERMINAL_SCREEN_MULTIPLEXERCOMPONENT_H_
-#define SLOKED_SCREEN_TERMINAL_SCREEN_MULTIPLEXERCOMPONENT_H_
+#ifndef SLOKED_SCREEN_TERMINAL_COMPONENTS_MULTIPLEXERCOMPONENT_H_
+#define SLOKED_SCREEN_TERMINAL_COMPONENTS_MULTIPLEXERCOMPONENT_H_
 
 #include "sloked/screen/components/MultiplexerComponent.h"
 #include "sloked/screen/terminal/multiplexer/TerminalWindow.h"
-#include "sloked/screen/terminal/screen/ComponentHandle.h"
+#include "sloked/screen/terminal/components/ComponentHandle.h"
 #include <vector>
 #include <memory>
 
@@ -21,9 +21,12 @@ namespace sloked {
         SlokedIndexed<SlokedComponentHandle &, WinId> NewWindow(const TextPosition &, const TextPosition &) override;
         bool CloseWindow(WinId) override;
 
-        void ProcessInput(const SlokedKeyboardInput &) override;
         void Render() override;
+        void Update() override;
 
+     protected:
+        void ProcessComponentInput(const SlokedKeyboardInput &) override;
+        
      private:
         SlokedTerminal &terminal;
         const Encoding &encoding;

@@ -9,7 +9,7 @@
 
 namespace sloked {
     
-    class PosixTerminal : public SlokedTerminal {
+    class PosixTerminal : public SlokedDuplexTerminal {
      public:
         class Termcap;
 

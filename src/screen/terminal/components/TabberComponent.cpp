@@ -1,5 +1,5 @@
 #include "sloked/core/Error.h"
-#include "sloked/screen/terminal/screen/TabberComponent.h"
+#include "sloked/screen/terminal/components/TabberComponent.h"
 
 namespace sloked {
 
@@ -49,19 +49,21 @@ namespace sloked {
         }
     }
 
-    void TerminalTabberComponent::ProcessInput(const SlokedKeyboardInput &input) {
-        bool processed = false;
-        if (this->inputHandler) {
-            processed = this->inputHandler(input);
-        }
-        if (!processed && this->GetCurrentTab().has_value()) {
-            this->components.at(this->GetCurrentTab().value()) ->ProcessInput(input);
-        }
-    }
-
     void TerminalTabberComponent::Render() {
         if (this->GetCurrentTab().has_value()) {
             this->components.at(this->GetCurrentTab().value())->Render();
+        }
+    }
+
+    void TerminalTabberComponent::Update() {
+        for (auto &tab : this->components) {
+            tab->Update();
+        }
+    }
+
+    void TerminalTabberComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {
+        if (this->GetCurrentTab().has_value()) {
+            this->components.at(this->GetCurrentTab().value()) ->ProcessInput(input);
         }
     }
 }

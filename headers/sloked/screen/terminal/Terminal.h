@@ -22,6 +22,12 @@ namespace sloked {
         }
     };
 
+    class SlokedTerminalInputSource {
+     public:
+        virtual ~SlokedTerminalInputSource() = default;
+        virtual std::vector<SlokedKeyboardInput> GetInput() = 0;
+    };
+
     class SlokedTerminal {
      public:
         using Line = TextPosition::Line;
@@ -45,7 +51,6 @@ namespace sloked {
         virtual Line GetHeight() = 0;
 
         virtual void Write(const std::string &) = 0;
-        virtual std::vector<SlokedKeyboardInput> GetInput() = 0;
 
         virtual void SetGraphicsMode(SlokedTextGraphics) = 0;
         virtual void SetGraphicsMode(SlokedBackgroundGraphics) = 0;
@@ -53,12 +58,9 @@ namespace sloked {
 
         virtual void Update() {}
         virtual void Flush(bool) {}
-
-        template <typename ... M>
-        void SetGraphicsMode(M ... modes) {
-            SlokedTerminalSetGraphicsMode<SlokedTerminal, M...>::Set(*this, modes...);
-        }
     };
+
+    class SlokedDuplexTerminal : public SlokedTerminal, public SlokedTerminalInputSource {};
 }
 
 #endif

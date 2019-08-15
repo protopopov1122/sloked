@@ -71,14 +71,6 @@ namespace sloked {
             }
         }
 
-        std::vector<SlokedKeyboardInput> GetInput() override {
-            if (this->is_current(this)) {
-                return this->term.GetInput();
-            } else {
-                return {};
-            }
-        }
-
         void SetGraphicsMode(SlokedTextGraphics m) override {
             if (this->is_current(this)) {
                 this->term.SetGraphicsMode(m);

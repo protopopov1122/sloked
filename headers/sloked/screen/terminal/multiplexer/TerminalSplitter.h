@@ -20,15 +20,15 @@ namespace sloked {
 
         TerminalSplitter(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharWidth &);
 
-        std::optional<WinId> GetFocus() const;
         unsigned int GetMinimum() const;
         unsigned int GetMaximum() const;
         SlokedTerminal &GetTerminal(WinId) const;
         WinId GetTerminalCount() const;
+        const Splitter::Constraints &GetConstraints(WinId) const;
 
-        bool SetFocus(WinId);
         SlokedIndexed<SlokedTerminal &, WinId> NewTerminal(const Splitter::Constraints &);
         SlokedIndexed<SlokedTerminal &, WinId> NewTerminal(WinId, const Splitter::Constraints &);
+        bool UpdateConstraints(WinId, const Splitter::Constraints &);
         bool CloseTerminal(WinId);
         void Update();
 
@@ -40,7 +40,6 @@ namespace sloked {
         const Encoding &encoding;
         const SlokedCharWidth &charWidth;
         std::vector<Window> windows;
-        std::size_t focus;
     };
 }
 
