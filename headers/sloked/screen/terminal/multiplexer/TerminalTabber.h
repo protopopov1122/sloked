@@ -22,6 +22,7 @@ namespace sloked {
         SlokedIndexed<SlokedTerminal &, TabId> NewTab();
         SlokedIndexed<SlokedTerminal &, TabId> NewTab(TabId);
         bool SelectTab(TabId);
+        bool MoveTab(TabId, TabId);
         bool CloseTab(TabId);
         
      private:

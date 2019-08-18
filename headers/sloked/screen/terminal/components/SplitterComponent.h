@@ -13,32 +13,53 @@
 namespace sloked {
 
     class TerminalSplitterComponent : public SlokedSplitterComponent {
-     public:        
-        TerminalSplitterComponent(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharWidth &);
+    public:
+      TerminalSplitterComponent(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharWidth &);
 
-        std::optional<WinId> GetFocus() const override;
-        SlokedComponentHandle &GetWindow(WinId) const override;
-        WinId GetWindowCount() const override;
-        const Splitter::Constraints &GetConstraints(WinId) const override;
+      std::shared_ptr<Window> GetFocus() const override;
+      std::shared_ptr<Window> GetWindow(Window::Id) const override;
+      std::size_t GetWindowCount() const override;
 
-        bool SetFocus(WinId) override;
-        SlokedIndexed<SlokedComponentHandle &, WinId> NewWindow(const Splitter::Constraints &) override;
-        SlokedIndexed<SlokedComponentHandle &, WinId> NewWindow(WinId, const Splitter::Constraints &) override;
-        bool UpdateConstraints(WinId, const Splitter::Constraints &) override;
-        bool CloseWindow(WinId) override;
+      std::shared_ptr<Window> NewWindow(const Splitter::Constraints &) override;
+      std::shared_ptr<Window> NewWindow(Window::Id, const Splitter::Constraints &) override;
 
-        void Render() override;
-        void Update() override;
+      void Render() override;
+      void Update() override;
 
-     protected:
-        void ProcessComponentInput(const SlokedKeyboardInput &) override;
+    protected:
+      void ProcessComponentInput(const SlokedKeyboardInput &) override;
         
-     private:
-        TerminalSplitter splitter;
-        const Encoding &encoding;
-        const SlokedCharWidth &charWidth;
-        std::vector<std::shared_ptr<TerminalComponentHandle>> components;
-        WinId focus;
+    private:
+      class TerminalSplitterWindow : public Window {
+       public:
+         TerminalSplitterWindow(Window::Id, std::unique_ptr<TerminalComponentHandle>, TerminalSplitterComponent &);
+         bool IsOpen() const override;
+         bool HasFocus() const override;
+         SlokedComponentHandle &GetComponent() const override;
+         Id GetId() const override;
+
+         void SetFocus() override;
+         void UpdateConstraints(const Splitter::Constraints &) override;
+         void Move(Id) override;
+         void Close() override;
+
+         void Update();
+         void Render();
+         void ProcessInput(const SlokedKeyboardInput &);
+
+       private:
+         Window::Id id;
+         std::unique_ptr<TerminalComponentHandle> component;
+         TerminalSplitterComponent &root;
+      };
+
+      friend class TerminalSplitterWindow;
+
+      TerminalSplitter splitter;
+      const Encoding &encoding;
+      const SlokedCharWidth &charWidth;
+      std::vector<std::shared_ptr<TerminalSplitterWindow>> components;
+      Window::Id focus;
     };
 }
 

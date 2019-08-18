@@ -10,15 +10,17 @@ namespace sloked {
 
     class SlokedMultiplexerComponent : public SlokedScreenComponent {
      public:
-        using WinId = std::size_t;
+        class Window : public SlokedComponentWindow {
+         public:
+            virtual void Move(const TextPosition &) = 0;
+            virtual void Resize(const TextPosition &) = 0;
+        };
 
-        virtual std::optional<WinId> GetFocus() const = 0;
-        virtual SlokedComponentHandle &GetWindow(WinId) const = 0;
-        virtual WinId GetWindowCount() const = 0;
+        virtual std::shared_ptr<Window> GetFocus() const = 0;
+        virtual std::shared_ptr<Window> GetWindow(Window::Id) const = 0;
+        virtual std::size_t GetWindowCount() const = 0;
 
-        virtual bool SetFocus(WinId) = 0;
-        virtual SlokedIndexed<SlokedComponentHandle &, WinId> NewWindow(const TextPosition &, const TextPosition &) = 0;
-        virtual bool CloseWindow(WinId) = 0;
+        virtual std::shared_ptr<Window> NewWindow(const TextPosition &, const TextPosition &) = 0;
     };
 }
 

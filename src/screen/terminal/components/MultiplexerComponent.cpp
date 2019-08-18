@@ -3,74 +3,138 @@
 
 namespace sloked {
 
+    TerminalMultiplexerComponent::TerminalMultiplexerWindow::TerminalMultiplexerWindow(
+        Id id, std::unique_ptr<TerminalComponentHandle> component, std::unique_ptr<TerminalWindow> window, TerminalMultiplexerComponent &root)
+        : id(id), component(std::move(component)), window(std::move(window)), root(root) {}
+    
+    TerminalMultiplexerComponent::TerminalMultiplexerWindow::~TerminalMultiplexerWindow() {
+        if (this->IsOpen()) {
+            this->Close();
+        }
+    }
+
+    bool TerminalMultiplexerComponent::TerminalMultiplexerWindow::IsOpen() const {
+        return this->root.windows.count(this->id) != 0;
+    }
+
+    bool TerminalMultiplexerComponent::TerminalMultiplexerWindow::HasFocus() const {
+        return this->root.focus.back() == this->id;
+    }
+
+    SlokedComponentHandle &TerminalMultiplexerComponent::TerminalMultiplexerWindow::GetComponent() const {
+        if (this->component) {
+            return *this->component;
+        } else {
+            throw SlokedError("Window already closed");
+        }
+    }
+
+    TerminalMultiplexerComponent::TerminalMultiplexerWindow::Window::Id TerminalMultiplexerComponent::TerminalMultiplexerWindow::GetId() const {
+        return this->id;
+    }
+
+    void TerminalMultiplexerComponent::TerminalMultiplexerWindow::SetFocus() {
+        if (this->IsOpen()) {
+            std::remove(this->root.focus.begin(), this->root.focus.end(), this->id);
+            this->root.focus.push_back(this->id);
+        } else {
+            throw SlokedError("Window already closed");
+        }
+    }
+
+    void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Move(const TextPosition &pos) {
+        if (this->window) {
+            this->window->SetPosition(pos.line, pos.column);
+        } else {
+            throw SlokedError("Window already closed");
+        }
+    }
+
+    void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Resize(const TextPosition &pos) {
+        if (this->window) {
+            this->window->Resize(pos.column, pos.line);
+        } else {
+            throw SlokedError("Window already closed");
+        }
+    }
+
+    void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Close() {
+        if (this->IsOpen()) {
+            std::remove(this->root.focus.begin(), this->root.focus.end(), this->id);
+            this->component.reset();
+            this->window.reset();
+            this->root.windows.erase(this->id);
+        } else {
+            throw SlokedError("Window already closed");
+        }
+    }
+
+    void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Render() {
+        if (this->component) {
+            this->component->Render();
+        }
+    }
+
+    void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Update() {
+        if (this->component) {
+            this->component->Update();
+        }
+    }
+
+    void TerminalMultiplexerComponent::TerminalMultiplexerWindow::ProcessInput(const SlokedKeyboardInput &input) {
+        if (this->component) {
+            this->component->ProcessInput(input);
+        }
+    }
+
     TerminalMultiplexerComponent::TerminalMultiplexerComponent(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : terminal(term), encoding(encoding), charWidth(charWidth), focus(0) {}
+        : terminal(term), encoding(encoding), charWidth(charWidth), focus(0), nextId(0) {}
 
-    std::optional<TerminalMultiplexerComponent::WinId> TerminalMultiplexerComponent::GetFocus() const {
-        if (this->focus < this->windows.size()) {
-            return this->focus;
+    std::shared_ptr<TerminalMultiplexerComponent::Window> TerminalMultiplexerComponent::GetFocus() const {
+        if (!this->focus.empty()) {
+            return this->windows.at(this->focus.back());
         } else {
-            return std::optional<TerminalMultiplexerComponent::WinId>{};
+            return nullptr;
         }
     }
 
-    SlokedComponentHandle &TerminalMultiplexerComponent::GetWindow(WinId idx) const {
-        if (idx < this->windows.size()) {
-            return *this->windows.at(idx).first;
+    std::shared_ptr<TerminalMultiplexerComponent::Window> TerminalMultiplexerComponent::GetWindow(Window::Id id) const {
+        if (this->windows.count(id)) {
+            return this->windows.at(id);
         } else {
-            throw SlokedError("Window #" + std::to_string(idx) + " not found");
+            return nullptr;
         }
     }
 
-    TerminalMultiplexerComponent::WinId TerminalMultiplexerComponent::GetWindowCount() const {
+    std::size_t TerminalMultiplexerComponent::GetWindowCount() const {
         return this->windows.size();
     }
 
-    bool TerminalMultiplexerComponent::SetFocus(WinId idx) {
-        if (idx <= this->windows.size()) {
-            this->focus = idx;
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    SlokedIndexed<SlokedComponentHandle &, TerminalMultiplexerComponent::WinId> TerminalMultiplexerComponent::NewWindow(const TextPosition &pos, const TextPosition &dim) {
-        auto terminal = std::make_shared<TerminalWindow>(this->terminal, this->encoding, this->charWidth, pos.column, pos.line, dim.column, dim.line);
-        auto handle = std::make_shared<TerminalComponentHandle>(*terminal, this->encoding, this->charWidth);
-        this->windows.push_back(std::make_pair(handle, terminal));
-        return {this->windows.size() - 1, *handle};
-    }
-
-    bool TerminalMultiplexerComponent::CloseWindow(WinId idx) {
-        if (idx < this->windows.size()) {
-            this->windows.erase(this->windows.begin() + idx);
-            return true;
-        } else {
-            return false;
-        }
+    std::shared_ptr<TerminalMultiplexerComponent::Window> TerminalMultiplexerComponent::NewWindow(const TextPosition &pos, const TextPosition &dim) {
+        auto terminal = std::make_unique<TerminalWindow>(this->terminal, this->encoding, this->charWidth, pos.column, pos.line, dim.column, dim.line);
+        auto handle = std::make_unique<TerminalComponentHandle>(*terminal, this->encoding, this->charWidth);
+        auto id = this->nextId++;
+        auto window = std::make_shared<TerminalMultiplexerWindow>(id, std::move(handle), std::move(terminal), *this);
+        this->windows[id] = window;
+        this->focus.push_back(id);
+        return window;
     }
 
     void TerminalMultiplexerComponent::Render() {
-        for (std::size_t i = 0; i < this->windows.size(); i++) {
-            if (i != this->focus) {
-                this->windows.at(i).first->Render();
-            }
-        }
-        if (this->focus < this->windows.size()) {
-            this->windows.at(this->focus).first->Render();
+        for (auto id : this->focus) {
+            this->windows.at(id)->Render();
         }
     }
 
     void TerminalMultiplexerComponent::Update() {
-        for (auto &win : this->windows) {
-            win.first->Update();
+        for (auto kv : this->windows) {
+            kv.second->Update();
         }
     }
-    
+
     void TerminalMultiplexerComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {
-        if (this->focus < this->windows.size()) {
-            this->windows.at(this->focus).first->ProcessInput(input);
+        if (!this->focus.empty()) {
+            this->windows.at(this->focus.back())->ProcessInput(input);
         }
     }
 }

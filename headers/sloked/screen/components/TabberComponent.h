@@ -10,16 +10,17 @@ namespace sloked {
 
     class SlokedTabberComponent : public SlokedScreenComponent {
      public:
-        using TabId = std::size_t;
+        class Window : public SlokedComponentWindow {
+         public:
+            virtual void Move(Id) = 0;
+        };
 
-        virtual TabId GetTabCount() const = 0;
-        virtual std::optional<TabId> GetCurrentTab() const = 0;
-        virtual SlokedComponentHandle &GetTab(TabId) const = 0;
+        virtual std::size_t GetWindowCount() const = 0;
+        virtual std::shared_ptr<Window> GetFocus() const = 0;
+        virtual std::shared_ptr<Window> GetWindow(Window::Id) const = 0;
 
-        virtual bool SelectTab(TabId) = 0;
-        virtual SlokedIndexed<SlokedComponentHandle &, TabId> NewTab() = 0;
-        virtual SlokedIndexed<SlokedComponentHandle &, TabId> NewTab(TabId) = 0;
-        virtual bool CloseTab(TabId) = 0;
+        virtual std::shared_ptr<Window> NewWindow() = 0;
+        virtual std::shared_ptr<Window> NewWindow(Window::Id) = 0;
     };
 }
 

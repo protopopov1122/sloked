@@ -29,6 +29,7 @@ namespace sloked {
         SlokedIndexed<SlokedTerminal &, WinId> NewTerminal(const Splitter::Constraints &);
         SlokedIndexed<SlokedTerminal &, WinId> NewTerminal(WinId, const Splitter::Constraints &);
         bool UpdateConstraints(WinId, const Splitter::Constraints &);
+        bool Move(WinId, WinId);
         bool CloseTerminal(WinId);
         void Update();
 

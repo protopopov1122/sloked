@@ -95,6 +95,21 @@ namespace sloked {
         }
     }
 
+    bool TerminalSplitter::Move(WinId src, WinId dst) {
+        if (src < this->windows.size() && dst < this->windows.size()) {
+            if (src < dst) {
+                this->windows.insert(this->windows.begin() + dst + 1, this->windows.at(src));
+                this->windows.erase(this->windows.begin() + src);
+            } else if (src > dst) {
+                this->windows.insert(this->windows.begin() + dst, this->windows.at(src));
+                this->windows.erase(this->windows.begin() + src + 1);
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     bool TerminalSplitter::CloseTerminal(WinId idx) {
         if (idx < this->windows.size()) {
             this->windows.erase(this->windows.begin() + idx);

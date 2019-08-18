@@ -5,8 +5,8 @@
 
 namespace sloked {
 
-    SlokedTextEditor::SlokedTextEditor(TextBlock &text, SlokedCursor &cursor, SlokedTransactionJournal &journal, const EncodingConverter &conv, const SlokedCharWidth &charWidth)
-        : text(text), cursor(cursor), journal(journal), conv(conv), charWidth(charWidth), frame(text, conv.GetSource(), charWidth) {}
+    SlokedTextEditor::SlokedTextEditor(TextBlock &text, SlokedCursor &cursor, SlokedTransactionJournal &journal, const EncodingConverter &conv, const SlokedCharWidth &charWidth, SlokedBackgroundGraphics bg)
+        : text(text), cursor(cursor), journal(journal), conv(conv), charWidth(charWidth), frame(text, conv.GetSource(), charWidth), background(bg) {}
 
     bool SlokedTextEditor::ProcessInput(const SlokedKeyboardInput &cmd) {
         if (cmd.index() == 0) {
@@ -61,6 +61,7 @@ namespace sloked {
     void SlokedTextEditor::Render(SlokedTextPane &pane) {
         this->frame.Update(TextPosition{pane.GetHeight(), pane.GetWidth()}, TextPosition{this->cursor.GetLine(), this->cursor.GetColumn()});
 
+        pane.SetGraphicsMode(this->background);
         pane.ClearScreen();
         pane.SetPosition(0, 0);
 

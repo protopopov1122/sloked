@@ -3,67 +3,131 @@
 
 namespace sloked {
 
+    TerminalSplitterComponent::TerminalSplitterWindow::TerminalSplitterWindow(Window::Id id, std::unique_ptr<TerminalComponentHandle> component, TerminalSplitterComponent &root)
+        : id(id), component(std::move(component)), root(root) {}
+
+    bool TerminalSplitterComponent::TerminalSplitterWindow::IsOpen() const {
+        return this->component != nullptr;
+    }
+
+    bool TerminalSplitterComponent::TerminalSplitterWindow::HasFocus() const {
+        return this->root.focus == this->id;
+    }
+
+    SlokedComponentHandle &TerminalSplitterComponent::TerminalSplitterWindow::GetComponent() const {
+        if (this->component) {
+            return *this->component;
+        } else {
+            throw SlokedError("Window already closed");
+        }
+    }
+
+    TerminalSplitterComponent::TerminalSplitterWindow::Id TerminalSplitterComponent::TerminalSplitterWindow::GetId() const {
+        return this->id;
+    }
+
+    void TerminalSplitterComponent::TerminalSplitterWindow::SetFocus() {
+        if (this->component) {
+            this->root.focus = this->id;
+        } else {
+            throw SlokedError("Window already closed");
+        }
+    }
+    
+    void TerminalSplitterComponent::TerminalSplitterWindow::UpdateConstraints(const Splitter::Constraints &constraints) {
+        if (this->component) {
+            this->root.splitter.UpdateConstraints(this->id, constraints);
+        } else {
+            throw SlokedError("Window already closed");
+        }
+    }
+
+    void TerminalSplitterComponent::TerminalSplitterWindow::Move(Id newId) {
+        if (this->component) {
+            if (!this->root.splitter.Move(this->id, newId)) {
+                throw SlokedError("Invalid window index");
+            }
+            if (this->id < newId) {
+                this->root.components.insert(this->root.components.begin() + newId + 1, this->root.components.at(this->id));
+                this->root.components.erase(this->root.components.begin() + this->id);
+            } else if (this->id > newId) {
+                this->root.components.insert(this->root.components.begin() + newId, this->root.components.at(this->id));
+                this->root.components.erase(this->root.components.begin() + this->id + 1);
+            }
+
+            for (std::size_t i = 0; i < this->root.components.size(); i++) {
+                this->root.components.at(i)->id = i;
+            }
+        } else {
+            throw SlokedError("Window already closed");
+        }
+    }
+
+    void TerminalSplitterComponent::TerminalSplitterWindow::Close() {
+        if (this->component) {
+            this->root.components.erase(this->root.components.begin() + this->id);
+            this->root.splitter.CloseTerminal(this->id);
+            this->component = nullptr;
+        } else {
+            throw SlokedError("Window already closed");
+        }
+    }
+
+    void TerminalSplitterComponent::TerminalSplitterWindow::Update() {
+        if (this->component) {
+            this->component->Update();
+        }
+    }
+
+    void TerminalSplitterComponent::TerminalSplitterWindow::Render() {
+        if (this->component) {
+            this->component->Render();
+        }
+    }
+
+    void TerminalSplitterComponent::TerminalSplitterWindow::ProcessInput(const SlokedKeyboardInput &input) {
+        if (this->component) {
+            this->component->ProcessInput(input);
+        }
+    }
+
     TerminalSplitterComponent::TerminalSplitterComponent(SlokedTerminal &term, Splitter::Direction dir, const Encoding &enc, const SlokedCharWidth &chWidth)
         : splitter(term, dir, enc, chWidth), encoding(enc), charWidth(chWidth), focus(0) {}
-    
-    bool TerminalSplitterComponent::SetFocus(std::size_t idx) {
-        if (idx <= this->components.size()) {
-            this->focus = idx;
-            return true;
-        } else {
-            return false;
-        }
-    }
 
-    std::optional<TerminalSplitterComponent::WinId> TerminalSplitterComponent::GetFocus() const {
+    std::shared_ptr<TerminalSplitterComponent::Window> TerminalSplitterComponent::GetFocus() const {
         if (this->focus < this->components.size()) {
-            return this->focus;
+            return this->components.at(this->focus);
         } else {
-            return {};
+            return nullptr;
         }
     }
 
-    SlokedComponentHandle &TerminalSplitterComponent::GetWindow(std::size_t idx) const {
-        if (idx < this->components.size()) {
-            return *this->components.at(idx);
+    std::shared_ptr<TerminalSplitterComponent::Window> TerminalSplitterComponent::GetWindow(Window::Id id) const {
+        if (id < this->components.size()) {
+            return this->components.at(id);
         } else {
-            throw SlokedError("Window #" + std::to_string(idx) + " not found");
+            return nullptr;
         }
     }
 
-    TerminalSplitterComponent::WinId TerminalSplitterComponent::GetWindowCount() const {
+    std::size_t TerminalSplitterComponent::GetWindowCount() const {
         return this->components.size();
     }
 
-    const Splitter::Constraints &TerminalSplitterComponent::GetConstraints(WinId idx) const {
-        return this->splitter.GetConstraints(idx);
-    }
-
-    SlokedIndexed<SlokedComponentHandle &, TerminalSplitterComponent::WinId> TerminalSplitterComponent::NewWindow(const Splitter::Constraints &constraints) {
+    std::shared_ptr<TerminalSplitterComponent::Window> TerminalSplitterComponent::NewWindow(const Splitter::Constraints &constraints) {
         auto term = this->splitter.NewTerminal(constraints);
-        auto component = std::make_shared<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
-        this->components.push_back(component);
-        return {term.index, *component};
+        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
+        auto window = std::make_shared<TerminalSplitterWindow>(term.index, std::move(component), *this);
+        this->components.push_back(window);
+        return window;
     }
 
-    SlokedIndexed<SlokedComponentHandle &, TerminalSplitterComponent::WinId> TerminalSplitterComponent::NewWindow(WinId idx, const Splitter::Constraints &constraints) {
+    std::shared_ptr<TerminalSplitterComponent::Window> TerminalSplitterComponent::NewWindow(Window::Id idx, const Splitter::Constraints &constraints) {
         auto term = this->splitter.NewTerminal(idx, constraints);
-        auto component = std::make_shared<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
-        this->components.insert(this->components.begin() + idx, component);
-        return {idx, *component};
-    }
-
-    bool TerminalSplitterComponent::UpdateConstraints(WinId idx, const Splitter::Constraints &constraints) {
-        return this->splitter.UpdateConstraints(idx, constraints);
-    }
-    
-    bool TerminalSplitterComponent::CloseWindow(WinId idx) {
-        if (idx < this->components.size()) {
-            this->components.erase(this->components.begin() + idx);
-            return this->splitter.CloseTerminal(idx);
-        } else {
-            return false;
-        }
+        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
+        auto window = std::make_shared<TerminalSplitterWindow>(term.index, std::move(component), *this);
+        this->components.insert(this->components.begin() + idx, window);
+        return window;
     }
 
     void TerminalSplitterComponent::Render() {
@@ -85,8 +149,8 @@ namespace sloked {
     }
 
     void TerminalSplitterComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {
-        if (this->GetFocus().has_value()) {
-            this->components.at(this->GetFocus().value())->ProcessInput(input);
+        if (this->focus < this->components.size()) {
+            this->components.at(this->focus)->ProcessInput(input);
         }
     }
 }

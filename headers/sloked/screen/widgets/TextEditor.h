@@ -14,7 +14,7 @@ namespace sloked {
 
     class SlokedTextEditor : public SlokedTextPaneWidget {
      public:
-        SlokedTextEditor(TextBlock &, SlokedCursor &, SlokedTransactionJournal &, const EncodingConverter &, const SlokedCharWidth &);
+        SlokedTextEditor(TextBlock &, SlokedCursor &, SlokedTransactionJournal &, const EncodingConverter &, const SlokedCharWidth &, SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black);
 
         bool ProcessInput(const SlokedKeyboardInput &) override;
         void Render(SlokedTextPane &) override;
@@ -25,6 +25,7 @@ namespace sloked {
         SlokedTransactionJournal &journal;
         const EncodingConverter &conv;
         const SlokedCharWidth &charWidth;
+        SlokedBackgroundGraphics background;
 
         TextFrameView frame;
     };

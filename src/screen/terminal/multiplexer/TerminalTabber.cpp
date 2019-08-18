@@ -125,7 +125,7 @@ namespace sloked {
         }
     }
 
-    SlokedIndexed<SlokedTerminal &, TerminalTabber::TabId> TerminalTabber::NewTab() {
+    SlokedIndexed<SlokedTerminal &, TerminalTabber::TabId>  TerminalTabber::NewTab() {
         auto tab = std::make_shared<TerminalTab>([this](auto tabPtr) {
             if (this->current_tab < this->tabs.size()) {
                 return tabPtr == this->tabs.at(this->current_tab).get();
@@ -137,7 +137,7 @@ namespace sloked {
         return {this->tabs.size() - 1, *tab};
     }
 
-    SlokedIndexed<SlokedTerminal &, TerminalTabber::TabId> TerminalTabber::NewTab(TabId idx) {
+    SlokedIndexed<SlokedTerminal &, TerminalTabber::TabId>  TerminalTabber::NewTab(TabId idx) {
         if (idx > this->tabs.size()) {
             throw SlokedError("Invalid tab index " + std::to_string(idx));
         }
@@ -155,6 +155,21 @@ namespace sloked {
     bool TerminalTabber::SelectTab(TabId tab) {
         if (tab <= this->tabs.size()) {
             this->current_tab = tab;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    bool TerminalTabber::MoveTab(TabId src, TabId dst) {
+        if (src < this->tabs.size() && dst < this->tabs.size()) {
+            if (src < dst) {
+                this->tabs.insert(this->tabs.begin() + dst + 1, this->tabs.at(src));
+                this->tabs.erase(this->tabs.begin() + src);
+            } else if (src > dst) {
+                this->tabs.insert(this->tabs.begin() + dst, this->tabs.at(src));
+                this->tabs.erase(this->tabs.begin() + src + 1);
+            }
             return true;
         } else {
             return false;
