@@ -75,7 +75,7 @@ namespace sloked {
 
     void TerminalSplitterComponent::TerminalSplitterWindow::Update() {
         if (this->component) {
-            this->component->Update();
+            this->component->UpdateDimensions();
         }
     }
 
@@ -141,7 +141,7 @@ namespace sloked {
         }
     }
 
-    void TerminalSplitterComponent::Update() {
+    void TerminalSplitterComponent::UpdateDimensions() {
         this->splitter.Update();
         for (auto &win : this->components) {
             win->Update();

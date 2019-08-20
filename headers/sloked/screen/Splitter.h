@@ -21,8 +21,6 @@ namespace sloked {
             unsigned int GetMinimum() const;
             unsigned int GetMaximum() const;
 
-            unsigned int Calc(unsigned int) const;
-
         private:
             float dim;
             unsigned int min;

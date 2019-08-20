@@ -15,7 +15,7 @@ namespace sloked {
         TerminalComponentHandle(SlokedTerminal &, const Encoding &, const SlokedCharWidth &);
 
         void Render() override;
-        void Update() override;
+        void UpdateDimensions() override;
         
         SlokedScreenComponent &NewTextPane(std::unique_ptr<SlokedTextPaneWidget>) override;
         SlokedSplitterComponent &NewSplitter(Splitter::Direction) override;

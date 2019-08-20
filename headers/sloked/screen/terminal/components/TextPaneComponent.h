@@ -12,7 +12,7 @@ namespace sloked {
         TerminalTextPaneComponent(SlokedTerminal &, std::unique_ptr<SlokedTextPaneWidget>);
         
         void Render() override;
-        void Update() override;
+        void UpdateDimensions() override;
         
      protected:
         void ProcessComponentInput(const SlokedKeyboardInput &) override;

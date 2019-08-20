@@ -21,7 +21,7 @@ namespace sloked {
       std::shared_ptr<Window> NewWindow(const TextPosition &, const TextPosition &) override;
 
       void Render() override;
-      void Update() override;
+      void UpdateDimensions() override;
 
     protected:
       void ProcessComponentInput(const SlokedKeyboardInput &) override;

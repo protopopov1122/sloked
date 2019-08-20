@@ -52,7 +52,7 @@ namespace sloked {
 
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Resize(const TextPosition &pos) {
         if (this->window) {
-            this->window->Resize(pos.column, pos.line);
+            this->window->Resize(pos);
         } else {
             throw SlokedError("Window already closed");
         }
@@ -77,7 +77,7 @@ namespace sloked {
 
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Update() {
         if (this->component) {
-            this->component->Update();
+            this->component->UpdateDimensions();
         }
     }
 
@@ -111,7 +111,7 @@ namespace sloked {
     }
 
     std::shared_ptr<TerminalMultiplexerComponent::Window> TerminalMultiplexerComponent::NewWindow(const TextPosition &pos, const TextPosition &dim) {
-        auto terminal = std::make_unique<TerminalWindow>(this->terminal, this->encoding, this->charWidth, pos.column, pos.line, dim.column, dim.line);
+        auto terminal = std::make_unique<TerminalWindow>(this->terminal, this->encoding, this->charWidth, pos, dim);
         auto handle = std::make_unique<TerminalComponentHandle>(*terminal, this->encoding, this->charWidth);
         auto id = this->nextId++;
         auto window = std::make_shared<TerminalMultiplexerWindow>(id, std::move(handle), std::move(terminal), *this);
@@ -126,7 +126,7 @@ namespace sloked {
         }
     }
 
-    void TerminalMultiplexerComponent::Update() {
+    void TerminalMultiplexerComponent::UpdateDimensions() {
         for (auto kv : this->windows) {
             kv.second->Update();
         }

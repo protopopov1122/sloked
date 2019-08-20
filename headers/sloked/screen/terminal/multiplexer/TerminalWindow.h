@@ -11,13 +11,12 @@ namespace sloked {
 
     class TerminalWindow : public SlokedTerminal {
      public:
-        TerminalWindow(SlokedTerminal &, const Encoding &, const SlokedCharWidth &, Column, Line, Column, Line);
+        TerminalWindow(SlokedTerminal &, const Encoding &, const SlokedCharWidth &, const TextPosition &, const TextPosition &);
 
-        void Move(Column, Line);
-        void Resize(Column, Line);
-        Column GetOffsetX() const;
-        Line GetOffsetY() const;
-        TerminalWindow SubWindow(Column, Line, Column, Line) const;
+        void Move(const TextPosition &);
+        void Resize(const TextPosition &);
+        const TextPosition &GetOffset() const;
+        TerminalWindow SubWindow(const TextPosition &, const TextPosition &) const;
 
         void SetPosition(Line, Column) override;
         void MoveUp(Line) override;
@@ -44,13 +43,10 @@ namespace sloked {
         SlokedTerminal &term;
         const Encoding &encoding;
         const SlokedCharWidth &charWidth;
-        Column offset_x;
-        Line offset_y;
-        Column width;
-        Line height;
-
-        Column col;
+        TextPosition offset;
+        TextPosition size;
         Line line;
+        Column col;
     };
 }
 

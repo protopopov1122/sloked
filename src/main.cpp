@@ -103,7 +103,7 @@ int main(int argc, const char **argv) {
     });
 
     while (true) {
-        screen.Update();
+        screen.UpdateDimensions();
         console.SetGraphicsMode(SlokedTextGraphics::Off);
         console.ClearScreen();
         screen.Render();

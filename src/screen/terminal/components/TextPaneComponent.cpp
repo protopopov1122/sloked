@@ -13,7 +13,7 @@ namespace sloked {
         }
     }
 
-    void TerminalTextPaneComponent::Update() {}
+    void TerminalTextPaneComponent::UpdateDimensions() {}
     
     void TerminalTextPaneComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {
         if (this->widget) {

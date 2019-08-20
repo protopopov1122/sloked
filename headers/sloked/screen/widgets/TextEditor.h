@@ -25,9 +25,9 @@ namespace sloked {
         SlokedTransactionJournal &journal;
         const EncodingConverter &conv;
         const SlokedCharWidth &charWidth;
-        SlokedBackgroundGraphics background;
 
         TextFrameView frame;
+        SlokedBackgroundGraphics background;
     };
 }
 

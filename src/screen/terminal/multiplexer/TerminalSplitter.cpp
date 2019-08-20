@@ -40,14 +40,6 @@ namespace sloked {
         return min;
     }
 
-    unsigned int TerminalSplitter::GetMaximum() const {
-        unsigned int max = 0;
-        for (const auto &win : this->windows) {
-            max += win.second.GetMaximum();
-        }
-        return max;
-    }
-
     SlokedTerminal &TerminalSplitter::GetTerminal(WinId idx) const {
         if (idx < this->windows.size()) {
             return *this->windows.at(idx).first;
@@ -60,6 +52,10 @@ namespace sloked {
         return this->windows.size();
     }
 
+    Splitter::Direction TerminalSplitter::GetDirection() const {
+        return this->direction;
+    }
+
     const Splitter::Constraints &TerminalSplitter::GetConstraints(WinId idx) const {
         if (idx < this->windows.size()) {
             return this->windows.at(idx).second;
@@ -69,7 +65,8 @@ namespace sloked {
     }
 
     SlokedIndexed<SlokedTerminal &, TerminalSplitter::WinId> TerminalSplitter::NewTerminal(const Splitter::Constraints &constraints) {
-        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charWidth, 0, 0, 0, 0);
+        TextPosition zero{0, 0};
+        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charWidth, zero, zero);
         this->windows.push_back(std::make_pair(win, constraints));
         this->Update();
         return {this->windows.size() - 1, *win};
@@ -79,7 +76,8 @@ namespace sloked {
         if (idx > this->windows.size()) {
             throw SlokedError("Incorrect window index " + std::to_string(idx));
         }
-        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charWidth, 0, 0, 0, 0);
+        TextPosition zero{0, 0};
+        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charWidth, zero, zero);
         this->windows.insert(this->windows.begin() + idx, std::make_pair(win, constraints));
         this->Update();
         return {idx, *win};
@@ -135,11 +133,11 @@ namespace sloked {
         for (const auto &win : this->windows) {
             unsigned winDim = calc.Next(win.second) + win.second.GetMinimum();
             if (this->direction == Splitter::Direction::Horizontal) {
-                win.first->Move(current, 0);
-                win.first->Resize(winDim, dim);
+                win.first->Move(TextPosition{0, current});
+                win.first->Resize(TextPosition{dim, winDim});
             } else {
-                win.first->Move(0, current);
-                win.first->Resize(dim, winDim);
+                win.first->Move(TextPosition{current, 0});
+                win.first->Resize(TextPosition{winDim, dim});
             }
             current += winDim;
         }

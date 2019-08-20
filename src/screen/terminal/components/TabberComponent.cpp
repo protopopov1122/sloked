@@ -73,7 +73,7 @@ namespace sloked {
 
     void TerminalTabberComponent::TerminalTabberWindow::Update() {
         if (this->component) {
-            this->component->Update();
+            this->component->UpdateDimensions();
         }
     }
 
@@ -130,7 +130,7 @@ namespace sloked {
         }
     }
 
-    void TerminalTabberComponent::Update() {
+    void TerminalTabberComponent::UpdateDimensions() {
         for (auto &tab : this->components) {
             tab->Update();
         }

@@ -20,10 +20,9 @@ namespace sloked {
 
         TerminalSplitter(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharWidth &);
 
-        unsigned int GetMinimum() const;
-        unsigned int GetMaximum() const;
         SlokedTerminal &GetTerminal(WinId) const;
         WinId GetTerminalCount() const;
+        Splitter::Direction GetDirection() const;
         const Splitter::Constraints &GetConstraints(WinId) const;
 
         SlokedIndexed<SlokedTerminal &, WinId> NewTerminal(const Splitter::Constraints &);
@@ -35,6 +34,7 @@ namespace sloked {
 
      private:
         using Window = std::pair<std::shared_ptr<TerminalWindow>, Splitter::Constraints>;
+        unsigned int GetMinimum() const;
 
         SlokedTerminal &term;
         Splitter::Direction direction;
