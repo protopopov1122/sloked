@@ -5,17 +5,17 @@
 namespace sloked {
 
     TextFrameView::TextFrameView(const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : text(text), encoding(encoding), charWidth(charWidth) {}
+        : text(text), encoding(encoding), charWidth(charWidth), offset{0, 0}, size{0, 0}, buffer{} {}
 
     std::size_t TextFrameView::TextFrameView::GetLastLine() const {
-        return this->content.size();
+        return std::min(static_cast<std::size_t>(this->offset.line + this->size.line), this->text.GetLastLine()) - this->offset.line;
     }
 
     std::size_t TextFrameView::GetTotalLength() const {
         std::size_t length = 0;
-        for (const auto &line : this->content) {
-            length += line.size() + 1;
-        }
+        this->VisitLines([&](auto line, auto content) {
+            length += content.size() + 1;
+        });
         if (length > 0) {
             length--;
         }
@@ -23,15 +23,17 @@ namespace sloked {
     }
 
     std::string_view TextFrameView::GetLine(std::size_t idx) const {
-        if (idx < this->content.size()) {
-            return this->content.at(idx);
+        if (this->offset.line + idx <= this->text.GetLastLine() && idx <= this->size.line) {
+            std::string line = this->PreprocessLine(this->text.GetLine(this->offset.line + idx));
+            this->buffer[idx] = line;
+            return this->buffer[idx];
         } else {
             return "";
         }
     }
 
     bool TextFrameView::Empty() const {
-        return this->content.empty();
+        return this->GetTotalLength() == 0;
     }
 
     void TextFrameView::Update(const TextPosition &dim, const TextPosition &cursor) {
@@ -49,25 +51,9 @@ namespace sloked {
         if (realColumn < this->offset.column) {
             this->offset.column = realColumn;
         }
-
-        this->content.clear();
-        this->text.Visit(this->offset.line, std::min(dim.line, static_cast<TextPosition::Line>(this->text.GetLastLine() - this->offset.line) + 1), [&](const auto line) {
-            std::stringstream ss;
-            this->encoding.IterateCodepoints(line, [&](auto start, auto length, auto chr) {
-                if (chr != u'\t') {
-                    ss << line.substr(start, length);
-                } else {
-                    ss << this->charWidth.GetTab();
-                }
-                return true;
-            });
-            auto offsetLine = this->encoding.GetCodepoint(ss.str(), this->offset.column);
-            if (offsetLine.second != 0) {
-                this->content.push_back(ss.str().substr(offsetLine.first));
-            } else {
-                this->content.push_back("");
-            }
-        });
+        this->size = dim;
+        this->buffer.clear();
+        this->buffer.insert(this->buffer.end(), this->size.line, "");
     }
 
     const TextPosition &TextFrameView::GetOffset() const {
@@ -75,12 +61,38 @@ namespace sloked {
     }
 
     std::ostream &TextFrameView::dump(std::ostream &os) const {
-        for (std::size_t i = 0; i < this->content.size(); i++) {
-            os << this->content.at(i);
-            if (i + 1 < this->content.size()) {
+        auto lastLine = this->GetLastLine();
+        this->VisitLines([&](auto line, auto content) {
+            os << content;
+            if (line < lastLine) {
                 os << std::endl;
             }
-        }
+        });
         return os;
+    }
+
+    void TextFrameView::VisitLines(std::function<void(std::size_t, std::string_view)> callback) const {
+        std::size_t lineId = 0;
+        this->text.Visit(this->offset.line, std::min(this->size.line, static_cast<TextPosition::Line>(this->text.GetLastLine() - this->offset.line) + 1), [&](const auto line) {
+            callback(lineId++, this->PreprocessLine(line));
+        });
+    }
+
+    std::string TextFrameView::PreprocessLine(std::string_view line) const {
+        std::stringstream ss;
+        this->encoding.IterateCodepoints(line, [&](auto start, auto length, auto chr) {
+            if (chr != u'\t') {
+                ss << line.substr(start, length);
+            } else {
+                ss << this->charWidth.GetTab();
+            }
+            return true;
+        });
+        auto offsetLine = this->encoding.GetCodepoint(ss.str(), this->offset.column);
+        if (offsetLine.second != 0) {
+            return ss.str().substr(offsetLine.first);
+        } else {
+            return "";
+        }
     }
 }

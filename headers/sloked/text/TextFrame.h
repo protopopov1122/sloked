@@ -20,16 +20,21 @@ namespace sloked {
 
         void Update(const TextPosition &, const TextPosition &);
         const TextPosition &GetOffset() const;
+        const TextPosition &GetSize() const;
 
      protected:
         std::ostream &dump(std::ostream &) const override;
 
      private:
+        void VisitLines(std::function<void(std::size_t, std::string_view)>) const;
+        std::string PreprocessLine(std::string_view) const;
+
         const TextBlockView &text;
         const Encoding &encoding;
         const SlokedCharWidth &charWidth;
-        std::vector<std::string> content;
         TextPosition offset;
+        TextPosition size;
+        mutable std::vector<std::string> buffer;
     };
 }
 
