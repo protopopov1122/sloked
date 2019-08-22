@@ -8,12 +8,12 @@
 
 namespace sloked {
 
-    template <typename T>
+    template <typename T, typename U = std::unique_ptr<T>>
     class AVLNode {
      protected:
-        AVLNode(std::unique_ptr<T> begin, std::unique_ptr<T> end)
+        AVLNode(U begin, U end)
             : begin(std::move(begin)), end(std::move(end)) {
-            static_assert(std::is_base_of<AVLNode<T>, T>::value);
+            static_assert(std::is_base_of<AVLNode<T, U>, T>::value);
             static_assert(std::is_convertible_v<decltype(std::declval<const T &>().GetHeight()), std::size_t>);
         }
 
@@ -21,8 +21,15 @@ namespace sloked {
 
         virtual void AvlUpdate() = 0;
         virtual void AvlSwapContent(T &) = 0;
-        
+
 #define HEIGHT(p) (p != nullptr ? p->GetHeight() + 1 : 0)
+        bool AvlBalanced() {
+            int64_t hB = HEIGHT(this->begin);
+            int64_t hE = HEIGHT(this->end);
+            int64_t balance = hB - hE;
+            return balance > -2 && balance < 2;
+        }
+        
         void AvlBalance() {
             if (this->begin) {
                 this->begin->AvlBalance();
@@ -54,21 +61,21 @@ namespace sloked {
         }
 #undef HEIGHT
 
-        std::unique_ptr<T> begin;
-        std::unique_ptr<T> end;
+        U begin;
+        U end;
 
      private:
         void RotateLl() {
             if (this->begin) {
                 this->AvlSwapContent(*this->begin);
-                std::unique_ptr<T> t1 = std::move(this->begin->begin);
-                std::unique_ptr<T> t23 = std::move(this->begin->end);
-                std::unique_ptr<T> t4 = std::move(this->end);
+                U t1 = std::move(this->begin->begin);
+                U t23 = std::move(this->begin->end);
+                U t4 = std::move(this->end);
                 this->end = std::move(this->begin);
                 this->begin = std::move(t1);
                 this->end->begin = std::move(t23);
                 this->end->end = std::move(t4);
-                static_cast<AVLNode<T> *>(this->end.get())->AvlUpdate();
+                static_cast<AVLNode<T, U> *>(this->end.get())->AvlUpdate();
                 this->AvlUpdate();
             }
         }
@@ -76,14 +83,14 @@ namespace sloked {
         void RotateRr() {
             if (this->end) {
                 this->AvlSwapContent(*this->end);
-                std::unique_ptr<T> t1 = std::move(this->begin);
-                std::unique_ptr<T> t23 = std::move(this->end->begin);
-                std::unique_ptr<T> t4 = std::move(this->end->end);
+                U t1 = std::move(this->begin);
+                U t23 = std::move(this->end->begin);
+                U t4 = std::move(this->end->end);
                 this->begin = std::move(this->end);
                 this->begin->begin = std::move(t1);
                 this->begin->end = std::move(t23);
                 this->end = std::move(t4);
-                static_cast<AVLNode<T> *>(this->begin.get())->AvlUpdate();
+                static_cast<AVLNode<T, U> *>(this->begin.get())->AvlUpdate();
                 this->AvlUpdate();
             }
         }

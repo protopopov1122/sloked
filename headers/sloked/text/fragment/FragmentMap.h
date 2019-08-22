@@ -56,11 +56,21 @@ namespace sloked {
             if (this->content.has_value() && this->content.value().Includes(pos)) {
                 fragment = &this->content.value();
             }
-            if (fragment == nullptr && this->begin) {
-                fragment = this->begin->Get(pos);
-            }
-            if (fragment == nullptr && this->end) {
-                fragment = this->end->Get(pos);
+            if (fragment == nullptr) {
+                if (this->content.has_value()) {
+                    if (this->begin && pos < this->content.value().GetStart()) {
+                        fragment = this->begin->Get(pos);
+                    } else if (this->end) {
+                        fragment = this->end->Get(pos);
+                    }
+                } else {
+                    if (fragment == nullptr && this->begin) {
+                        fragment = this->begin->Get(pos);
+                    }
+                    if (fragment == nullptr && this->end) {
+                        fragment = this->end->Get(pos);
+                    }
+                }
             }
             return fragment;
         }
@@ -95,6 +105,9 @@ namespace sloked {
                 }
             }
             this->UpdateStats();
+            if (!this->AvlBalanced()) {
+                this->AvlBalance();
+            }
         }
 
         void Remove(const TextPosition &pos) {
@@ -113,6 +126,9 @@ namespace sloked {
                 this->end->Remove(pos);
             }
             this->UpdateStats();
+            if (!this->AvlBalanced()) {
+                this->AvlBalance();
+            }
         }
 
         void Optimize() {
@@ -170,7 +186,6 @@ namespace sloked {
             TaggedTextFragment<T> fragment(start, length, std::forward<T>(tag));
             if (this->root) {
                 this->root->Insert(std::move(fragment));
-                this->root->Optimize();
             } else {
                 this->root = std::make_unique<TaggedFragmentMapNode<T>>(std::move(fragment));
             }
@@ -179,7 +194,6 @@ namespace sloked {
         void Remove(const TextPosition &pos) {
             if (this->root) {
                 this->root->Remove(pos);
-                this->root->Optimize();
             }
             if (this->root->Empty()) {
                 this->root.reset();
