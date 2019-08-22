@@ -14,6 +14,8 @@ namespace sloked {
         Column column;
 
         bool operator<(const TextPosition &) const;
+        bool operator==(const TextPosition &) const;
+        bool operator<=(const TextPosition &) const;
     };
 
     struct TextPositionDelta {

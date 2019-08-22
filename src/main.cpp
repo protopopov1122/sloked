@@ -18,6 +18,7 @@
 #include "sloked/namespace/Virtual.h"
 #include "sloked/namespace/View.h"
 #include "sloked/namespace/posix/Filesystem.h"
+#include "sloked/text/fragment/FragmentMap.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
@@ -29,7 +30,6 @@ int main(int argc, const char **argv) {
         std::cout << "Format: " << argv[0] << " source destination" << std::endl;
         return EXIT_FAILURE;
     }
-    
 
     char BUFFER[1024];
     realpath(argv[1], BUFFER);
