@@ -29,10 +29,10 @@ namespace sloked {
                 (this->end && this->end->Has(pos));
         }
 
-        const TaggedTextFragment<T> *Min() const {
+        const TaggedTextFragment<T> *Minimum() const {
             const TaggedTextFragment<T> *res = this->content.has_value() ? &this->content.value() : nullptr;
             if (this->begin) {
-                const TaggedTextFragment<T> *bres = this->begin->Min();
+                const TaggedTextFragment<T> *bres = this->begin->Minimum();
                 if (bres) {
                     res = bres;
                 }
@@ -40,15 +40,25 @@ namespace sloked {
             return res;
         }
 
-        const TaggedTextFragment<T> *Max() const {
+        const TaggedTextFragment<T> *Maximum() const {
             const TaggedTextFragment<T> *res = this->content.has_value() ? &this->content.value() : nullptr;
             if (this->end) {
-                const TaggedTextFragment<T> *eres = this->begin->Max();
+                const TaggedTextFragment<T> *eres = this->begin->Maximum();
                 if (eres) {
                     res = eres;
                 }
             }
             return res;
+        }
+
+        std::optional<TextPosition> NearestLeast(const TextPosition &pos) const {
+            if (this->content.has_value() && this->content.value().GetStart() < pos) {
+                return this->content.value().GetStart();
+            } else if (this->begin) {
+                return this->begin->NearestLeast(pos);
+            } else {
+                return {};
+            }
         }
 
         const TaggedTextFragment<T> *Get(const TextPosition &pos) {
@@ -94,8 +104,8 @@ namespace sloked {
                     }
                 }
             } else {
-                auto max_begin = this->begin ? this->begin->Max() : nullptr;
-                auto min_end = this->end ? this->end->Min() : nullptr;
+                auto max_begin = this->begin ? this->begin->Maximum() : nullptr;
+                auto min_end = this->end ? this->end->Minimum() : nullptr;
                 if (max_begin && fragment < *max_begin) {
                     this->begin->Insert(std::forward<TaggedTextFragment<T>>(fragment));
                 } else if (min_end && *min_end < fragment) {
@@ -110,25 +120,28 @@ namespace sloked {
             }
         }
 
-        void Remove(const TextPosition &pos) {
+        std::optional<TextPosition> Remove(const TextPosition &pos) {
+            std::optional<TextPosition> res;
             if (this->content.has_value()) {
                 auto start = this->content.value().GetStart();
                 auto len = this->content.value().GetLength();
                 TextPosition end{start.line + len.line, start.column + len.column};
                 if (pos < start || pos == start || (start < pos && pos < end)) {
                     this->content.reset();
+                    res = start;
                 }
             }
             if (this->begin) {
-                this->begin->Remove(pos);
+                res = std::min(res, this->begin->Remove(pos));
             }
             if (this->end) {
-                this->end->Remove(pos);
+                res = std::min(res, this->end->Remove(pos));
             }
             this->UpdateStats();
             if (!this->AvlBalanced()) {
                 this->AvlBalance();
             }
+            return res;
         }
 
         void Optimize() {
@@ -173,6 +186,14 @@ namespace sloked {
      public:
         TaggedFragmentMap()
             : root(nullptr) {}
+
+        std::optional<TextPosition> NearestLeast(const TextPosition &pos) const {
+            if (this->root) {
+                return this->root->NearestLeast(pos);
+            } else {
+                return {};
+            }
+        }
     
         const TaggedTextFragment<T> *Get(const TextPosition &pos) {
             if (this->root) {
@@ -191,13 +212,23 @@ namespace sloked {
             }
         }
 
-        void Remove(const TextPosition &pos) {
+        void Insert(TaggedTextFragment<T> &&fragment) {
             if (this->root) {
-                this->root->Remove(pos);
+                this->root->Insert(std::move(fragment));
+            } else {
+                this->root = std::make_unique<TaggedFragmentMapNode<T>>(std::forward<TaggedTextFragment<T>>(fragment));
             }
-            if (this->root->Empty()) {
-                this->root.reset();
+        }
+
+        std::optional<TextPosition> Remove(const TextPosition &pos) {
+            std::optional<TextPosition> res;
+            if (this->root) {
+                res = this->root->Remove(pos);
+                if (this->root->Empty()) {
+                    this->root.reset();
+                }
             }
+            return res;
         }
 
         void Clear() {

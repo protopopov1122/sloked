@@ -19,18 +19,22 @@ namespace sloked {
             return this->length;
         }
 
+        TextPosition GetEnd() const {
+            return TextPosition{this->start.line + this->length.line, this->start.column + this->length.column};
+        }
+
         const T &GetTag() const {
             return this->tag;
         }
 
         bool Includes(const TextPosition &pos) const {
-            TextPosition end{this->start.line + this->length.line, this->start.column + this->length.column};
+            TextPosition end = this->GetEnd();
             return (start < pos || start == pos) &&
                 pos < end;
         }
 
         bool Overlaps(const TaggedTextFragment<T> &other) const {
-            TextPosition selfEnd{this->start.line + this->length.line, this->start.column + this->length.column};
+            TextPosition selfEnd = this->GetEnd();
             TextPosition otherEnd{other.start.line + other.length.line, other.start.column + other.length.column};
             return (this->start <= other.start && other.start < selfEnd) ||
                 (other.start <= this->start && this->start < otherEnd);
