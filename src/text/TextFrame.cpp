@@ -24,7 +24,7 @@ namespace sloked {
 
     std::string_view TextFrameView::GetLine(std::size_t idx) const {
         if (this->offset.line + idx <= this->text.GetLastLine() && idx <= this->size.line) {
-            std::string line = this->PreprocessLine(this->text.GetLine(this->offset.line + idx));
+            std::string line {this->PreprocessLine(this->text.GetLine(this->offset.line + idx))};
             this->buffer[idx] = line;
             return this->buffer[idx];
         } else {
@@ -44,7 +44,7 @@ namespace sloked {
             this->offset.line = cursor.line;
         }
 
-        auto realColumn = this->charWidth.GetRealPosition(std::string {this->text.GetLine(cursor.line)}, cursor.column, this->encoding);
+        auto realColumn = this->charWidth.GetRealPosition(std::string {this->text.GetLine(cursor.line)}, cursor.column, this->encoding).first;
         if (this->offset.column + dim.column - 1 < realColumn) {
             this->offset.column = realColumn - dim.column + 1;
         }
@@ -53,11 +53,15 @@ namespace sloked {
         }
         this->size = dim;
         this->buffer.clear();
-        this->buffer.insert(this->buffer.end(), this->size.line, "");
+        this->buffer.insert(this->buffer.end(), this->size.line + 1, "");
     }
 
     const TextPosition &TextFrameView::GetOffset() const {
         return this->offset;
+    }
+
+    const TextPosition &TextFrameView::GetSize() const {
+        return this->size;
     }
 
     std::ostream &TextFrameView::dump(std::ostream &os) const {
@@ -89,8 +93,12 @@ namespace sloked {
             return true;
         });
         auto offsetLine = this->encoding.GetCodepoint(ss.str(), this->offset.column);
+        auto sizeLine = this->encoding.GetCodepoint(ss.str(), this->offset.column + this->size.column);
         if (offsetLine.second != 0) {
-            return ss.str().substr(offsetLine.first);
+            return ss.str().substr(offsetLine.first,
+                sizeLine.second != 0
+                    ? sizeLine.first - offsetLine.first
+                    : std::string::npos);
         } else {
             return "";
         }

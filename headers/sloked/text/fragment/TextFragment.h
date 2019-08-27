@@ -9,7 +9,9 @@ namespace sloked {
     class TaggedTextFragment {
      public:
         TaggedTextFragment(const TextPosition &start, const TextPosition &length, T &&tag)
-            : start(start), length(length), tag(std::forward<T>(tag)) {}
+            : start(start), length(length), tag(std::forward<T>(tag)) {
+            this->end = TextPosition{this->start.line + this->length.line, this->start.column + this->length.column};
+        }
 
         const TextPosition &GetStart() const {
             return this->start;
@@ -19,8 +21,8 @@ namespace sloked {
             return this->length;
         }
 
-        TextPosition GetEnd() const {
-            return TextPosition{this->start.line + this->length.line, this->start.column + this->length.column};
+        const TextPosition &GetEnd() const {
+            return this->end;
         }
 
         const T &GetTag() const {
@@ -28,14 +30,13 @@ namespace sloked {
         }
 
         bool Includes(const TextPosition &pos) const {
-            TextPosition end = this->GetEnd();
-            return (start < pos || start == pos) &&
-                pos < end;
+            return (this->start < pos || this->start == pos) &&
+                pos < this->end;
         }
 
         bool Overlaps(const TaggedTextFragment<T> &other) const {
-            TextPosition selfEnd = this->GetEnd();
-            TextPosition otherEnd{other.start.line + other.length.line, other.start.column + other.length.column};
+            const TextPosition &selfEnd = this->GetEnd();
+            const TextPosition &otherEnd = other.GetEnd();
             return (this->start <= other.start && other.start < selfEnd) ||
                 (other.start <= this->start && this->start < otherEnd);
         }
@@ -47,6 +48,7 @@ namespace sloked {
      private:
         TextPosition start;
         TextPosition length;
+        TextPosition end;
         T tag;
     };
 }

@@ -15,17 +15,14 @@ namespace sloked {
         }
     }
     
-    std::size_t SlokedCharWidth::GetRealPosition(const std::string &str, std::size_t idx, const Encoding &encoding) const {
-        std::size_t pos = 0;
-        if (idx == 0) {
-            return pos;
-        }
-        idx--;
+    std::pair<std::size_t, std::size_t> SlokedCharWidth::GetRealPosition(const std::string &str, std::size_t idx, const Encoding &encoding) const {
+        std::pair<std::size_t, std::size_t> res{0, 0};
         encoding.IterateCodepoints(str, [&](auto start, auto length, auto value) {
-            pos += GetCharWidth(value);
+            res.first = res.second;
+            res.second += GetCharWidth(value);
             return idx--;
         });
-        return pos;
+        return res;
     }
 
     std::string SlokedCharWidth::GetTab() const {

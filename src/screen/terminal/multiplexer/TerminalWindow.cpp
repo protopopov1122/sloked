@@ -84,7 +84,6 @@ namespace sloked {
     void TerminalWindow::Write(const std::string &str) {
         std::string buffer;
         std::string_view view = str;
-        std::size_t count = 0;
         bool res = this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto codepoint) {
             if (this->line >= this->size.line || this->line + this->offset.line >= this->term.GetHeight()) {
                 return false;
@@ -92,17 +91,17 @@ namespace sloked {
             if (codepoint == U'\n') {
                 this->term.Write(buffer);
                 buffer.clear();
-                this->ClearChars(this->size.column - (this->col + count) - 1);
+                this->ClearChars(this->size.column - this->col - 1);
                 if (this->line + 1 >= this->size.line || this->line + this->offset.line >= this->term.GetHeight()) {
                     return false;
                 } else {
-                    count = 0;
                     this->SetPosition(this->line + 1, 0);
                 }
             } else {
-                if (this->col + count + 1 < this->size.column) {
+                auto curWidth = this->charWidth.GetCharWidth(codepoint);
+                if (this->col + curWidth < this->size.column) {
                     buffer.append(view.substr(start, length));
-                    count += this->charWidth.GetCharWidth(codepoint);
+                    this->col += curWidth;
                 }
             }
             return true;

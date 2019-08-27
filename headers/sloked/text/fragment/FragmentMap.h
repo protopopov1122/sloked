@@ -43,7 +43,7 @@ namespace sloked {
         const TaggedTextFragment<T> *Maximum() const {
             const TaggedTextFragment<T> *res = this->content.has_value() ? &this->content.value() : nullptr;
             if (this->end) {
-                const TaggedTextFragment<T> *eres = this->begin->Maximum();
+                const TaggedTextFragment<T> *eres = this->end->Maximum();
                 if (eres) {
                     res = eres;
                 }
@@ -52,13 +52,16 @@ namespace sloked {
         }
 
         std::optional<TextPosition> NearestLeast(const TextPosition &pos) const {
+            std::optional<TextPosition> res;
             if (this->content.has_value() && this->content.value().GetStart() < pos) {
                 return this->content.value().GetStart();
-            } else if (this->begin) {
-                return this->begin->NearestLeast(pos);
-            } else {
-                return {};
+            } else if (!res.has_value() && this->begin) {
+                res = this->begin->NearestLeast(pos);
+            } else if (!res.has_value() && this->end) {
+                res = this->end->NearestLeast(pos);
             }
+
+            return res;
         }
 
         const TaggedTextFragment<T> *Get(const TextPosition &pos) {
@@ -132,10 +135,16 @@ namespace sloked {
                 }
             }
             if (this->begin) {
-                res = std::min(res, this->begin->Remove(pos));
+                auto beginRes = this->begin->Remove(pos);
+                if (beginRes.has_value() && (!res.has_value() || beginRes.value() < res.value())) {
+                    res = beginRes;
+                }
             }
             if (this->end) {
-                res = std::min(res, this->end->Remove(pos));
+                auto endRes = this->end->Remove(pos);
+                if (endRes.has_value() && (!res.has_value() || endRes.value() < res.value())) {
+                    res = endRes;
+                }
             }
             this->UpdateStats();
             if (!this->AvlBalanced()) {
@@ -205,16 +214,12 @@ namespace sloked {
 
         void Insert(const TextPosition &start, const TextPosition &length, T &&tag) {
             TaggedTextFragment<T> fragment(start, length, std::forward<T>(tag));
-            if (this->root) {
-                this->root->Insert(std::move(fragment));
-            } else {
-                this->root = std::make_unique<TaggedFragmentMapNode<T>>(std::move(fragment));
-            }
+            this->Insert(std::move(fragment));
         }
 
         void Insert(TaggedTextFragment<T> &&fragment) {
             if (this->root) {
-                this->root->Insert(std::move(fragment));
+                this->root->Insert(std::forward<TaggedTextFragment<T>>(fragment));
             } else {
                 this->root = std::make_unique<TaggedFragmentMapNode<T>>(std::forward<TaggedTextFragment<T>>(fragment));
             }

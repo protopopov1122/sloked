@@ -18,11 +18,82 @@
 #include "sloked/namespace/Virtual.h"
 #include "sloked/namespace/View.h"
 #include "sloked/namespace/posix/Filesystem.h"
+#include "sloked/text/fragment/TaggedText.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
 
 using namespace sloked;
+
+class TestFragment : public SlokedTextTagger<int> {
+ public:
+    TestFragment(const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth)
+        : text(text), encoding(encoding), charWidth(charWidth), current{0, 0} {}
+
+    std::optional<TaggedTextFragment<int>> Next() override {
+        const auto TabLength = this->encoding.CodepointCount(this->charWidth.GetTab());
+        while (true) {
+            while (this->current.line <= this->text.GetLastLine() &&
+                this->current.column >= this->encoding.CodepointCount(this->text.GetLine(this->current.line))) {
+                this->current.line++;
+                this->current.column = 0;
+            }
+            if (this->current.line > this->text.GetLastLine()) {
+                break;
+            }
+
+            std::string currentLine {this->text.GetLine(this->current.line)};
+            TextPosition realPosition{this->current.line, this->charWidth.GetRealPosition(currentLine, this->current.column, this->encoding).first};
+            auto position = this->encoding.GetCodepoint(currentLine, this->current.column);
+            
+            this->current.column++;
+            if (currentLine.substr(position.first, 1).compare("\t") == 0) {
+                return TaggedTextFragment<int>(realPosition, TextPosition{0, static_cast<TextPosition::Column>(TabLength)}, 1);
+            }
+        }
+        return {};
+    }
+    
+    void Rewind(const TextPosition &position) override {
+        if (position < this->current) {
+            this->current = position;
+        }
+    }
+
+ private:
+    const TextBlockView &text;
+    const Encoding &encoding;
+    const SlokedCharWidth &charWidth;
+    TextPosition current;
+};
+
+template <typename T>
+class FragmentUpdater : public SlokedTransactionStream::Listener {
+ public:
+    FragmentUpdater(const TextBlockView &text, SlokedTaggedText<T> &tags, const Encoding &encoding, SlokedCharWidth &charWidth)
+        : text(text), tags(tags), encoding(encoding), charWidth(charWidth) {}
+
+    void OnCommit(const SlokedCursorTransaction &trans) override {
+        TextPosition realPos{trans.GetPosition().line, this->charWidth.GetRealPosition(std::string{this->text.GetLine(trans.GetPosition().line)}, trans.GetPosition().column, this->encoding).first};
+        this->tags.Rewind(realPos);
+    }
+
+    void OnRollback(const SlokedCursorTransaction &trans) override {
+        TextPosition realPos{trans.GetPosition().line, this->charWidth.GetRealPosition(std::string{this->text.GetLine(trans.GetPosition().line)}, trans.GetPosition().column, this->encoding).first};
+        this->tags.Rewind(realPos);
+    }
+
+    void OnRevert(const SlokedCursorTransaction &trans) override {
+        TextPosition realPos{trans.GetPosition().line, this->charWidth.GetRealPosition(std::string{this->text.GetLine(trans.GetPosition().line)}, trans.GetPosition().column, this->encoding).first};
+        this->tags.Rewind(realPos);
+    }
+
+ private:
+    const TextBlockView &text;
+    SlokedTaggedText<T> &tags;
+    const Encoding &encoding;
+    SlokedCharWidth &charWidth;
+};
 
 int main(int argc, const char **argv) {
     if (argc < 3) {
@@ -47,21 +118,26 @@ int main(int argc, const char **argv) {
     TransactionCursor cursor(text, fileEncoding, *stream1);
     SlokedCharWidth charWidth;
 
+    SlokedLazyTaggedText<int> lazyTags(std::make_unique<TestFragment>(text, fileEncoding, charWidth));
+    SlokedCacheTaggedText<int> tags(lazyTags);
+    auto fragmentUpdater = std::make_shared<FragmentUpdater<int>>(text, tags, fileEncoding, charWidth);
+    // stream1->AddListener(fragmentUpdater);
+
     PosixTerminal terminal;
     BufferedTerminal console(terminal, Encoding::Utf8, charWidth);
 
     TerminalComponentHandle screen(console, terminalEncoding, charWidth);
     auto &multi = screen.NewMultiplexer();
-    auto win1 = multi.NewWindow(TextPosition{5, 5}, TextPosition{50, 150});
+    auto win1 = multi.NewWindow(TextPosition{5, 5}, TextPosition{40, 150});
     auto win2 = multi.NewWindow(TextPosition{10, 50}, TextPosition{30, 150});
     auto &splitter = win1->GetComponent().NewSplitter(Splitter::Direction::Horizontal);
     auto &tabber = splitter.NewWindow(Splitter::Constraints(0.4))->GetComponent().NewTabber();
-    auto &tab1 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
-    auto &tab2 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth, SlokedBackgroundGraphics::Blue));
-    auto &tab3 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth, SlokedBackgroundGraphics::Magenta));
-    auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.2))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
-    auto &pane5 = splitter.NewWindow(Splitter::Constraints(0.15))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth));
-    auto &pane6 = win2->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, conv, charWidth, SlokedBackgroundGraphics::Yellow));
+    auto &tab1 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth));
+    auto &tab2 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth, SlokedBackgroundGraphics::Blue));
+    auto &tab3 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth, SlokedBackgroundGraphics::Magenta));
+    auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.2))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth));
+    auto &pane5 = splitter.NewWindow(Splitter::Constraints(0.15))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth));
+    auto &pane6 = win2->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth, SlokedBackgroundGraphics::Yellow));
     win1->SetFocus();
 
     screen.SetInputHandler([&](const SlokedKeyboardInput &cmd) {
