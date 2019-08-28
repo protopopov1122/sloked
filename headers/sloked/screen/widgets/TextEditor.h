@@ -29,7 +29,6 @@ namespace sloked {
         const SlokedCharWidth &charWidth;
 
         TextFrameView frame;
-        SlokedTaggedTextView<int> tagsView;
         SlokedBackgroundGraphics background;
     };
 }

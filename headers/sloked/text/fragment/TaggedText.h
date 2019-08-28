@@ -40,7 +40,6 @@ namespace sloked {
         void Rewind(const TextPosition &pos) override {
             TextPosition start{pos.line > 0 ? pos.line - 1 : 0 , 0};
             this->fragments.Remove(start);
-            // std::cout << "Rewind: " << start.line << '\t' << start.column << std::endl;
             this->tagger->Rewind(start);
             this->current = std::min(this->current, start);
         }

@@ -31,7 +31,7 @@ class TestFragment : public SlokedTextTagger<int> {
         : text(text), encoding(encoding), charWidth(charWidth), current{0, 0} {}
 
     std::optional<TaggedTextFragment<int>> Next() override {
-        const auto TabLength = this->encoding.CodepointCount(this->charWidth.GetTab());
+        const auto TabLength = this->encoding.CodepointCount("\t");
         while (true) {
             while (this->current.line <= this->text.GetLastLine() &&
                 this->current.column >= this->encoding.CodepointCount(this->text.GetLine(this->current.line))) {
@@ -43,7 +43,7 @@ class TestFragment : public SlokedTextTagger<int> {
             }
 
             std::string currentLine {this->text.GetLine(this->current.line)};
-            TextPosition realPosition{this->current.line, this->charWidth.GetRealPosition(currentLine, this->current.column, this->encoding).first};
+            auto realPosition = this->current;
             auto position = this->encoding.GetCodepoint(currentLine, this->current.column);
             
             this->current.column++;
