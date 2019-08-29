@@ -19,9 +19,11 @@
 #include "sloked/namespace/View.h"
 #include "sloked/namespace/posix/Filesystem.h"
 #include "sloked/text/fragment/TaggedText.h"
+#include "sloked/text/fragment/Updater.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
+#include <queue>
 
 using namespace sloked;
 
@@ -31,68 +33,52 @@ class TestFragment : public SlokedTextTagger<int> {
         : text(text), encoding(encoding), charWidth(charWidth), current{0, 0} {}
 
     std::optional<TaggedTextFragment<int>> Next() override {
-        const auto TabLength = this->encoding.CodepointCount("\t");
-        while (true) {
-            while (this->current.line <= this->text.GetLastLine() &&
-                this->current.column >= this->encoding.CodepointCount(this->text.GetLine(this->current.line))) {
-                this->current.line++;
-                this->current.column = 0;
-            }
-            if (this->current.line > this->text.GetLastLine()) {
-                break;
-            }
-
-            std::string currentLine {this->text.GetLine(this->current.line)};
-            auto realPosition = this->current;
-            auto position = this->encoding.GetCodepoint(currentLine, this->current.column);
-            
-            this->current.column++;
-            if (currentLine.substr(position.first, 1).compare("\t") == 0) {
-                return TaggedTextFragment<int>(realPosition, TextPosition{0, static_cast<TextPosition::Column>(TabLength)}, 1);
-            }
+        if (this->cache.empty()) {
+            this->ParseLine();
         }
-        return {};
+        if (!this->cache.empty()) {
+            auto fragment = std::move(this->cache.front());
+            this->cache.pop();
+            return fragment;
+        } else {
+            return {};
+        }
     }
     
     void Rewind(const TextPosition &position) override {
         if (position < this->current) {
             this->current = position;
+            this->cache = {};
         }
     }
 
  private:
+    void ParseLine() {
+        if (this->current.line > this->text.GetLastLine()) {
+            return;
+        }
+
+        const auto TabLength = this->encoding.CodepointCount("\t");
+        std::string currentLine{this->text.GetLine(this->current.line)};
+        auto lineLength = this->encoding.CodepointCount(currentLine);
+        while (this->current.column < lineLength) {
+            auto position = this->encoding.GetCodepoint(currentLine, this->current.column);
+            auto substr = currentLine.substr(position.first, 1);
+            if (substr.compare("\t") == 0) {
+                this->cache.push(TaggedTextFragment<int>(this->current, TextPosition{0, static_cast<TextPosition::Column>(TabLength)}, 1));
+            }
+            this->current.column++;
+        }
+
+        this->current.line++;
+        this->current.column = 0;
+    }
+
     const TextBlockView &text;
     const Encoding &encoding;
     const SlokedCharWidth &charWidth;
     TextPosition current;
-};
-
-template <typename T>
-class FragmentUpdater : public SlokedTransactionStream::Listener {
- public:
-    FragmentUpdater(const TextBlockView &text, SlokedTaggedText<T> &tags, const Encoding &encoding, SlokedCharWidth &charWidth)
-        : text(text), tags(tags), encoding(encoding), charWidth(charWidth) {}
-
-    void OnCommit(const SlokedCursorTransaction &trans) override {
-        TextPosition realPos{trans.GetPosition().line, this->charWidth.GetRealPosition(std::string{this->text.GetLine(trans.GetPosition().line)}, trans.GetPosition().column, this->encoding).first};
-        this->tags.Rewind(realPos);
-    }
-
-    void OnRollback(const SlokedCursorTransaction &trans) override {
-        TextPosition realPos{trans.GetPosition().line, this->charWidth.GetRealPosition(std::string{this->text.GetLine(trans.GetPosition().line)}, trans.GetPosition().column, this->encoding).first};
-        this->tags.Rewind(realPos);
-    }
-
-    void OnRevert(const SlokedCursorTransaction &trans) override {
-        TextPosition realPos{trans.GetPosition().line, this->charWidth.GetRealPosition(std::string{this->text.GetLine(trans.GetPosition().line)}, trans.GetPosition().column, this->encoding).first};
-        this->tags.Rewind(realPos);
-    }
-
- private:
-    const TextBlockView &text;
-    SlokedTaggedText<T> &tags;
-    const Encoding &encoding;
-    SlokedCharWidth &charWidth;
+    std::queue<TaggedTextFragment<int>> cache;
 };
 
 int main(int argc, const char **argv) {
@@ -120,8 +106,8 @@ int main(int argc, const char **argv) {
 
     SlokedLazyTaggedText<int> lazyTags(std::make_unique<TestFragment>(text, fileEncoding, charWidth));
     SlokedCacheTaggedText<int> tags(lazyTags);
-    auto fragmentUpdater = std::make_shared<FragmentUpdater<int>>(text, tags, fileEncoding, charWidth);
-    // stream1->AddListener(fragmentUpdater);
+    auto fragmentUpdater = std::make_shared<SlokedFragmentUpdater<int>>(text, tags, fileEncoding, charWidth);
+    stream1->AddListener(fragmentUpdater);
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, Encoding::Utf8, charWidth);
