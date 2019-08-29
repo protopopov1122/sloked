@@ -131,7 +131,9 @@ namespace sloked {
             }
         });
         
-        auto realColumn = this->charWidth.GetRealPosition(std::string {this->text.GetLine(this->cursor.GetLine())}, this->cursor.GetColumn(), this->conv.GetSource()).first;
+        std::string realLine{this->text.GetLine(this->cursor.GetLine())};
+        auto realPos = this->charWidth.GetRealPosition(realLine, this->cursor.GetColumn(), this->conv.GetSource());
+        auto realColumn = this->cursor.GetColumn() < this->conv.GetSource().CodepointCount(realLine) ? realPos.first : realPos.second;
         const auto &offset = this->frame.GetOffset();
         pane.SetPosition(this->cursor.GetLine() - offset.line, realColumn - offset.column);
     }
