@@ -9,6 +9,7 @@ sloked_src = [
   'src/core/CharWidth.cpp',
   'src/core/Encoding.cpp',
   'src/core/Error.cpp',
+  'src/core/Locale.cpp',
   'src/core/NewLine.cpp',
   'src/core/Position.cpp',
   'src/filesystem/FileIO.cpp',

@@ -21,6 +21,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include "sloked/core/Locale.h"
 #include "sloked/text/TextDocument.h"
 #include "sloked/text/TextView.h"
 #include "sloked/text/TextChunk.h"
@@ -113,6 +114,7 @@ int main(int argc, const char **argv) {
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     auto view = root.GetObject(BUFFER)->AsFile()->View();
 
+    SlokedLocale::Setup();
     const Encoding &fileEncoding = Encoding::Utf8;
     const Encoding &terminalEncoding = Encoding::Utf8;
     EncodingConverter conv(fileEncoding, terminalEncoding);
