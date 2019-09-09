@@ -25,6 +25,62 @@
 
 namespace sloked {
 
+    class JsonASTPrinter : public JsonASTVisitor {
+     public:
+        JsonASTPrinter(std::ostream &os)
+            : out(os) {}
+
+      void Visit(const JsonConstantNode &node) {
+        switch (node.GetConstantType()) {
+            case JsonConstantNode::DataType::Integer:
+                this->out << node.AsInteger();
+                break;
+
+            case JsonConstantNode::DataType::Number:
+                this->out << node.AsNumber();
+                break;
+
+            case JsonConstantNode::DataType::Boolean:
+                this->out << (node.AsBoolean() ? "true" : "false");
+                break;
+
+            case JsonConstantNode::DataType::String:
+                this->out << '\"' << node.AsString() << '\"';
+                break;
+
+            case JsonConstantNode::DataType::Null:
+                this->out << "null";
+        }
+      }
+
+      void Visit(const JsonArrayNode &node) override {
+        this->out << '[';
+        for (std::size_t i = 0; i < node.Length(); i++) {
+            if (i > 0) {
+                this->out << ',';
+            }
+            node.At(i).Visit(*this);
+        }
+        this->out << ']';
+      }
+
+      void Visit(const JsonObjectNode &node) override {
+        this->out << '{';
+        std::size_t count = 0;
+        for (const auto &key : node.Keys()) {
+            this->out << '\"' << key << "\":";
+            node.Get(key).Visit(*this);
+            if (++count < node.Keys().size()) {
+                this->out << ',';
+            }
+        }
+        this->out << '}';
+      }
+
+     private:
+        std::ostream &out;
+    };
+
     JsonASTNode::JsonASTNode(Type type, const JsonSourcePosition &position)
         : type(type), position(position) {}
 
@@ -37,7 +93,8 @@ namespace sloked {
     }
 
     std::ostream &operator<<(std::ostream &os, const JsonASTNode &node) {
-        node.Dump(os);
+        JsonASTPrinter printer(os);
+        node.Visit(printer);
         return os;
     }
 
@@ -92,27 +149,8 @@ namespace sloked {
         }
     }
 
-    void JsonConstantNode::Dump(std::ostream &os) const {
-        switch (this->type) {
-            case DataType::Integer:
-                os << std::get<0>(this->value);
-                break;
-
-            case DataType::Number:
-                os << std::get<1>(this->value);
-                break;
-
-            case DataType::Boolean:
-                os << (std::get<2>(this->value) ? "true" : "false");
-                break;
-
-            case DataType::String:
-                os << '\"' << std::get<3>(this->value) << '\"';
-                break;
-
-            case DataType::Null:
-                os << "null";
-        }
+    void JsonConstantNode::Visit(JsonASTVisitor &visitor) const {
+        visitor.Visit(*this);
     }
 
     JsonArrayNode::JsonArrayNode(std::vector<std::shared_ptr<JsonASTNode>> &&elements, const JsonSourcePosition &position)
@@ -130,15 +168,8 @@ namespace sloked {
         }
     }
 
-    void JsonArrayNode::Dump(std::ostream &os) const {
-        os << '[';
-        for (std::size_t i = 0; i < this->elements.size(); i++) {
-            if (i > 0) {
-                os << ',';
-            }
-            os << *this->elements.at(i);
-        }
-        os << ']';
+    void JsonArrayNode::Visit(JsonASTVisitor &visitor) const {
+        visitor.Visit(*this);
     }
 
     JsonObjectNode::JsonObjectNode(std::map<std::string, std::unique_ptr<JsonASTNode>> &&members, const JsonSourcePosition &position)
@@ -164,15 +195,7 @@ namespace sloked {
         return this->keys;
     }
 
-    void JsonObjectNode::Dump(std::ostream &os) const {
-        os << '{';
-        std::size_t count = 0;
-        for (const auto &kv : this->members) {
-            os << '\"' << kv.first << "\":" << *kv.second;
-            if (++count < this->members.size()) {
-                os << ',';
-            }
-        }
-        os << '}';
+    void JsonObjectNode::Visit(JsonASTVisitor &visitor) const {
+        visitor.Visit(*this);
     }
 }

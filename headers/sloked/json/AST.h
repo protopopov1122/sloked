@@ -33,6 +33,8 @@
 
 namespace sloked {
 
+   class JsonASTVisitor;
+
     class JsonASTNode {
      public:
         enum class Type {
@@ -45,11 +47,10 @@ namespace sloked {
         virtual ~JsonASTNode() = default;
         Type GetType() const;
         const JsonSourcePosition &GetPosition() const;
+        
+        virtual void Visit(JsonASTVisitor &) const = 0;
 
         friend std::ostream &operator<<(std::ostream &, const JsonASTNode &);
-
-     protected:
-        virtual void Dump(std::ostream &) const = 0;
 
      private:
         Type type;
@@ -78,8 +79,7 @@ namespace sloked {
         bool AsBoolean(bool = false) const;
         const std::string &AsString(const std::string & = "") const;
 
-     protected:
-        void Dump(std::ostream &) const override;
+        void Visit(JsonASTVisitor &) const override;
     
      private:
         DataType type;
@@ -92,8 +92,7 @@ namespace sloked {
         std::size_t Length() const;
         JsonASTNode &At(std::size_t) const;
 
-     protected:
-        void Dump(std::ostream &) const override;
+        void Visit(JsonASTVisitor &) const override;
 
      private:
         std::vector<std::shared_ptr<JsonASTNode>> elements;
@@ -106,13 +105,20 @@ namespace sloked {
         JsonASTNode &Get(const std::string &) const;
         const std::set<std::string> &Keys() const;
 
-     protected:
-        void Dump(std::ostream &) const override;
+        void Visit(JsonASTVisitor &) const override;
 
      private:
         std::map<std::string, std::unique_ptr<JsonASTNode>> members;
         std::set<std::string> keys;
     };
+
+   class JsonASTVisitor {
+    public:
+      virtual ~JsonASTVisitor() = default;
+      virtual void Visit(const JsonConstantNode &) = 0;
+      virtual void Visit(const JsonArrayNode &) = 0;
+      virtual void Visit(const JsonObjectNode &) = 0;
+   };
 }
 
 #endif
