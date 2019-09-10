@@ -80,14 +80,13 @@ class TestFragment : public SlokedTextTagger<int> {
             return;
         }
 
-        const auto TabLength = this->encoding.CodepointCount("\t");
         std::string currentLine{this->text.GetLine(this->current.line)};
         auto lineLength = this->encoding.CodepointCount(currentLine);
         while (this->current.column < lineLength) {
             auto position = this->encoding.GetCodepoint(currentLine, this->current.column);
             auto substr = currentLine.substr(position.first, 1);
             if (substr.compare("\t") == 0) {
-                this->cache.push(TaggedTextFragment<int>(this->current, TextPosition{0, static_cast<TextPosition::Column>(TabLength)}, 1));
+                this->cache.push(TaggedTextFragment<int>(this->current, TextPosition{0, static_cast<TextPosition::Column>(1)}, 1));
             }
             this->current.column++;
         }
@@ -115,8 +114,8 @@ int main(int argc, const char **argv) {
     auto view = root.GetObject(BUFFER)->AsFile()->View();
 
     SlokedLocale::Setup();
-    const Encoding &fileEncoding = Encoding::Utf8;
-    const Encoding &terminalEncoding = Encoding::Utf8;
+    const Encoding &fileEncoding = SlokedLocale::SystemEncoding();
+    const Encoding &terminalEncoding = SlokedLocale::SystemEncoding();
     EncodingConverter conv(fileEncoding, terminalEncoding);
     auto newline = NewLine::LF(fileEncoding);
     TextChunkFactory blockFactory(*newline);

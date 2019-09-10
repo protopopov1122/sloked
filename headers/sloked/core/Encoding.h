@@ -37,6 +37,8 @@ namespace sloked {
         Encoding &operator=(const Encoding &) = delete;
         Encoding &operator=(Encoding &&) = delete;
 
+        bool operator==(const Encoding &) const;
+
         virtual std::size_t CodepointCount(std::string_view) const = 0;
         virtual std::pair<std::size_t, std::size_t> GetCodepoint(std::string_view, std::size_t) const = 0;
         virtual bool IterateCodepoints(std::string_view, std::function<bool(std::size_t, std::size_t, char32_t)>) const = 0;

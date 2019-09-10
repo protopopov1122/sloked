@@ -46,8 +46,8 @@ namespace sloked {
         return res;
     }
 
-    std::string SlokedCharWidth::GetTab() const {
-        return std::string(this->tab_width, ' ');
+    std::string SlokedCharWidth::GetTab(const Encoding &encoding) const {
+        return encoding.Encode(std::u32string(this->tab_width, U' '));
     }
 
     void SlokedCharWidth::SetTabWidth(std::size_t width) {

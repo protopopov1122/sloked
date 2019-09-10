@@ -95,7 +95,7 @@ namespace sloked {
                 break;
 
             case SlokedControlKey::Tab:
-                cursor.Insert(conv.GetSource().Encode(u'\t'));
+                cursor.Insert(conv.GetSource().Encode(U'\t'));
                 break;
 
             case SlokedControlKey::Backspace:
@@ -145,10 +145,11 @@ namespace sloked {
                     pane.SetGraphicsMode(this->background);
                 }
                 auto pos = this->conv.GetSource().GetCodepoint(line, column);
-                pane.Write(line.substr(pos.first, pos.second));
+                auto fragment = this->conv.Convert(line.substr(pos.first, pos.second));
+                pane.Write(fragment);
             }
             if (lineNumber++ < this->frame.GetLastLine()) {
-                pane.Write("\n");
+                pane.Write(this->conv.GetDestination().Encode(U"\n"));
             }
         });
         

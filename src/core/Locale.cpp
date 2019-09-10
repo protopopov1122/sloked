@@ -26,10 +26,17 @@
 
 namespace sloked {
 
+    // TODO Proper system locale setup and detection
+
     void SlokedLocale::Setup() {
         constexpr auto Locale = "C";
-        std::setlocale(LC_ALL, Locale);
+        constexpr auto LocaleEnc = "C.UTF-8";
+        std::setlocale(LC_ALL, LocaleEnc);
         std::locale::global(std::locale(Locale));
         std::cout.imbue(std::locale(Locale));
+    }
+
+    const Encoding &SlokedLocale::SystemEncoding() {
+        return Encoding::Utf8;
     }
 }

@@ -109,7 +109,7 @@ namespace sloked {
             if (chr != u'\t') {
                 ss << line.substr(start, length);
             } else {
-                ss << this->charWidth.GetTab();
+                ss << this->charWidth.GetTab(this->encoding);
             }
             return true;
         });

@@ -187,7 +187,7 @@ namespace sloked {
                 }
                 this->SetPosition(this->line + 1, 0);
             } else if (codepoint == U'\t') {
-                this->Write(this->charWidth.GetTab());
+                this->Write(this->charWidth.GetTab(this->encoding));
             } else if (this->col < this->width) {
                 Character &chr = this->buffer[this->line * this->width + this->col];
                 chr.value = codepoint;

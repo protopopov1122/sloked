@@ -82,7 +82,11 @@ namespace sloked {
     }
 
     void TerminalWindow::ClearScreen() {
-        std::string cl(this->size.column, ' ');
+        std::string cl;
+        auto spaceSym = this->encoding.Encode(U' ');
+        for (std::size_t i = 0; i < this->size.column; i++) {
+            cl.append(spaceSym);
+        }
         for (std::size_t y = this->offset.line; y < this->offset.line + this->size.line; y++) {
             this->term.SetPosition(y, this->offset.column);
             this->term.Write(cl);

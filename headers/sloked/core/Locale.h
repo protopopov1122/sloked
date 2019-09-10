@@ -22,13 +22,14 @@
 #ifndef SLOKED_CORE_LOCALE_H_
 #define SLOKED_CORE_LOCALE_H_
 
-#include "sloked/Base.h"
+#include "sloked/core/Encoding.h"
 
 namespace sloked {
 
     class SlokedLocale {
      public:
         static void Setup();
+        static const Encoding &SystemEncoding();
     };
 }
 
