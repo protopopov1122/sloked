@@ -42,6 +42,13 @@ namespace sloked {
             }
         }
 
+        std::optional<std::size_t> GetCodepointByOffset(std::string_view str, std::size_t symbol_offset) const override {
+            if (symbol_offset >= str.size()) {
+                return {};
+            }
+            return symbol_offset / 4;
+        }
+
         bool IterateCodepoints(std::string_view view, std::function<bool(std::size_t, std::size_t, char32_t)> iter) const override {
             if (view.size() % 4 != 0) {
                 throw SlokedError("UTF-32LE: Invalid length");

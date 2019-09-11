@@ -99,6 +99,26 @@ namespace sloked {
             return std::make_pair(0, 0);
         }
 
+        std::optional<std::size_t> GetCodepointByOffset(std::string_view str, std::size_t symbol_offset) const override {
+            if (symbol_offset >= str.size()) {
+                return {};
+            }
+            std::optional<std::size_t> value;
+            std::size_t idx = 0;
+            this->IterateCodepoints(str, [&](std::size_t offset, std::size_t length, char32_t chr) {
+                if (offset > symbol_offset) {
+                    value = idx - 1;
+                    return false;
+                } else if (offset == symbol_offset) {
+                    value = idx;
+                    return false;
+                }
+                idx++;
+                return true;
+            });
+            return value;
+        }
+
         bool IterateCodepoints(std::string_view str, std::function<bool(std::size_t, std::size_t, char32_t)> callback) const override {
 #define ASSERT_WIDTH(x) do { \
                             if (i + (x) - 1 >= str.size()) { \
