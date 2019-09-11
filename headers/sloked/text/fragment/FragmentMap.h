@@ -187,6 +187,18 @@ namespace sloked {
             std::swap(this->content, other.content);
         }
 
+        void Visit(std::function<void(const TaggedTextFragment<T> &)> &callback) const {
+            if (this->begin) {
+                this->begin->Visit(callback);
+            }
+            if (this->content) {
+                callback(this->content.value());
+            }
+            if (this->end) {
+                this->end->Visit(callback);
+            }
+        }
+
      private:
         void UpdateStats() {
             this->empty = (this->begin == nullptr || this->begin->Empty()) &&
@@ -259,6 +271,12 @@ namespace sloked {
 
         void Clear() {
             this->root.reset();
+        }
+
+        void Visit(std::function<void(const TaggedTextFragment<T> &)> callback) const {
+            if (this->root) {
+                this->root->Visit(callback);
+            }
         }
 
      private:
