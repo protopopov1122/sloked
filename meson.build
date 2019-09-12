@@ -58,7 +58,8 @@ sloked_src = [
   'src/text/cursor/TransactionCursor.cpp',
   'src/text/cursor/TransactionFactory.cpp',
   'src/text/cursor/TransactionStreamMultiplexer.cpp',
-  'src/text/search/Match.cpp'
+  'src/text/search/Match.cpp',
+  'src/text/search/Replace.cpp'
 ]
 
 cpp = meson.get_compiler('cpp')

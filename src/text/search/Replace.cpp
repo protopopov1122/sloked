@@ -19,37 +19,19 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_TEXT_SEARCH_MATCH_H_
-#define SLOKED_TEXT_SEARCH_MATCH_H_
-
-#include "sloked/core/Encoding.h"
-#include "sloked/text/TextBlock.h"
-#include "sloked/text/search/Entry.h"
-#include <regex>
-#include <vector>
+#include "sloked/text/search/Replace.h"
+#include <iostream>
 
 namespace sloked {
 
-    class SlokedTextMatcher {
-     public:
-        using Result = SlokedSearchEntry;
+    SlokedTextReplacer::SlokedTextReplacer(TextBlock &text, const Encoding &encoding)
+        : text(text), encoding(encoding) {}
 
-        SlokedTextMatcher(const TextBlockView &, const Encoding &);
-
-        const std::vector<Result> &GetResults() const;
-        void Match(const std::string &);
-        void Rewind(const TextPosition &);
-
-     private:
-        void Search();
-        
-        const TextBlockView &text;
-        EncodingConverter conv;
-
-        TextPosition::Line current_line;
-        std::regex regexp;
-        std::vector<Result> occurences;
-    };
+    void SlokedTextReplacer::Replace(const SlokedSearchEntry &entry, std::string_view value) {
+        std::string currentLine{this->text.GetLine(entry.start.line)};
+        auto start = this->encoding.GetCodepoint(currentLine, entry.start.column).first;
+        auto end = this->encoding.GetCodepoint(currentLine, entry.start.column + entry.length).first;
+        currentLine.replace(start, end - start, value);
+        this->text.SetLine(entry.start.line, currentLine);
+    }
 }
-
-#endif

@@ -58,12 +58,14 @@ namespace sloked {
                     this->current_line,
                     static_cast<TextPosition::Column>(this->conv.GetDestination().GetCodepointByOffset(line, match.position()).value_or(0) + offset)
                 };
-                TextPosition length {
-                    0,
-                    static_cast<TextPosition::Column>(this->conv.GetDestination().CodepointCount(match.str()))
-                };
-                this->occurences.push_back(Result{pos, length, this->conv.ReverseConvert(match.str())});
-                offset = pos.column + length.column;
+                TextPosition::Column length = this->conv.GetDestination().CodepointCount(match.str());
+                this->occurences.push_back(Result {
+                    pos,
+                    length,
+                    this->conv.ReverseConvert(match.str()),
+                    {}
+                });
+                offset = pos.column + length;
                 line = match.suffix().str();
             }
             this->current_line++;

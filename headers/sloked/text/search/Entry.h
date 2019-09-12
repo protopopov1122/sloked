@@ -19,36 +19,20 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_TEXT_SEARCH_MATCH_H_
-#define SLOKED_TEXT_SEARCH_MATCH_H_
+#ifndef SLOKED_TEXT_SEARCH_ENTRY_H_
+#define SLOKED_TEXT_SEARCH_ENTRY_H_
 
-#include "sloked/core/Encoding.h"
-#include "sloked/text/TextBlock.h"
-#include "sloked/text/search/Entry.h"
-#include <regex>
+#include "sloked/core/Position.h"
+#include <string>
 #include <vector>
 
 namespace sloked {
 
-    class SlokedTextMatcher {
-     public:
-        using Result = SlokedSearchEntry;
-
-        SlokedTextMatcher(const TextBlockView &, const Encoding &);
-
-        const std::vector<Result> &GetResults() const;
-        void Match(const std::string &);
-        void Rewind(const TextPosition &);
-
-     private:
-        void Search();
-        
-        const TextBlockView &text;
-        EncodingConverter conv;
-
-        TextPosition::Line current_line;
-        std::regex regexp;
-        std::vector<Result> occurences;
+    struct SlokedSearchEntry {
+        TextPosition start;
+        TextPosition::Column length;
+        std::string content;
+        std::vector<std::string> subentries;
     };
 }
 
