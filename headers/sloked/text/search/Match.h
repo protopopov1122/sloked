@@ -34,21 +34,51 @@ namespace sloked {
      public:
         using Result = SlokedSearchEntry;
 
-        SlokedTextMatcher(const TextBlockView &, const Encoding &);
+        virtual ~SlokedTextMatcher() = default;
+        virtual const std::vector<Result> &GetResults() const = 0;
+        virtual void Match(const std::string &) = 0;
+        virtual void Rewind(const TextPosition &) = 0;
+    };
 
-        const std::vector<Result> &GetResults() const;
-        void Match(const std::string &);
-        void Rewind(const TextPosition &);
+    class SlokedTextMatcherBase : public SlokedTextMatcher {
+     public:
+        SlokedTextMatcherBase(const TextBlockView &, const Encoding &);
 
-     private:
-        void Search();
-        
+        const std::vector<Result> &GetResults() const override;
+        void Rewind(const TextPosition &) override;
+
+     protected:
+        virtual void Search() = 0;
+
         const TextBlockView &text;
         EncodingConverter conv;
 
         TextPosition::Line current_line;
-        std::regex regexp;
         std::vector<Result> occurences;
+    };
+
+    class SlokedTextPlainMatcher : public SlokedTextMatcherBase {
+     public:
+        using SlokedTextMatcherBase::SlokedTextMatcherBase;
+
+        void Match(const std::string &) override;
+
+     private:
+        void Search() override;
+
+        std::string query;
+    };
+
+    class SlokedTextRegexMatcher : public SlokedTextMatcherBase {
+     public:
+        using SlokedTextMatcherBase::SlokedTextMatcherBase;
+
+        void Match(const std::string &) override;
+
+     private:
+        void Search() override;
+
+        std::regex regexp;
     };
 }
 

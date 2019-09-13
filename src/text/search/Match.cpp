@@ -25,21 +25,14 @@
 
 namespace sloked {
 
-    SlokedTextMatcher::SlokedTextMatcher(const TextBlockView &text, const Encoding &encoding)
-        : text(text), conv(encoding, SlokedLocale::SystemEncoding()), current_line(0) {}    
+    SlokedTextMatcherBase::SlokedTextMatcherBase(const TextBlockView &text, const Encoding &encoding)
+        : text(text), conv(encoding, SlokedLocale::SystemEncoding()), current_line(0) {}
 
-    const std::vector<SlokedTextMatcher::Result> &SlokedTextMatcher::GetResults() const {
+    const std::vector<SlokedTextMatcherBase::Result> &SlokedTextMatcherBase::GetResults() const {
         return this->occurences;
     }
 
-    void SlokedTextMatcher::Match(const std::string &query) {
-        this->occurences.clear();
-        this->current_line = 0;
-        this->regexp = std::regex(query);
-        this->Search();
-    }
-
-    void SlokedTextMatcher::Rewind(const TextPosition &position) {
+    void SlokedTextMatcherBase::Rewind(const TextPosition &position) {
         TextPosition start{position.line, 0};
         std::remove_if(this->occurences.begin(), this->occurences.end(), [&](const auto &match) {
             return match.start >= start;
@@ -48,7 +41,45 @@ namespace sloked {
         this->Search();
     }
 
-    void SlokedTextMatcher::Search() {
+    void SlokedTextPlainMatcher::Match(const std::string &query) {
+        this->occurences.clear();
+        this->current_line = 0;
+        this->query = query;
+        this->Search();
+    }
+
+    void SlokedTextPlainMatcher::Search() {
+        this->text.Visit(this->current_line, this->text.GetLastLine() - this->current_line + 1, [&](const auto lineView) {
+            std::size_t match;
+            const std::string line{this->conv.Convert(lineView)};
+            std::size_t offset = 0;
+            const TextPosition::Column length = this->conv.GetDestination().CodepointCount(this->query);
+            const std::string revQuery{this->conv.ReverseConvert(this->query)};
+            while ((match = line.find(this->query, offset)) != std::string::npos) {
+                TextPosition pos {
+                    this->current_line,
+                    static_cast<TextPosition::Column>(this->conv.GetDestination().GetCodepointByOffset(line, match).value_or(0))
+                };
+                this->occurences.push_back(Result {
+                    pos,
+                    length,
+                    revQuery,
+                    {}
+                });
+                offset = pos.column + length;
+            }
+            this->current_line++;
+        });
+    }
+
+    void SlokedTextRegexMatcher::Match(const std::string &query) {
+        this->occurences.clear();
+        this->current_line = 0;
+        this->regexp = std::regex(query);
+        this->Search();
+    }
+
+    void SlokedTextRegexMatcher::Search() {
         this->text.Visit(this->current_line, this->text.GetLastLine() - this->current_line + 1, [&](const auto lineView) {
             std::smatch match;
             std::string line{this->conv.Convert(lineView)};
