@@ -42,6 +42,12 @@ namespace sloked {
         this->Search();
     }
 
+    SlokedTextRegexMatcher::SlokedTextRegexMatcher(const TextBlockView &text, const Encoding &encoding, bool enable_subentries)
+        : SlokedTextMatcherBase(text, encoding), enable_subentries(enable_subentries) {}
+
+    SlokedTextRegexMatcher::SlokedTextRegexMatcher(const TextBlockView &text, const Encoding &encoding)
+        : SlokedTextRegexMatcher(text, encoding, true) {}
+
     void SlokedTextRegexMatcher::Match(const std::string &query, Flags flags) {
         this->occurences.clear();
         this->current_line = 0;
@@ -64,11 +70,17 @@ namespace sloked {
                     static_cast<TextPosition::Column>(this->conv.GetDestination().GetCodepointByOffset(line, match.position()).value_or(0) + offset)
                 };
                 TextPosition::Column length = this->conv.GetDestination().CodepointCount(match.str());
+                std::vector<std::string> subentries;
+                if (this->enable_subentries) {
+                    for (std::size_t i = 0; i < match.size(); i++) {
+                        subentries.push_back(this->conv.ReverseConvert(match.str(i)));
+                    }
+                }
                 this->occurences.push_back(Result {
                     pos,
                     length,
                     this->conv.ReverseConvert(match.str()),
-                    {}
+                    subentries
                 });
                 offset = pos.column + length;
                 line = match.suffix().str();
@@ -76,6 +88,9 @@ namespace sloked {
             this->current_line++;
         });
     }
+
+    SlokedTextPlainMatcher::SlokedTextPlainMatcher(const TextBlockView &text, const Encoding &encoding)
+        : SlokedTextRegexMatcher(text, encoding, false) {}
 
     void SlokedTextPlainMatcher::Match(const std::string &query, Flags flags) {
         std::u32string escapedQuery;

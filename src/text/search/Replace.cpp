@@ -20,14 +20,28 @@
 */
 
 #include "sloked/text/search/Replace.h"
-#include <iostream>
+#include "sloked/core/Locale.h"
+#include <regex>
 
 namespace sloked {
+
+    static bool starts_with(std::string_view s1, std::string_view s2) {
+        if (s1.size() >= s2.size()) {
+            for (std::size_t i = 0; i < s2.size(); i++) {
+                if (s1[i] != s2[i]) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     SlokedTextReplacer::SlokedTextReplacer(TextBlock &text, const Encoding &encoding)
         : text(text), encoding(encoding) {}
 
-    void SlokedTextReplacer::Replace(const SlokedSearchEntry &entry, std::string_view value) {
+    void SlokedTextReplacer::Replace(const SlokedSearchEntry &entry, std::string_view value, bool replace_subentries) {
         std::string currentLine{this->text.GetLine(entry.start.line)};
         auto start = this->encoding.GetCodepoint(currentLine, entry.start.column);
         auto end = this->encoding.GetCodepoint(currentLine, entry.start.column + entry.length);
@@ -38,7 +52,29 @@ namespace sloked {
         if (end.second == 0) {
             length = this->encoding.CodepointCount(currentLine);
         }
-        currentLine.replace(start.first, length, value);
+        currentLine.replace(start.first, length, replace_subentries
+            ? this->Prepare(entry, value)
+            : value);
         this->text.SetLine(entry.start.line, currentLine);
+    }
+
+    std::string SlokedTextReplacer::Prepare(const SlokedSearchEntry &entry, std::string_view value) {
+        std::string str{value};
+        if (entry.subentries.empty()) {
+            return str;
+        }
+        EncodingConverter conv(this->encoding, SlokedLocale::SystemEncoding());
+        str = conv.Convert(str);
+        std::regex groupNum(R"(\$\{[0-9]+\})");
+        std::smatch match;
+        while (std::regex_search(str, match, groupNum)) {
+            std::size_t idx = std::stoull(match.str().substr(2));
+            std::string groupValue = idx < entry.subentries.size()
+                ? conv.Convert(entry.subentries.at(idx))
+                : "";
+            str.replace(match.position(), match.str().size(), groupValue);
+            match = {};
+        }
+        return str;
     }
 }

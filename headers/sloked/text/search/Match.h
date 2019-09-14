@@ -46,12 +46,12 @@ namespace sloked {
 
     class SlokedTextMatcherBase : public SlokedTextMatcher {
      public:
-        SlokedTextMatcherBase(const TextBlockView &, const Encoding &);
 
         const std::vector<Result> &GetResults() const override;
         void Rewind(const TextPosition &) override;
 
      protected:
+        SlokedTextMatcherBase(const TextBlockView &, const Encoding &);
         virtual void Search() = 0;
 
         const TextBlockView &text;
@@ -63,21 +63,23 @@ namespace sloked {
 
     class SlokedTextRegexMatcher : public SlokedTextMatcherBase {
      public:
-        using SlokedTextMatcherBase::SlokedTextMatcherBase;
+        SlokedTextRegexMatcher(const TextBlockView &, const Encoding &);
 
         void Match(const std::string &, Flags = None) override;
 
      protected:
+        SlokedTextRegexMatcher(const TextBlockView &, const Encoding &, bool);
         void Search() override;
 
+        const bool enable_subentries;
         std::regex regexp;
     };
 
     class SlokedTextPlainMatcher : public SlokedTextRegexMatcher {
      public:
-         using SlokedTextRegexMatcher::SlokedTextRegexMatcher;
+        SlokedTextPlainMatcher(const TextBlockView &, const Encoding &);
 
-         void Match(const std::string &, Flags = None) override;
+        void Match(const std::string &, Flags = None) override;
     };
 }
 

@@ -32,16 +32,18 @@ namespace sloked {
      public:
         SlokedTextReplacer(TextBlock &, const Encoding &);
 
-        void Replace(const SlokedSearchEntry &, std::string_view);
+        void Replace(const SlokedSearchEntry &, std::string_view, bool = true);
 
         template <typename T>
-        void Replace(const T &begin, const T &end, std::string_view value) {
+        void Replace(const T &begin, const T &end, std::string_view value, bool replace_subentries = true) {
             for (auto it = begin; it != end; ++it) {
-                this->Replace(*it, value);
+                this->Replace(*it, value, replace_subentries);
             }
         }
 
      private:
+        std::string Prepare(const SlokedSearchEntry &, std::string_view);
+
         TextBlock &text;
         const Encoding &encoding;
     };
