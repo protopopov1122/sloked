@@ -32,12 +32,16 @@ namespace sloked {
 
     class SlokedTextMatcher {
      public:
-        using Result = SlokedSearchEntry;
+         using Result = SlokedSearchEntry;
+         using Flags = uint64_t;
 
-        virtual ~SlokedTextMatcher() = default;
-        virtual const std::vector<Result> &GetResults() const = 0;
-        virtual void Match(const std::string &) = 0;
-        virtual void Rewind(const TextPosition &) = 0;
+         virtual ~SlokedTextMatcher() = default;
+         virtual const std::vector<Result> &GetResults() const = 0;
+         virtual void Match(const std::string &, Flags = None) = 0;
+         virtual void Rewind(const TextPosition &) = 0;
+
+         static constexpr Flags None = 0;
+         static constexpr Flags CaseInsensitive = 1;
     };
 
     class SlokedTextMatcherBase : public SlokedTextMatcher {
@@ -57,28 +61,23 @@ namespace sloked {
         std::vector<Result> occurences;
     };
 
-    class SlokedTextPlainMatcher : public SlokedTextMatcherBase {
-     public:
-        using SlokedTextMatcherBase::SlokedTextMatcherBase;
-
-        void Match(const std::string &) override;
-
-     private:
-        void Search() override;
-
-        std::string query;
-    };
-
     class SlokedTextRegexMatcher : public SlokedTextMatcherBase {
      public:
         using SlokedTextMatcherBase::SlokedTextMatcherBase;
 
-        void Match(const std::string &) override;
+        void Match(const std::string &, Flags = None) override;
 
-     private:
+     protected:
         void Search() override;
 
         std::regex regexp;
+    };
+
+    class SlokedTextPlainMatcher : public SlokedTextRegexMatcher {
+     public:
+         using SlokedTextRegexMatcher::SlokedTextRegexMatcher;
+
+         void Match(const std::string &, Flags = None) override;
     };
 }
 

@@ -29,9 +29,16 @@ namespace sloked {
 
     void SlokedTextReplacer::Replace(const SlokedSearchEntry &entry, std::string_view value) {
         std::string currentLine{this->text.GetLine(entry.start.line)};
-        auto start = this->encoding.GetCodepoint(currentLine, entry.start.column).first;
-        auto end = this->encoding.GetCodepoint(currentLine, entry.start.column + entry.length).first;
-        currentLine.replace(start, end - start, value);
+        auto start = this->encoding.GetCodepoint(currentLine, entry.start.column);
+        auto end = this->encoding.GetCodepoint(currentLine, entry.start.column + entry.length);
+        if (start.second == 0) {
+            return;
+        }
+        std::size_t length = end.first - start.first;
+        if (end.second == 0) {
+            length = this->encoding.CodepointCount(currentLine);
+        }
+        currentLine.replace(start.first, length, value);
         this->text.SetLine(entry.start.line, currentLine);
     }
 }

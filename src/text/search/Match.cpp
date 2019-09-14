@@ -22,6 +22,7 @@
 #include "sloked/text/search/Match.h"
 #include "sloked/core/Locale.h"
 #include <algorithm>
+#include <cstring>
 
 namespace sloked {
 
@@ -41,41 +42,14 @@ namespace sloked {
         this->Search();
     }
 
-    void SlokedTextPlainMatcher::Match(const std::string &query) {
+    void SlokedTextRegexMatcher::Match(const std::string &query, Flags flags) {
         this->occurences.clear();
         this->current_line = 0;
-        this->query = query;
-        this->Search();
-    }
-
-    void SlokedTextPlainMatcher::Search() {
-        this->text.Visit(this->current_line, this->text.GetLastLine() - this->current_line + 1, [&](const auto lineView) {
-            std::size_t match;
-            const std::string line{this->conv.Convert(lineView)};
-            std::size_t offset = 0;
-            const TextPosition::Column length = this->conv.GetDestination().CodepointCount(this->query);
-            const std::string revQuery{this->conv.ReverseConvert(this->query)};
-            while ((match = line.find(this->query, offset)) != std::string::npos) {
-                TextPosition pos {
-                    this->current_line,
-                    static_cast<TextPosition::Column>(this->conv.GetDestination().GetCodepointByOffset(line, match).value_or(0))
-                };
-                this->occurences.push_back(Result {
-                    pos,
-                    length,
-                    revQuery,
-                    {}
-                });
-                offset = pos.column + length;
-            }
-            this->current_line++;
-        });
-    }
-
-    void SlokedTextRegexMatcher::Match(const std::string &query) {
-        this->occurences.clear();
-        this->current_line = 0;
-        this->regexp = std::regex(query);
+        unsigned int regex_prms = 0;
+        if ((flags & SlokedTextMatcher::CaseInsensitive) != 0) {
+            regex_prms |= std::regex_constants::icase;
+        }
+        this->regexp = std::regex(query, static_cast<std::regex::flag_type>(regex_prms));
         this->Search();
     }
 
@@ -101,5 +75,33 @@ namespace sloked {
             }
             this->current_line++;
         });
+    }
+
+    void SlokedTextPlainMatcher::Match(const std::string &query, Flags flags) {
+        std::u32string escapedQuery;
+        this->conv.GetDestination().IterateCodepoints(query, [&](auto start, auto length, auto chr) {
+            switch (chr) {
+                case U'[':
+                case U'\\':
+                case U'^':
+                case U'$':
+                case U'.':
+                case U'|':
+                case U'?':
+                case U'*':
+                case U'+':
+                case U'(':
+                case U')':
+                    escapedQuery.append(U"\\");
+                    escapedQuery.push_back(chr);
+                    break;
+
+                default:
+                    escapedQuery.push_back(chr);
+                    break;
+            }
+            return true;
+        });
+        this->SlokedTextRegexMatcher::Match(this->conv.GetDestination().Encode(escapedQuery), flags);
     }
 }
