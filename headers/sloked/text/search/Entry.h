@@ -32,7 +32,7 @@ namespace sloked {
         TextPosition start;
         TextPosition::Column length;
         std::string content;
-        std::vector<std::string> subentries;
+        std::vector<std::string> groups;
     };
 }
 

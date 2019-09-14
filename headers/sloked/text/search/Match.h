@@ -71,7 +71,7 @@ namespace sloked {
         SlokedTextRegexMatcher(const TextBlockView &, const Encoding &, bool);
         void Search() override;
 
-        const bool enable_subentries;
+        const bool enable_groups;
         std::regex regexp;
     };
 

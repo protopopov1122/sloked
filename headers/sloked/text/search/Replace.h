@@ -35,9 +35,9 @@ namespace sloked {
         void Replace(const SlokedSearchEntry &, std::string_view, bool = true);
 
         template <typename T>
-        void Replace(const T &begin, const T &end, std::string_view value, bool replace_subentries = true) {
+        void Replace(const T &begin, const T &end, std::string_view value, bool replace_groups = true) {
             for (auto it = begin; it != end; ++it) {
-                this->Replace(*it, value, replace_subentries);
+                this->Replace(*it, value, replace_groups);
             }
         }
 

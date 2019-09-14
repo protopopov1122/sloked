@@ -42,8 +42,8 @@ namespace sloked {
         this->Search();
     }
 
-    SlokedTextRegexMatcher::SlokedTextRegexMatcher(const TextBlockView &text, const Encoding &encoding, bool enable_subentries)
-        : SlokedTextMatcherBase(text, encoding), enable_subentries(enable_subentries) {}
+    SlokedTextRegexMatcher::SlokedTextRegexMatcher(const TextBlockView &text, const Encoding &encoding, bool enable_groups)
+        : SlokedTextMatcherBase(text, encoding), enable_groups(enable_groups) {}
 
     SlokedTextRegexMatcher::SlokedTextRegexMatcher(const TextBlockView &text, const Encoding &encoding)
         : SlokedTextRegexMatcher(text, encoding, true) {}
@@ -70,17 +70,17 @@ namespace sloked {
                     static_cast<TextPosition::Column>(this->conv.GetDestination().GetCodepointByOffset(line, match.position()).value_or(0) + offset)
                 };
                 TextPosition::Column length = this->conv.GetDestination().CodepointCount(match.str());
-                std::vector<std::string> subentries;
-                if (this->enable_subentries) {
+                std::vector<std::string> groups;
+                if (this->enable_groups) {
                     for (std::size_t i = 0; i < match.size(); i++) {
-                        subentries.push_back(this->conv.ReverseConvert(match.str(i)));
+                        groups.push_back(this->conv.ReverseConvert(match.str(i)));
                     }
                 }
                 this->occurences.push_back(Result {
                     pos,
                     length,
                     this->conv.ReverseConvert(match.str()),
-                    subentries
+                    groups
                 });
                 offset = pos.column + length;
                 line = match.suffix().str();
@@ -95,6 +95,7 @@ namespace sloked {
     void SlokedTextPlainMatcher::Match(const std::string &query, Flags flags) {
         std::u32string escapedQuery;
         this->conv.GetDestination().IterateCodepoints(query, [&](auto start, auto length, auto chr) {
+            // Escaping raw string
             switch (chr) {
                 case U'[':
                 case U'\\':

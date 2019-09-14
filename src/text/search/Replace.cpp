@@ -41,7 +41,7 @@ namespace sloked {
     SlokedTextReplacer::SlokedTextReplacer(TextBlock &text, const Encoding &encoding)
         : text(text), encoding(encoding) {}
 
-    void SlokedTextReplacer::Replace(const SlokedSearchEntry &entry, std::string_view value, bool replace_subentries) {
+    void SlokedTextReplacer::Replace(const SlokedSearchEntry &entry, std::string_view value, bool replace_groups) {
         std::string currentLine{this->text.GetLine(entry.start.line)};
         auto start = this->encoding.GetCodepoint(currentLine, entry.start.column);
         auto end = this->encoding.GetCodepoint(currentLine, entry.start.column + entry.length);
@@ -52,7 +52,7 @@ namespace sloked {
         if (end.second == 0) {
             length = this->encoding.CodepointCount(currentLine);
         }
-        currentLine.replace(start.first, length, replace_subentries
+        currentLine.replace(start.first, length, replace_groups
             ? this->Prepare(entry, value)
             : value);
         this->text.SetLine(entry.start.line, currentLine);
@@ -60,7 +60,7 @@ namespace sloked {
 
     std::string SlokedTextReplacer::Prepare(const SlokedSearchEntry &entry, std::string_view value) {
         std::string str{value};
-        if (entry.subentries.empty()) {
+        if (entry.groups.empty()) {
             return str;
         }
         EncodingConverter conv(this->encoding, SlokedLocale::SystemEncoding());
@@ -69,8 +69,8 @@ namespace sloked {
         std::smatch match;
         while (std::regex_search(str, match, groupNum)) {
             std::size_t idx = std::stoull(match.str().substr(2));
-            std::string groupValue = idx < entry.subentries.size()
-                ? conv.Convert(entry.subentries.at(idx))
+            std::string groupValue = idx < entry.groups.size()
+                ? conv.Convert(entry.groups.at(idx))
                 : "";
             str.replace(match.position(), match.str().size(), groupValue);
             match = {};
