@@ -57,6 +57,7 @@ namespace sloked {
         
         void Shift();
         bool IsSymbol(JsonLexem::Symbol) const;
+        [[noreturn]] void ThrowError(std::string_view) const;
 
         JsonLexemStream &lexer;
         std::optional<JsonLexem> lexem;

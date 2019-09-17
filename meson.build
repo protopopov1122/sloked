@@ -23,6 +23,8 @@ sloked_src = [
   'src/json/AST.cpp',
   'src/json/Lexer.cpp',
   'src/json/Parser.cpp',
+  'src/kgr/Serialize.cpp',
+  'src/kgr/Value.cpp',
   'src/namespace/Directory.cpp',
   'src/namespace/Filesystem.cpp',
   'src/namespace/Object.cpp',
