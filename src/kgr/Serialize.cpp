@@ -22,11 +22,49 @@
 #include "sloked/kgr/Serialize.h"
 #include "sloked/json/Parser.h"
 #include <sstream>
-#include <iostream>
 
 namespace sloked {
 
     static const JsonSourcePosition DefaultPosition{"", 0, 0};
+
+    class KgrJsonDeserializeVisitor : public JsonASTVisitor<KgrValue> {
+     public:
+        KgrValue Visit(const JsonConstantNode &value) override {
+            switch (value.GetConstantType()) {
+                case JsonConstantNode::DataType::Null:
+                    return KgrValue();
+
+                case JsonConstantNode::DataType::Integer:
+                    return KgrValue(value.AsInteger());
+
+                case JsonConstantNode::DataType::Number:
+                    return KgrValue(value.AsNumber());
+
+                case JsonConstantNode::DataType::Boolean:
+                    return KgrValue(value.AsBoolean());
+
+                case JsonConstantNode::DataType::String:
+                    return KgrValue(value.AsString());
+            }
+            return {};
+        }
+
+        KgrValue Visit(const JsonArrayNode &value) override {
+            std::vector<KgrValue> array;
+            for (std::size_t i = 0; i < value.Length(); i++) {
+                array.push_back(value.At(i).Visit(*this));
+            }
+            return KgrValue(std::move(array));
+        }
+
+        KgrValue Visit(const JsonObjectNode &value) override {
+            std::map<std::string, KgrValue> object;
+            for (const auto &key : value.Keys()) {
+                object[key] = value.Get(key).Visit(*this);
+            }
+            return KgrValue(std::move(object));
+        }
+    };
 
     KgrJsonSerializer::Blob KgrJsonSerializer::Serialize(const KgrValue &value) const {
         std::stringstream ss;
@@ -80,45 +118,7 @@ namespace sloked {
     }
 
     KgrValue KgrJsonSerializer::DeserializeValue(const JsonASTNode &node) const {
-        switch (node.GetType()) {
-            case JsonASTNode::Type::Constant: {
-                const JsonConstantNode &value = dynamic_cast<const JsonConstantNode &>(node);
-                switch (value.GetConstantType()) {
-                    case JsonConstantNode::DataType::Null:
-                        return KgrValue();
-
-                    case JsonConstantNode::DataType::Integer:
-                        return KgrValue(value.AsInteger());
-
-                    case JsonConstantNode::DataType::Number:
-                        return KgrValue(value.AsNumber());
-
-                    case JsonConstantNode::DataType::Boolean:
-                        return KgrValue(value.AsBoolean());
-
-                    case JsonConstantNode::DataType::String:
-                        return KgrValue(value.AsString());
-                }
-            } break;
-            
-            case JsonASTNode::Type::Array: {
-                const JsonArrayNode &value = dynamic_cast<const JsonArrayNode &>(node);
-                std::vector<KgrValue> array;
-                for (std::size_t i = 0; i < value.Length(); i++) {
-                    array.push_back(this->DeserializeValue(value.At(i)));
-                }
-                return KgrValue(std::move(array));
-            }
-            
-            case JsonASTNode::Type::Object: {
-                const JsonObjectNode &value = dynamic_cast<const JsonObjectNode &>(node);
-                std::map<std::string, KgrValue> object;
-                for (const auto &key : value.Keys()) {
-                    object[key] = this->DeserializeValue(value.Get(key));
-                }
-                return KgrValue(std::move(object));
-            }
-        }
-        return KgrValue{};
+        KgrJsonDeserializeVisitor visitor;
+        return node.Visit(visitor);
     }
 }

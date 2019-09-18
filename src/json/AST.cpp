@@ -25,7 +25,7 @@
 
 namespace sloked {
 
-    class JsonASTPrinter : public JsonASTVisitor {
+    class JsonASTPrinter : public JsonASTVisitor<void> {
      public:
         JsonASTPrinter(std::ostream &os)
             : out(os) {}
@@ -149,7 +149,7 @@ namespace sloked {
         }
     }
 
-    void JsonConstantNode::Visit(JsonASTVisitor &visitor) const {
+    void JsonConstantNode::VisitNode(JsonASTVisitor<void> &visitor) const {
         visitor.Visit(*this);
     }
 
@@ -168,7 +168,7 @@ namespace sloked {
         }
     }
 
-    void JsonArrayNode::Visit(JsonASTVisitor &visitor) const {
+    void JsonArrayNode::VisitNode(JsonASTVisitor<void> &visitor) const {
         visitor.Visit(*this);
     }
 
@@ -195,7 +195,7 @@ namespace sloked {
         return this->keys;
     }
 
-    void JsonObjectNode::Visit(JsonASTVisitor &visitor) const {
+    void JsonObjectNode::VisitNode(JsonASTVisitor<void> &visitor) const {
         visitor.Visit(*this);
     }
 }

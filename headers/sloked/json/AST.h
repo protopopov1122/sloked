@@ -30,95 +30,143 @@
 #include <memory>
 #include <map>
 #include <set>
+#include <type_traits>
 
 namespace sloked {
 
+   template <typename T>
    class JsonASTVisitor;
 
-    class JsonASTNode {
-     public:
-        enum class Type {
-            Object,
-            Array,
-            Constant
-        };
+   class JsonASTNode {
+    public:
+      enum class Type {
+         Object,
+         Array,
+         Constant
+      };
 
-        JsonASTNode(Type, const JsonSourcePosition &);
-        virtual ~JsonASTNode() = default;
-        Type GetType() const;
-        const JsonSourcePosition &GetPosition() const;
-        
-        virtual void Visit(JsonASTVisitor &) const = 0;
+      JsonASTNode(Type, const JsonSourcePosition &);
+      virtual ~JsonASTNode() = default;
+      Type GetType() const;
+      const JsonSourcePosition &GetPosition() const;
 
-        friend std::ostream &operator<<(std::ostream &, const JsonASTNode &);
+      template <typename T>
+      T Visit(JsonASTVisitor<T> &) const;
 
-     private:
-        Type type;
-        JsonSourcePosition position;
-    };
+      friend std::ostream &operator<<(std::ostream &, const JsonASTNode &);
 
-    class JsonConstantNode : public JsonASTNode {
-     public:
-        enum class DataType {
-            Integer,
-            Number,
-            Boolean,
-            String,
-            Null
-        };
+    protected:
+      virtual void VisitNode(JsonASTVisitor<void> &) const = 0;
 
-        JsonConstantNode(int64_t, const JsonSourcePosition &);
-        JsonConstantNode(double, const JsonSourcePosition &);
-        JsonConstantNode(bool, const JsonSourcePosition &);
-        JsonConstantNode(std::string_view, const JsonSourcePosition &);
-        JsonConstantNode(const JsonSourcePosition &);
+    private:
+      Type type;
+      JsonSourcePosition position;
+   };
 
-        DataType GetConstantType() const;
-        int64_t AsInteger(int64_t = 0) const;
-        double AsNumber(double = 0.0) const;
-        bool AsBoolean(bool = false) const;
-        const std::string &AsString(const std::string & = "") const;
+   class JsonConstantNode : public JsonASTNode {
+    public:
+      enum class DataType {
+         Integer,
+         Number,
+         Boolean,
+         String,
+         Null
+      };
 
-        void Visit(JsonASTVisitor &) const override;
-    
-     private:
-        DataType type;
-        std::variant<int64_t, double, bool, std::string> value;
-    };
+      JsonConstantNode(int64_t, const JsonSourcePosition &);
+      JsonConstantNode(double, const JsonSourcePosition &);
+      JsonConstantNode(bool, const JsonSourcePosition &);
+      JsonConstantNode(std::string_view, const JsonSourcePosition &);
+      JsonConstantNode(const JsonSourcePosition &);
 
-    class JsonArrayNode : public JsonASTNode {
-     public:
-        JsonArrayNode(std::vector<std::shared_ptr<JsonASTNode>> &&, const JsonSourcePosition &);
-        std::size_t Length() const;
-        JsonASTNode &At(std::size_t) const;
+      DataType GetConstantType() const;
+      int64_t AsInteger(int64_t = 0) const;
+      double AsNumber(double = 0.0) const;
+      bool AsBoolean(bool = false) const;
+      const std::string &AsString(const std::string & = "") const;
 
-        void Visit(JsonASTVisitor &) const override;
+    protected:
+      void VisitNode(JsonASTVisitor<void> &) const override;
+   
+    private:
+      DataType type;
+      std::variant<int64_t, double, bool, std::string> value;
+   };
 
-     private:
-        std::vector<std::shared_ptr<JsonASTNode>> elements;
-    };
+   class JsonArrayNode : public JsonASTNode {
+    public:
+      JsonArrayNode(std::vector<std::shared_ptr<JsonASTNode>> &&, const JsonSourcePosition &);
+      std::size_t Length() const;
+      JsonASTNode &At(std::size_t) const;
 
-    class JsonObjectNode : public JsonASTNode {
-     public:
-        JsonObjectNode(std::map<std::string, std::unique_ptr<JsonASTNode>> &&, const JsonSourcePosition &);
-        bool Has(const std::string &) const;
-        JsonASTNode &Get(const std::string &) const;
-        const std::set<std::string> &Keys() const;
+    protected:
+      void VisitNode(JsonASTVisitor<void> &) const override;
 
-        void Visit(JsonASTVisitor &) const override;
+    private:
+      std::vector<std::shared_ptr<JsonASTNode>> elements;
+   };
 
-     private:
-        std::map<std::string, std::unique_ptr<JsonASTNode>> members;
-        std::set<std::string> keys;
-    };
+   class JsonObjectNode : public JsonASTNode {
+    public:
+      JsonObjectNode(std::map<std::string, std::unique_ptr<JsonASTNode>> &&, const JsonSourcePosition &);
+      bool Has(const std::string &) const;
+      JsonASTNode &Get(const std::string &) const;
+      const std::set<std::string> &Keys() const;
 
+    protected:
+      void VisitNode(JsonASTVisitor<void> &) const override;
+
+    private:
+      std::map<std::string, std::unique_ptr<JsonASTNode>> members;
+      std::set<std::string> keys;
+   };
+
+   template <typename T>
    class JsonASTVisitor {
     public:
       virtual ~JsonASTVisitor() = default;
-      virtual void Visit(const JsonConstantNode &) = 0;
-      virtual void Visit(const JsonArrayNode &) = 0;
-      virtual void Visit(const JsonObjectNode &) = 0;
+      virtual T Visit(const JsonConstantNode &) = 0;
+      virtual T Visit(const JsonArrayNode &) = 0;
+      virtual T Visit(const JsonObjectNode &) = 0;
    };
+
+   template <typename T>
+   class JsonASTProxyVisitor : public JsonASTVisitor<void> {
+    public:
+      JsonASTProxyVisitor(JsonASTVisitor<T> &visitor)
+         : visitor(visitor) {}
+
+      void Visit(const JsonConstantNode &node) override {
+         this->value = this->visitor.Visit(node);
+      }
+
+      void Visit(const JsonArrayNode &node) override {
+         this->value = this->visitor.Visit(node);
+      }
+
+      void Visit(const JsonObjectNode &node) override {
+         this->value = this->visitor.Visit(node);
+      }
+
+      T &GetValue() {
+         return this->value.value();
+      }
+
+    private:
+      JsonASTVisitor<T> &visitor;
+      std::optional<T> value;
+   };
+
+   template <typename T>
+   T JsonASTNode::Visit(JsonASTVisitor<T> &visitor) const {
+      if constexpr (std::is_void_v<T>) {
+         this->VisitNode(visitor);
+      } else {
+         JsonASTProxyVisitor<T> proxy(visitor);
+         this->VisitNode(proxy);
+         return proxy.GetValue();
+      }
+   }
 }
 
 #endif

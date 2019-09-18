@@ -42,6 +42,7 @@
 #include "sloked/namespace/posix/Filesystem.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/text/fragment/Updater.h"
+#include "sloked/kgr/Serialize.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
@@ -107,6 +108,27 @@ int main(int argc, const char **argv) {
         std::cout << "Format: " << argv[0] << " source destination" << std::endl;
         return EXIT_FAILURE;
     }
+
+    KgrDictionary value {
+        { "test1", 10 },
+        { "test2", 3.14 },
+        { "test3", true },
+        { "test4", {} },
+        { "test5", "Hello, world!" },
+        {
+            "test6", KgrArray {
+                5,
+                6,
+                7,
+                KgrDictionary {
+                    { "hello", "world" }
+                }
+            }
+        }
+    };
+    KgrJsonSerializer jsonSerializer;
+    std::cout << jsonSerializer.Serialize(value) << std::endl;
+    return EXIT_SUCCESS;
 
     char BUFFER[1024];
     realpath(argv[1], BUFFER);
