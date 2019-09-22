@@ -42,7 +42,10 @@
 #include "sloked/namespace/posix/Filesystem.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/text/fragment/Updater.h"
-#include "sloked/kgr/Serialize.h"
+// #include "sloked/kgr/Serialize.h"
+// #include "sloked/kgr/local/Pipe.h"
+// #include "sloked/kgr/local/Server.h"
+// #include "sloked/kgr/local/ContextManager.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
@@ -103,32 +106,82 @@ class TestFragment : public SlokedTextTagger<int> {
     std::queue<TaggedTextFragment<int>> cache;
 };
 
+// class SumServiceContext : public KgrLocalContext {
+//  public:
+//     SumServiceContext(int64_t n, std::unique_ptr<KgrPipe> pipe, KgrLocalContextManager &ctxMgr)
+//         : KgrLocalContext(std::move(pipe), ctxMgr.Bind(*this)), number(n) {}
+
+//     void Run() override {
+//         try {
+//             while (!this->pipe->Empty()) {
+//                 auto msg = this->pipe->Receive();
+//                 if (msg.Is(KgrValueType::Array)) {
+//                     KgrArray result;
+//                     for (const auto &el : msg.AsArray()) {
+//                         if (el.Is(KgrValueType::Integer)) {
+//                             result.Append(el.AsInt() + this->number);
+//                         }
+//                     }
+//                     this->pipe->Send(std::move(result));
+//                 } else {
+//                     this->pipe->Send(KgrArray {});
+//                 }
+//             }
+//         } catch (const SlokedError &ex) {
+//             if (this->pipe->GetStatus() == KgrPipe::Status::Open) {
+//                 throw;
+//             }
+//         }
+//     }
+
+//  private:
+//     int64_t number;
+// };
+
+// class SumService : public KgrService {
+//  public:
+//     SumService(int64_t n, KgrLocalContextManager &ctxMgr)
+//         : number(n), ctxMgr(ctxMgr) {}
+
+//     std::unique_ptr<KgrServiceContext> Attach(std::unique_ptr<KgrPipe> pipe) override {
+//         auto ctx = std::make_unique<SumServiceContext>(this->number, std::move(pipe), this->ctxMgr);
+//         return ctx;
+//     }
+
+//  private:
+//     int64_t number;
+//     KgrLocalContextManager &ctxMgr;
+// };
+
 int main(int argc, const char **argv) {
     if (argc < 3) {
         std::cout << "Format: " << argv[0] << " source destination" << std::endl;
         return EXIT_FAILURE;
     }
 
-    KgrDictionary value {
-        { "test1", 10 },
-        { "test2", 3.14 },
-        { "test3", true },
-        { "test4", {} },
-        { "test5", "Hello, world!" },
-        {
-            "test6", KgrArray {
-                5,
-                6,
-                7,
-                KgrDictionary {
-                    { "hello", "world" }
-                }
-            }
-        }
-    };
-    KgrJsonSerializer jsonSerializer;
-    std::cout << jsonSerializer.Serialize(value) << std::endl;
-    return EXIT_SUCCESS;
+    // KgrLocalServer server;
+    // KgrLocalContextManager ctxManager;
+    // auto srvId = server.Bind(std::make_unique<SumService>(10, ctxManager));
+
+    // auto in = server.Connect(srvId);
+    // in->Send(KgrArray {
+    //     1,
+    //     2,
+    //     3,
+    //     3.14,
+    //     "Hello, world",
+    //     5,
+    //     true,
+    //     KgrDictionary {}
+    // });
+    // in->Send({});
+    // in->Send(KgrArray {3, 2, 1});
+    // ctxManager.Run();
+    // while (!in->Empty()) {
+    //     auto val = in->Receive();
+    //     std::cout << KgrJsonSerializer{}.Serialize(val) << std::endl;
+    // }
+    // return EXIT_SUCCESS;
 
     char BUFFER[1024];
     realpath(argv[1], BUFFER);
