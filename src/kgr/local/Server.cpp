@@ -33,9 +33,7 @@ namespace sloked {
             throw SlokedError("KgrServer: Unknown service #" + std::to_string(srvId));
         }
         auto [clientPipe, servicePipe] = KgrLocalPipe::Make();
-        auto context = this->services.at(srvId)->Attach(std::move(servicePipe));
-        if (context) {
-            this->contexts.push_back(std::move(context));
+        if (this->services.at(srvId)->Attach(std::move(servicePipe))) {
             return std::move(clientPipe);
         } else {
             return nullptr;

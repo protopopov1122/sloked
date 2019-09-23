@@ -31,7 +31,7 @@ namespace sloked {
     class KgrService {
      public:
         virtual ~KgrService() = default;
-        virtual std::unique_ptr<KgrServiceContext> Attach(std::unique_ptr<KgrPipe>) = 0;
+        virtual bool Attach(std::unique_ptr<KgrPipe>) = 0;
     };
 }
 

@@ -24,8 +24,8 @@
 namespace sloked {
 
 
-    KgrLocalContext::KgrLocalContext(std::unique_ptr<KgrPipe> pipe, std::unique_ptr<KgrContextManager<KgrLocalContext>::ContextHandle> handle)
-        : pipe(std::move(pipe)), handle(std::move(handle)) {}
+    KgrLocalContext::KgrLocalContext(std::unique_ptr<KgrPipe> pipe)
+        : pipe(std::move(pipe)) {}
 
     KgrLocalContext::~KgrLocalContext() {
         this->Close();
@@ -38,9 +38,6 @@ namespace sloked {
     
     void KgrLocalContext::Close() {
         this->pipe->Close();
-        while (!this->pipe->Empty()) {
-            this->pipe->Skip();
-        }
-        this->handle.reset();
+        this->pipe->SkipAll();
     }
 }

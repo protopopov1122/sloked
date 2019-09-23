@@ -30,13 +30,8 @@ namespace sloked {
     template <typename T>
     class KgrContextManager {
      public:
-        class ContextHandle {
-         public:
-            virtual ~ContextHandle() = default;
-        };
-
         virtual ~KgrContextManager() = default;
-        virtual std::unique_ptr<ContextHandle> Bind(T &) = 0;
+        virtual void Push(std::unique_ptr<T>) = 0;
     };
 }
 

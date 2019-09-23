@@ -46,6 +46,7 @@ namespace sloked {
         bool Empty() const override;
         KgrValue Receive() override;
         void Skip() override;
+        void SkipAll() override;
         void Send(KgrValue &&) override;
         void Close() override;
 

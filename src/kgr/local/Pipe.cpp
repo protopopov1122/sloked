@@ -62,6 +62,11 @@ namespace sloked {
         this->input->content.pop();
     }
 
+    void KgrLocalPipe::SkipAll() {
+        std::unique_lock<std::mutex> lock(this->input->content_mtx);
+        this->input->content = {};
+    }
+
     void KgrLocalPipe::Send(KgrValue &&msg) {
         std::unique_lock<std::mutex> lock(this->output->content_mtx);
         if (this->descriptor->status != Status::Open) {

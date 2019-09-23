@@ -24,28 +24,20 @@
 
 #include "sloked/kgr/ContextManager.h"
 #include "sloked/kgr/local/Context.h"
+#include <mutex>
+#include <list>
 
 namespace sloked {
 
-    class KgrLocalContextManager : public KgrContextManager<KgrLocalContext>, public SlokedRunnable {
-     public:
-        friend class Unbinder;
-        class Unbinder : public ContextHandle {
-         public:
-            Unbinder(KgrLocalContextManager &, KgrLocalContext &);
-            virtual ~Unbinder();
-
-         private:
-            KgrLocalContextManager &manager;
-            KgrLocalContext &context;
-        };
-
-        std::unique_ptr<ContextHandle> Bind(KgrLocalContext &) override;
-        void Run() override;
+   class KgrLocalContextManager : public KgrContextManager<KgrLocalContext>, public SlokedRunnable {
+    public:
+      void Push(std::unique_ptr<KgrLocalContext>) override;
+      void Run() override;
     
-     private:
-        std::vector<std::reference_wrapper<KgrLocalContext>> contexts;
-    };
+    private:
+      std::list<std::unique_ptr<KgrLocalContext>> contexts;
+      std::mutex contexts_mtx;
+   };
 }
 
 #endif

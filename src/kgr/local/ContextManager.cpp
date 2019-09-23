@@ -24,23 +24,29 @@
 
 namespace sloked {
 
-    KgrLocalContextManager::Unbinder::Unbinder(KgrLocalContextManager &ctx_man, KgrLocalContext &ctx)
-        : manager(ctx_man), context(ctx) {}
-    
-    KgrLocalContextManager::Unbinder::~Unbinder() {
-        std::remove_if(this->manager.contexts.begin(), this->manager.contexts.end(), [&](const auto &ctx) {
-            return std::addressof(ctx.get()) == std::addressof(this->context);
-        });
-    }
-
-    std::unique_ptr<KgrLocalContextManager::ContextHandle> KgrLocalContextManager::Bind(KgrLocalContext &ctx) {
-        this->contexts.push_back(std::ref(ctx));
-        return std::make_unique<Unbinder>(*this, ctx);
+    void KgrLocalContextManager::Push(std::unique_ptr<KgrLocalContext> ctx) {
+        std::unique_lock<std::mutex> lock(this->contexts_mtx);
+        this->contexts.push_back(std::move(ctx));
     }
     
     void KgrLocalContextManager::Run() {
-        for (const auto &ctx : this->contexts) {
-            ctx.get().Run();
+        if (this->contexts.empty()) {
+            return;
+        }
+        for (auto it = this->contexts.begin();;) {
+            if ((*it)->Alive()) {
+                (*it)->Run();
+            }
+            
+            std::unique_lock<std::mutex> lock(this->contexts_mtx);
+            auto current_it = it;
+            ++it;
+            if ((*current_it)->Alive()) {
+                this->contexts.erase(current_it);
+            }
+            if (it == this->contexts.end()) {
+                break;
+            }
         }
     }
 }

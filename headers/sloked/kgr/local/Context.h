@@ -31,7 +31,7 @@ namespace sloked {
 
     class KgrLocalContext : public KgrServiceContext, public SlokedRunnable {
      public:
-        KgrLocalContext(std::unique_ptr<KgrPipe>, std::unique_ptr<KgrContextManager<KgrLocalContext>::ContextHandle>);
+        KgrLocalContext(std::unique_ptr<KgrPipe>);
         virtual ~KgrLocalContext();
 
         bool Alive() const override;
@@ -39,7 +39,6 @@ namespace sloked {
 
      protected:
         std::unique_ptr<KgrPipe> pipe;
-        std::unique_ptr<KgrContextManager<KgrLocalContext>::ContextHandle> handle;
     };
 }
 

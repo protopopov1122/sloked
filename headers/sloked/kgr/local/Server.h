@@ -23,6 +23,8 @@
 #define SLOKED_KGR_LOCAL_SERVER_H_
 
 #include "sloked/kgr/Server.h"
+#include "sloked/kgr/ContextManager.h"
+#include "sloked/kgr/local/Context.h"
 #include <map>
 
 namespace sloked {
@@ -37,7 +39,6 @@ namespace sloked {
      private:
         ServiceId nextServiceId;
         std::map<ServiceId, std::unique_ptr<KgrService>> services;
-        std::vector<std::shared_ptr<KgrServiceContext>> contexts;
     };
 }
 

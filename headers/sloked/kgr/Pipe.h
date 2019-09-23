@@ -38,6 +38,7 @@ namespace sloked {
         virtual bool Empty() const = 0;
         virtual KgrValue Receive() = 0;
         virtual void Skip() = 0;
+        virtual void SkipAll() = 0;
         virtual void Send(KgrValue &&) = 0;
         virtual void Close() = 0;
     };
