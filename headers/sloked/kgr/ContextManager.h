@@ -31,7 +31,7 @@ namespace sloked {
     class KgrContextManager {
      public:
         virtual ~KgrContextManager() = default;
-        virtual void Push(std::unique_ptr<T>) = 0;
+        virtual void Attach(std::unique_ptr<T>) = 0;
     };
 }
 

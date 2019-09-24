@@ -42,10 +42,10 @@
 #include "sloked/namespace/posix/Filesystem.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/text/fragment/Updater.h"
-// #include "sloked/kgr/Serialize.h"
-// #include "sloked/kgr/local/Pipe.h"
-// #include "sloked/kgr/local/Server.h"
-// #include "sloked/kgr/local/ContextManager.h"
+#include "sloked/kgr/Serialize.h"
+#include "sloked/kgr/local/Pipe.h"
+#include "sloked/kgr/local/Server.h"
+#include "sloked/kgr/ctx-manager/RunnableContextManager.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
@@ -106,52 +106,53 @@ class TestFragment : public SlokedTextTagger<int> {
     std::queue<TaggedTextFragment<int>> cache;
 };
 
-// class SumServiceContext : public KgrLocalContext {
-//  public:
-//     SumServiceContext(int64_t n, std::unique_ptr<KgrPipe> pipe, KgrLocalContextManager &ctxMgr)
-//         : KgrLocalContext(std::move(pipe), ctxMgr.Bind(*this)), number(n) {}
+class SumServiceContext : public KgrLocalContext {
+ public:
+    SumServiceContext(int64_t n, std::unique_ptr<KgrPipe> pipe, KgrContextManager<KgrLocalContext> &ctxMgr)
+        : KgrLocalContext(std::move(pipe)), number(n) {}
 
-//     void Run() override {
-//         try {
-//             while (!this->pipe->Empty()) {
-//                 auto msg = this->pipe->Receive();
-//                 if (msg.Is(KgrValueType::Array)) {
-//                     KgrArray result;
-//                     for (const auto &el : msg.AsArray()) {
-//                         if (el.Is(KgrValueType::Integer)) {
-//                             result.Append(el.AsInt() + this->number);
-//                         }
-//                     }
-//                     this->pipe->Send(std::move(result));
-//                 } else {
-//                     this->pipe->Send(KgrArray {});
-//                 }
-//             }
-//         } catch (const SlokedError &ex) {
-//             if (this->pipe->GetStatus() == KgrPipe::Status::Open) {
-//                 throw;
-//             }
-//         }
-//     }
+    void Run() override {
+        try {
+            while (!this->pipe->Empty()) {
+                auto msg = this->pipe->Receive();
+                if (msg.Is(KgrValueType::Array)) {
+                    KgrArray result;
+                    for (const auto &el : msg.AsArray()) {
+                        if (el.Is(KgrValueType::Integer)) {
+                            result.Append(el.AsInt() + this->number);
+                        }
+                    }
+                    this->pipe->Send(std::move(result));
+                } else {
+                    this->pipe->Send(KgrArray {});
+                }
+            }
+        } catch (const SlokedError &ex) {
+            if (this->pipe->GetStatus() == KgrPipe::Status::Open) {
+                throw;
+            }
+        }
+    }
 
-//  private:
-//     int64_t number;
-// };
+ private:
+    int64_t number;
+};
 
-// class SumService : public KgrService {
-//  public:
-//     SumService(int64_t n, KgrLocalContextManager &ctxMgr)
-//         : number(n), ctxMgr(ctxMgr) {}
+class SumService : public KgrService {
+ public:
+    SumService(int64_t n, KgrContextManager<KgrLocalContext> &ctxMgr)
+        : number(n), ctxMgr(ctxMgr) {}
 
-//     std::unique_ptr<KgrServiceContext> Attach(std::unique_ptr<KgrPipe> pipe) override {
-//         auto ctx = std::make_unique<SumServiceContext>(this->number, std::move(pipe), this->ctxMgr);
-//         return ctx;
-//     }
+    bool Attach(std::unique_ptr<KgrPipe> pipe) override {
+        auto ctx = std::make_unique<SumServiceContext>(this->number, std::move(pipe), this->ctxMgr);
+        this->ctxMgr.Attach(std::move(ctx));
+        return true;
+    }
 
-//  private:
-//     int64_t number;
-//     KgrLocalContextManager &ctxMgr;
-// };
+ private:
+    int64_t number;
+    KgrContextManager<KgrLocalContext> &ctxMgr;
+};
 
 int main(int argc, const char **argv) {
     if (argc < 3) {
@@ -160,8 +161,14 @@ int main(int argc, const char **argv) {
     }
 
     // KgrLocalServer server;
-    // KgrLocalContextManager ctxManager;
-    // auto srvId = server.Bind(std::make_unique<SumService>(10, ctxManager));
+    // KgrRunnableContextManager<KgrLocalContext> ctxManager;
+    // for (int i = 0; i < 100; i++) {
+    //     server.Bind(nullptr);
+    // }
+    // server.Unbind(51);
+    // auto srvId = 51;
+    // server.Bind(51, std::make_unique<SumService>(10, ctxManager));
+    // std::cout << srvId << std::endl;
 
     // auto in = server.Connect(srvId);
     // in->Send(KgrArray {

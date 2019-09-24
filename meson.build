@@ -7,6 +7,7 @@ endif
 sloked_src = [
   'src/main.cpp',
   'src/core/CharWidth.cpp',
+  'src/core/DynamicBitset.cpp',
   'src/core/Encoding.cpp',
   'src/core/Error.cpp',
   'src/core/Locale.cpp',
@@ -26,7 +27,6 @@ sloked_src = [
   'src/kgr/Serialize.cpp',
   'src/kgr/Value.cpp',
   'src/kgr/local/Context.cpp',
-  'src/kgr/local/ContextManager.cpp',
   'src/kgr/local/Pipe.cpp',
   'src/kgr/local/Server.cpp',
   'src/namespace/Directory.cpp',

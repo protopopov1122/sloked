@@ -25,20 +25,23 @@
 #include "sloked/kgr/Server.h"
 #include "sloked/kgr/ContextManager.h"
 #include "sloked/kgr/local/Context.h"
+#include "sloked/core/DynamicBitset.h"
 #include <map>
 
 namespace sloked {
 
     class KgrLocalServer : public KgrServer {
      public:
-        KgrLocalServer();
         std::unique_ptr<KgrPipe> Connect(ServiceId) override;
+        
         ServiceId Bind(std::unique_ptr<KgrService>) override;
+        void Bind(ServiceId, std::unique_ptr<KgrService>) override;
+        bool HasService(ServiceId) override;
         void Unbind(ServiceId) override;
 
      private:
-        ServiceId nextServiceId;
         std::map<ServiceId, std::unique_ptr<KgrService>> services;
+        SlokedDynamicBitset serviceAllocator;
     };
 }
 

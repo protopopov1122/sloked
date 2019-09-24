@@ -25,9 +25,6 @@
 
 namespace sloked {
 
-    KgrLocalServer::KgrLocalServer()
-        : nextServiceId(0) {}
-
     std::unique_ptr<KgrPipe> KgrLocalServer::Connect(ServiceId srvId) {
         if (this->services.count(srvId) == 0) {
             throw SlokedError("KgrServer: Unknown service #" + std::to_string(srvId));
@@ -41,13 +38,27 @@ namespace sloked {
     }
 
     KgrLocalServer::ServiceId KgrLocalServer::Bind(std::unique_ptr<KgrService> service) {
-        auto serviceId = this->nextServiceId++;
+        auto serviceId = this->serviceAllocator.Allocate();
         this->services.emplace(serviceId, std::move(service));
         return serviceId;
     }
 
+    void KgrLocalServer::Bind(ServiceId serviceId, std::unique_ptr<KgrService> service) {
+        if (this->services.count(serviceId) == 0) {
+            this->serviceAllocator.Set(serviceId, true);
+            this->services.emplace(serviceId, std::move(service));
+        } else {
+            throw SlokedError("KgrLocalServer: Sevice #" + std::to_string(serviceId) + " already allocated");
+        }
+    }
+
+    bool KgrLocalServer::HasService(ServiceId serviceId) {
+        return this->services.count(serviceId) != 0;
+    }
+
     void KgrLocalServer::Unbind(ServiceId serviceId) {
         if (this->services.count(serviceId)) {
+            this->serviceAllocator.Set(serviceId, false);
             this->services.erase(serviceId);
         } else {
             throw SlokedError("KgrServer: Unknown service #" + std::to_string(serviceId));
