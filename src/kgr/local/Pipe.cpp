@@ -31,6 +31,7 @@ namespace sloked {
         if (this->descriptor->status == Status::Open) {
             std::unique_lock<std::mutex> ilock(this->input->content_mtx);
             std::unique_lock<std::mutex> olock(this->output->content_mtx);
+            this->input->content = {};
             this->descriptor->status = Status::Closed;
         }
     }
@@ -44,7 +45,12 @@ namespace sloked {
         return this->input->content.empty();
     }
 
-    KgrValue KgrLocalPipe::Receive() {
+    std::size_t KgrLocalPipe::Count() const {
+        std::unique_lock<std::mutex> lock(this->input->content_mtx);
+        return this->input->content.size();
+    }
+
+    KgrValue KgrLocalPipe::Read() {
         std::unique_lock<std::mutex> lock(this->input->content_mtx);
         if (this->input->content.empty()) {
             throw SlokedError("KgrLocal: Pipe empty");
@@ -54,31 +60,73 @@ namespace sloked {
         return msg;
     }
 
-    void KgrLocalPipe::Skip() {
+    std::optional<KgrValue> KgrLocalPipe::ReadOptional() {
         std::unique_lock<std::mutex> lock(this->input->content_mtx);
         if (this->input->content.empty()) {
-            throw SlokedError("KgrLocal: Pipe empty");
+            return {};
         }
+        KgrValue msg = std::move(this->input->content.front());
         this->input->content.pop();
+        return msg;
     }
 
-    void KgrLocalPipe::SkipAll() {
+    KgrValue KgrLocalPipe::ReadWait() {
+        std::unique_lock<std::mutex> lock(this->input->content_mtx);
+        while (this->input->content.empty() && this->descriptor->status == Status::Open) {
+            this->input->content_cv.wait(lock);
+        }
+        if (this->input->content.empty()) {
+            throw SlokedError("KgrLocal: Pipe empty on close");
+        }
+        KgrValue msg = std::move(this->input->content.front());
+        this->input->content.pop();
+        return msg;
+    }
+
+    bool KgrLocalPipe::Wait(std::size_t count) {
+        std::unique_lock<std::mutex> lock(this->input->content_mtx);
+        while (this->input->content.size() < count && this->descriptor->status == Status::Open) {
+            this->input->content_cv.wait(lock);
+        }
+        return this->input->content.size() >= count;
+    }
+
+    void KgrLocalPipe::Drop(std::size_t count) {
+        std::unique_lock<std::mutex> lock(this->input->content_mtx);
+        while (!this->input->content.empty() && count > 0) {
+            this->input->content.pop();
+            count--;
+        }
+    }
+
+    void KgrLocalPipe::DropAll() {
         std::unique_lock<std::mutex> lock(this->input->content_mtx);
         this->input->content = {};
     }
 
-    void KgrLocalPipe::Send(KgrValue &&msg) {
+    void KgrLocalPipe::Write(KgrValue &&msg) {
         std::unique_lock<std::mutex> lock(this->output->content_mtx);
         if (this->descriptor->status != Status::Open) {
             throw SlokedError("KgrLocal: Pipe already closed");
         }
         this->output->content.push(std::forward<KgrValue>(msg));
+        this->output->content_cv.notify_all();
+    }
+
+    void KgrLocalPipe::WriteNX(KgrValue &&msg) {
+        std::unique_lock<std::mutex> lock(this->output->content_mtx);
+        if (this->descriptor->status != Status::Open) {
+            return;
+        }
+        this->output->content.push(std::forward<KgrValue>(msg));
+        this->output->content_cv.notify_all();
     }
 
     void KgrLocalPipe::Close() {
         std::unique_lock<std::mutex> ilock(this->input->content_mtx);
         std::unique_lock<std::mutex> olock(this->output->content_mtx);
         this->descriptor->status = Status::Closed;
+        this->output->content_cv.notify_all();
     }
 
     std::pair<std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>> KgrLocalPipe::Make() {

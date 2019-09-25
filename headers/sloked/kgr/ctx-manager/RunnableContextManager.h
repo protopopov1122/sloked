@@ -42,14 +42,16 @@ namespace sloked {
                 return;
             }
             for (auto it = this->contexts.begin();;) {
-                if ((*it)->Alive()) {
+                if ((*it)->GetState() == KgrServiceContext::State::Active) {
                     (*it)->Run();
                 }
                 
                 std::unique_lock<std::mutex> lock(this->contexts_mtx);
                 auto current_it = it;
                 ++it;
-                if ((*current_it)->Alive()) {
+                auto state = (*current_it)->GetState();
+                if (state == KgrServiceContext::State::Finished ||
+                    state == KgrServiceContext::State::Destroyed) {
                     this->contexts.erase(current_it);
                 }
                 if (it == this->contexts.end()) {

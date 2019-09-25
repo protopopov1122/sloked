@@ -28,9 +28,16 @@ namespace sloked {
 
     class KgrServiceContext {
      public:
+        enum class State {
+            Idle,
+            Active,
+            Finished,
+            Destroyed
+        };
+
         virtual ~KgrServiceContext() = default;
-        virtual bool Alive() const = 0;
-        virtual void Close() = 0;
+        virtual State GetState() const = 0;
+        virtual void Destroy() = 0;
     };
 }
 

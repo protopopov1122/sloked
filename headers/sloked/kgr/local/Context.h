@@ -34,8 +34,8 @@ namespace sloked {
         KgrLocalContext(std::unique_ptr<KgrPipe>);
         virtual ~KgrLocalContext();
 
-        bool Alive() const override;
-        void Close() override;
+        State GetState() const override;
+        void Destroy() override;
 
      protected:
         std::unique_ptr<KgrPipe> pipe;

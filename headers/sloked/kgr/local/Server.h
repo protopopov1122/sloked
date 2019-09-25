@@ -34,10 +34,10 @@ namespace sloked {
      public:
         std::unique_ptr<KgrPipe> Connect(ServiceId) override;
         
-        ServiceId Bind(std::unique_ptr<KgrService>) override;
-        void Bind(ServiceId, std::unique_ptr<KgrService>) override;
-        bool HasService(ServiceId) override;
-        void Unbind(ServiceId) override;
+        ServiceId Register(std::unique_ptr<KgrService>) override;
+        void Register(ServiceId, std::unique_ptr<KgrService>) override;
+        bool Registered(ServiceId) override;
+        void Deregister(ServiceId) override;
 
      private:
         std::map<ServiceId, std::unique_ptr<KgrService>> services;

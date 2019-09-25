@@ -50,8 +50,11 @@
 #include <fstream>
 #include <sstream>
 #include <queue>
+#include <thread>
+#include <chrono>
 
 using namespace sloked;
+using namespace std::chrono_literals;
 
 class TestFragment : public SlokedTextTagger<int> {
  public:
@@ -114,7 +117,7 @@ class SumServiceContext : public KgrLocalContext {
     void Run() override {
         try {
             while (!this->pipe->Empty()) {
-                auto msg = this->pipe->Receive();
+                auto msg = this->pipe->Read();
                 if (msg.Is(KgrValueType::Array)) {
                     KgrArray result;
                     for (const auto &el : msg.AsArray()) {
@@ -122,9 +125,9 @@ class SumServiceContext : public KgrLocalContext {
                             result.Append(el.AsInt() + this->number);
                         }
                     }
-                    this->pipe->Send(std::move(result));
+                    this->pipe->Write(std::move(result));
                 } else {
-                    this->pipe->Send(KgrArray {});
+                    this->pipe->Write(KgrArray {});
                 }
             }
         } catch (const SlokedError &ex) {
@@ -163,15 +166,22 @@ int main(int argc, const char **argv) {
     // KgrLocalServer server;
     // KgrRunnableContextManager<KgrLocalContext> ctxManager;
     // for (int i = 0; i < 100; i++) {
-    //     server.Bind(nullptr);
+    //     server.Register(std::make_unique<SumService>(i, ctxManager));
     // }
-    // server.Unbind(51);
+    // server.Deregister(51);
     // auto srvId = 51;
-    // server.Bind(51, std::make_unique<SumService>(10, ctxManager));
+    // server.Register(51, std::make_unique<SumService>(10, ctxManager));
     // std::cout << srvId << std::endl;
 
+    // std::atomic<bool> thread_run = true;
+    // std::thread ctxMgrThread([&]() {
+    //     while (thread_run.load()) {
+    //         ctxManager.Run();
+    //     }
+    // });
+
     // auto in = server.Connect(srvId);
-    // in->Send(KgrArray {
+    // in->Write(KgrArray {
     //     1,
     //     2,
     //     3,
@@ -181,13 +191,15 @@ int main(int argc, const char **argv) {
     //     true,
     //     KgrDictionary {}
     // });
-    // in->Send({});
-    // in->Send(KgrArray {3, 2, 1});
-    // ctxManager.Run();
+    // in->Write({});
+    // in->Write(KgrArray {3, 2, 1});
+    // in->Wait(3);
     // while (!in->Empty()) {
-    //     auto val = in->Receive();
+    //     auto val = in->Read();
     //     std::cout << KgrJsonSerializer{}.Serialize(val) << std::endl;
     // }
+    // thread_run = false;
+    // ctxMgrThread.join();
     // return EXIT_SUCCESS;
 
     char BUFFER[1024];

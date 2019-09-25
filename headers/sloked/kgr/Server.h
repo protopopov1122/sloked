@@ -33,10 +33,10 @@ namespace sloked {
         virtual ~KgrServer() = default;
         virtual std::unique_ptr<KgrPipe> Connect(ServiceId) = 0;
 
-        virtual ServiceId Bind(std::unique_ptr<KgrService>) = 0;
-        virtual void Bind(ServiceId, std::unique_ptr<KgrService>) = 0;
-        virtual bool HasService(ServiceId) = 0;
-        virtual void Unbind(ServiceId) = 0;
+        virtual ServiceId Register(std::unique_ptr<KgrService>) = 0;
+        virtual void Register(ServiceId, std::unique_ptr<KgrService>) = 0;
+        virtual bool Registered(ServiceId) = 0;
+        virtual void Deregister(ServiceId) = 0;
     };
 }
 

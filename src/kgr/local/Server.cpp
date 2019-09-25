@@ -37,13 +37,19 @@ namespace sloked {
         }
     }
 
-    KgrLocalServer::ServiceId KgrLocalServer::Bind(std::unique_ptr<KgrService> service) {
+    KgrLocalServer::ServiceId KgrLocalServer::Register(std::unique_ptr<KgrService> service) {
+        if (service == nullptr) {
+            throw SlokedError("KgrServer: Service can't be null");
+        }
         auto serviceId = this->serviceAllocator.Allocate();
         this->services.emplace(serviceId, std::move(service));
         return serviceId;
     }
 
-    void KgrLocalServer::Bind(ServiceId serviceId, std::unique_ptr<KgrService> service) {
+    void KgrLocalServer::Register(ServiceId serviceId, std::unique_ptr<KgrService> service) {
+        if (service == nullptr) {
+            throw SlokedError("KgrServer: Service can't be null");
+        }
         if (this->services.count(serviceId) == 0) {
             this->serviceAllocator.Set(serviceId, true);
             this->services.emplace(serviceId, std::move(service));
@@ -52,11 +58,11 @@ namespace sloked {
         }
     }
 
-    bool KgrLocalServer::HasService(ServiceId serviceId) {
+    bool KgrLocalServer::Registered(ServiceId serviceId) {
         return this->services.count(serviceId) != 0;
     }
 
-    void KgrLocalServer::Unbind(ServiceId serviceId) {
+    void KgrLocalServer::Deregister(ServiceId serviceId) {
         if (this->services.count(serviceId)) {
             this->serviceAllocator.Set(serviceId, false);
             this->services.erase(serviceId);

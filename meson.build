@@ -70,7 +70,8 @@ sloked_src = [
 
 cpp = meson.get_compiler('cpp')
 ncurses = dependency('ncurses')
+threads = dependency('threads')
 
 sloked = executable('sloked', sloked_src,
   include_directories : include_directories('headers'),
-  dependencies : [ncurses])
+  dependencies : [ncurses, threads])

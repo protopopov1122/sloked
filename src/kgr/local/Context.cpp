@@ -28,16 +28,23 @@ namespace sloked {
         : pipe(std::move(pipe)) {}
 
     KgrLocalContext::~KgrLocalContext() {
-        this->Close();
+        this->Destroy();
     }
 
-    bool KgrLocalContext::Alive() const {
-        return this->pipe->GetStatus() == KgrPipe::Status::Open ||
-            !this->pipe->Empty();
+    KgrLocalContext::State KgrLocalContext::GetState() const {
+        if (this->pipe == nullptr) {
+            return State::Destroyed;
+        } else if (this->pipe->GetStatus() == KgrPipe::Status::Closed &&
+            this->pipe->Empty()) {
+            return State::Finished;
+        } else if (this->pipe->Empty()) {
+            return State::Idle;
+        } else {
+            return State::Active;
+        }
     }
     
-    void KgrLocalContext::Close() {
-        this->pipe->Close();
-        this->pipe->SkipAll();
+    void KgrLocalContext::Destroy() {
+        this->pipe.reset();
     }
 }

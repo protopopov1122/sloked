@@ -27,6 +27,7 @@
 #include <queue>
 #include <memory>
 #include <atomic>
+#include <condition_variable>
 
 namespace sloked {
 
@@ -37,6 +38,7 @@ namespace sloked {
     struct KgrLocalPipeContent {
         std::queue<KgrValue> content;
         std::mutex content_mtx;
+        std::condition_variable content_cv;
     };
 
     class KgrLocalPipe : public KgrPipe {
@@ -44,11 +46,18 @@ namespace sloked {
         virtual ~KgrLocalPipe();
         Status GetStatus() const override;
         bool Empty() const override;
-        KgrValue Receive() override;
-        void Skip() override;
-        void SkipAll() override;
-        void Send(KgrValue &&) override;
+        std::size_t Count() const override;
         void Close() override;
+
+        KgrValue Read() override;
+        std::optional<KgrValue> ReadOptional() override;
+        KgrValue ReadWait() override;
+        bool Wait(std::size_t = 1) override;
+        void Drop(std::size_t = 1) override;
+        void DropAll() override;
+        
+        void Write(KgrValue &&) override;
+        void WriteNX(KgrValue &&) override;
 
         static std::pair<std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>> Make();
 

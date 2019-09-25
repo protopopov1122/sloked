@@ -36,11 +36,18 @@ namespace sloked {
         virtual ~KgrPipe() = default;
         virtual Status GetStatus() const = 0;
         virtual bool Empty() const = 0;
-        virtual KgrValue Receive() = 0;
-        virtual void Skip() = 0;
-        virtual void SkipAll() = 0;
-        virtual void Send(KgrValue &&) = 0;
+        virtual std::size_t Count() const = 0;
         virtual void Close() = 0;
+
+        virtual KgrValue Read() = 0;
+        virtual std::optional<KgrValue> ReadOptional() = 0;
+        virtual KgrValue ReadWait() = 0;
+        virtual bool Wait(std::size_t = 1) = 0;
+        virtual void Drop(std::size_t = 1) = 0;
+        virtual void DropAll() = 0;
+
+        virtual void Write(KgrValue &&) = 0;
+        virtual void WriteNX(KgrValue &&) = 0;
     };
 }
 
