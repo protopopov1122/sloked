@@ -45,6 +45,7 @@
 #include "sloked/kgr/Serialize.h"
 #include "sloked/kgr/local/Pipe.h"
 #include "sloked/kgr/local/Server.h"
+#include "sloked/kgr/local/NamedServer.h"
 #include "sloked/kgr/ctx-manager/RunnableContextManager.h"
 #include <fcntl.h>
 #include <fstream>
@@ -163,15 +164,10 @@ int main(int argc, const char **argv) {
         return EXIT_FAILURE;
     }
 
-    // KgrLocalServer server;
+    // KgrLocalServer portServer;
+    // KgrLocalNamedServer server(portServer);
     // KgrRunnableContextManager<KgrLocalContext> ctxManager;
-    // for (int i = 0; i < 100; i++) {
-    //     server.Register(std::make_unique<SumService>(i, ctxManager));
-    // }
-    // server.Deregister(51);
-    // auto srvId = 51;
-    // server.Register(51, std::make_unique<SumService>(10, ctxManager));
-    // std::cout << srvId << std::endl;
+    // server.Register("sum.10", std::make_unique<SumService>(10, ctxManager));
 
     // std::atomic<bool> thread_run = true;
     // std::thread ctxMgrThread([&]() {
@@ -180,7 +176,7 @@ int main(int argc, const char **argv) {
     //     }
     // });
 
-    // auto in = server.Connect(srvId);
+    // auto in = server.Connect("sum.10");
     // in->Write(KgrArray {
     //     1,
     //     2,

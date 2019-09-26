@@ -19,31 +19,25 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_KGR_SERVER_H_
-#define SLOKED_KGR_SERVER_H_
+#ifndef SLOKED_KGR_LOCAL_NAMEDSERVER_H_
+#define SLOKED_KGR_LOCAL_NAMEDSERVER_H_
 
-#include "sloked/kgr/Service.h"
-#include <memory>
+#include "sloked/kgr/NamedServer.h"
 
 namespace sloked {
 
-    using KgrServerServiceId = uint16_t;
-
-    template <typename T>
-    class KgrAbstractServer {
+    class KgrLocalNamedServer : public KgrNamedServer {
      public:
-        virtual ~KgrAbstractServer() = default;
-        virtual std::unique_ptr<KgrPipe> Connect(T) = 0;
+        KgrLocalNamedServer(KgrServer &);
+        std::unique_ptr<KgrPipe> Connect(const std::string &) override;
+        
+        void Register(const std::string &, std::unique_ptr<KgrService>) override;
+        bool Registered(const std::string &) override;
+        void Deregister(const std::string &) override;
 
-        virtual void Register(T, std::unique_ptr<KgrService>) = 0;
-        virtual bool Registered(T) = 0;
-        virtual void Deregister(T) = 0;
-    };
-
-    class KgrServer : public KgrAbstractServer<KgrServerServiceId> {
-     public:
-        using ServiceId = KgrServerServiceId;
-        virtual ServiceId Register(std::unique_ptr<KgrService>) = 0;
+     private:
+        KgrServer &server;
+        std::map<std::string, KgrServer::ServiceId> names;
     };
 }
 

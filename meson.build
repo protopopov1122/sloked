@@ -27,6 +27,7 @@ sloked_src = [
   'src/kgr/Serialize.cpp',
   'src/kgr/Value.cpp',
   'src/kgr/local/Context.cpp',
+  'src/kgr/local/NamedServer.cpp',
   'src/kgr/local/Pipe.cpp',
   'src/kgr/local/Server.cpp',
   'src/namespace/Directory.cpp',
