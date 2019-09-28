@@ -39,6 +39,7 @@ namespace sloked {
         std::queue<KgrValue> content;
         std::mutex content_mtx;
         std::condition_variable content_cv;
+        std::function<void()> callback;
     };
 
     class KgrLocalPipe : public KgrPipe {
@@ -52,12 +53,13 @@ namespace sloked {
         KgrValue Read() override;
         std::optional<KgrValue> ReadOptional() override;
         KgrValue ReadWait() override;
+        void SetListener(std::function<void()>) override;
         bool Wait(std::size_t = 1) override;
         void Drop(std::size_t = 1) override;
         void DropAll() override;
         
         void Write(KgrValue &&) override;
-        void WriteNX(KgrValue &&) override;
+        bool WriteNX(KgrValue &&) override;
 
         static std::pair<std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>> Make();
 

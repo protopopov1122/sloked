@@ -23,6 +23,7 @@
 #define SLOKED_KGR_CONTEXT_H_
 
 #include "sloked/Base.h"
+#include <functional>
 
 namespace sloked {
 
@@ -38,6 +39,7 @@ namespace sloked {
         virtual ~KgrServiceContext() = default;
         virtual State GetState() const = 0;
         virtual void Destroy() = 0;
+        virtual void SetListener(std::function<void()>) = 0;
     };
 }
 

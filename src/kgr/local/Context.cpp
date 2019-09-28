@@ -47,4 +47,10 @@ namespace sloked {
     void KgrLocalContext::Destroy() {
         this->pipe.reset();
     }
+
+    void KgrLocalContext::SetListener(std::function<void()> callback) {
+        if (this->pipe) {
+            this->pipe->SetListener(std::move(callback));
+        }
+    }
 }

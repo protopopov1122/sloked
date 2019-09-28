@@ -23,6 +23,7 @@
 #define SLOKED_KGR_PIPE_H_
 
 #include "sloked/kgr/Value.h"
+#include <functional>
 
 namespace sloked {
 
@@ -42,12 +43,13 @@ namespace sloked {
         virtual KgrValue Read() = 0;
         virtual std::optional<KgrValue> ReadOptional() = 0;
         virtual KgrValue ReadWait() = 0;
+        virtual void SetListener(std::function<void()>) = 0;
         virtual bool Wait(std::size_t = 1) = 0;
         virtual void Drop(std::size_t = 1) = 0;
         virtual void DropAll() = 0;
 
         virtual void Write(KgrValue &&) = 0;
-        virtual void WriteNX(KgrValue &&) = 0;
+        virtual bool WriteNX(KgrValue &&) = 0;
     };
 }
 

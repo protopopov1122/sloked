@@ -83,6 +83,11 @@ namespace sloked {
         return msg;
     }
 
+    void KgrLocalPipe::SetListener(std::function<void()> callback) {
+        std::unique_lock<std::mutex> lock(this->input->content_mtx);
+        this->input->callback = std::move(callback);
+    }
+
     bool KgrLocalPipe::Wait(std::size_t count) {
         std::unique_lock<std::mutex> lock(this->input->content_mtx);
         while (this->input->content.size() < count && this->descriptor->status == Status::Open) {
@@ -111,15 +116,22 @@ namespace sloked {
         }
         this->output->content.push(std::forward<KgrValue>(msg));
         this->output->content_cv.notify_all();
+        if (this->output->callback) {
+            this->output->callback();
+        }
     }
 
-    void KgrLocalPipe::WriteNX(KgrValue &&msg) {
+    bool KgrLocalPipe::WriteNX(KgrValue &&msg) {
         std::unique_lock<std::mutex> lock(this->output->content_mtx);
         if (this->descriptor->status != Status::Open) {
-            return;
+            return false;
         }
         this->output->content.push(std::forward<KgrValue>(msg));
         this->output->content_cv.notify_all();
+        if (this->output->callback) {
+            this->output->callback();
+        }
+        return true;
     }
 
     void KgrLocalPipe::Close() {
@@ -127,6 +139,9 @@ namespace sloked {
         std::unique_lock<std::mutex> olock(this->output->content_mtx);
         this->descriptor->status = Status::Closed;
         this->output->content_cv.notify_all();
+        if (this->output->callback) {
+            this->output->callback();
+        }
     }
 
     std::pair<std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>> KgrLocalPipe::Make() {

@@ -25,6 +25,8 @@
 #include "sloked/kgr/ContextManager.h"
 #include "sloked/core/Runnable.h"
 #include <mutex>
+#include <thread>
+#include <condition_variable>
 #include <list>
 
 namespace sloked {
@@ -32,9 +34,30 @@ namespace sloked {
     template <typename T>
     class KgrRunnableContextManager : public KgrContextManager<T>, public SlokedRunnable {
      public:
+        bool HasPendingActions() const {
+            for (auto &ctx : this->contexts) {
+                if (ctx->GetState() != KgrServiceContext::State::Idle) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        void SetListener(std::function<void()> callback) {
+            std::unique_lock<std::mutex> lock(this->contexts_mtx);
+            for (auto &ctx : this->contexts) {
+                ctx->SetListener(callback);
+            }
+            this->callback = std::move(callback);
+        }
+
         void Attach(std::unique_ptr<T> ctx) override {
             std::unique_lock<std::mutex> lock(this->contexts_mtx);
+            ctx->SetListener(this->callback);
             this->contexts.push_back(std::move(ctx));
+            if (this->callback) {
+                this->callback();
+            }
         }
 
         void Run() override {
@@ -63,6 +86,57 @@ namespace sloked {
      private:
         std::list<std::unique_ptr<T>> contexts;
         std::mutex contexts_mtx;
+        std::function<void()> callback;
+    };
+
+    template <typename T>
+    class KgrRunnableContextManagerHandle {
+     public:
+        KgrRunnableContextManagerHandle()
+            : work(false) {
+            this->manager.SetListener([&]() {
+                this->notificationCV.notify_all();
+            });
+        }
+
+        ~KgrRunnableContextManagerHandle() {
+            this->Stop();
+        }
+
+        KgrContextManager<T> &GetManager() {
+            return this->manager;
+        }
+
+        void Start() {
+            if (this->work.load()) {
+                return;
+            }
+            this->work = true;
+            this->managerThread = std::thread([&]() {
+                while (this->work.load()) {
+                    std::unique_lock<std::mutex> notificationLock(this->notificationMutex);
+                    while (!this->manager.HasPendingActions() && this->work.load()) {
+                        this->notificationCV.wait(notificationLock);
+                    }
+                    this->manager.Run();
+                }
+            });
+        }
+
+        void Stop() {
+            if (this->work.load()) {
+                this->work = false;
+                this->notificationCV.notify_all();
+                this->managerThread.join();
+            }
+        }
+
+     private:
+        KgrRunnableContextManager<T> manager;
+        std::atomic<bool> work;
+        std::mutex notificationMutex;
+        std::condition_variable notificationCV;
+        std::thread managerThread;
     };
 }
 

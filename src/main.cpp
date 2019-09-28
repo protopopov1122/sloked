@@ -166,15 +166,10 @@ int main(int argc, const char **argv) {
 
     // KgrLocalServer portServer;
     // KgrLocalNamedServer server(portServer);
-    // KgrRunnableContextManager<KgrLocalContext> ctxManager;
+    // KgrRunnableContextManagerHandle<KgrLocalContext> ctxManagerHandle;
+    // KgrContextManager<KgrLocalContext> &ctxManager = ctxManagerHandle.GetManager();
+    // ctxManagerHandle.Start();
     // server.Register("sum.10", std::make_unique<SumService>(10, ctxManager));
-
-    // std::atomic<bool> thread_run = true;
-    // std::thread ctxMgrThread([&]() {
-    //     while (thread_run.load()) {
-    //         ctxManager.Run();
-    //     }
-    // });
 
     // auto in = server.Connect("sum.10");
     // in->Write(KgrArray {
@@ -194,8 +189,7 @@ int main(int argc, const char **argv) {
     //     auto val = in->Read();
     //     std::cout << KgrJsonSerializer{}.Serialize(val) << std::endl;
     // }
-    // thread_run = false;
-    // ctxMgrThread.join();
+    // in->Close();
     // return EXIT_SUCCESS;
 
     char BUFFER[1024];
