@@ -53,7 +53,7 @@ namespace sloked {
         KgrValue Read() override;
         std::optional<KgrValue> ReadOptional() override;
         KgrValue ReadWait() override;
-        void SetListener(std::function<void()>) override;
+        void SetMessageListener(std::function<void()>) override;
         bool Wait(std::size_t = 1) override;
         void Drop(std::size_t = 1) override;
         void DropAll() override;

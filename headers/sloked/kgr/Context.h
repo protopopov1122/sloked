@@ -31,7 +31,7 @@ namespace sloked {
      public:
         enum class State {
             Idle,
-            Active,
+            Pending,
             Finished,
             Destroyed
         };
@@ -39,7 +39,7 @@ namespace sloked {
         virtual ~KgrServiceContext() = default;
         virtual State GetState() const = 0;
         virtual void Destroy() = 0;
-        virtual void SetListener(std::function<void()>) = 0;
+        virtual void SetActivationListener(std::function<void()>) = 0;
     };
 }
 

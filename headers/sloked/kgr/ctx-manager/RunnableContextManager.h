@@ -43,17 +43,17 @@ namespace sloked {
             return false;
         }
 
-        void SetListener(std::function<void()> callback) {
+        void SetActivationListener(std::function<void()> callback) {
             std::unique_lock<std::mutex> lock(this->contexts_mtx);
             for (auto &ctx : this->contexts) {
-                ctx->SetListener(callback);
+                ctx->SetActivationListener(callback);
             }
             this->callback = std::move(callback);
         }
 
         void Attach(std::unique_ptr<T> ctx) override {
             std::unique_lock<std::mutex> lock(this->contexts_mtx);
-            ctx->SetListener(this->callback);
+            ctx->SetActivationListener(this->callback);
             this->contexts.push_back(std::move(ctx));
             if (this->callback) {
                 this->callback();
@@ -65,7 +65,7 @@ namespace sloked {
                 return;
             }
             for (auto it = this->contexts.begin();;) {
-                if ((*it)->GetState() == KgrServiceContext::State::Active) {
+                if ((*it)->GetState() == KgrServiceContext::State::Pending) {
                     (*it)->Run();
                 }
                 
@@ -94,7 +94,7 @@ namespace sloked {
      public:
         KgrRunnableContextManagerHandle()
             : work(false) {
-            this->manager.SetListener([&]() {
+            this->manager.SetActivationListener([&]() {
                 this->notificationCV.notify_all();
             });
         }
@@ -114,11 +114,11 @@ namespace sloked {
             this->work = true;
             this->managerThread = std::thread([&]() {
                 while (this->work.load()) {
+                    this->manager.Run();
                     std::unique_lock<std::mutex> notificationLock(this->notificationMutex);
                     while (!this->manager.HasPendingActions() && this->work.load()) {
                         this->notificationCV.wait(notificationLock);
                     }
-                    this->manager.Run();
                 }
             });
         }

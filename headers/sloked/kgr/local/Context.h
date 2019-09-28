@@ -36,7 +36,7 @@ namespace sloked {
 
         State GetState() const override;
         void Destroy() override;
-        void SetListener(std::function<void()>) override;
+        void SetActivationListener(std::function<void()>) override;
 
      protected:
         std::unique_ptr<KgrPipe> pipe;

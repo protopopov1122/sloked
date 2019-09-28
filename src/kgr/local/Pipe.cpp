@@ -83,7 +83,7 @@ namespace sloked {
         return msg;
     }
 
-    void KgrLocalPipe::SetListener(std::function<void()> callback) {
+    void KgrLocalPipe::SetMessageListener(std::function<void()> callback) {
         std::unique_lock<std::mutex> lock(this->input->content_mtx);
         this->input->callback = std::move(callback);
     }

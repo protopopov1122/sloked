@@ -40,7 +40,7 @@ namespace sloked {
         } else if (this->pipe->Empty()) {
             return State::Idle;
         } else {
-            return State::Active;
+            return State::Pending;
         }
     }
     
@@ -48,9 +48,9 @@ namespace sloked {
         this->pipe.reset();
     }
 
-    void KgrLocalContext::SetListener(std::function<void()> callback) {
+    void KgrLocalContext::SetActivationListener(std::function<void()> callback) {
         if (this->pipe) {
-            this->pipe->SetListener(std::move(callback));
+            this->pipe->SetMessageListener(std::move(callback));
         }
     }
 }

@@ -43,7 +43,7 @@ namespace sloked {
         virtual KgrValue Read() = 0;
         virtual std::optional<KgrValue> ReadOptional() = 0;
         virtual KgrValue ReadWait() = 0;
-        virtual void SetListener(std::function<void()>) = 0;
+        virtual void SetMessageListener(std::function<void()>) = 0;
         virtual bool Wait(std::size_t = 1) = 0;
         virtual void Drop(std::size_t = 1) = 0;
         virtual void DropAll() = 0;
