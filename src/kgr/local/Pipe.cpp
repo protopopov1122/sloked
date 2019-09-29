@@ -116,6 +116,7 @@ namespace sloked {
         }
         this->output->content.push(std::forward<KgrValue>(msg));
         this->output->content_cv.notify_all();
+        lock.unlock();
         if (this->output->callback) {
             this->output->callback();
         }
@@ -128,6 +129,7 @@ namespace sloked {
         }
         this->output->content.push(std::forward<KgrValue>(msg));
         this->output->content_cv.notify_all();
+        lock.unlock();
         if (this->output->callback) {
             this->output->callback();
         }
@@ -139,6 +141,7 @@ namespace sloked {
         std::unique_lock<std::mutex> olock(this->output->content_mtx);
         this->descriptor->status = Status::Closed;
         this->output->content_cv.notify_all();
+        olock.unlock();
         if (this->output->callback) {
             this->output->callback();
         }

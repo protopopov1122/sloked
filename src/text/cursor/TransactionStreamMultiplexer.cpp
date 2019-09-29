@@ -152,6 +152,11 @@ namespace sloked {
             this->journal[i].transaction.Update(this->text, this->encoding);
             this->journal[i].transaction.Commit(this->text, this->encoding);
             auto commitPatch = this->journal[i].transaction.CommitPatch(this->encoding);
+            if (commitPatch.Has(pos)) {
+                const auto &delta = commitPatch.At(pos);
+                pos.line += delta.line;
+                pos.column += delta.column;
+            }
         }
 
         this->TriggerListeners(&SlokedTransactionStream::Listener::OnRollback, this->backtrack[streamId].back().transaction);
@@ -192,19 +197,24 @@ namespace sloked {
             this->journal.push_back(transaction);
         }
         transaction.transaction.Commit(this->text, this->encoding);
-        for (std::size_t i = idx + 1; i < this->journal.size(); i++) {
-            this->journal[i].transaction.Apply(patch);
-            this->journal[i].transaction.Update(this->text, this->encoding);
-            this->journal[i].transaction.Commit(this->text, this->encoding);
-            auto commitPatch = this->journal[i].transaction.CommitPatch(this->encoding);
-        }
-
-        this->TriggerListeners(&SlokedTransactionStream::Listener::OnRevert, transaction.transaction);
         if (patch.Has(pos)) {
             const auto &delta = patch.At(pos);
             pos.line += delta.line;
             pos.column += delta.column;
         }
+        for (std::size_t i = idx + 1; i < this->journal.size(); i++) {
+            this->journal[i].transaction.Apply(patch);
+            this->journal[i].transaction.Update(this->text, this->encoding);
+            this->journal[i].transaction.Commit(this->text, this->encoding);
+            auto commitPatch = this->journal[i].transaction.CommitPatch(this->encoding);
+            if (commitPatch.Has(pos)) {
+                const auto &delta = commitPatch.At(pos);
+                pos.line += delta.line;
+                pos.column += delta.column;
+            }
+        }
+
+        this->TriggerListeners(&SlokedTransactionStream::Listener::OnRevert, transaction.transaction);
         return pos;
     }
 

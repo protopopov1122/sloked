@@ -93,8 +93,10 @@ namespace sloked {
     class KgrRunnableContextManagerHandle {
      public:
         KgrRunnableContextManagerHandle()
-            : work(false) {
+            : work(false), notifications(0) {
             this->manager.SetActivationListener([&]() {
+                std::unique_lock<std::mutex> lock(this->notificationMutex);
+                this->notifications++;
                 this->notificationCV.notify_all();
             });
         }
@@ -114,11 +116,13 @@ namespace sloked {
             this->work = true;
             this->managerThread = std::thread([&]() {
                 while (this->work.load()) {
-                    this->manager.Run();
                     std::unique_lock<std::mutex> notificationLock(this->notificationMutex);
-                    while (!this->manager.HasPendingActions() && this->work.load()) {
+                    while (!this->manager.HasPendingActions() && this->work.load() && this->notifications.load() == 0) {
                         this->notificationCV.wait(notificationLock);
                     }
+                    this->notifications = 0;
+                    notificationLock.unlock();
+                    this->manager.Run();
                 }
             });
         }
@@ -134,6 +138,7 @@ namespace sloked {
      private:
         KgrRunnableContextManager<T> manager;
         std::atomic<bool> work;
+        std::atomic<uint32_t> notifications;
         std::mutex notificationMutex;
         std::condition_variable notificationCV;
         std::thread managerThread;

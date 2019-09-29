@@ -30,7 +30,7 @@ namespace sloked {
     template <typename T>
     class SlokedFragmentUpdater : public SlokedTransactionStream::Listener {
     public:
-        SlokedFragmentUpdater(const TextBlockView &text, SlokedTaggedText<T> &tags, const Encoding &encoding, SlokedCharWidth &charWidth)
+        SlokedFragmentUpdater(const TextBlockView &text, SlokedTaggedText<T> &tags, const Encoding &encoding, const SlokedCharWidth &charWidth)
             : text(text), tags(tags), encoding(encoding), charWidth(charWidth) {}
 
         void OnCommit(const SlokedCursorTransaction &trans) override {
@@ -55,7 +55,7 @@ namespace sloked {
         const TextBlockView &text;
         SlokedTaggedText<T> &tags;
         const Encoding &encoding;
-        SlokedCharWidth &charWidth;
+        const SlokedCharWidth &charWidth;
     };
 }
 

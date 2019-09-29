@@ -47,6 +47,7 @@
 #include "sloked/kgr/local/Server.h"
 #include "sloked/kgr/local/NamedServer.h"
 #include "sloked/kgr/ctx-manager/RunnableContextManager.h"
+#include "sloked/services/TextEditor.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
@@ -63,9 +64,7 @@ class TestFragment : public SlokedTextTagger<int> {
         : text(text), encoding(encoding), charWidth(charWidth), current{0, 0} {}
 
     std::optional<TaggedTextFragment<int>> Next() override {
-        if (this->cache.empty()) {
-            this->ParseLine();
-        }
+        while (this->cache.empty() && this->ParseLine()) {}
         if (!this->cache.empty()) {
             auto fragment = std::move(this->cache.front());
             this->cache.pop();
@@ -83,24 +82,24 @@ class TestFragment : public SlokedTextTagger<int> {
     }
 
  private:
-    void ParseLine() {
+    bool ParseLine() {
         if (this->current.line > this->text.GetLastLine()) {
-            return;
+            return false;
         }
 
         std::string currentLine{this->text.GetLine(this->current.line)};
-        auto lineLength = this->encoding.CodepointCount(currentLine);
-        while (this->current.column < lineLength) {
-            auto position = this->encoding.GetCodepoint(currentLine, this->current.column);
-            auto substr = currentLine.substr(position.first, 1);
-            if (substr.compare("\t") == 0) {
+        currentLine.erase(0, this->encoding.GetCodepoint(currentLine, this->current.column).first);
+        this->encoding.IterateCodepoints(currentLine, [&](auto start, auto length, auto chr) {
+            if (chr == U'\t') {
                 this->cache.push(TaggedTextFragment<int>(this->current, TextPosition{0, static_cast<TextPosition::Column>(1)}, 1));
             }
             this->current.column++;
-        }
+            return true;
+        });
 
         this->current.line++;
         this->current.column = 0;
+        return true;
     }
 
     const TextBlockView &text;
@@ -110,53 +109,13 @@ class TestFragment : public SlokedTextTagger<int> {
     std::queue<TaggedTextFragment<int>> cache;
 };
 
-class SumServiceContext : public KgrLocalContext {
+class TestFragmentFactory : public SlokedTextTaggerFactory<int> {
  public:
-    SumServiceContext(int64_t n, std::unique_ptr<KgrPipe> pipe, KgrContextManager<KgrLocalContext> &ctxMgr)
-        : KgrLocalContext(std::move(pipe)), number(n) {}
-
-    void Run() override {
-        try {
-            while (!this->pipe->Empty()) {
-                auto msg = this->pipe->Read();
-                if (msg.Is(KgrValueType::Array)) {
-                    KgrArray result;
-                    for (const auto &el : msg.AsArray()) {
-                        if (el.Is(KgrValueType::Integer)) {
-                            result.Append(el.AsInt() + this->number);
-                        }
-                    }
-                    this->pipe->Write(std::move(result));
-                } else {
-                    this->pipe->Write(KgrArray {});
-                }
-            }
-        } catch (const SlokedError &ex) {
-            if (this->pipe->GetStatus() == KgrPipe::Status::Open) {
-                throw;
-            }
-        }
+    std::unique_ptr<SlokedTextTagger<int>> Create(const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth) const override {
+        return std::make_unique<TestFragment>(text, encoding, charWidth);
     }
-
- private:
-    int64_t number;
 };
 
-class SumService : public KgrService {
- public:
-    SumService(int64_t n, KgrContextManager<KgrLocalContext> &ctxMgr)
-        : number(n), ctxMgr(ctxMgr) {}
-
-    bool Attach(std::unique_ptr<KgrPipe> pipe) override {
-        auto ctx = std::make_unique<SumServiceContext>(this->number, std::move(pipe), this->ctxMgr);
-        this->ctxMgr.Attach(std::move(ctx));
-        return true;
-    }
-
- private:
-    int64_t number;
-    KgrContextManager<KgrLocalContext> &ctxMgr;
-};
 
 int main(int argc, const char **argv) {
     if (argc < 3) {
@@ -164,33 +123,11 @@ int main(int argc, const char **argv) {
         return EXIT_FAILURE;
     }
 
-    // KgrLocalServer portServer;
-    // KgrLocalNamedServer server(portServer);
-    // KgrRunnableContextManagerHandle<KgrLocalContext> ctxManagerHandle;
-    // KgrContextManager<KgrLocalContext> &ctxManager = ctxManagerHandle.GetManager();
-    // ctxManagerHandle.Start();
-    // server.Register("sum.10", std::make_unique<SumService>(10, ctxManager));
-
-    // auto in = server.Connect("sum.10");
-    // in->Write(KgrArray {
-    //     1,
-    //     2,
-    //     3,
-    //     3.14,
-    //     "Hello, world",
-    //     5,
-    //     true,
-    //     KgrDictionary {}
-    // });
-    // in->Write({});
-    // in->Write(KgrArray {3, 2, 1});
-    // in->Wait(3);
-    // while (!in->Empty()) {
-    //     auto val = in->Read();
-    //     std::cout << KgrJsonSerializer{}.Serialize(val) << std::endl;
-    // }
-    // in->Close();
-    // return EXIT_SUCCESS;
+    KgrLocalServer portServer;
+    KgrLocalNamedServer server(portServer);
+    KgrRunnableContextManagerHandle<KgrLocalContext> ctxManagerHandle;
+    KgrContextManager<KgrLocalContext> &ctxManager = ctxManagerHandle.GetManager();
+    ctxManagerHandle.Start();
 
     char BUFFER[1024];
     realpath(argv[1], BUFFER);
@@ -205,10 +142,13 @@ int main(int argc, const char **argv) {
     TextChunkFactory blockFactory(*newline);
     TextDocument text(*newline, TextView::Open(*view, *newline, blockFactory));
 
+    SlokedCharWidth charWidth;
+    TestFragmentFactory fragmentFactory;
+    server.Register("text::editor", std::make_unique<SlokedTextEditorService>(text, fileEncoding, charWidth, fragmentFactory, ctxManager));
+
     TransactionStreamMultiplexer multiplexer(text, fileEncoding);
     auto stream1 = multiplexer.NewStream();
     TransactionCursor cursor(text, fileEncoding, *stream1);
-    SlokedCharWidth charWidth;
 
     SlokedLazyTaggedText<int> lazyTags(std::make_unique<TestFragment>(text, fileEncoding, charWidth));
     SlokedCacheTaggedText<int> tags(lazyTags);
@@ -216,7 +156,7 @@ int main(int argc, const char **argv) {
     stream1->AddListener(fragmentUpdater);
 
     PosixTerminal terminal;
-    BufferedTerminal console(terminal, Encoding::Utf8, charWidth);
+    BufferedTerminal console(terminal, terminalEncoding, charWidth);
 
     TerminalComponentHandle screen(console, terminalEncoding, charWidth);
     auto &multi = screen.NewMultiplexer();
@@ -224,12 +164,12 @@ int main(int argc, const char **argv) {
     auto win2 = multi.NewWindow(TextPosition{10, 50}, TextPosition{30, 150});
     auto &splitter = win1->GetComponent().NewSplitter(Splitter::Direction::Horizontal);
     auto &tabber = splitter.NewWindow(Splitter::Constraints(0.4))->GetComponent().NewTabber();
-    auto &tab1 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth));
-    auto &tab2 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth, SlokedBackgroundGraphics::Blue));
-    auto &tab3 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth, SlokedBackgroundGraphics::Magenta));
-    auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.2))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth));
-    auto &pane5 = splitter.NewWindow(Splitter::Constraints(0.15))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth));
-    auto &pane6 = win2->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(text, cursor, cursor, tags, conv, charWidth, SlokedBackgroundGraphics::Yellow));
+    auto &tab1 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::editor")));
+    auto &tab2 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::editor"), SlokedBackgroundGraphics::Blue));
+    auto &tab3 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::editor"), SlokedBackgroundGraphics::Magenta));
+    auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.2))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::editor")));
+    auto &pane5 = splitter.NewWindow(Splitter::Constraints(0.15))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::editor")));
+    auto &pane6 = win2->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::editor"), SlokedBackgroundGraphics::Yellow));
     win1->SetFocus();
 
     screen.SetInputHandler([&](const SlokedKeyboardInput &cmd) {
@@ -281,5 +221,6 @@ int main(int argc, const char **argv) {
         }
     }
 
+    ctxManagerHandle.Stop();
     return EXIT_SUCCESS;
 }

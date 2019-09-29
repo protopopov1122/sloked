@@ -38,6 +38,13 @@ namespace sloked {
     };
 
     template <typename T>
+    class SlokedTextTaggerFactory {
+     public:
+        virtual ~SlokedTextTaggerFactory() = default;
+        virtual std::unique_ptr<SlokedTextTagger<T>> Create(const TextBlockView &, const Encoding &, const SlokedCharWidth &) const = 0;
+    };
+
+    template <typename T>
     class SlokedTaggedText {
      public:
         virtual ~SlokedTaggedText() = default;

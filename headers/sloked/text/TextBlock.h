@@ -52,7 +52,7 @@ namespace sloked {
     };
 
     class TextBlock : public TextBlockView {
-     public:        
+     public:
         virtual void SetLine(std::size_t, std::string_view) = 0;
         virtual void EraseLine(std::size_t) = 0;
         virtual void InsertLine(std::size_t, std::string_view) = 0;

@@ -35,8 +35,11 @@ namespace sloked {
         }
 
         std::pair<std::size_t, std::size_t> GetCodepoint(std::string_view view, std::size_t idx) const override {
-            if (view.size() % 4 == 0) {
+            bool validView = view.size() % 4 == 0;
+            if (validView && idx * 4 < view.size()) {
                 return std::make_pair(idx * 4, 4);
+            } else if (validView) {
+                return std::make_pair(0, 0);
             } else {
                 throw SlokedError("UTF-32LE: Invalid length");
             }

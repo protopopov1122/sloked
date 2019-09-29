@@ -25,19 +25,6 @@
 
 namespace sloked {
 
-    static bool starts_with(std::string_view s1, std::string_view s2) {
-        if (s1.size() >= s2.size()) {
-            for (std::size_t i = 0; i < s2.size(); i++) {
-                if (s1[i] != s2[i]) {
-                    return false;
-                }
-            }
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     SlokedTextReplacer::SlokedTextReplacer(TextBlock &text, const Encoding &encoding)
         : text(text), encoding(encoding) {}
 
