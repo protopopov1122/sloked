@@ -5,10 +5,10 @@
 #include "sloked/core/CharWidth.h"
 #include "sloked/kgr/Service.h"
 #include "sloked/kgr/ContextManager.h"
-#include "sloked/kgr/local/Context.h"
 #include "sloked/text/TextBlock.h"
 #include "sloked/text/cursor/TransactionStreamMultiplexer.h"
 #include "sloked/text/fragment/TaggedText.h"
+#include "sloked/services/Service.h"
 
 namespace sloked {
 

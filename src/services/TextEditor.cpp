@@ -67,12 +67,12 @@ namespace sloked {
         const SlokedCharWidth &charWidth;
     };
 
-    class SlokedTextEditorContext : public KgrLocalContext {
+    class SlokedTextEditorContext : public SlokedServiceContext {
      public:
         SlokedTextEditorContext(std::unique_ptr<KgrPipe> pipe,
             TextBlock &text, const EncodingConverter &conv, const SlokedCharWidth &charWidth,
             std::unique_ptr<SlokedTransactionStream> stream, std::unique_ptr<SlokedTextTagger<int>> tagger)
-            : KgrLocalContext(std::move(pipe)),
+            : SlokedServiceContext(std::move(pipe)),
               text(text), conv(conv), charWidth(charWidth), cursor(text, conv.GetDestination(), *stream),
               lazyTags(std::move(tagger)), tags(lazyTags), frame(text, conv.GetDestination(), charWidth) {
             
@@ -81,24 +81,8 @@ namespace sloked {
             this->stream->AddListener(fragmentUpdater);
         }
 
-        void Run() override {
-            try {
-                if (!this->pipe->Empty()) {
-                    auto msg = this->pipe->Read();
-                    auto res = this->ProcessMessage(msg);
-                    if (res.has_value()) {
-                        this->pipe->Write(std::move(res.value()));
-                    }
-                }
-            } catch (const SlokedError &ex) {
-                if (this->pipe->GetStatus() == KgrPipe::Status::Open) {
-                    throw;
-                }
-            }
-        }
-
-     private:
-        std::optional<KgrValue> ProcessMessage(const KgrValue &message) {
+     protected:
+        void ProcessRequest(const KgrValue &message) override {
             const auto &prms = message.AsDictionary();
             auto command = static_cast<SlokedTextEditorService::Command>(prms["command"].AsInt());
             switch (command) {
@@ -143,11 +127,12 @@ namespace sloked {
                     break;
 
                 case SlokedTextEditorService::Command::Render:
-                    return this->Render(prms);
+                    this->SendResponse(this->Render(prms));
+                    break;
             }
-            return std::optional<KgrValue>();
         }
 
+     private:
         KgrValue Render(const KgrDictionary &dict) {
             const auto &dim = dict["dim"].AsDictionary();
             this->frame.Update(TextPosition{
