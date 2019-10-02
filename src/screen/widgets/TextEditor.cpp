@@ -20,79 +20,79 @@
 */
 
 #include "sloked/screen/widgets/TextEditor.h"
-#include "sloked/services/TextEditor.h"
+#include "sloked/services/Cursor.h"
 #include "sloked/core/Locale.h"
 
 namespace sloked {
 
-    SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, std::unique_ptr<KgrPipe> editorService, SlokedBackgroundGraphics bg)
-        : conv(encoding, SlokedLocale::SystemEncoding()), editorService(std::move(editorService)), background(bg) {}
+    SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService, std::unique_ptr<KgrPipe> renderService, SlokedBackgroundGraphics bg)
+        : conv(encoding, SlokedLocale::SystemEncoding()), cursorService(std::move(cursorService)), renderService(std::move(renderService)), background(bg) {}
 
     bool SlokedTextEditor::ProcessInput(const SlokedKeyboardInput &cmd) {
         if (cmd.index() == 0) {
-            this->editorService->Write(KgrDictionary {
-                { "command", static_cast<int>(SlokedTextEditorService::Command::Insert) },
+            this->cursorService->Write(KgrDictionary {
+                { "command", static_cast<int>(SlokedCursorService::Command::Insert) },
                 { "content", KgrValue(conv.Convert(std::get<0>(cmd))) }
             });
         } else switch (std::get<1>(cmd)) {
             case SlokedControlKey::ArrowUp:
-                this->editorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedTextEditorService::Command::MoveUp) }
+                this->cursorService->Write(KgrDictionary {
+                    { "command", static_cast<int>(SlokedCursorService::Command::MoveUp) }
                 });
                 break;
             
             case SlokedControlKey::ArrowDown:
-                this->editorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedTextEditorService::Command::MoveDown) }
+                this->cursorService->Write(KgrDictionary {
+                    { "command", static_cast<int>(SlokedCursorService::Command::MoveDown) }
                 });
                 break;
             
             case SlokedControlKey::ArrowLeft:
-                this->editorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedTextEditorService::Command::MoveBackward) }
+                this->cursorService->Write(KgrDictionary {
+                    { "command", static_cast<int>(SlokedCursorService::Command::MoveBackward) }
                 });
                 break;
             
             case SlokedControlKey::ArrowRight:
-                this->editorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedTextEditorService::Command::MoveForward) }
+                this->cursorService->Write(KgrDictionary {
+                    { "command", static_cast<int>(SlokedCursorService::Command::MoveForward) }
                 });
                 break;
 
             case SlokedControlKey::Enter:
-                this->editorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedTextEditorService::Command::NewLine) }
+                this->cursorService->Write(KgrDictionary {
+                    { "command", static_cast<int>(SlokedCursorService::Command::NewLine) }
                 });
                 break;
 
             case SlokedControlKey::Tab:
-                this->editorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedTextEditorService::Command::Insert) },
+                this->cursorService->Write(KgrDictionary {
+                    { "command", static_cast<int>(SlokedCursorService::Command::Insert) },
                     { "content", KgrValue("\t") }
                 });
                 break;
 
             case SlokedControlKey::Backspace:
-                this->editorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedTextEditorService::Command::DeleteBackward) }
+                this->cursorService->Write(KgrDictionary {
+                    { "command", static_cast<int>(SlokedCursorService::Command::DeleteBackward) }
                 });
                 break;
 
             case SlokedControlKey::Delete:
-                this->editorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedTextEditorService::Command::DeleteForward) }
+                this->cursorService->Write(KgrDictionary {
+                    { "command", static_cast<int>(SlokedCursorService::Command::DeleteForward) }
                 });
                 break;
             
             case SlokedControlKey::Escape:
-                this->editorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedTextEditorService::Command::Undo) }
+                this->cursorService->Write(KgrDictionary {
+                    { "command", static_cast<int>(SlokedCursorService::Command::Undo) }
                 });
                 break;
             
             case SlokedControlKey::End:
-                this->editorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedTextEditorService::Command::Redo) }
+                this->cursorService->Write(KgrDictionary {
+                    { "command", static_cast<int>(SlokedCursorService::Command::Redo) }
                 });
                 break;
 
@@ -103,19 +103,24 @@ namespace sloked {
     }
 
     void SlokedTextEditor::Render(SlokedTextPane &pane) {
-        this->editorService->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedTextEditorService::Command::Render) },
+        this->cursorService->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::Info) }
+        });
+        auto cursor = this->cursorService->ReadWait();
+        this->renderService->Write(KgrDictionary {
             {
                 "dim", KgrDictionary {
                     { "height", static_cast<int64_t>(pane.GetHeight()) },
-                    { "width", static_cast<int64_t>(pane.GetWidth()) }
+                    { "width", static_cast<int64_t>(pane.GetWidth()) },
+                    { "line", static_cast<int64_t>(cursor.AsDictionary()["line"].AsInt()) },
+                    { "column", static_cast<int64_t>(cursor.AsDictionary()["column"].AsInt()) }
                 }
             }
         });
-        if (this->editorService->Count() > 1) {
-            this->editorService->Drop(this->editorService->Count() - 1);
+        if (this->renderService->Count() > 1) {
+            this->renderService->Drop(this->renderService->Count() - 1);
         }
-        auto res = this->editorService->ReadWait();
+        auto res = this->renderService->ReadWait();
 
         pane.SetGraphicsMode(this->background);
         pane.ClearScreen();
@@ -134,7 +139,7 @@ namespace sloked {
             pane.Write(text);
         }
         
-        const auto &cursor = res.AsDictionary()["cursor"].AsDictionary();
-        pane.SetPosition(cursor["line"].AsInt(), cursor["column"].AsInt());
+        const auto &realCursor = res.AsDictionary()["cursor"].AsDictionary();
+        pane.SetPosition(realCursor["line"].AsInt(), realCursor["column"].AsInt());
     }
 }

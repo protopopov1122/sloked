@@ -27,16 +27,25 @@
 
 namespace sloked {
 
-    class SlokedTransactionStream {
-     public:
-        class Listener {
-         public:
-            virtual ~Listener() = default;
-            virtual void OnCommit(const SlokedCursorTransaction &) = 0;
-            virtual void OnRollback(const SlokedCursorTransaction &) = 0;
-            virtual void OnRevert(const SlokedCursorTransaction &) = 0;
-        };
+    class SlokedTransactionStreamListener {
+        public:
+        virtual ~SlokedTransactionStreamListener() = default;
+        virtual void OnCommit(const SlokedCursorTransaction &) = 0;
+        virtual void OnRollback(const SlokedCursorTransaction &) = 0;
+        virtual void OnRevert(const SlokedCursorTransaction &) = 0;
+    };
 
+    class SlokedTransactionListenerManager {
+     public:
+        virtual ~SlokedTransactionListenerManager() = default;
+        virtual void AddListener(std::shared_ptr<SlokedTransactionStreamListener>) = 0;
+        virtual void RemoveListener(const SlokedTransactionStreamListener &) = 0;
+        virtual void ClearListeners() = 0;
+    };
+
+    class SlokedTransactionStream : public SlokedTransactionListenerManager {
+     public:
+        using Listener = SlokedTransactionStreamListener;
         virtual ~SlokedTransactionStream() = default;
         virtual TextPosition Commit(const SlokedCursorTransaction &) = 0;
         virtual bool HasRollback() const = 0;

@@ -19,10 +19,9 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/services/TextEditor.h"
+#include "sloked/services/TextRender.h"
 #include "sloked/core/Error.h"
 #include "sloked/core/Locale.h"
-#include "sloked/text/cursor/TransactionCursor.h"
 #include "sloked/text/cursor/TransactionJournal.h"
 #include "sloked/text/fragment/Updater.h"
 #include "sloked/text/TextFrame.h"
@@ -67,79 +66,39 @@ namespace sloked {
         const SlokedCharWidth &charWidth;
     };
 
-    class SlokedTextEditorContext : public SlokedServiceContext {
+    class SlokedTextRenderContext : public SlokedServiceContext {
      public:
-        SlokedTextEditorContext(std::unique_ptr<KgrPipe> pipe,
+        SlokedTextRenderContext(std::unique_ptr<KgrPipe> pipe,
             TextBlock &text, const EncodingConverter &conv, const SlokedCharWidth &charWidth,
-            std::unique_ptr<SlokedTransactionStream> stream, std::unique_ptr<SlokedTextTagger<int>> tagger)
+            SlokedTransactionListenerManager &transactionListeners, std::unique_ptr<SlokedTextTagger<int>> tagger)
             : SlokedServiceContext(std::move(pipe)),
-              text(text), conv(conv), charWidth(charWidth), cursor(text, conv.GetDestination(), *stream),
+              text(text), conv(conv), charWidth(charWidth), transactionListeners(transactionListeners),
               lazyTags(std::move(tagger)), tags(lazyTags), frame(text, conv.GetDestination(), charWidth) {
-            
-            this->stream = std::move(stream);
-            auto fragmentUpdater = std::make_shared<SlokedFragmentUpdater<int>>(this->text, this->tags, this->conv.GetDestination(), this->charWidth);
-            this->stream->AddListener(fragmentUpdater);
+            this->fragmentUpdater = std::make_shared<SlokedFragmentUpdater<int>>(this->text, this->tags, this->conv.GetDestination(), this->charWidth);
+            this->transactionListeners.AddListener(this->fragmentUpdater);
+        }
+
+        ~SlokedTextRenderContext() {
+            this->transactionListeners.RemoveListener(*this->fragmentUpdater);
         }
 
      protected:
         void ProcessRequest(const KgrValue &message) override {
             const auto &prms = message.AsDictionary();
-            auto command = static_cast<SlokedTextEditorService::Command>(prms["command"].AsInt());
-            switch (command) {
-                case SlokedTextEditorService::Command::Insert:
-                    this->cursor.Insert(this->conv.Convert(prms["content"].AsString()));
-                    break;
-
-                case SlokedTextEditorService::Command::MoveUp:
-                    this->cursor.MoveUp(1);
-                    break;
-
-                case SlokedTextEditorService::Command::MoveDown:
-                    this->cursor.MoveDown(1);
-                    break;
-
-                case SlokedTextEditorService::Command::MoveBackward:
-                    this->cursor.MoveBackward(1);
-                    break;
-
-                case SlokedTextEditorService::Command::MoveForward:
-                    this->cursor.MoveForward(1);
-                    break;
-
-                case SlokedTextEditorService::Command::NewLine:
-                    this->cursor.NewLine("");
-                    break;
-
-                case SlokedTextEditorService::Command::DeleteBackward:
-                    this->cursor.DeleteBackward();
-                    break;
-
-                case SlokedTextEditorService::Command::DeleteForward:
-                    this->cursor.DeleteForward();
-                    break;
-
-                case SlokedTextEditorService::Command::Undo:
-                    this->cursor.Undo();
-                    break;
-
-                case SlokedTextEditorService::Command::Redo:
-                    this->cursor.Redo();
-                    break;
-
-                case SlokedTextEditorService::Command::Render:
-                    this->SendResponse(this->Render(prms));
-                    break;
-            }
+            this->SendResponse(this->Render(prms));
         }
 
      private:
         KgrValue Render(const KgrDictionary &dict) {
             const auto &dim = dict["dim"].AsDictionary();
+            auto line = static_cast<TextPosition::Line>(dim["line"].AsInt());
+            auto column = static_cast<TextPosition::Column>(dim["column"].AsInt());
             this->frame.Update(TextPosition{
                     static_cast<TextPosition::Line>(dim["height"].AsInt()),
                     static_cast<TextPosition::Column>(dim["width"].AsInt())
                 }, TextPosition{
-                    this->cursor.GetLine(), this->cursor.GetColumn()
+                    line,
+                    column
                 });
 
             KgrArray fragments;
@@ -169,12 +128,12 @@ namespace sloked {
                 }
             });
             
-            std::string realLine{this->text.GetLine(this->cursor.GetLine())};
-            auto realPos = this->charWidth.GetRealPosition(realLine, this->cursor.GetColumn(), conv.GetDestination());
-            auto realColumn = this->cursor.GetColumn() < this->conv.GetDestination().CodepointCount(realLine) ? realPos.first : realPos.second;
+            std::string realLine{this->text.GetLine(line)};
+            auto realPos = this->charWidth.GetRealPosition(realLine, column, conv.GetDestination());
+            auto realColumn = column < this->conv.GetDestination().CodepointCount(realLine) ? realPos.first : realPos.second;
             const auto &offset = this->frame.GetOffset();
             KgrDictionary cursor {
-                { "line", static_cast<int64_t>(this->cursor.GetLine() - offset.line) },
+                { "line", static_cast<int64_t>(line - offset.line) },
                 { "column", static_cast<int64_t>(realColumn - offset.column) }
             };
             return KgrDictionary {
@@ -186,21 +145,20 @@ namespace sloked {
         TextBlock &text;
         const EncodingConverter &conv;
         const SlokedCharWidth &charWidth;
-        std::unique_ptr<SlokedTransactionStream> stream;
-        TransactionCursor cursor;
+        SlokedTransactionListenerManager &transactionListeners;
         SlokedLazyTaggedText<int> lazyTags;
         SlokedCacheTaggedText<int> tags;
         TextFrameView frame;
+        std::shared_ptr<SlokedFragmentUpdater<int>> fragmentUpdater;
     };
 
 
-    SlokedTextEditorService::SlokedTextEditorService(TextBlock &text, const Encoding &encoding, const SlokedCharWidth &charWidth, SlokedTextTaggerFactory<int> &taggerFactory,
+    SlokedTextRenderService::SlokedTextRenderService(TextBlock &text, const Encoding &encoding, SlokedTransactionListenerManager &transactioListeners, const SlokedCharWidth &charWidth, SlokedTextTaggerFactory<int> &taggerFactory,
         KgrContextManager<KgrLocalContext> &contextManager)
-        : text(text), conv(SlokedLocale::SystemEncoding(), encoding), taggerFactory(taggerFactory), charWidth(charWidth), contextManager(contextManager),
-          multiplexer(text, encoding) {}
+        : text(text), conv(SlokedLocale::SystemEncoding(), encoding), transactionListeners(transactioListeners), taggerFactory(taggerFactory), charWidth(charWidth), contextManager(contextManager) {}
 
-    bool SlokedTextEditorService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedTextEditorContext>(std::move(pipe), this->text, this->conv, this->charWidth, this->multiplexer.NewStream(), this->taggerFactory.Create(this->text, this->conv.GetDestination(), this->charWidth));
+    bool SlokedTextRenderService::Attach(std::unique_ptr<KgrPipe> pipe) {
+        auto ctx = std::make_unique<SlokedTextRenderContext>(std::move(pipe), this->text, this->conv, this->charWidth, this->transactionListeners, this->taggerFactory.Create(this->text, this->conv.GetDestination(), this->charWidth));
         this->contextManager.Attach(std::move(ctx));
         return true;
     }

@@ -83,6 +83,20 @@ namespace sloked {
         return std::make_unique<Stream>(*this);
     }
 
+    void TransactionStreamMultiplexer::AddListener(std::shared_ptr<SlokedTransactionStream::Listener> l) {
+        this->anonymousListeners.push_back(l);
+    }
+
+    void TransactionStreamMultiplexer::RemoveListener(const SlokedTransactionStream::Listener &l) {
+        std::remove_if(this->anonymousListeners.begin(), this->anonymousListeners.end(), [&](const auto &listener) {
+            return listener.get() == std::addressof(l);
+        });
+    }
+
+    void TransactionStreamMultiplexer::ClearListeners() {
+        this->anonymousListeners.clear();
+    }
+
     TransactionStreamMultiplexer::StreamId TransactionStreamMultiplexer::RegisterStream(SlokedTransactionStream::Listener &listener) {
         std::size_t id = this->nextStreamId++;
         this->backtrack[id] = std::vector<LabeledTransaction>{};
@@ -221,6 +235,9 @@ namespace sloked {
     void TransactionStreamMultiplexer::TriggerListeners(void (SlokedTransactionStream::Listener::*callback)(const SlokedCursorTransaction &), const SlokedCursorTransaction &trans) {
         for (auto listener : this->listeners) {
             (listener.second.get().*callback)(trans);
+        }
+        for (auto listener : this->anonymousListeners) {
+            (*listener.*callback)(trans);
         }
     }
 }

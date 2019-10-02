@@ -29,10 +29,14 @@
 
 namespace sloked {
 
-    class TransactionStreamMultiplexer {
+    class TransactionStreamMultiplexer : public SlokedTransactionListenerManager {
      public:
         TransactionStreamMultiplexer(TextBlock &, const Encoding &);
         std::unique_ptr<SlokedTransactionStream> NewStream();
+
+        void AddListener(std::shared_ptr<SlokedTransactionStream::Listener>) override;
+        void RemoveListener(const SlokedTransactionStream::Listener &) override;
+        void ClearListeners() override;
 
         class Stream;
         friend class Stream;
@@ -61,6 +65,7 @@ namespace sloked {
         std::vector<LabeledTransaction> journal;
         std::map<std::size_t, std::vector<LabeledTransaction>> backtrack;
         std::map<StreamId, std::reference_wrapper<SlokedTransactionStream::Listener>> listeners;
+        std::vector<std::shared_ptr<SlokedTransactionStream::Listener>> anonymousListeners;
     };
 }
 

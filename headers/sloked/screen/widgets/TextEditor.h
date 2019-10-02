@@ -31,14 +31,15 @@ namespace sloked {
 
     class SlokedTextEditor : public SlokedTextPaneWidget {
      public:
-        SlokedTextEditor(const Encoding &, std::unique_ptr<KgrPipe>, SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black);
+        SlokedTextEditor(const Encoding &, std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>, SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black);
 
         bool ProcessInput(const SlokedKeyboardInput &) override;
         void Render(SlokedTextPane &) override;
 
      private:
         EncodingConverter conv;
-        std::unique_ptr<KgrPipe> editorService;
+        std::unique_ptr<KgrPipe> cursorService;
+        std::unique_ptr<KgrPipe> renderService;
         SlokedBackgroundGraphics background;
     };
 }
