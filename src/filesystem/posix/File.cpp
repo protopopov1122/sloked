@@ -170,4 +170,33 @@ namespace sloked {
             }
         }
     }
+
+    static void TraverseDir(const std::string &dir, const SlokedFile::FileVisitor &visitor, bool includes_dirs) {
+        DIR *directory = opendir(dir.c_str());
+        if (directory == nullptr) {
+            return;
+        }
+        for (dirent *entry = readdir(directory); entry != nullptr; entry = readdir(directory)) {
+            std::string path(entry->d_name);
+            if (path != ".." && path != ".") {
+                struct stat stats;
+                auto fullPath = dir + "/" + path;
+                bool is_directory = stat(fullPath.c_str(), &stats) == 0 && S_ISDIR(stats.st_mode);
+                if (!is_directory || includes_dirs) {
+                    visitor(fullPath);
+                }
+                if (is_directory) {
+                    TraverseDir(fullPath, visitor, includes_dirs);
+                }
+            }
+        }
+    }
+
+    void SlokedPosixFile::Traverse(FileVisitor visitor, bool include_dirs) const {
+        if (this->IsFile()) {
+            visitor(this->path);
+        } else {
+            TraverseDir(this->path, visitor, include_dirs);
+        }
+    }
 }

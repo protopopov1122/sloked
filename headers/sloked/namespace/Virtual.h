@@ -37,6 +37,7 @@ namespace sloked {
         std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) override;
         bool HasObject(const SlokedPath &) const override;
         void Iterate(const SlokedPath &, Visitor) const override;
+        void Traverse(const SlokedPath &, Visitor, bool = false) const override;
         std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(const SlokedPath &) override;
 
         friend class SlokedVirtualObjectHandle;

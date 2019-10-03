@@ -185,6 +185,20 @@ namespace sloked {
         }
     }
 
+    void SlokedFilesystemNamespace::Traverse(const SlokedPath &path, Visitor visitor, bool include_dirs) const {
+        auto file = this->filesystem->NewFile(path);
+        if (file) {
+            file->Traverse([&](const std::string &name) {
+                auto childPath = this->filesystem->ToPath(name);
+                auto file = this->filesystem->NewFile(childPath);
+                visitor(childPath.RelativeTo(path).ToString(),
+                    file->IsFile()
+                        ? SlokedNamespaceObject::Type::File
+                        : SlokedNamespaceObject::Type::Directory);
+            }, include_dirs);
+        }
+    }
+
     std::unique_ptr<SlokedNamespaceObjectHandle> SlokedFilesystemNamespace::GetHandle(const SlokedPath &path) {
         return std::make_unique<SlokedFilesystemObjectHandle>(*this->filesystem, path);
     }

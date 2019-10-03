@@ -161,6 +161,13 @@ namespace sloked {
         entry.ns->Iterate(nsPath, visitor);
     }
 
+    void SlokedVirtualNamespace::Traverse(const SlokedPath &path, Visitor visitor, bool include_dirs) const {
+        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(SlokedPath::Root);
+        const Entry &entry = this->find(realPath);
+        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
+        entry.ns->Traverse(nsPath, visitor, include_dirs);
+    }
+
     std::unique_ptr<SlokedNamespaceObjectHandle> SlokedVirtualNamespace::GetHandle(const SlokedPath &path) {
         return std::make_unique<SlokedVirtualObjectHandle>(*this, path);
     }

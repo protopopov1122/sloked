@@ -61,6 +61,14 @@ namespace sloked {
             this->ns.Iterate(path.RelativeTo(this->path), std::move(visitor));
         }
     }
+
+    void SlokedNamespaceDefaultDirectory::Traverse(const SlokedPath &path, Visitor visitor, bool include_dirs) const {
+        if (path.IsAbsolute()) {
+            this->ns.Traverse(path, std::move(visitor), include_dirs);
+        } else {
+            this->ns.Traverse(path.RelativeTo(this->path), std::move(visitor), include_dirs);
+        }
+    }
     
     std::unique_ptr<SlokedNamespaceObjectHandle> SlokedNamespaceDefaultDirectory::GetHandle(const SlokedPath &path) {
         if (path.IsAbsolute()) {

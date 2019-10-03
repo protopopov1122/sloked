@@ -49,6 +49,7 @@ namespace sloked {
 
         std::unique_ptr<SlokedFile> GetFile(std::string_view) const override;
         void ListFiles(FileVisitor) const override;
+        void Traverse(FileVisitor, bool = false) const override;
 
      private:
         std::string path;

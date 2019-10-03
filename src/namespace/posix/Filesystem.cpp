@@ -45,4 +45,7 @@ namespace sloked {
             return std::make_unique<SlokedPosixFile>(realPath.ToString());
         }
     }
+    SlokedPath SlokedPosixFilesystemAdapter::ToPath(const std::string &path) const {
+        return SlokedPath(path);
+    }
 }

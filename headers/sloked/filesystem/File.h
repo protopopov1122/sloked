@@ -60,6 +60,7 @@ namespace sloked {
 
         virtual std::unique_ptr<SlokedFile> GetFile(std::string_view) const = 0;
         virtual void ListFiles(FileVisitor) const = 0;
+        virtual void Traverse(FileVisitor, bool = false) const = 0;
     };
 }
 

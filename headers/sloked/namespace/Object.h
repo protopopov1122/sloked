@@ -81,6 +81,7 @@ namespace sloked {
         virtual std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) = 0;
         virtual bool HasObject(const SlokedPath &) const = 0;
         virtual void Iterate(const SlokedPath &, Visitor) const = 0;
+        virtual void Traverse(const SlokedPath &, Visitor, bool = false) const = 0;
         virtual std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(const SlokedPath &) = 0;
     };
 
