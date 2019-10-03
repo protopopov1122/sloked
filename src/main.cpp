@@ -37,6 +37,7 @@
 #include "sloked/screen/widgets/TextEditor.h"
 #include "sloked/filesystem/posix/File.h"
 #include "sloked/namespace/Filesystem.h"
+#include "sloked/namespace/Find.h"
 #include "sloked/namespace/Virtual.h"
 #include "sloked/namespace/View.h"
 #include "sloked/namespace/posix/Filesystem.h"

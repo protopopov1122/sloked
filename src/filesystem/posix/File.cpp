@@ -190,6 +190,7 @@ namespace sloked {
                 }
             }
         }
+        closedir(directory);
     }
 
     void SlokedPosixFile::Traverse(FileVisitor visitor, bool include_dirs) const {

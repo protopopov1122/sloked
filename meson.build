@@ -32,6 +32,7 @@ sloked_src = [
   'src/kgr/local/Server.cpp',
   'src/namespace/Directory.cpp',
   'src/namespace/Filesystem.cpp',
+  'src/namespace/Find.cpp',
   'src/namespace/Object.cpp',
   'src/namespace/Path.cpp',
   'src/namespace/View.cpp',
