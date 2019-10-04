@@ -47,6 +47,7 @@ namespace sloked {
         virtual std::string Encode(std::u32string_view) const = 0;
         virtual std::u32string Decode(std::string_view) const;
 
+        static const Encoding &Get(const std::string &);
         static const Encoding &Utf8;
         static const Encoding &Utf32LE;
 

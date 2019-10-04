@@ -20,8 +20,16 @@
 */
 
 #include "sloked/core/Encoding.h"
+#include "sloked/core/Error.h"
+#include "sloked/core/Locale.h"
+#include <map>
 
 namespace sloked {
+
+    static std::map<std::string, std::reference_wrapper<const Encoding>> Encodings = {
+        { "utf-8", Encoding::Utf8 },
+        { "utf-32le", Encoding::Utf32LE }
+    };
 
     bool Encoding::operator==(const Encoding &other) const {
         return this == &other;
@@ -34,6 +42,17 @@ namespace sloked {
             return true;
         });
         return res;
+    }
+
+    const Encoding &Encoding::Get(const std::string &id) {
+        if (id == "system") {
+            return SlokedLocale::SystemEncoding();
+        }
+        if (Encodings.count(id) != 0) {
+            return Encodings.at(id).get();
+        } else {
+            throw SlokedError("Unknown encoding " + id);
+        }
     }
 
     EncodingConverter::EncodingConverter(const Encoding &from, const Encoding &to)
