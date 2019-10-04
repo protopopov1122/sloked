@@ -100,11 +100,11 @@ namespace sloked {
     };
 
 
-    SlokedCursorService::SlokedCursorService(TextBlock &text, const Encoding &encoding, TransactionStreamMultiplexer &multiplexer, KgrContextManager<KgrLocalContext> &contextManager)
-        : text(text), conv(SlokedLocale::SystemEncoding(), encoding), multiplexer(multiplexer), contextManager(contextManager) {}
+    SlokedCursorService::SlokedCursorService(SlokedEditorDocument &document, KgrContextManager<KgrLocalContext> &contextManager)
+        : document(document), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()), contextManager(contextManager) {}
 
     bool SlokedCursorService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedCursorContext>(std::move(pipe), this->text, this->conv, this->multiplexer.NewStream());
+        auto ctx = std::make_unique<SlokedCursorContext>(std::move(pipe), this->document.GetText(), this->conv, this->document.NewStream());
         this->contextManager.Attach(std::move(ctx));
         return true;
     }

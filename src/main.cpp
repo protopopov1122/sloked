@@ -50,6 +50,7 @@
 #include "sloked/kgr/ctx-manager/RunnableContextManager.h"
 #include "sloked/services/TextRender.h"
 #include "sloked/services/Cursor.h"
+#include "sloked/editor/Document.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
@@ -134,30 +135,19 @@ int main(int argc, const char **argv) {
     char BUFFER[1024];
     realpath(argv[1], BUFFER);
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
-    auto view = root.GetObject(BUFFER)->AsFile()->View();
 
     SlokedLocale::Setup();
     const Encoding &fileEncoding = Encoding::Get("system");
     const Encoding &terminalEncoding = Encoding::Get("system");
     EncodingConverter conv(fileEncoding, terminalEncoding);
     auto newline = NewLine::LF(fileEncoding);
-    TextChunkFactory blockFactory(*newline);
-    TextDocument text(*newline, TextView::Open(*view, *newline, blockFactory));
+    SlokedEditorDocument document(root, BUFFER, fileEncoding, std::move(newline));
 
     SlokedCharWidth charWidth;
     TestFragmentFactory fragmentFactory;
 
-    TransactionStreamMultiplexer multiplexer(text, fileEncoding);
-    auto stream1 = multiplexer.NewStream();
-    TransactionCursor cursor(text, fileEncoding, *stream1);
-
-    server.Register("text::render", std::make_unique<SlokedTextRenderService>(text, fileEncoding, multiplexer, charWidth, fragmentFactory, ctxManager));
-    server.Register("text::cursor", std::make_unique<SlokedCursorService>(text, fileEncoding, multiplexer, ctxManager));
-
-    SlokedLazyTaggedText<int> lazyTags(std::make_unique<TestFragment>(text, fileEncoding, charWidth));
-    SlokedCacheTaggedText<int> tags(lazyTags);
-    auto fragmentUpdater = std::make_shared<SlokedFragmentUpdater<int>>(text, tags, fileEncoding, charWidth);
-    stream1->AddListener(fragmentUpdater);
+    server.Register("text::render", std::make_unique<SlokedTextRenderService>(document.GetText(), document.GetEncoding(), document.GetTransactionListeners(), charWidth, fragmentFactory, ctxManager));
+    server.Register("text::cursor", std::make_unique<SlokedCursorService>(document, ctxManager));
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
@@ -182,7 +172,7 @@ int main(int argc, const char **argv) {
         } else switch (std::get<1>(cmd)) {            
             case SlokedControlKey::F9: {
                 std::ofstream of(argv[2]);
-                of << text;
+                of << document.GetText();
                 of.close();
                 std::exit(EXIT_SUCCESS);
             }

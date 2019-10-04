@@ -30,6 +30,7 @@
 #include "sloked/text/cursor/TransactionStreamMultiplexer.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/services/Service.h"
+#include "sloked/editor/Document.h"
 
 namespace sloked {
 
@@ -49,13 +50,12 @@ namespace sloked {
             Info
         };
 
-        SlokedCursorService(TextBlock &, const Encoding &, TransactionStreamMultiplexer &, KgrContextManager<KgrLocalContext> &);
+        SlokedCursorService(SlokedEditorDocument &, KgrContextManager<KgrLocalContext> &);
         bool Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
-        TextBlock &text;
+        SlokedEditorDocument &document;
         EncodingConverter conv;
-        TransactionStreamMultiplexer &multiplexer;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
 }
