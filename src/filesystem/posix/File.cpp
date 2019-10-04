@@ -36,6 +36,27 @@ namespace sloked {
 
     static constexpr auto MODE = 0755;
 
+    class DirectoryHandle {
+     public:
+        DirectoryHandle(const std::string &path)
+            : dir(opendir(path.c_str())) {}
+
+        ~DirectoryHandle() {
+            closedir(this->dir);
+        }
+
+        dirent *Read() const {
+            if (this->dir) {
+                return readdir(this->dir);
+            } else {
+                return nullptr;
+            }
+        }
+
+     private:
+        DIR *dir;
+    };
+
     SlokedPosixFile::SlokedPosixFile(const std::string &path)
         : path(path) {}
 
@@ -159,11 +180,8 @@ namespace sloked {
     }
 
     void SlokedPosixFile::ListFiles(FileVisitor visitor) const {
-        DIR *directory = opendir(this->path.c_str());
-        if (directory == nullptr) {
-            return;
-        }
-        for (dirent *entry = readdir(directory); entry != nullptr; entry = readdir(directory)) {
+        DirectoryHandle directory(this->path);
+        for (dirent *entry = directory.Read(); entry != nullptr; entry = directory.Read()) {
             std::string str(entry->d_name);
             if (str != ".." && str != ".") {
                 visitor(str);
@@ -172,11 +190,8 @@ namespace sloked {
     }
 
     static void TraverseDir(const std::string &dir, const SlokedFile::FileVisitor &visitor, bool includes_dirs) {
-        DIR *directory = opendir(dir.c_str());
-        if (directory == nullptr) {
-            return;
-        }
-        for (dirent *entry = readdir(directory); entry != nullptr; entry = readdir(directory)) {
+        DirectoryHandle directory(dir);
+        for (dirent *entry = directory.Read(); entry != nullptr; entry = directory.Read()) {
             std::string path(entry->d_name);
             if (path != ".." && path != ".") {
                 struct stat stats;
@@ -190,7 +205,6 @@ namespace sloked {
                 }
             }
         }
-        closedir(directory);
     }
 
     void SlokedPosixFile::Traverse(FileVisitor visitor, bool include_dirs) const {
