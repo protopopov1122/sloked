@@ -22,6 +22,7 @@ sloked_src = [
   'src/filesystem/posix/View.cpp',
   'src/filesystem/posix/Writer.cpp',
   'src/editor/Document.cpp',
+  'src/editor/DocumentSet.cpp',
   'src/json/AST.cpp',
   'src/json/Lexer.cpp',
   'src/json/Parser.cpp',

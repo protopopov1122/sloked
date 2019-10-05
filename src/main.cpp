@@ -50,7 +50,7 @@
 #include "sloked/kgr/ctx-manager/RunnableContextManager.h"
 #include "sloked/services/TextRender.h"
 #include "sloked/services/Cursor.h"
-#include "sloked/editor/Document.h"
+#include "sloked/editor/DocumentSet.h"
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
@@ -135,19 +135,20 @@ int main(int argc, const char **argv) {
     char BUFFER[1024];
     realpath(argv[1], BUFFER);
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
+    SlokedEditorDocumentSet documents(root);
 
     SlokedLocale::Setup();
     const Encoding &fileEncoding = Encoding::Get("system");
     const Encoding &terminalEncoding = Encoding::Get("system");
     EncodingConverter conv(fileEncoding, terminalEncoding);
     auto newline = NewLine::LF(fileEncoding);
-    SlokedEditorDocument document(root, BUFFER, fileEncoding, std::move(newline));
+    auto document = documents.OpenDocument(BUFFER, fileEncoding, std::move(newline));
 
     SlokedCharWidth charWidth;
     TestFragmentFactory fragmentFactory;
 
-    server.Register("text::render", std::make_unique<SlokedTextRenderService>(document.GetText(), document.GetEncoding(), document.GetTransactionListeners(), charWidth, fragmentFactory, ctxManager));
-    server.Register("text::cursor", std::make_unique<SlokedCursorService>(document, ctxManager));
+    server.Register("text::render", std::make_unique<SlokedTextRenderService>(document.GetObject().GetText(), document.GetObject().GetEncoding(), document.GetObject().GetTransactionListeners(), charWidth, fragmentFactory, ctxManager));
+    server.Register("text::cursor", std::make_unique<SlokedCursorService>(document.GetObject(), ctxManager));
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
@@ -172,7 +173,7 @@ int main(int argc, const char **argv) {
         } else switch (std::get<1>(cmd)) {            
             case SlokedControlKey::F9: {
                 std::ofstream of(argv[2]);
-                of << document.GetText();
+                of << document.GetObject().GetText();
                 of.close();
                 std::exit(EXIT_SUCCESS);
             }
