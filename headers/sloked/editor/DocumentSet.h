@@ -15,6 +15,7 @@ namespace sloked {
 		Document OpenDocument(const SlokedPath &, const Encoding &, std::unique_ptr<NewLine>);
 		std::optional<Document> OpenDocument(DocumentId);
 		bool HasDocument(DocumentId);
+		Document Empty();
 
 	 private:
 		SlokedNamespace &ns;

@@ -72,7 +72,7 @@ namespace sloked {
         void AvlUpdate() override;
         
      private:
-        template <typename Line, typename Offset, typename Length = Offset>
+        template <typename Line, typename Offset, typename Length>
         class Map;
 
         using DefaultMap = Map<std::size_t, std::size_t, std::size_t>;

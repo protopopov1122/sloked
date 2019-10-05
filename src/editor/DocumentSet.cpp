@@ -18,4 +18,8 @@ namespace sloked {
     bool SlokedEditorDocumentSet::HasDocument(DocumentId id) {
         return this->documents.Has(id);
     }
+
+    SlokedEditorDocumentSet::Document SlokedEditorDocumentSet::Empty() {
+        return Document(this->documents);
+    }
 }

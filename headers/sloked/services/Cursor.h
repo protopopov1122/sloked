@@ -30,13 +30,14 @@
 #include "sloked/text/cursor/TransactionStreamMultiplexer.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/services/Service.h"
-#include "sloked/editor/Document.h"
+#include "sloked/editor/DocumentSet.h"
 
 namespace sloked {
 
     class SlokedCursorService : public KgrService {
      public:
         enum class Command {
+            Connect,
             Insert,
             MoveUp,
             MoveDown,
@@ -50,12 +51,11 @@ namespace sloked {
             Info
         };
 
-        SlokedCursorService(SlokedEditorDocument &, KgrContextManager<KgrLocalContext> &);
+        SlokedCursorService(SlokedEditorDocumentSet &, KgrContextManager<KgrLocalContext> &);
         bool Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
-        SlokedEditorDocument &document;
-        EncodingConverter conv;
+        SlokedEditorDocumentSet &documents;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
 }

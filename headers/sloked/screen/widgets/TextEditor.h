@@ -25,13 +25,14 @@
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/widgets/TextPane.h"
 #include "sloked/screen/widgets/TextPaneWidget.h"
+#include "sloked/editor/DocumentSet.h"
 #include "sloked/kgr/Pipe.h"
 
 namespace sloked {
 
     class SlokedTextEditor : public SlokedTextPaneWidget {
      public:
-        SlokedTextEditor(const Encoding &, std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>, SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black);
+        SlokedTextEditor(const Encoding &, std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black);
 
         bool ProcessInput(const SlokedKeyboardInput &) override;
         void Render(SlokedTextPane &) override;

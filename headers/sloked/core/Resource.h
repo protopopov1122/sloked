@@ -17,6 +17,9 @@ namespace sloked {
          public: 
             friend class SlokedRegistry<T>;
 
+            Resource(SlokedRegistry<T> &registry)
+                : key(SlokedRegistry<T>::None), registry(std::ref(registry)) {}
+
             Resource(const Resource &handle)
                 : key(handle.key), registry(handle.registry) {
                 this->registry.get().Use(this->key);
@@ -40,7 +43,7 @@ namespace sloked {
             }
 
             Resource &operator=(Resource &&handle) {
-                this->registry.Unuse(this->key);
+                this->registry.get().Unuse(this->key);
                 this->key = handle.key;
                 this->registry = handle.registry;
                 handle.key = SlokedRegistry<T>::None;
@@ -57,7 +60,7 @@ namespace sloked {
 
             T &GetObject() const {
                 if (this->key != SlokedRegistry<T>::None) {
-                    return *this->registry.get().registry[this->key];
+                    return *this->registry.get().registry.at(this->key);
                 } else {
                     throw SlokedError("Registry: Resource points to non-existing object");
                 }
@@ -83,7 +86,7 @@ namespace sloked {
 
         Resource Add(std::unique_ptr<T> obj) {
             Key objKey = this->nextKey++;
-            this->registry[objKey] = std::move(obj);
+            this->registry.insert(std::make_pair(objKey, std::move(obj)));
             this->refcount[objKey] = 0;
             return Resource(objKey, *this);
         }

@@ -25,8 +25,21 @@
 
 namespace sloked {
 
-    SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService, std::unique_ptr<KgrPipe> renderService, SlokedBackgroundGraphics bg)
-        : conv(encoding, SlokedLocale::SystemEncoding()), cursorService(std::move(cursorService)), renderService(std::move(renderService)), background(bg) {}
+    SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService, std::unique_ptr<KgrPipe> renderService, SlokedEditorDocumentSet::DocumentId docId, SlokedBackgroundGraphics bg)
+        : conv(encoding, SlokedLocale::SystemEncoding()), cursorService(std::move(cursorService)), renderService(std::move(renderService)), background(bg) {
+        this->cursorService->Write(KgrDictionary {
+                { "command", static_cast<int>(SlokedCursorService::Command::Connect) },
+                { "id", static_cast<int64_t>(docId) }
+        });
+        this->cursorService->Wait();
+        this->cursorService->Drop();
+
+        this->renderService->Write(KgrDictionary {
+                { "id", static_cast<int64_t>(docId) }
+        });
+        this->renderService->Wait();
+        this->renderService->Drop();
+    }
 
     bool SlokedTextEditor::ProcessInput(const SlokedKeyboardInput &cmd) {
         if (cmd.index() == 0) {

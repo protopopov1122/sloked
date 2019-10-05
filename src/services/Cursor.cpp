@@ -32,79 +32,101 @@ namespace sloked {
     class SlokedCursorContext : public SlokedServiceContext {
      public:
         SlokedCursorContext(std::unique_ptr<KgrPipe> pipe,
-            TextBlock &text, const EncodingConverter &conv,
-            std::unique_ptr<SlokedTransactionStream> stream)
-            : SlokedServiceContext(std::move(pipe)),
-              text(text), conv(conv), cursor(text, conv.GetDestination(), *stream) {
-            this->stream = std::move(stream);
-        }
+            SlokedEditorDocumentSet &documents)
+            : SlokedServiceContext(std::move(pipe)), documents(documents), handle(documents.Empty()), document(nullptr) {}
 
      protected:
         void ProcessRequest(const KgrValue &message) override {
             const auto &prms = message.AsDictionary();
             auto command = static_cast<SlokedCursorService::Command>(prms["command"].AsInt());
+            if (command != SlokedCursorService::Command::Connect &&
+                this->document == nullptr) {
+                return;
+            }
             switch (command) {
+                case SlokedCursorService::Command::Connect: {
+                    auto doc = this->documents.OpenDocument(static_cast<SlokedEditorDocumentSet::DocumentId>(prms["id"].AsInt()));
+                    if (doc.has_value()) {
+                        this->handle = std::move(doc.value());
+                        this->document = std::make_unique<DocumentContent>(this->handle.GetObject());
+                        this->SendResponse(true);
+                    } else {
+                        this->SendResponse(false);
+                    }
+                } break;
+                
                 case SlokedCursorService::Command::Insert:
-                    this->cursor.Insert(this->conv.Convert(prms["content"].AsString()));
+                    this->document->cursor.Insert(this->document->conv.Convert(prms["content"].AsString()));
                     break;
 
                 case SlokedCursorService::Command::MoveUp:
-                    this->cursor.MoveUp(1);
+                    this->document->cursor.MoveUp(1);
                     break;
 
                 case SlokedCursorService::Command::MoveDown:
-                    this->cursor.MoveDown(1);
+                    this->document->cursor.MoveDown(1);
                     break;
 
                 case SlokedCursorService::Command::MoveBackward:
-                    this->cursor.MoveBackward(1);
+                    this->document->cursor.MoveBackward(1);
                     break;
 
                 case SlokedCursorService::Command::MoveForward:
-                    this->cursor.MoveForward(1);
+                    this->document->cursor.MoveForward(1);
                     break;
 
                 case SlokedCursorService::Command::NewLine:
-                    this->cursor.NewLine("");
+                    this->document->cursor.NewLine("");
                     break;
 
                 case SlokedCursorService::Command::DeleteBackward:
-                    this->cursor.DeleteBackward();
+                    this->document->cursor.DeleteBackward();
                     break;
 
                 case SlokedCursorService::Command::DeleteForward:
-                    this->cursor.DeleteForward();
+                    this->document->cursor.DeleteForward();
                     break;
 
                 case SlokedCursorService::Command::Undo:
-                    this->cursor.Undo();
+                    this->document->cursor.Undo();
                     break;
 
                 case SlokedCursorService::Command::Redo:
-                    this->cursor.Redo();
+                    this->document->cursor.Redo();
                     break;
 
                 case SlokedCursorService::Command::Info:
                     this->SendResponse(KgrDictionary {
-                        { "line", static_cast<int64_t>(this->cursor.GetLine()) },
-                        { "column", static_cast<int64_t>(this->cursor.GetColumn()) }
+                        { "line", static_cast<int64_t>(this->document->cursor.GetLine()) },
+                        { "column", static_cast<int64_t>(this->document->cursor.GetColumn()) }
                     });
                     break;
             }
         }
 
-        TextBlock &text;
-        const EncodingConverter &conv;
-        std::unique_ptr<SlokedTransactionStream> stream;
-        TransactionCursor cursor;
+     private:
+        struct DocumentContent {
+            DocumentContent(SlokedEditorDocument &document)
+                : text(document.GetText()), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
+                  stream(document.NewStream()), cursor(document.GetText(), document.GetEncoding(), *stream) {}
+                
+            TextBlock &text;
+            EncodingConverter conv;
+            std::unique_ptr<SlokedTransactionStream> stream;
+            TransactionCursor cursor;
+        };
+
+        SlokedEditorDocumentSet &documents;
+        SlokedEditorDocumentSet::Document handle;
+        std::unique_ptr<DocumentContent> document;
     };
 
 
-    SlokedCursorService::SlokedCursorService(SlokedEditorDocument &document, KgrContextManager<KgrLocalContext> &contextManager)
-        : document(document), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()), contextManager(contextManager) {}
+    SlokedCursorService::SlokedCursorService(SlokedEditorDocumentSet &documents, KgrContextManager<KgrLocalContext> &contextManager)
+        : documents(documents), contextManager(contextManager) {}
 
     bool SlokedCursorService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedCursorContext>(std::move(pipe), this->document.GetText(), this->conv, this->document.NewStream());
+        auto ctx = std::make_unique<SlokedCursorContext>(std::move(pipe), this->documents);
         this->contextManager.Attach(std::move(ctx));
         return true;
     }

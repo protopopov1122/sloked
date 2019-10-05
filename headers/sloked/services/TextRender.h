@@ -30,19 +30,17 @@
 #include "sloked/text/cursor/TransactionStream.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/services/Service.h"
+#include "sloked/editor/DocumentSet.h"
 
 namespace sloked {
 
     class SlokedTextRenderService : public KgrService {
      public:
-        SlokedTextRenderService(TextBlock &, const Encoding &, SlokedTransactionListenerManager &, const SlokedCharWidth &, SlokedTextTaggerFactory<int> &,
-            KgrContextManager<KgrLocalContext> &);
+        SlokedTextRenderService(SlokedEditorDocumentSet &, const SlokedCharWidth &, SlokedTextTaggerFactory<int> &, KgrContextManager<KgrLocalContext> &);
         bool Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
-        TextBlock &text;
-        EncodingConverter conv;
-        SlokedTransactionListenerManager &transactionListeners;
+        SlokedEditorDocumentSet &documents;
         SlokedTextTaggerFactory<int> &taggerFactory;
         const SlokedCharWidth &charWidth;
         KgrContextManager<KgrLocalContext> &contextManager;

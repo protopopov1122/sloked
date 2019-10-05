@@ -69,23 +69,24 @@ namespace sloked {
     class SlokedTextRenderContext : public SlokedServiceContext {
      public:
         SlokedTextRenderContext(std::unique_ptr<KgrPipe> pipe,
-            TextBlock &text, const EncodingConverter &conv, const SlokedCharWidth &charWidth,
-            SlokedTransactionListenerManager &transactionListeners, std::unique_ptr<SlokedTextTagger<int>> tagger)
-            : SlokedServiceContext(std::move(pipe)),
-              text(text), conv(conv), charWidth(charWidth), transactionListeners(transactionListeners),
-              lazyTags(std::move(tagger)), tags(lazyTags), frame(text, conv.GetDestination(), charWidth) {
-            this->fragmentUpdater = std::make_shared<SlokedFragmentUpdater<int>>(this->text, this->tags, this->conv.GetDestination(), this->charWidth);
-            this->transactionListeners.AddListener(this->fragmentUpdater);
-        }
-
-        ~SlokedTextRenderContext() {
-            this->transactionListeners.RemoveListener(*this->fragmentUpdater);
-        }
+            SlokedEditorDocumentSet &documents, const SlokedCharWidth &charWidth, SlokedTextTaggerFactory<int> &taggerFactory)
+            : SlokedServiceContext(std::move(pipe)), documents(documents), charWidth(charWidth), taggerFactory(taggerFactory), handle(documents.Empty()), document(nullptr) {}
 
      protected:
         void ProcessRequest(const KgrValue &message) override {
             const auto &prms = message.AsDictionary();
-            this->SendResponse(this->Render(prms));
+            if (this->document == nullptr) {
+                auto doc = this->documents.OpenDocument(static_cast<SlokedEditorDocumentSet::DocumentId>(prms["id"].AsInt()));
+                if (doc.has_value()) {
+                    this->handle = std::move(doc.value());
+                    this->document = std::make_unique<DocumentContent>(this->handle.GetObject(), this->charWidth, this->taggerFactory);
+                    this->SendResponse(true);
+                } else {
+                    this->SendResponse(false);
+                }
+            } else {
+                this->SendResponse(this->Render(prms));
+            }
         }
 
      private:
@@ -93,7 +94,7 @@ namespace sloked {
             const auto &dim = dict["dim"].AsDictionary();
             auto line = static_cast<TextPosition::Line>(dim["line"].AsInt());
             auto column = static_cast<TextPosition::Column>(dim["column"].AsInt());
-            this->frame.Update(TextPosition{
+            this->document->frame.Update(TextPosition{
                     static_cast<TextPosition::Line>(dim["height"].AsInt()),
                     static_cast<TextPosition::Column>(dim["width"].AsInt())
                 }, TextPosition{
@@ -103,24 +104,24 @@ namespace sloked {
 
             KgrArray fragments;
             TextPosition::Line lineNumber = 0;
-            this->frame.Visit(0, std::min(static_cast<TextPosition::Line>(dim["height"].AsInt()), static_cast<TextPosition::Line>(this->frame.GetLastLine()) + 1), [&](const auto lineView) {
+            this->document->frame.Visit(0, std::min(static_cast<TextPosition::Line>(dim["height"].AsInt()), static_cast<TextPosition::Line>(this->document->frame.GetLastLine()) + 1), [&](const auto lineView) {
                 std::string line{lineView};
-                std::string fullLine{this->text.GetLine(this->frame.GetOffset().line + lineNumber)};
+                std::string fullLine{this->document->text.GetLine(this->document->frame.GetOffset().line + lineNumber)};
 
-                const auto lineLength = this->conv.GetDestination().CodepointCount(line);
-                std::size_t frameOffset = this->frame.GetOffset().column;
+                const auto lineLength = this->document->conv.GetDestination().CodepointCount(line);
+                std::size_t frameOffset = this->document->frame.GetOffset().column;
                 
-                TextCharWidthIterator iter(fullLine, frameOffset, this->conv.GetDestination(), this->charWidth);
+                TextCharWidthIterator iter(fullLine, frameOffset, this->document->conv.GetDestination(), this->charWidth);
                 for (TextPosition::Column column = 0; column < lineLength; column++, iter.Next()) {
-                    auto tag = this->tags.Get(TextPosition{this->frame.GetOffset().line + lineNumber, iter.GetRealColumn()});
-                    auto pos = this->conv.GetDestination().GetCodepoint(line, column);
+                    auto tag = this->document->tags.Get(TextPosition{this->document->frame.GetOffset().line + lineNumber, iter.GetRealColumn()});
+                    auto pos = this->document->conv.GetDestination().GetCodepoint(line, column);
                     auto fragment = line.substr(pos.first, pos.second);
                     fragments.Append(KgrDictionary {
                         { "tag", tag != nullptr },
-                        { "content", KgrValue(conv.ReverseConvert(fragment)) }
+                        { "content", KgrValue(this->document->conv.ReverseConvert(fragment)) }
                     });
                 }
-                if (lineNumber++ < this->frame.GetLastLine()) {
+                if (lineNumber++ < this->document->frame.GetLastLine()) {
                     fragments.Append(KgrDictionary {
                         { "tag", false },
                         { "content", KgrValue("\n") }
@@ -128,10 +129,10 @@ namespace sloked {
                 }
             });
             
-            std::string realLine{this->text.GetLine(line)};
-            auto realPos = this->charWidth.GetRealPosition(realLine, column, conv.GetDestination());
-            auto realColumn = column < this->conv.GetDestination().CodepointCount(realLine) ? realPos.first : realPos.second;
-            const auto &offset = this->frame.GetOffset();
+            std::string realLine{this->document->text.GetLine(line)};
+            auto realPos = this->charWidth.GetRealPosition(realLine, column, this->document->conv.GetDestination());
+            auto realColumn = column < this->document->conv.GetDestination().CodepointCount(realLine) ? realPos.first : realPos.second;
+            const auto &offset = this->document->frame.GetOffset();
             KgrDictionary cursor {
                 { "line", static_cast<int64_t>(line - offset.line) },
                 { "column", static_cast<int64_t>(realColumn - offset.column) }
@@ -142,23 +143,43 @@ namespace sloked {
             };
         }
 
-        TextBlock &text;
-        const EncodingConverter &conv;
+        struct DocumentContent {
+            DocumentContent(SlokedEditorDocument &document, const SlokedCharWidth &charWidth, SlokedTextTaggerFactory<int> &taggerFactory)
+                : text(document.GetText()), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
+                  transactionListeners(document.GetTransactionListeners()), lazyTags(taggerFactory.Create(document.GetText(), document.GetEncoding(), charWidth)),
+                  tags(lazyTags), frame(document.GetText(), document.GetEncoding(), charWidth) {
+
+                this->fragmentUpdater = std::make_shared<SlokedFragmentUpdater<int>>(this->text, this->tags, this->conv.GetDestination(), charWidth);
+                this->transactionListeners.AddListener(this->fragmentUpdater);
+            }
+
+            ~DocumentContent() {
+                this->transactionListeners.RemoveListener(*this->fragmentUpdater);
+            }
+                
+            TextBlock &text;
+            EncodingConverter conv;
+            SlokedTransactionListenerManager &transactionListeners;
+            SlokedLazyTaggedText<int> lazyTags;
+            SlokedCacheTaggedText<int> tags;
+            TextFrameView frame;
+            std::shared_ptr<SlokedFragmentUpdater<int>> fragmentUpdater;
+        };
+
+        SlokedEditorDocumentSet &documents;
         const SlokedCharWidth &charWidth;
-        SlokedTransactionListenerManager &transactionListeners;
-        SlokedLazyTaggedText<int> lazyTags;
-        SlokedCacheTaggedText<int> tags;
-        TextFrameView frame;
-        std::shared_ptr<SlokedFragmentUpdater<int>> fragmentUpdater;
+        SlokedTextTaggerFactory<int> &taggerFactory;
+        SlokedEditorDocumentSet::Document handle;
+        std::unique_ptr<DocumentContent> document;
     };
 
 
-    SlokedTextRenderService::SlokedTextRenderService(TextBlock &text, const Encoding &encoding, SlokedTransactionListenerManager &transactioListeners, const SlokedCharWidth &charWidth, SlokedTextTaggerFactory<int> &taggerFactory,
+    SlokedTextRenderService::SlokedTextRenderService(SlokedEditorDocumentSet &documents, const SlokedCharWidth &charWidth, SlokedTextTaggerFactory<int> &taggerFactory,
         KgrContextManager<KgrLocalContext> &contextManager)
-        : text(text), conv(SlokedLocale::SystemEncoding(), encoding), transactionListeners(transactioListeners), taggerFactory(taggerFactory), charWidth(charWidth), contextManager(contextManager) {}
+        : documents(documents), taggerFactory(taggerFactory), charWidth(charWidth), contextManager(contextManager) {}
 
     bool SlokedTextRenderService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedTextRenderContext>(std::move(pipe), this->text, this->conv, this->charWidth, this->transactionListeners, this->taggerFactory.Create(this->text, this->conv.GetDestination(), this->charWidth));
+        auto ctx = std::make_unique<SlokedTextRenderContext>(std::move(pipe), documents, this->charWidth, this->taggerFactory);
         this->contextManager.Attach(std::move(ctx));
         return true;
     }
