@@ -50,6 +50,7 @@
 #include "sloked/kgr/ctx-manager/RunnableContextManager.h"
 #include "sloked/services/TextRender.h"
 #include "sloked/services/Cursor.h"
+#include "sloked/services/DocumentSet.h"
 #include "sloked/editor/DocumentSet.h"
 #include <fcntl.h>
 #include <fstream>
@@ -141,14 +142,22 @@ int main(int argc, const char **argv) {
     const Encoding &fileEncoding = Encoding::Get("system");
     const Encoding &terminalEncoding = Encoding::Get("system");
     EncodingConverter conv(fileEncoding, terminalEncoding);
-    auto newline = NewLine::Create("system", fileEncoding);
-    auto document = documents.OpenDocument(BUFFER, fileEncoding, std::move(newline));
 
     SlokedCharWidth charWidth;
     TestFragmentFactory fragmentFactory;
 
     server.Register("text::render", std::make_unique<SlokedTextRenderService>(documents, charWidth, fragmentFactory, ctxManager));
     server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, ctxManager));
+    server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
+
+    auto document = server.Connect("documents");
+    document->Write(KgrDictionary {
+        { "command", static_cast<int64_t>(SlokedDocumentSetService::Command::Open) },
+        { "path", BUFFER },
+        { "encoding", "system" },
+        { "newline", "system" }
+    });
+    auto documentId = document->ReadWait().AsInt();
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
@@ -159,12 +168,12 @@ int main(int argc, const char **argv) {
     auto win2 = multi.NewWindow(TextPosition{10, 50}, TextPosition{30, 150});
     auto &splitter = win1->GetComponent().NewSplitter(Splitter::Direction::Horizontal);
     auto &tabber = splitter.NewWindow(Splitter::Constraints(0.4))->GetComponent().NewTabber();
-    auto &tab1 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), document.GetKey()));
-    auto &tab2 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), document.GetKey(), SlokedBackgroundGraphics::Blue));
-    auto &tab3 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), document.GetKey(), SlokedBackgroundGraphics::Magenta));
-    auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.2))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), document.GetKey()));
-    auto &pane5 = splitter.NewWindow(Splitter::Constraints(0.15))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), document.GetKey()));
-    auto &pane6 = win2->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), document.GetKey(), SlokedBackgroundGraphics::Yellow));
+    auto &tab1 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId));
+    auto &tab2 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId, SlokedBackgroundGraphics::Blue));
+    auto &tab3 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId, SlokedBackgroundGraphics::Magenta));
+    auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.2))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId));
+    auto &pane5 = splitter.NewWindow(Splitter::Constraints(0.15))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId));
+    auto &pane6 = win2->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId, SlokedBackgroundGraphics::Yellow));
     win1->SetFocus();
 
     screen.SetInputHandler([&](const SlokedKeyboardInput &cmd) {
@@ -173,7 +182,7 @@ int main(int argc, const char **argv) {
         } else switch (std::get<1>(cmd)) {            
             case SlokedControlKey::F9: {
                 std::ofstream of(argv[2]);
-                of << document.GetObject().GetText();
+                of << documents.OpenDocument(documentId).value().GetObject().GetText();
                 of.close();
                 std::exit(EXIT_SUCCESS);
             }
