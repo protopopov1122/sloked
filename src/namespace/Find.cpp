@@ -20,7 +20,6 @@
 */
 
 #include "sloked/namespace/Find.h"
-#include <iostream>
 
 namespace sloked {
 
@@ -30,7 +29,6 @@ namespace sloked {
     std::vector<SlokedPath> SlokedNamespacePlainFind::Query(const SlokedPath &root, const std::string &query, bool include_dirs) const {
         std::vector<SlokedPath> result;
         this->ns.Traverse(root, [&](const std::string &item, auto type) {
-            // std::cout << item << '\t' << query << std::endl;
             if (item.find(query) != std::string::npos) {
                 result.push_back(SlokedPath{item});
             }
