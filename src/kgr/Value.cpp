@@ -224,6 +224,9 @@ namespace sloked {
     
     KgrValue::KgrValue(std::string_view value)
         : type(KgrValueType::String), value(std::string{value}) {}
+
+    KgrValue::KgrValue(const std::string &value)
+        : type(KgrValueType::String), value(value) {}
     
     KgrValue::KgrValue(const char *value)
         : type(KgrValueType::String), value(std::string{value}) {}

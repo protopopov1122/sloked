@@ -22,6 +22,17 @@ namespace sloked {
         SlokedEditorDocumentSet &documents;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
+
+    class SlokedDocumentSetClient {
+     public:
+        SlokedDocumentSetClient(std::unique_ptr<KgrPipe>);
+        SlokedEditorDocumentSet::DocumentId Open(const std::string &, const std::string &, const std::string &);
+        void Close();
+        std::optional<SlokedEditorDocumentSet::DocumentId> Get() const;
+
+     private:
+        std::unique_ptr<KgrPipe> pipe;
+    };
 }
 
 #endif

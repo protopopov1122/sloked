@@ -139,9 +139,7 @@ int main(int argc, const char **argv) {
     SlokedEditorDocumentSet documents(root);
 
     SlokedLocale::Setup();
-    const Encoding &fileEncoding = Encoding::Get("system");
     const Encoding &terminalEncoding = Encoding::Get("system");
-    EncodingConverter conv(fileEncoding, terminalEncoding);
 
     SlokedCharWidth charWidth;
     TestFragmentFactory fragmentFactory;
@@ -150,14 +148,8 @@ int main(int argc, const char **argv) {
     server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, ctxManager));
     server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
 
-    auto document = server.Connect("documents");
-    document->Write(KgrDictionary {
-        { "command", static_cast<int64_t>(SlokedDocumentSetService::Command::Open) },
-        { "path", BUFFER },
-        { "encoding", "system" },
-        { "newline", "system" }
-    });
-    auto documentId = document->ReadWait().AsInt();
+    SlokedDocumentSetClient document(server.Connect("documents"));
+    auto documentId = document.Open(BUFFER, "system", "system");
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);

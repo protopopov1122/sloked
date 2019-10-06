@@ -123,6 +123,7 @@ namespace sloked {
         KgrValue(double);
         KgrValue(bool);
         KgrValue(std::string_view);
+        KgrValue(const std::string &);
         KgrValue(const char *);
         KgrValue(const KgrArray &);
         KgrValue(KgrArray &&);

@@ -59,4 +59,35 @@ namespace sloked {
         this->contextManager.Attach(std::move(ctx));
         return true;
     }
+
+    SlokedDocumentSetClient::SlokedDocumentSetClient(std::unique_ptr<KgrPipe> pipe)
+        : pipe(std::move(pipe)) {}
+
+    SlokedEditorDocumentSet::DocumentId SlokedDocumentSetClient::Open(const std::string &path, const std::string &encoding, const std::string &newline) {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int64_t>(SlokedDocumentSetService::Command::Open) },
+            { "path", path },
+            { "encoding", encoding },
+            { "newline", newline }
+        });
+        return this->pipe->ReadWait().AsInt();
+    }
+
+    void SlokedDocumentSetClient::Close() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int64_t>(SlokedDocumentSetService::Command::Close) }
+        });
+    }
+
+    std::optional<SlokedEditorDocumentSet::DocumentId> SlokedDocumentSetClient::Get() const {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int64_t>(SlokedDocumentSetService::Command::Get) }
+        });
+        auto res = this->pipe->ReadWait();
+        if (res.Is(KgrValueType::Integer)) {
+            return res.AsInt();
+        } else {
+            return {};
+        }
+    }
 }
