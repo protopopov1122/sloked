@@ -141,7 +141,7 @@ int main(int argc, const char **argv) {
     const Encoding &fileEncoding = Encoding::Get("system");
     const Encoding &terminalEncoding = Encoding::Get("system");
     EncodingConverter conv(fileEncoding, terminalEncoding);
-    auto newline = NewLine::LF(fileEncoding);
+    auto newline = NewLine::Create("system", fileEncoding);
     auto document = documents.OpenDocument(BUFFER, fileEncoding, std::move(newline));
 
     SlokedCharWidth charWidth;

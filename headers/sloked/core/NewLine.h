@@ -47,8 +47,9 @@ namespace sloked {
         virtual std::size_t Count(std::string_view) const = 0;
 
         const std::size_t Width;
-        static std::unique_ptr<NewLine> LF(const Encoding & = Encoding::Utf8);
-        static std::unique_ptr<NewLine> CRLF(const Encoding & = Encoding::Utf8);
+        static std::unique_ptr<NewLine> LF(const Encoding &);
+        static std::unique_ptr<NewLine> CRLF(const Encoding &);
+        static std::unique_ptr<NewLine> Create(const std::string &, const Encoding &);
     
      private:
         friend std::ostream &operator<<(std::ostream &, const NewLine &);

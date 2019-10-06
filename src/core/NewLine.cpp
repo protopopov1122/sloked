@@ -21,8 +21,9 @@
 
 #include "sloked/core/NewLine.h"
 #include "sloked/core/Encoding.h"
+#include "sloked/core/Locale.h"
+#include "sloked/core/Error.h"
 #include <algorithm>
-#include <iostream>
 
 namespace sloked {
 
@@ -102,5 +103,17 @@ namespace sloked {
 
     std::unique_ptr<NewLine> NewLine::CRLF(const Encoding &enc) {
         return std::make_unique<CRLFNewLine>(enc);
+    }
+
+    std::unique_ptr<NewLine> NewLine::Create(const std::string &id, const Encoding &encoding) {
+        if (id == "lf") {
+            return NewLine::LF(encoding);
+        } else if (id == "crlf") {
+            return NewLine::CRLF(encoding);
+        } else if (id == "system") {
+            return SlokedLocale::SystemNewline(encoding);
+        } else {
+            throw SlokedError("Unknown newline: " + id);
+        }
     }
 }

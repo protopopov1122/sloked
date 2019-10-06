@@ -39,4 +39,8 @@ namespace sloked {
     const Encoding &SlokedLocale::SystemEncoding() {
         return Encoding::Utf8;
     }
+
+    std::unique_ptr<NewLine> SlokedLocale::SystemNewline(const Encoding &encoding) {
+        return NewLine::LF(encoding);
+    }
 }

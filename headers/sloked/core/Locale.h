@@ -23,6 +23,7 @@
 #define SLOKED_CORE_LOCALE_H_
 
 #include "sloked/core/Encoding.h"
+#include "sloked/core/NewLine.h"
 
 namespace sloked {
 
@@ -30,6 +31,7 @@ namespace sloked {
      public:
         static void Setup();
         static const Encoding &SystemEncoding();
+        static std::unique_ptr<NewLine> SystemNewline(const Encoding &);
     };
 }
 
