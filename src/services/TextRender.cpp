@@ -183,4 +183,32 @@ namespace sloked {
         this->contextManager.Attach(std::move(ctx));
         return true;
     }
+
+    SlokedTextRenderClient::SlokedTextRenderClient(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet::DocumentId docId)
+        : pipe(std::move(pipe)) {
+        this->pipe->Write(KgrDictionary {
+                { "id", static_cast<int64_t>(docId) }
+        });
+        this->pipe->Wait();
+        this->pipe->Drop();
+    }
+
+    std::optional<KgrValue> SlokedTextRenderClient::Render(const TextPosition &pos, const TextPosition &dim) {
+        this->pipe->DropAll();
+        this->pipe->Write(KgrDictionary {
+            {
+                "dim", KgrDictionary {
+                    { "height", static_cast<int64_t>(dim.line) },
+                    { "width", static_cast<int64_t>(dim.column) },
+                    { "line", static_cast<int64_t>(pos.line) },
+                    { "column", static_cast<int64_t>(pos.column) }
+                }
+            }
+        });
+        auto renderRes = this->pipe->ReadWait();
+        if (!renderRes.AsDictionary()["success"].AsBoolean()) {
+            return {};
+        }
+        return std::move(renderRes.AsDictionary()["result"]);
+    }
 }

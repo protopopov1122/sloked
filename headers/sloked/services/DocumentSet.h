@@ -26,7 +26,7 @@ namespace sloked {
     class SlokedDocumentSetClient {
      public:
         SlokedDocumentSetClient(std::unique_ptr<KgrPipe>);
-        SlokedEditorDocumentSet::DocumentId Open(const std::string &, const std::string &, const std::string &);
+        std::optional<SlokedEditorDocumentSet::DocumentId> Open(const std::string &, const std::string &, const std::string &);
         void Close();
         std::optional<SlokedEditorDocumentSet::DocumentId> Get() const;
 

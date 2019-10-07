@@ -58,6 +58,26 @@ namespace sloked {
         SlokedEditorDocumentSet &documents;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
+
+    class SlokedCursorClient {
+     public:
+        SlokedCursorClient(std::unique_ptr<KgrPipe>);
+        bool Connect(SlokedEditorDocumentSet::DocumentId);
+        void Insert(const std::string &);
+        void MoveUp();
+        void MoveDown();
+        void MoveBackward();
+        void MoveForward();
+        void NewLine();
+        void DeleteBackward();
+        void DeleteForward();
+        void Undo();
+        void Redo();
+        std::optional<TextPosition> GetPosition();
+
+     private:
+        std::unique_ptr<KgrPipe> pipe;
+    };
 }
 
 #endif

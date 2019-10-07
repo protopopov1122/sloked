@@ -130,4 +130,94 @@ namespace sloked {
         this->contextManager.Attach(std::move(ctx));
         return true;
     }
+
+    SlokedCursorClient::SlokedCursorClient(std::unique_ptr<KgrPipe> pipe)
+        : pipe(std::move(pipe)) {}
+
+    bool SlokedCursorClient::Connect(SlokedEditorDocumentSet::DocumentId docId) {
+        this->pipe->Write(KgrDictionary {
+                { "command", static_cast<int>(SlokedCursorService::Command::Connect) },
+                { "id", static_cast<int64_t>(docId) }
+        });
+        auto res = this->pipe->ReadWait();
+        return res.AsDictionary()["success"].AsBoolean() &&
+            res.AsDictionary()["result"].AsBoolean();
+    }
+
+    void SlokedCursorClient::Insert(const std::string &content) {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::Insert) },
+            { "content", content }
+        });
+    }
+    
+    void SlokedCursorClient::MoveUp() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::MoveUp) }
+        });
+    }
+    
+    void SlokedCursorClient::MoveDown() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::MoveDown) }
+        });
+    }
+    
+    void SlokedCursorClient::MoveBackward() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::MoveBackward) }
+        });
+    }
+    
+    void SlokedCursorClient::MoveForward() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::MoveForward) }
+        });
+    }
+    
+    void SlokedCursorClient::NewLine() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::NewLine) }
+        });
+    }
+    
+    void SlokedCursorClient::DeleteBackward() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::DeleteBackward) }
+        });
+    }
+    
+    void SlokedCursorClient::DeleteForward() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::DeleteForward) }
+        });
+    }
+    
+    void SlokedCursorClient::Undo() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::Undo) }
+        });
+    }
+    
+    void SlokedCursorClient::Redo() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::Redo) }
+        });
+    }
+
+    std::optional<TextPosition> SlokedCursorClient::GetPosition() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int>(SlokedCursorService::Command::Info) }
+        });
+        auto cursorRes = this->pipe->ReadWait();
+        if (!cursorRes.AsDictionary()["success"].AsBoolean()) {
+            return {};
+        } else {
+            const auto &cursor = cursorRes.AsDictionary()["result"];
+            return TextPosition {
+                static_cast<TextPosition::Line>(cursor.AsDictionary()["line"].AsInt()),
+                static_cast<TextPosition::Column>(cursor.AsDictionary()["column"].AsInt())
+            };
+        }
+    }
 }

@@ -26,7 +26,8 @@
 #include "sloked/screen/widgets/TextPane.h"
 #include "sloked/screen/widgets/TextPaneWidget.h"
 #include "sloked/editor/DocumentSet.h"
-#include "sloked/kgr/Pipe.h"
+#include "sloked/services/Cursor.h"
+#include "sloked/services/TextRender.h"
 
 namespace sloked {
 
@@ -39,8 +40,8 @@ namespace sloked {
 
      private:
         EncodingConverter conv;
-        std::unique_ptr<KgrPipe> cursorService;
-        std::unique_ptr<KgrPipe> renderService;
+        SlokedCursorClient cursorClient;
+        SlokedTextRenderClient renderClient;
         SlokedBackgroundGraphics background;
     };
 }

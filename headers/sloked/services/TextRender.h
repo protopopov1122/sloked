@@ -45,6 +45,15 @@ namespace sloked {
         const SlokedCharWidth &charWidth;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
+
+    class SlokedTextRenderClient {
+     public:
+        SlokedTextRenderClient(std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId);
+        std::optional<KgrValue> Render(const TextPosition &, const TextPosition &);
+
+     private:
+        std::unique_ptr<KgrPipe> pipe;
+    };
 }
 
 #endif

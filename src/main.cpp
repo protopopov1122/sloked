@@ -149,7 +149,7 @@ int main(int argc, const char **argv) {
     server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
 
     SlokedDocumentSetClient document(server.Connect("documents"));
-    auto documentId = document.Open(BUFFER, "system", "system");
+    auto documentId = document.Open(BUFFER, "system", "system").value();
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);

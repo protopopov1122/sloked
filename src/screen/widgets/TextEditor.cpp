@@ -26,87 +26,52 @@
 namespace sloked {
 
     SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService, std::unique_ptr<KgrPipe> renderService, SlokedEditorDocumentSet::DocumentId docId, SlokedBackgroundGraphics bg)
-        : conv(encoding, SlokedLocale::SystemEncoding()), cursorService(std::move(cursorService)), renderService(std::move(renderService)), background(bg) {
-        this->cursorService->Write(KgrDictionary {
-                { "command", static_cast<int>(SlokedCursorService::Command::Connect) },
-                { "id", static_cast<int64_t>(docId) }
-        });
-        this->cursorService->Wait();
-        this->cursorService->Drop();
-
-        this->renderService->Write(KgrDictionary {
-                { "id", static_cast<int64_t>(docId) }
-        });
-        this->renderService->Wait();
-        this->renderService->Drop();
+        : conv(encoding, SlokedLocale::SystemEncoding()), cursorClient(std::move(cursorService)), renderClient(std::move(renderService), docId), background(bg) {
+        this->cursorClient.Connect(docId);
     }
 
     bool SlokedTextEditor::ProcessInput(const SlokedKeyboardInput &cmd) {
         if (cmd.index() == 0) {
-            this->cursorService->Write(KgrDictionary {
-                { "command", static_cast<int>(SlokedCursorService::Command::Insert) },
-                { "content", KgrValue(conv.Convert(std::get<0>(cmd))) }
-            });
+            this->cursorClient.Insert(conv.Convert(std::get<0>(cmd)));
         } else switch (std::get<1>(cmd)) {
             case SlokedControlKey::ArrowUp:
-                this->cursorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedCursorService::Command::MoveUp) }
-                });
+                this->cursorClient.MoveUp();
                 break;
             
             case SlokedControlKey::ArrowDown:
-                this->cursorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedCursorService::Command::MoveDown) }
-                });
+                this->cursorClient.MoveDown();
                 break;
             
             case SlokedControlKey::ArrowLeft:
-                this->cursorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedCursorService::Command::MoveBackward) }
-                });
+                this->cursorClient.MoveBackward();
                 break;
             
             case SlokedControlKey::ArrowRight:
-                this->cursorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedCursorService::Command::MoveForward) }
-                });
+                this->cursorClient.MoveForward();
                 break;
 
             case SlokedControlKey::Enter:
-                this->cursorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedCursorService::Command::NewLine) }
-                });
+                this->cursorClient.NewLine();
                 break;
 
             case SlokedControlKey::Tab:
-                this->cursorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedCursorService::Command::Insert) },
-                    { "content", KgrValue("\t") }
-                });
+                this->cursorClient.Insert("\t");
                 break;
 
             case SlokedControlKey::Backspace:
-                this->cursorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedCursorService::Command::DeleteBackward) }
-                });
+                this->cursorClient.DeleteBackward();
                 break;
 
             case SlokedControlKey::Delete:
-                this->cursorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedCursorService::Command::DeleteForward) }
-                });
+                this->cursorClient.DeleteForward();
                 break;
             
             case SlokedControlKey::Escape:
-                this->cursorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedCursorService::Command::Undo) }
-                });
+                this->cursorClient.Undo();
                 break;
             
             case SlokedControlKey::End:
-                this->cursorService->Write(KgrDictionary {
-                    { "command", static_cast<int>(SlokedCursorService::Command::Redo) }
-                });
+                this->cursorClient.Redo();
                 break;
 
             default:
@@ -116,24 +81,18 @@ namespace sloked {
     }
 
     void SlokedTextEditor::Render(SlokedTextPane &pane) {
-        this->cursorService->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::Info) }
-        });
-        auto cursor = this->cursorService->ReadWait();
-        this->renderService->Write(KgrDictionary {
-            {
-                "dim", KgrDictionary {
-                    { "height", static_cast<int64_t>(pane.GetHeight()) },
-                    { "width", static_cast<int64_t>(pane.GetWidth()) },
-                    { "line", static_cast<int64_t>(cursor.AsDictionary()["line"].AsInt()) },
-                    { "column", static_cast<int64_t>(cursor.AsDictionary()["column"].AsInt()) }
-                }
-            }
-        });
-        if (this->renderService->Count() > 1) {
-            this->renderService->Drop(this->renderService->Count() - 1);
+        const auto &cursor = this->cursorClient.GetPosition();
+        if (!cursor.has_value()) {
+            return;
         }
-        auto res = this->renderService->ReadWait();
+        auto renderRes = this->renderClient.Render(cursor.value(), TextPosition {
+            pane.GetHeight(),
+            pane.GetWidth()
+        });
+        if (!renderRes.has_value()) {
+            return;
+        }
+        const auto &res = renderRes.value();
 
         pane.SetGraphicsMode(this->background);
         pane.ClearScreen();

@@ -23,17 +23,11 @@
 
 namespace sloked {
 
-
     void SlokedServiceContext::Run() {
         try {
             if (!this->pipe->Empty()) {
                 auto msg = this->pipe->Read();
-                if (this->requestHandlers.empty()) {
-                    this->ProcessRequest(msg);
-                } else {
-                    this->requestHandlers.front()(msg);
-                    this->requestHandlers.pop();
-                }
+                this->ProcessRequest(msg);
             }
         } catch (const SlokedError &err) {
             this->HandleError(err);
@@ -41,11 +35,17 @@ namespace sloked {
     }
 
     void SlokedServiceContext::SendResponse(KgrValue &&msg) {
-        this->pipe->Write(std::forward<KgrValue>(msg));
+        this->pipe->Write(KgrDictionary {
+            { "success", true },
+            { "result", std::forward<KgrValue>(msg) }
+        });
     }
 
-    void SlokedServiceContext::OnRequest(std::function<void(const KgrValue &)> callback) {
-        this->requestHandlers.push(std::move(callback));
+    void SlokedServiceContext::SendError(KgrValue &&msg) {
+        this->pipe->Write(KgrDictionary {
+            { "success", false },
+            { "error", std::forward<KgrValue>(msg) }
+        });
     }
 
     void SlokedServiceContext::HandleError(const SlokedError &err) {

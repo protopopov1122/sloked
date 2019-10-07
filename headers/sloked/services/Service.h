@@ -24,26 +24,24 @@
 
 #include "sloked/kgr/local/Context.h"
 #include "sloked/core/Error.h"
+#include "sloked/kgr/Value.h"
 #include <queue>
 #include <functional>
 
 namespace sloked {
 
-    class SlokedServiceContext : public KgrLocalContext {
-     public:
-        using KgrLocalContext::KgrLocalContext;
-        void Run() override;
+   class SlokedServiceContext : public KgrLocalContext {
+    public:
+      using KgrLocalContext::KgrLocalContext;
+      void Run() override;
 
-     protected:
-        void SendResponse(KgrValue &&);
-        void OnRequest(std::function<void(const KgrValue &)>);
+    protected:
+      void SendResponse(KgrValue &&);
+      void SendError(KgrValue &&);
 
-        virtual void ProcessRequest(const KgrValue &) = 0;
-        virtual void HandleError(const SlokedError &);
-
-     private:
-        std::queue<std::function<void(const KgrValue &)>> requestHandlers;
-    };
+      virtual void ProcessRequest(const KgrValue &) = 0;
+      virtual void HandleError(const SlokedError &);
+   };
 }
 
 #endif
