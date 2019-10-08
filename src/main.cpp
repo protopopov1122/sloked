@@ -68,7 +68,9 @@ class TestFragment : public SlokedTextTagger<int> {
         : text(text), encoding(encoding), charWidth(charWidth), current{0, 0} {}
 
     std::optional<TaggedTextFragment<int>> Next() override {
-        while (this->cache.empty() && this->ParseLine()) {}
+        if (this->cache.empty()) {
+            this->ParseLine();
+        }
         if (!this->cache.empty()) {
             auto fragment = std::move(this->cache.front());
             this->cache.pop();
@@ -83,6 +85,10 @@ class TestFragment : public SlokedTextTagger<int> {
             this->current = position;
             this->cache = {};
         }
+    }
+
+    const TextPosition &GetPosition() const override {
+        return this->current;
     }
 
  private:

@@ -35,6 +35,7 @@ namespace sloked {
         virtual ~SlokedTextTagger() = default;
         virtual std::optional<TaggedTextFragment<T>> Next() = 0;
         virtual void Rewind(const TextPosition &) = 0;
+        virtual const TextPosition &GetPosition() const = 0;
     };
 
     template <typename T>
@@ -61,7 +62,9 @@ namespace sloked {
         }
 
         const TaggedTextFragment<T> *Get(const TextPosition &pos) override {
-            while (!(pos < this->current) && this->NextFragment()) {}
+            while (!(pos < this->current)) {
+                this->NextFragment();
+            }
             return this->fragments.Get(pos);
         }
 
@@ -72,14 +75,13 @@ namespace sloked {
         }
     
      private:
-        bool NextFragment() {
+        void NextFragment() {
             auto fragment = this->tagger->Next();
             if (fragment.has_value()) {
-                this->fragments.Insert(std::move(fragment.value()));
                 this->current = fragment.value().GetEnd();
-                return true;
+                this->fragments.Insert(std::move(fragment.value()));
             } else {
-                return false;
+                this->current = this->tagger->GetPosition();
             }
         }
 
