@@ -87,7 +87,7 @@ namespace sloked {
         }
         auto renderRes = this->renderClient.Render(cursor.value(), TextPosition {
             pane.GetHeight(),
-            pane.GetWidth()
+            pane.GetWidth() - 1
         });
         if (!renderRes.has_value()) {
             return;
