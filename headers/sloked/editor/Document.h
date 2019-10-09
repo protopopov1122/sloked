@@ -28,6 +28,7 @@
 #include "sloked/text/TextChunk.h"
 #include "sloked/text/cursor/TransactionStreamMultiplexer.h"
 #include "sloked/namespace/Object.h"
+#include "sloked/editor/DocumentUpstream.h"
 
 namespace sloked {
 
@@ -38,11 +39,11 @@ namespace sloked {
         const Encoding &GetEncoding();
         std::unique_ptr<SlokedTransactionStream> NewStream();
         SlokedTransactionListenerManager &GetTransactionListeners();
+        void Save();
 
      private:
-        std::unique_ptr<SlokedIOView> fileView;
         TextChunkFactory blockFactory;
-        TextDocument text;
+        SlokedDocumentUpstream upstream;
         const Encoding &encoding;
         std::unique_ptr<NewLine> newline;
         TransactionStreamMultiplexer multiplexer;

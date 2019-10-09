@@ -12,7 +12,8 @@ namespace sloked {
         enum class Command {
             Open,
             Close,
-            Get
+            Get,
+            Save
         };
 
         SlokedDocumentSetService(SlokedEditorDocumentSet &, KgrContextManager<KgrLocalContext> &);
@@ -29,6 +30,7 @@ namespace sloked {
         std::optional<SlokedEditorDocumentSet::DocumentId> Open(const std::string &, const std::string &, const std::string &);
         void Close();
         std::optional<SlokedEditorDocumentSet::DocumentId> Get() const;
+        bool Save();
 
      private:
         std::unique_ptr<KgrPipe> pipe;

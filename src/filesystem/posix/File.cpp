@@ -155,7 +155,7 @@ namespace sloked {
     }
 
     std::unique_ptr<SlokedIOWriter> SlokedPosixFile::Writer() const {
-        FILE *fp = fopen(this->path.c_str(), "w");
+        FILE *fp = fopen(this->path.c_str(), "w+b");
         if (fp) {
             return std::make_unique<SlokedPosixFileWriter>(fp);
         } else {

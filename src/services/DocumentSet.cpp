@@ -43,6 +43,15 @@ namespace sloked {
                         this->SendResponse({});
                     }
                     break;
+
+                case SlokedDocumentSetService::Command::Save:
+                    if (this->document.Exists()) {
+                        this->document.GetObject().Save();
+                        this->SendResponse(true);
+                    } else {
+                        this->SendResponse(false);
+                    }
+                    break;
             }
         }
 
@@ -94,6 +103,19 @@ namespace sloked {
             return res.AsDictionary()["result"].AsInt();
         } else {
             return {};
+        }
+    }
+
+    bool SlokedDocumentSetClient::Save() {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int64_t>(SlokedDocumentSetService::Command::Save) }
+        });
+        auto res = this->pipe->ReadWait();
+        if (res.AsDictionary()["success"].AsBoolean() &&
+            res.AsDictionary()["result"].Is(KgrValueType::Boolean)) {
+            return res.AsDictionary()["result"].AsBoolean();
+        } else {
+            return false;
         }
     }
 }

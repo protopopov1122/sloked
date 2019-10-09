@@ -179,11 +179,9 @@ int main(int argc, const char **argv) {
             return false;
         } else switch (std::get<1>(cmd)) {            
             case SlokedControlKey::F9: {
-                std::ofstream of(argv[2]);
-                of << documents.OpenDocument(documentId).value().GetObject().GetText();
-                of.close();
+                document.Save();
                 std::exit(EXIT_SUCCESS);
-            }
+            } break;
 
             case SlokedControlKey::F1:
                 tabber.GetWindow(0)->SetFocus();

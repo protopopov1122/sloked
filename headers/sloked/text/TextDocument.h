@@ -30,6 +30,7 @@ namespace sloked {
     class TextDocument : public TextBlockImpl<TextDocument> {
      public:
         TextDocument(const NewLine &, std::unique_ptr<TextBlock>);
+        void Rebuild(const NewLine &, std::unique_ptr<TextBlock>);
 
         std::size_t GetLastLine() const override;
         std::size_t GetTotalLength() const override;
@@ -45,7 +46,7 @@ namespace sloked {
         friend std::ostream &operator<<(std::ostream &os, const TextDocument &);
     
      private:
-        const NewLine &newline;
+        std::reference_wrapper<const NewLine> newline;
         std::unique_ptr<TextBlock> content;
     };
 }

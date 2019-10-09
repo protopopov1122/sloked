@@ -25,11 +25,11 @@
 namespace sloked {
 
     SlokedEditorDocument::SlokedEditorDocument(SlokedNamespace &ns, const SlokedPath &path, const Encoding &encoding, std::unique_ptr<NewLine> newline)
-        : fileView(ns.GetObject(path)->AsFile()->View()), blockFactory(*newline), text(*newline, TextView::Open(*fileView, *newline, blockFactory)),
-          encoding(encoding), newline(std::move(newline)), multiplexer(text, encoding) {}
+        : blockFactory(*newline), upstream(ns, path, this->blockFactory, *newline),
+          encoding(encoding), newline(std::move(newline)), multiplexer(this->upstream.GetText(), encoding) {}
 
     TextBlock &SlokedEditorDocument::GetText() {
-        return this->text;
+        return this->upstream.GetText();
     }
 
     const Encoding &SlokedEditorDocument::GetEncoding() {
@@ -42,5 +42,9 @@ namespace sloked {
 
     SlokedTransactionListenerManager &SlokedEditorDocument::GetTransactionListeners() {
         return this->multiplexer;
+    }
+
+    void SlokedEditorDocument::Save() {
+        this->upstream.Save();
     }
 }

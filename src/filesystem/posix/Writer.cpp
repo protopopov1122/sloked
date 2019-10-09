@@ -20,6 +20,7 @@
 */
 
 #include "sloked/filesystem/posix/Writer.h"
+// #include <unistd.h>
 
 namespace sloked {
 
@@ -27,6 +28,7 @@ namespace sloked {
         : SlokedPosixFileIO(file) {}
     
     std::size_t SlokedPosixFileWriter::Write(std::string_view str) {
+        // ftruncate(fileno(this->file), ftell(this->file) + sizeof(std::string_view::value_type) * str.size());
         return fwrite(str.data(), sizeof(std::string_view::value_type), str.size(), this->file);
     }
     
