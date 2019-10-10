@@ -26,9 +26,13 @@
 
 namespace sloked {
 
+    const std::string EncodingIdentifiers::System = "system";
+    const std::string EncodingIdentifiers::Utf8 = "utf-8";
+    const std::string EncodingIdentifiers::Utf32LE = "utf-32le";
+
     static std::map<std::string, std::reference_wrapper<const Encoding>> Encodings = {
-        { "utf-8", Encoding::Utf8 },
-        { "utf-32le", Encoding::Utf32LE }
+        { EncodingIdentifiers::Utf8, Encoding::Utf8 },
+        { EncodingIdentifiers::Utf32LE, Encoding::Utf32LE }
     };
 
     bool Encoding::operator==(const Encoding &other) const {
@@ -45,7 +49,7 @@ namespace sloked {
     }
 
     const Encoding &Encoding::Get(const std::string &id) {
-        if (id == "system") {
+        if (id == EncodingIdentifiers::System) {
             return SlokedLocale::SystemEncoding();
         }
         if (Encodings.count(id) != 0) {

@@ -34,17 +34,20 @@ namespace sloked {
 
     class SlokedEditorDocument {
      public:
+        SlokedEditorDocument(const Encoding &, std::unique_ptr<NewLine>);
         SlokedEditorDocument(SlokedNamespace &, const SlokedPath &, const Encoding &, std::unique_ptr<NewLine>);
+        bool HasUpstream() const;
         TextBlock &GetText();
         const Encoding &GetEncoding();
         std::unique_ptr<SlokedTransactionStream> NewStream();
         SlokedTransactionListenerManager &GetTransactionListeners();
         void Save();
+        void Save(SlokedNamespace &, const SlokedPath &);
 
      private:
         TextChunkFactory blockFactory;
         SlokedDocumentUpstream upstream;
-        const Encoding &encoding;
+        std::reference_wrapper<const Encoding> encoding;
         std::unique_ptr<NewLine> newline;
         TransactionStreamMultiplexer multiplexer;
     };

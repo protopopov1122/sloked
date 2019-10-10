@@ -43,16 +43,28 @@ namespace sloked {
         content << *this->content;
         auto writer = this->upstream.value().file->AsFile()->Writer();
         writer->Write(content.str());
+        writer->Flush();
 
         this->upstream.value().fileView = this->upstream.value().file->AsFile()->View();
         this->content->Rebuild(this->newline, TextView::Open(*this->upstream.value().fileView, this->newline, this->blockFactory));
     }
 
     void SlokedDocumentUpstream::Save(SlokedNamespace &ns, const SlokedPath &path, const TextBlockFactory &blockFactory, const NewLine &newline) {
+        auto fileHandle = ns.GetHandle(path);
+        if (!fileHandle->Exists()) {
+            fileHandle->MakeFile();
+        }
         auto file = ns.GetObject(path);
-        if (file->AsFile() == nullptr) {
+        if (file == nullptr || file->AsFile() == nullptr) {
             throw SlokedError("Not a file: " + path.ToString());
         }
+
+        std::stringstream content;
+        content << *this->content;
+        auto writer = file->AsFile()->Writer();
+        writer->Write(content.str());
+        writer->Flush();
+
         this->blockFactory = std::cref(blockFactory);
         this->newline = std::cref(this->newline);
         auto view = file->AsFile()->View();

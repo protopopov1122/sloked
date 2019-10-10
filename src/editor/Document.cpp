@@ -24,9 +24,17 @@
 
 namespace sloked {
 
+    SlokedEditorDocument::SlokedEditorDocument(const Encoding &encoding, std::unique_ptr<NewLine> newline)
+        : blockFactory(*newline), upstream(this->blockFactory, *newline),
+          encoding(std::cref(encoding)), newline(std::move(newline)), multiplexer(this->upstream.GetText(), encoding) {}
+
     SlokedEditorDocument::SlokedEditorDocument(SlokedNamespace &ns, const SlokedPath &path, const Encoding &encoding, std::unique_ptr<NewLine> newline)
         : blockFactory(*newline), upstream(ns, path, this->blockFactory, *newline),
           encoding(encoding), newline(std::move(newline)), multiplexer(this->upstream.GetText(), encoding) {}
+
+    bool SlokedEditorDocument::HasUpstream() const {
+        return this->upstream.HasUpstream();
+    }
 
     TextBlock &SlokedEditorDocument::GetText() {
         return this->upstream.GetText();
@@ -46,5 +54,9 @@ namespace sloked {
 
     void SlokedEditorDocument::Save() {
         this->upstream.Save();
+    }
+
+    void SlokedEditorDocument::Save(SlokedNamespace &ns, const SlokedPath &path) {
+        this->upstream.Save(ns, path, this->blockFactory, *this->newline);
     }
 }

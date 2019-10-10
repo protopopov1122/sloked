@@ -27,10 +27,18 @@
 
 namespace sloked {
 
+    static const std::string IdSystem = "system";
+    static const std::string IdLF = "lf";
+    static const std::string IdCRLF = "crlf";
+
     class LFNewLine : public NewLine {
      public:
         LFNewLine(const Encoding &enc)
             : NewLine(enc.Encode(U'\n')), encoding(enc) {}
+
+        const std::string &GetIdentifier() const override {
+            return IdLF;
+        }
         
         void Iterate(std::string_view str, Iterator iter) const override {
             this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto chr) {
@@ -59,6 +67,10 @@ namespace sloked {
      public:
         CRLFNewLine(const Encoding &enc)
             : NewLine(enc.Encode(U"\r\n")), encoding(enc) {}
+
+        const std::string &GetIdentifier() const override {
+            return IdCRLF;
+        }
         
         void Iterate(std::string_view str, Iterator iter) const override {
             std::size_t last_char_pos = 0;
@@ -106,11 +118,11 @@ namespace sloked {
     }
 
     std::unique_ptr<NewLine> NewLine::Create(const std::string &id, const Encoding &encoding) {
-        if (id == "lf") {
+        if (id == IdLF) {
             return NewLine::LF(encoding);
-        } else if (id == "crlf") {
+        } else if (id == IdCRLF) {
             return NewLine::CRLF(encoding);
-        } else if (id == "system") {
+        } else if (id == IdSystem) {
             return SlokedLocale::SystemNewline(encoding);
         } else {
             throw SlokedError("Unknown newline: " + id);

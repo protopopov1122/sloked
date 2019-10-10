@@ -140,7 +140,7 @@ namespace sloked {
         const Entry &entry = this->find(realPath);
         SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(SlokedPath::Root);
         auto obj = entry.ns->GetObject(nsPath);
-        if (obj->GetType() == SlokedNamespaceObject::Type::Directory) {
+        if (obj && obj->GetType() == SlokedNamespaceObject::Type::Directory) {
             return std::make_unique<SlokedNamespaceDefaultDirectory>(*this, path);
         } else {
             return obj;

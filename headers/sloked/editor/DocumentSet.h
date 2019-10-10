@@ -33,8 +33,10 @@ namespace sloked {
 		using DocumentId = SlokedRegistry<SlokedEditorDocument>::Key;
 
 		SlokedEditorDocumentSet(SlokedNamespace &);
+		Document NewDocument(const Encoding &, std::unique_ptr<NewLine>);
 		Document OpenDocument(const SlokedPath &, const Encoding &, std::unique_ptr<NewLine>);
 		std::optional<Document> OpenDocument(DocumentId);
+		void SaveAs(SlokedEditorDocument &, const SlokedPath &);
 		bool HasDocument(DocumentId);
 		Document Empty();
 

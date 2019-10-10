@@ -50,6 +50,10 @@ namespace sloked {
 
     class Utf8Encoding : public Encoding {
      public:
+        const std::string &GetIdentifier() const override {
+            return EncodingIdentifiers::Utf8;
+        }
+
         std::size_t CodepointCount(std::string_view str) const override {
             std::size_t count = 0;
             for (std::size_t i = 0; i < str.size(); i++) {

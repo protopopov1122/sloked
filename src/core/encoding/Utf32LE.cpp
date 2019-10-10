@@ -26,6 +26,10 @@ namespace sloked {
 
     class Utf32LEEncoding : public Encoding {
      public:
+        const std::string &GetIdentifier() const override {
+            return EncodingIdentifiers::Utf32LE;
+        }
+
         std::size_t CodepointCount(std::string_view view) const override {
             if (view.size() % 4 == 0) {
                 return view.size() / 4;

@@ -139,8 +139,9 @@ int main(int argc, const char **argv) {
     KgrContextManager<KgrLocalContext> &ctxManager = ctxManagerHandle.GetManager();
     ctxManagerHandle.Start();
 
-    char BUFFER[1024];
+    char BUFFER[1024], OUT_BUFFER[1024];
     realpath(argv[1], BUFFER);
+    realpath(argv[2], OUT_BUFFER);
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     SlokedEditorDocumentSet documents(root);
 
@@ -179,7 +180,7 @@ int main(int argc, const char **argv) {
             return false;
         } else switch (std::get<1>(cmd)) {            
             case SlokedControlKey::F9: {
-                document.Save();
+                document.Save(OUT_BUFFER);
                 std::exit(EXIT_SUCCESS);
             } break;
 

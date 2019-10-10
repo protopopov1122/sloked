@@ -43,6 +43,7 @@ namespace sloked {
         NewLine &operator=(const NewLine &) = delete;
         NewLine &operator=(NewLine &&) = delete;
 
+        virtual const std::string &GetIdentifier() const = 0;
         virtual void Iterate(std::string_view, Iterator) const = 0;
         virtual std::size_t Count(std::string_view) const = 0;
 
