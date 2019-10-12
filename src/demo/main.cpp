@@ -41,6 +41,7 @@
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentSet.h"
 #include "sloked/editor/DocumentSet.h"
+#include "sloked/editor/Tabs.h"
 
 using namespace sloked;
 
@@ -137,25 +138,16 @@ int main(int argc, const char **argv) {
     server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, ctxManager));
     server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
 
-    SlokedDocumentSetClient document(server.Connect("documents"));
-    auto documentId = document.Open(INPUT_PATH, "system", "system").value();
-
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
 
     TerminalComponentHandle screen(console, terminalEncoding, charWidth);
     auto &multi = screen.NewMultiplexer();
-    auto win1 = multi.NewWindow(TextPosition{5, 5}, TextPosition{40, 150});
-    auto win2 = multi.NewWindow(TextPosition{10, 50}, TextPosition{30, 150});
-    auto &splitter = win1->GetComponent().NewSplitter(Splitter::Direction::Horizontal);
-    auto &tabber = splitter.NewWindow(Splitter::Constraints(0.4))->GetComponent().NewTabber();
-    auto &tab1 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId));
-    auto &tab2 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId, SlokedBackgroundGraphics::Blue));
-    auto &tab3 = tabber.NewWindow()->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId, SlokedBackgroundGraphics::Magenta));
-    auto &pane4 = splitter.NewWindow(Splitter::Constraints(0.2))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId));
-    auto &pane5 = splitter.NewWindow(Splitter::Constraints(0.15))->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId));
-    auto &pane6 = win2->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId, SlokedBackgroundGraphics::Yellow));
-    win1->SetFocus();
+    auto mainWindow = multi.NewWindow(TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
+    auto &tabber = mainWindow->GetComponent().NewTabber();
+    SlokedEditorTabs tabs(tabber, terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), server.GetConnector("documents"));
+
+    auto tab = tabs.Open(INPUT_PATH, "system", "system");
 
     bool work = true;
     screen.SetInputHandler([&](const SlokedKeyboardInput &cmd) {
@@ -163,29 +155,10 @@ int main(int argc, const char **argv) {
             return false;
         } else switch (std::get<1>(cmd)) {            
             case SlokedControlKey::F9: {
-                document.Save(OUTPUT_PATH);
+                tab->Save(OUTPUT_PATH);
+                tab->Close();
                 work = false;
             } break;
-
-            case SlokedControlKey::F1:
-                tabber.GetWindow(0)->SetFocus();
-                break;
-
-            case SlokedControlKey::F2:
-                tabber.GetWindow(1)->SetFocus();
-                break;
-
-            case SlokedControlKey::F3:
-                tabber.GetWindow(2)->SetFocus();
-                break;
-
-            case SlokedControlKey::F4:
-                win1->SetFocus();
-                break;
-
-            case SlokedControlKey::F5:
-                win2->SetFocus();
-                break;
 
             default:
                 return false;
@@ -204,6 +177,7 @@ int main(int argc, const char **argv) {
             screen.ProcessInput(evt);
         }
     }
+    tabs.Close();
 
     ctxManagerHandle.Stop();
     return EXIT_SUCCESS;

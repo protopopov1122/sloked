@@ -30,6 +30,7 @@ namespace sloked {
      public:
         KgrLocalNamedServer(KgrServer &);
         std::unique_ptr<KgrPipe> Connect(const std::string &) override;
+        Connector GetConnector(const std::string &) override;
         
         void Register(const std::string &, std::unique_ptr<KgrService>) override;
         bool Registered(const std::string &) override;

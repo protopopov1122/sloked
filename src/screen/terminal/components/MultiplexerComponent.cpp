@@ -29,12 +29,12 @@ namespace sloked {
         : id(id), component(std::move(component)), window(std::move(window)), root(root) {}
     
     TerminalMultiplexerComponent::TerminalMultiplexerWindow::~TerminalMultiplexerWindow() {
-        if (this->IsOpen()) {
+        if (this->IsOpened()) {
             this->Close();
         }
     }
 
-    bool TerminalMultiplexerComponent::TerminalMultiplexerWindow::IsOpen() const {
+    bool TerminalMultiplexerComponent::TerminalMultiplexerWindow::IsOpened() const {
         return this->root.windows.count(this->id) != 0;
     }
 
@@ -55,7 +55,7 @@ namespace sloked {
     }
 
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::SetFocus() {
-        if (this->IsOpen()) {
+        if (this->IsOpened()) {
             std::remove(this->root.focus.begin(), this->root.focus.end(), this->id);
             this->root.focus.push_back(this->id);
         } else {
@@ -80,7 +80,7 @@ namespace sloked {
     }
 
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Close() {
-        if (this->IsOpen()) {
+        if (this->IsOpened()) {
             std::remove(this->root.focus.begin(), this->root.focus.end(), this->id);
             this->component.reset();
             this->window.reset();

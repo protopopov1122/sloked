@@ -54,7 +54,7 @@ namespace sloked {
          TerminalMultiplexerWindow(Id, std::unique_ptr<TerminalComponentHandle>, std::unique_ptr<TerminalWindow>, TerminalMultiplexerComponent &);
          virtual ~TerminalMultiplexerWindow();
 
-         bool IsOpen() const override;
+         bool IsOpened() const override;
          bool HasFocus() const override;
          SlokedComponentHandle &GetComponent() const override;
          Id GetId() const override;

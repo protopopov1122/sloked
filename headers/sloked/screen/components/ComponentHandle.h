@@ -45,7 +45,7 @@ namespace sloked {
      public:
         using Id = std::size_t;
         virtual ~SlokedComponentWindow() = default;
-        virtual bool IsOpen() const = 0;
+        virtual bool IsOpened() const = 0;
         virtual bool HasFocus() const = 0;
         virtual SlokedComponentHandle &GetComponent() const = 0;
         virtual Id GetId() const = 0;

@@ -23,6 +23,7 @@
 #define SLOKED_CORE_INDEXED_H_
 
 #include "sloked/Base.h"
+#include <utility>
 #include <cinttypes>
 
 namespace sloked {

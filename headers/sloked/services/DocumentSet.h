@@ -30,6 +30,7 @@ namespace sloked {
         SlokedDocumentSetClient(std::unique_ptr<KgrPipe>);
         std::optional<SlokedEditorDocumentSet::DocumentId> New(const std::string &, const std::string &);
         std::optional<SlokedEditorDocumentSet::DocumentId> Open(const std::string &, const std::string &, const std::string &);
+        bool Open(SlokedEditorDocumentSet::DocumentId);
         bool Save();
         bool Save(const std::string &);
         void Close();

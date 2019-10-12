@@ -34,6 +34,12 @@ namespace sloked {
             throw SlokedError("KgrNamedServer: Unknown name \'" + name + "\'");
         }
     }
+
+    KgrLocalNamedServer::Connector KgrLocalNamedServer::GetConnector(const std::string &name) {
+        return [this, name]() {
+            return this->Connect(name);
+        };
+    }
     
     void KgrLocalNamedServer::Register(const std::string &name, std::unique_ptr<KgrService> service) {
         if (this->names.count(name) == 0) {

@@ -118,6 +118,19 @@ namespace sloked {
         }
     }
 
+    bool SlokedDocumentSetClient::Open(SlokedEditorDocumentSet::DocumentId docId) {
+        this->pipe->Write(KgrDictionary {
+            { "command", static_cast<int64_t>(SlokedDocumentSetService::Command::Open) },
+            { "id", static_cast<int64_t>(docId) }
+        });
+        auto res = this->pipe->ReadWait();
+        if (res.AsDictionary()["success"].AsBoolean()) {
+            return res.AsDictionary()["result"].AsBoolean();
+        } else {
+            return {};
+        }
+    }
+
     bool SlokedDocumentSetClient::Save() {
         this->pipe->Write(KgrDictionary {
             { "command", static_cast<int64_t>(SlokedDocumentSetService::Command::Save) }

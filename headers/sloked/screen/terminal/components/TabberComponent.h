@@ -54,7 +54,7 @@ namespace sloked {
         class TerminalTabberWindow : public Window {
          public:
             TerminalTabberWindow(Id, std::unique_ptr<TerminalComponentHandle>, TerminalTabberComponent &);
-            bool IsOpen() const override;
+            bool IsOpened() const override;
             bool HasFocus() const override;
             SlokedComponentHandle &GetComponent() const override;
             Id GetId() const override;

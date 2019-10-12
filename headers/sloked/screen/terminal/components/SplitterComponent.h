@@ -54,7 +54,7 @@ namespace sloked {
       class TerminalSplitterWindow : public Window {
        public:
          TerminalSplitterWindow(Window::Id, std::unique_ptr<TerminalComponentHandle>, TerminalSplitterComponent &);
-         bool IsOpen() const override;
+         bool IsOpened() const override;
          bool HasFocus() const override;
          SlokedComponentHandle &GetComponent() const override;
          Id GetId() const override;

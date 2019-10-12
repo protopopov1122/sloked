@@ -27,7 +27,7 @@ namespace sloked {
     TerminalSplitterComponent::TerminalSplitterWindow::TerminalSplitterWindow(Window::Id id, std::unique_ptr<TerminalComponentHandle> component, TerminalSplitterComponent &root)
         : id(id), component(std::move(component)), root(root) {}
 
-    bool TerminalSplitterComponent::TerminalSplitterWindow::IsOpen() const {
+    bool TerminalSplitterComponent::TerminalSplitterWindow::IsOpened() const {
         return this->component != nullptr;
     }
 

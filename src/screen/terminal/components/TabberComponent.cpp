@@ -27,7 +27,7 @@ namespace sloked {
     TerminalTabberComponent::TerminalTabberWindow::TerminalTabberWindow(Id id, std::unique_ptr<TerminalComponentHandle> component, TerminalTabberComponent &root)
         : id(id), component(std::move(component)), root(root) {}
     
-    bool TerminalTabberComponent::TerminalTabberWindow::IsOpen() const {
+    bool TerminalTabberComponent::TerminalTabberWindow::IsOpened() const {
         return this->component != nullptr;
     }
 

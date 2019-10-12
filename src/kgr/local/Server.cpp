@@ -37,6 +37,12 @@ namespace sloked {
         }
     }
 
+    KgrLocalServer::Connector KgrLocalServer::GetConnector(ServiceId srvId) {
+        return [this, srvId]() {
+            return this->Connect(srvId);
+        };
+    }
+
     KgrLocalServer::ServiceId KgrLocalServer::Register(std::unique_ptr<KgrService> service) {
         if (service == nullptr) {
             throw SlokedError("KgrServer: Service can't be null");
