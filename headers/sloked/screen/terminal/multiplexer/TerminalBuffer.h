@@ -35,7 +35,6 @@ namespace sloked {
     class BufferedTerminal : public SlokedTerminal {
      public:
         BufferedTerminal(SlokedTerminal &, const Encoding &, const SlokedCharWidth &);
-        virtual ~BufferedTerminal();
 
         void Flush();
         void UpdateSize();
@@ -74,7 +73,7 @@ namespace sloked {
         const SlokedCharWidth &charWidth;
         bool cls;
         bool show_cursor;
-        Character *buffer;
+        std::unique_ptr<Character[]> buffer;
         BufferedGraphicsMode graphics;
         Line line;
         Column col;

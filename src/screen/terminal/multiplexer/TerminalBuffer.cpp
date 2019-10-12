@@ -65,11 +65,7 @@ namespace sloked {
     BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
         : term(term), encoding(encoding), charWidth(charWidth), cls(false), show_cursor(true), buffer(nullptr), line(0), col(0) {
         this->Update();
-        this->buffer = new Character[this->width * this->height];
-    }
-
-    BufferedTerminal::~BufferedTerminal() {
-        delete[] this->buffer;
+        this->buffer = std::unique_ptr<Character[]>(new Character[this->width * this->height]);
     }
 
     void BufferedTerminal::Flush() {
@@ -110,8 +106,7 @@ namespace sloked {
     void BufferedTerminal::UpdateSize() {
         this->width = term.GetWidth();
         this->height = term.GetHeight();
-        delete[] this->buffer;
-        this->buffer = new Character[this->width * this->height];
+        this->buffer = std::unique_ptr<Character[]>(new Character[this->width * this->height]);
     }
     
     void BufferedTerminal::SetPosition(Line l, Column c) {
