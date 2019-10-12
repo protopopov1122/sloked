@@ -51,6 +51,11 @@ namespace sloked {
             this->callback = std::move(callback);
         }
 
+        void Clear() {
+            std::unique_lock<std::mutex> lock(this->contexts_mtx);
+            this->contexts.clear();
+        }
+
         void Attach(std::unique_ptr<T> ctx) override {
             std::unique_lock<std::mutex> lock(this->contexts_mtx);
             ctx->SetActivationListener(this->callback);
@@ -132,6 +137,7 @@ namespace sloked {
                 this->work = false;
                 this->notificationCV.notify_all();
                 this->managerThread.join();
+                this->manager.Clear();
             }
         }
 

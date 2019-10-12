@@ -22,12 +22,6 @@
 #include <cstdlib>
 #include <iostream>
 #include "sloked/core/Locale.h"
-#include "sloked/text/TextDocument.h"
-#include "sloked/text/TextView.h"
-#include "sloked/text/TextChunk.h"
-#include "sloked/text/cursor/TransactionCursor.h"
-#include "sloked/text/cursor/TransactionBatch.h"
-#include "sloked/text/cursor/TransactionStreamMultiplexer.h"
 #include "sloked/screen/terminal/posix/PosixTerminal.h"
 #include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
 #include "sloked/screen/terminal/components/ComponentHandle.h"
@@ -35,15 +29,10 @@
 #include "sloked/screen/terminal/components/TabberComponent.h"
 #include "sloked/screen/terminal/components/MultiplexerComponent.h"
 #include "sloked/screen/widgets/TextEditor.h"
-#include "sloked/filesystem/posix/File.h"
 #include "sloked/namespace/Filesystem.h"
-#include "sloked/namespace/Find.h"
 #include "sloked/namespace/Virtual.h"
-#include "sloked/namespace/View.h"
 #include "sloked/namespace/posix/Filesystem.h"
 #include "sloked/text/fragment/TaggedText.h"
-#include "sloked/text/fragment/Updater.h"
-#include "sloked/kgr/Serialize.h"
 #include "sloked/kgr/local/Pipe.h"
 #include "sloked/kgr/local/Server.h"
 #include "sloked/kgr/local/NamedServer.h"
@@ -52,15 +41,8 @@
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentSet.h"
 #include "sloked/editor/DocumentSet.h"
-#include <fcntl.h>
-#include <fstream>
-#include <sstream>
-#include <queue>
-#include <thread>
-#include <chrono>
 
 using namespace sloked;
-using namespace std::chrono_literals;
 
 class TestFragment : public SlokedTextTagger<int> {
  public:
@@ -139,9 +121,9 @@ int main(int argc, const char **argv) {
     KgrContextManager<KgrLocalContext> &ctxManager = ctxManagerHandle.GetManager();
     ctxManagerHandle.Start();
 
-    char BUFFER[1024], OUT_BUFFER[1024];
-    realpath(argv[1], BUFFER);
-    realpath(argv[2], OUT_BUFFER);
+    char INPUT_PATH[1024], OUTPUT_PATH[1024];
+    realpath(argv[1], INPUT_PATH);
+    realpath(argv[2], OUTPUT_PATH);
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     SlokedEditorDocumentSet documents(root);
 
@@ -156,7 +138,7 @@ int main(int argc, const char **argv) {
     server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
 
     SlokedDocumentSetClient document(server.Connect("documents"));
-    auto documentId = document.Open(BUFFER, "system", "system").value();
+    auto documentId = document.Open(INPUT_PATH, "system", "system").value();
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
@@ -175,13 +157,14 @@ int main(int argc, const char **argv) {
     auto &pane6 = win2->GetComponent().NewTextPane(std::make_unique<SlokedTextEditor>(terminalEncoding, server.Connect("text::cursor"), server.Connect("text::render"), documentId, SlokedBackgroundGraphics::Yellow));
     win1->SetFocus();
 
+    bool work = true;
     screen.SetInputHandler([&](const SlokedKeyboardInput &cmd) {
         if (cmd.index() == 0) {
             return false;
         } else switch (std::get<1>(cmd)) {            
             case SlokedControlKey::F9: {
-                document.Save(OUT_BUFFER);
-                std::exit(EXIT_SUCCESS);
+                document.Save(OUTPUT_PATH);
+                work = false;
             } break;
 
             case SlokedControlKey::F1:
@@ -210,7 +193,7 @@ int main(int argc, const char **argv) {
         return true;
     });
 
-    while (true) {
+    while (work) {
         screen.UpdateDimensions();
         console.SetGraphicsMode(SlokedTextGraphics::Off);
         console.ClearScreen();

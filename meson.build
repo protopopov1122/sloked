@@ -5,7 +5,6 @@ if meson.get_compiler('cpp').get_id() == 'gcc' or meson.get_compiler('cpp').get_
 endif
 
 sloked_src = [
-  'src/main.cpp',
   'src/core/CharWidth.cpp',
   'src/core/DynamicBitset.cpp',
   'src/core/Encoding.cpp',
@@ -15,6 +14,7 @@ sloked_src = [
   'src/core/Position.cpp',
   'src/core/encoding/Utf8.cpp',
   'src/core/encoding/Utf32LE.cpp',
+  'src/demo/main.cpp',
   'src/filesystem/FileIO.cpp',
   'src/filesystem/posix/File.cpp',
   'src/filesystem/posix/FileIO.cpp',

@@ -110,6 +110,15 @@ namespace sloked {
 
     TerminalMultiplexerComponent::TerminalMultiplexerComponent(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
         : terminal(term), encoding(encoding), charWidth(charWidth), focus(0), nextId(0) {}
+    
+    TerminalMultiplexerComponent::~TerminalMultiplexerComponent() {
+        for (auto it = this->windows.begin(); it != this->windows.end();) {
+            auto current = it->second;
+            ++it;
+            current->Close();
+        }
+        this->windows.clear(); 
+    }
 
     std::shared_ptr<TerminalMultiplexerComponent::Window> TerminalMultiplexerComponent::GetFocus() const {
         if (!this->focus.empty()) {

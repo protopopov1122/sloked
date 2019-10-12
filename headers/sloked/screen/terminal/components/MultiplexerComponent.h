@@ -34,6 +34,7 @@ namespace sloked {
    class TerminalMultiplexerComponent : public SlokedMultiplexerComponent {
     public:
       TerminalMultiplexerComponent(SlokedTerminal &, const Encoding &, const SlokedCharWidth &);
+      virtual ~TerminalMultiplexerComponent();
 
       std::shared_ptr<Window> GetFocus() const override;
       std::shared_ptr<Window> GetWindow(Window::Id) const override;
