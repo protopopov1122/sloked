@@ -51,7 +51,32 @@ namespace sloked {
         F6,
         F7,
         F8,
-        F9
+        F9,
+        F10,
+        F11,
+        F12,
+        CtrlSpace,
+        CtrlA,
+        CtrlB,
+        CtrlD,
+        CtrlE,
+        CtrlF,
+        CtrlG,
+        CtrlH,
+        CtrlI,
+        CtrlJ,
+        CtrlK,
+        CtrlL,
+        CtrlN,
+        CtrlO,
+        CtrlP,
+        CtrlR,
+        CtrlT,
+        CtrlU,
+        CtrlV,
+        CtrlW,
+        CtrlX,
+        CtrlY
     };
 
     using SlokedKeyboardInput = std::variant<std::string, SlokedControlKey>;

@@ -63,7 +63,10 @@ namespace sloked {
         { "k6", SlokedControlKey::F6 },
         { "k7", SlokedControlKey::F7 },
         { "k8", SlokedControlKey::F8 },
-        { "k9", SlokedControlKey::F9 }
+        { "k9", SlokedControlKey::F9 },
+        { "k;", SlokedControlKey::F10 },
+        { "F1", SlokedControlKey::F11 },
+        { "F2", SlokedControlKey::F12 }
     };
 
     static const std::map<std::string, std::string> CompatConversions = {
@@ -72,6 +75,31 @@ namespace sloked {
         { "\033OC", "\033[C" },
         { "\033OD", "\033[D" },
         { "\033OH", "\033[H" }
+    };
+    
+    static const std::map<char, SlokedControlKey> ControlKeys = {
+        { '\000', SlokedControlKey::CtrlSpace },
+        { '\001', SlokedControlKey::CtrlA },
+        { '\002', SlokedControlKey::CtrlB },
+        { '\004', SlokedControlKey::CtrlD },
+        { '\005', SlokedControlKey::CtrlE },
+        { '\006', SlokedControlKey::CtrlF },
+        { '\007', SlokedControlKey::CtrlG },
+        { '\010', SlokedControlKey::CtrlH },
+        { '\011', SlokedControlKey::CtrlI },
+        { '\012', SlokedControlKey::CtrlJ },
+        { '\013', SlokedControlKey::CtrlK },
+        { '\014', SlokedControlKey::CtrlL },
+        { '\016', SlokedControlKey::CtrlN },
+        { '\017', SlokedControlKey::CtrlO },
+        { '\020', SlokedControlKey::CtrlP },
+        { '\022', SlokedControlKey::CtrlR },
+        { '\024', SlokedControlKey::CtrlT },
+        { '\025', SlokedControlKey::CtrlU },
+        { '\026', SlokedControlKey::CtrlV },
+        { '\027', SlokedControlKey::CtrlW },
+        { '\030', SlokedControlKey::CtrlX },
+        { '\031', SlokedControlKey::CtrlY },
     };
 
     struct PosixTerminal::State {
@@ -126,6 +154,12 @@ namespace sloked {
                 input.erase(0, CompatConversions.at(value).size());
                 return specialKey.second;
             }
+        }
+
+        if (ControlKeys.count(input[0]) != 0) {
+            char chr = input[0];
+            input.erase(0, 1);
+            return ControlKeys.at(chr);
         }
         
         switch (input[0]) {
