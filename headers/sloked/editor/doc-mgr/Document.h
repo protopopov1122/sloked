@@ -19,8 +19,8 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_EDITOR_DOCUMENT_H_
-#define SLOKED_EDITOR_DOCUMENT_H_
+#ifndef SLOKED_EDITOR_DOCMGR_DOCUMENT_H_
+#define SLOKED_EDITOR_DOCMGR_DOCUMENT_H_
 
 #include "sloked/core/Encoding.h"
 #include "sloked/core/NewLine.h"
@@ -28,7 +28,7 @@
 #include "sloked/text/TextChunk.h"
 #include "sloked/text/cursor/TransactionStreamMultiplexer.h"
 #include "sloked/namespace/Object.h"
-#include "sloked/editor/DocumentUpstream.h"
+#include "sloked/editor/doc-mgr/DocumentUpstream.h"
 
 namespace sloked {
 

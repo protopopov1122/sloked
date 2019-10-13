@@ -40,7 +40,7 @@
 #include "sloked/services/TextRender.h"
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentSet.h"
-#include "sloked/editor/DocumentSet.h"
+#include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/editor/Tabs.h"
 
 using namespace sloked;
@@ -109,7 +109,6 @@ class TestFragmentFactory : public SlokedTextTaggerFactory<int> {
     }
 };
 
-
 int main(int argc, const char **argv) {
     if (argc < 3) {
         std::cout << "Format: " << argv[0] << " source destination" << std::endl;
@@ -144,7 +143,10 @@ int main(int argc, const char **argv) {
     TerminalComponentHandle screen(console, terminalEncoding, charWidth);
     auto &multi = screen.NewMultiplexer();
     auto mainWindow = multi.NewWindow(TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
-    auto &tabber = mainWindow->GetComponent().NewTabber();
+    auto &splitter = mainWindow->GetComponent().NewSplitter(Splitter::Direction::Vertical);
+    auto tabberWindow = splitter.NewWindow(Splitter::Constraints(1.0f));
+    auto cmdlineWindow = splitter.NewWindow(Splitter::Constraints(0.0f, 1));
+    auto &tabber = tabberWindow->GetComponent().NewTabber();
     SlokedEditorTabs tabs(tabber, terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), server.GetConnector("documents"));
 
     auto tab = tabs.Open(INPUT_PATH, "system", "system");
@@ -154,8 +156,8 @@ int main(int argc, const char **argv) {
         if (cmd.index() == 0) {
             return false;
         } else switch (std::get<1>(cmd)) {            
-            case SlokedControlKey::F9: {
-                tab->Save(OUTPUT_PATH);
+            case SlokedControlKey::Escape: {
+                tab->Save();
                 tab->Close();
                 work = false;
             } break;
@@ -177,7 +179,7 @@ int main(int argc, const char **argv) {
             screen.ProcessInput(evt);
         }
     }
-    tabs.Close();
+    tabs.CloseAll();
 
     ctxManagerHandle.Stop();
     return EXIT_SUCCESS;

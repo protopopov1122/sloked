@@ -1,4 +1,4 @@
-#include "sloked/editor/DocumentUpstream.h"
+#include "sloked/editor/doc-mgr/DocumentUpstream.h"
 #include "sloked/text/TextDocument.h"
 #include "sloked/text/TextView.h"
 #include "sloked/core/Position.h"

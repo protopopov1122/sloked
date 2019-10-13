@@ -19,10 +19,10 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_EDITOR_DOCUMENTSET_H_
-#define SLOKED_EDITOR_DOCUMENTSET_H_
+#ifndef SLOKED_EDITOR_DOCMGR_DOCUMENTSET_H_
+#define SLOKED_EDITOR_DOCMGR_DOCUMENTSET_H_
 
-#include "sloked/editor/Document.h"
+#include "sloked/editor/doc-mgr/Document.h"
 #include "sloked/core/Resource.h"
 
 namespace sloked {

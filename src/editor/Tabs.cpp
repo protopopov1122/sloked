@@ -93,14 +93,14 @@ namespace sloked {
         : tabber(tabber), encoding(encoding), cursorService(std::move(cursorService)), renderService(std::move(renderService)), documentService(std::move(documentService)) {}
 
     SlokedEditorTabs::~SlokedEditorTabs() {
-        this->Close();
+        this->CloseAll();
     }
 
-    std::size_t SlokedEditorTabs::GetTabCount() {
+    std::size_t SlokedEditorTabs::GetWindowCount() {
         return this->tabber.GetWindowCount();
     }
 
-    std::shared_ptr<SlokedEditorTabs::Tab> SlokedEditorTabs::GetTab(SlokedComponentWindow::Id id) {
+    std::shared_ptr<SlokedEditorTabs::DocumentWindow> SlokedEditorTabs::GetWindow(SlokedComponentWindow::Id id) {
         if (this->documents.count(id)) {
             return this->documents.at(id);
         } else {
@@ -108,7 +108,7 @@ namespace sloked {
         }
     }
 
-    std::shared_ptr<SlokedEditorTabs::Tab> SlokedEditorTabs::GetFocus() {
+    std::shared_ptr<SlokedEditorTabs::DocumentWindow> SlokedEditorTabs::GetFocus() {
         auto win = this->tabber.GetFocus();
         if (win) {
             return this->documents.at(win->GetId());
@@ -117,7 +117,7 @@ namespace sloked {
         }
     }
 
-    std::shared_ptr<SlokedEditorTabs::Tab> SlokedEditorTabs::New(const std::string &encoding, const std::string &newline) {
+    std::shared_ptr<SlokedEditorTabs::DocumentWindow> SlokedEditorTabs::New(const std::string &encoding, const std::string &newline) {
         SlokedDocumentSetClient document(this->documentService());
         auto documentId = document.New(encoding, newline);
         if (documentId.has_value()) {
@@ -131,7 +131,7 @@ namespace sloked {
             return nullptr;
         }
     }
-    std::shared_ptr<SlokedEditorTabs::Tab> SlokedEditorTabs::Open(const std::string &path, const std::string &encoding, const std::string &newline) {
+    std::shared_ptr<SlokedEditorTabs::DocumentWindow> SlokedEditorTabs::Open(const std::string &path, const std::string &encoding, const std::string &newline) {
         SlokedDocumentSetClient document(this->documentService());
         auto documentId = document.Open(path, encoding, newline);
         if (documentId.has_value()) {
@@ -146,7 +146,7 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorTabs::Close() {
+    void SlokedEditorTabs::CloseAll() {
         for (auto it = this->documents.begin(); it != this->documents.end();) {
             auto current = it->second;
             ++it;

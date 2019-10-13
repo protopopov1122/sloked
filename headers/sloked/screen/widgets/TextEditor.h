@@ -25,7 +25,7 @@
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/widgets/TextPane.h"
 #include "sloked/screen/widgets/TextPaneWidget.h"
-#include "sloked/editor/DocumentSet.h"
+#include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/services/Cursor.h"
 #include "sloked/services/TextRender.h"
 

@@ -30,7 +30,7 @@
 #include "sloked/text/cursor/TransactionStream.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/services/Service.h"
-#include "sloked/editor/DocumentSet.h"
+#include "sloked/editor/doc-mgr/DocumentSet.h"
 
 namespace sloked {
 

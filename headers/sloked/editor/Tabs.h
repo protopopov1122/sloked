@@ -22,6 +22,7 @@
 #ifndef SLOKED_EDITOR_TABS_H_
 #define SLOKED_EDITOR_TABS_H_
 
+#include "sloked/editor/EditorDocuments.h"
 #include "sloked/screen/components/TabberComponent.h"
 #include "sloked/kgr/Server.h"
 #include "sloked/services/DocumentSet.h"
@@ -29,19 +30,19 @@
 
 namespace sloked {
 
-    class SlokedEditorTabs {
+    class SlokedEditorTabs : public SlokedEditorDocuments {
      public:
-        class Tab {
+        class Tab : public SlokedEditorDocuments::DocumentWindow {
          public:
             Tab(std::shared_ptr<SlokedComponentWindow>, SlokedDocumentSetClient, SlokedEditorTabs &);
-            ~Tab();
-            bool IsOpened() const;
-            bool HasFocus() const;
-            void SetFocus() const;
-            SlokedComponentWindow::Id GetId() const;
-            void Save();
-            void Save(const std::string &);
-            void Close();
+            virtual ~Tab();
+            bool IsOpened() const override;
+            bool HasFocus() const override;
+            void SetFocus() const override;
+            SlokedComponentWindow::Id GetId() const override;
+            void Save() override;
+            void Save(const std::string &) override;
+            void Close() override;
 
          private:
             std::shared_ptr<SlokedComponentWindow> win;
@@ -53,12 +54,12 @@ namespace sloked {
 
         SlokedEditorTabs(SlokedTabberComponent &, const Encoding &, KgrServer::Connector, KgrServer::Connector, KgrServer::Connector);
         ~SlokedEditorTabs();
-        std::size_t GetTabCount();
-        std::shared_ptr<Tab> GetTab(SlokedComponentWindow::Id);
-        std::shared_ptr<Tab> GetFocus();
-        std::shared_ptr<Tab> New(const std::string &, const std::string &);
-        std::shared_ptr<Tab> Open(const std::string &, const std::string &, const std::string &);
-        void Close();
+        std::size_t GetWindowCount() override;
+        std::shared_ptr<DocumentWindow> GetWindow(SlokedComponentWindow::Id) override;
+        std::shared_ptr<DocumentWindow> GetFocus() override;
+        std::shared_ptr<DocumentWindow> New(const std::string &, const std::string &) override;
+        std::shared_ptr<DocumentWindow> Open(const std::string &, const std::string &, const std::string &) override;
+        void CloseAll() override;
 
      private:
         SlokedTabberComponent &tabber;

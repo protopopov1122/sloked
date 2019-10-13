@@ -19,8 +19,8 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_EDITOR_DOCUMENTUPSTREAM_H_
-#define SLOKED_EDITOR_DOCUMENTUPSTREAM_H_
+#ifndef SLOKED_EDITOR_DOCMGR_DOCUMENTUPSTREAM_H_
+#define SLOKED_EDITOR_DOCMGR_DOCUMENTUPSTREAM_H_
 
 #include "sloked/core/NewLine.h"
 #include "sloked/namespace/Object.h"

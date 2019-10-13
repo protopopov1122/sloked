@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/editor/DocumentSet.h"
+#include "sloked/editor/doc-mgr/DocumentSet.h"
 
 namespace sloked {
 

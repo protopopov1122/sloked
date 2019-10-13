@@ -3,7 +3,7 @@
 
 #include "sloked/kgr/Service.h"
 #include "sloked/services/Service.h"
-#include "sloked/editor/DocumentSet.h"
+#include "sloked/editor/doc-mgr/DocumentSet.h"
 
 namespace sloked {
 
