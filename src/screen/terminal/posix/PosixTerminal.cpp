@@ -87,7 +87,6 @@ namespace sloked {
         { '\007', SlokedControlKey::CtrlG },
         { '\010', SlokedControlKey::CtrlH },
         { '\011', SlokedControlKey::CtrlI },
-        { '\012', SlokedControlKey::CtrlJ },
         { '\013', SlokedControlKey::CtrlK },
         { '\014', SlokedControlKey::CtrlL },
         { '\016', SlokedControlKey::CtrlN },
@@ -140,7 +139,7 @@ namespace sloked {
         std::array<char, 2048> buffer;
     };
 
-    std::optional<SlokedControlKey> collectControlKey(PosixTerminal::Termcap &termcap, std::string &input) {
+    std::optional<SlokedControlKey> collectControlKey(PosixTerminal::Termcap &termcap, std::string &input, bool &altPressed) {
         for (const auto &specialKey : TermcapSpecialKeys) {
             const char *str = termcap.GetString(specialKey.first);
             if (str == nullptr) {
@@ -180,6 +179,9 @@ namespace sloked {
                 if (starts_with(input, "\033[F")) {
                     input.erase(0, 3);
                     return SlokedControlKey::End;
+                } else if (input.size() > 1) {
+                    input.erase(0, 1);
+                    altPressed = true;
                 } else {
                     input.erase(0, 1);
                     return SlokedControlKey::Escape;
@@ -342,27 +344,30 @@ namespace sloked {
 
         std::vector<SlokedKeyboardInput> input;
         std::string buf;
+        bool altPressed = false;
         while (!view.empty()) {
-            auto specialKey = collectControlKey(*this->termcap, view);
+            bool prevAlt = altPressed;
+            auto specialKey = collectControlKey(*this->termcap, view, altPressed);
+            if (!prevAlt && altPressed) { // Alt keycode is detected skip to get the next input chunk
+                continue;
+            }
             if (specialKey.has_value()) {
                 if (!buf.empty()) {
-                    input.push_back(buf);
+                    input.push_back(SlokedKeyboardInput{buf, false});
                     buf.clear();
                 }
-                input.push_back(specialKey.value());
-            } else {
+                input.push_back(SlokedKeyboardInput{specialKey.value(), altPressed});
+            } else if (!view.empty()) {
                 buf.push_back(view[0]);
                 view.erase(0, 1);
             }
+            altPressed = false;
         }
         if (!buf.empty()) {
-            input.push_back(buf);
+            input.push_back(SlokedKeyboardInput{buf, false});
         }
         return input;
     }
-
-    void set_terminal_mode(FILE *fd, unsigned int mode) {
-    }    
 
     void PosixTerminal::SetGraphicsMode(SlokedTextGraphics mode) {
         unsigned int imode = 0;

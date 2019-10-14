@@ -153,11 +153,11 @@ int main(int argc, const char **argv) {
 
     bool work = true;
     screen.SetInputHandler([&](const SlokedKeyboardInput &cmd) {
-        if (cmd.index() == 0) {
+        if (cmd.value.index() == 0) {
             return false;
-        } else switch (std::get<1>(cmd)) {            
+        } else switch (std::get<1>(cmd.value)) {            
             case SlokedControlKey::Escape: {
-                tab->Save();
+                tab->Save(OUTPUT_PATH);
                 tab->Close();
                 work = false;
             } break;

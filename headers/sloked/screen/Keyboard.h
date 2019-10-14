@@ -64,7 +64,6 @@ namespace sloked {
         CtrlG,
         CtrlH,
         CtrlI,
-        CtrlJ,
         CtrlK,
         CtrlL,
         CtrlN,
@@ -79,7 +78,10 @@ namespace sloked {
         CtrlY
     };
 
-    using SlokedKeyboardInput = std::variant<std::string, SlokedControlKey>;
+    struct SlokedKeyboardInput {
+      std::variant<std::string, SlokedControlKey> value;
+      bool alt;
+    };
 }
 
 #endif

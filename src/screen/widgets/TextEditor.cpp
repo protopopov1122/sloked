@@ -31,9 +31,9 @@ namespace sloked {
     }
 
     bool SlokedTextEditor::ProcessInput(const SlokedKeyboardInput &cmd) {
-        if (cmd.index() == 0) {
-            this->cursorClient.Insert(conv.Convert(std::get<0>(cmd)));
-        } else switch (std::get<1>(cmd)) {
+        if (cmd.value.index() == 0) {
+            this->cursorClient.Insert(conv.Convert(std::get<0>(cmd.value)));
+        } else switch (std::get<1>(cmd.value)) {
             case SlokedControlKey::ArrowUp:
                 this->cursorClient.MoveUp();
                 break;
