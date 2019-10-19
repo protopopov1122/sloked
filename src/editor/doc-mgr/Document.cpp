@@ -32,6 +32,10 @@ namespace sloked {
         : blockFactory(*newline), upstream(ns, path, this->blockFactory, *newline),
           encoding(encoding), newline(std::move(newline)), multiplexer(this->upstream.GetText(), encoding) {}
 
+    std::optional<std::reference_wrapper<const SlokedPath>> SlokedEditorDocument::GetUpstream() const {
+        return this->upstream.GetUpstream();
+    }
+
     bool SlokedEditorDocument::HasUpstream() const {
         return this->upstream.HasUpstream();
     }

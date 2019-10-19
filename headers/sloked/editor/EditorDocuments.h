@@ -13,6 +13,7 @@ namespace sloked {
             virtual bool IsOpened() const = 0;
             virtual bool HasFocus() const = 0;
             virtual void SetFocus() const = 0;
+            virtual std::optional<std::string> GetPath() = 0;
             virtual SlokedComponentWindow::Id GetId() const = 0;
             virtual void Save() = 0;
             virtual void Save(const std::string &) = 0;

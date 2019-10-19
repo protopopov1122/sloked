@@ -54,6 +54,14 @@ namespace sloked {
         }
     }
 
+    std::optional<std::string> SlokedEditorTabs::Tab::GetPath() {
+        if (this->win) {
+            return this->document.GetUpstream();
+        } else {
+            throw SlokedError("Tab already closed");
+        }
+    }
+
     SlokedComponentWindow::Id SlokedEditorTabs::Tab::GetId() const {
         if (this->win) {
             return this->win->GetId();

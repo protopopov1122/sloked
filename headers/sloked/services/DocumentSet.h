@@ -26,7 +26,8 @@ namespace sloked {
         bool Save();
         bool Save(const std::string &);
         void Close();
-        std::optional<SlokedEditorDocumentSet::DocumentId> Get();
+        std::optional<SlokedEditorDocumentSet::DocumentId> GetId();
+        std::optional<std::string> GetUpstream();
 
      private:
         SlokedServiceClient client;

@@ -39,6 +39,7 @@ namespace sloked {
             bool IsOpened() const override;
             bool HasFocus() const override;
             void SetFocus() const override;
+            std::optional<std::string> GetPath() override;
             SlokedComponentWindow::Id GetId() const override;
             void Save() override;
             void Save(const std::string &) override;

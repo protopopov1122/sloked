@@ -14,6 +14,7 @@ namespace sloked {
             this->RegisterMethod("saveAs", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->SaveAs(method, params, rsp); });
             this->RegisterMethod("close", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Close(method, params, rsp); });
             this->RegisterMethod("getId", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->GetId(method, params, rsp); });
+            this->RegisterMethod("getUpstream", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->GetUpstream(method, params, rsp); });
         }
 
      protected:
@@ -75,6 +76,19 @@ namespace sloked {
         void GetId(const std::string &method, const KgrValue &params, Response &rsp) {
             if (this->document.Exists()) {
                 rsp.Result(static_cast<int64_t>(this->document.GetKey()));
+            } else {
+                rsp.Result({});
+            }
+        }
+
+        void GetUpstream(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document.Exists()) {
+                auto upstream = this->document.GetObject().GetUpstream();
+                if (upstream.has_value()) {
+                    rsp.Result(upstream.value().get().ToString());
+                } else {
+                    rsp.Result({});
+                }
             } else {
                 rsp.Result({});
             }
@@ -160,11 +174,21 @@ namespace sloked {
         this->client.Invoke("close", {});
     }
 
-    std::optional<SlokedEditorDocumentSet::DocumentId> SlokedDocumentSetClient::Get() {
+    std::optional<SlokedEditorDocumentSet::DocumentId> SlokedDocumentSetClient::GetId() {
         auto rsp = this->client.Invoke("getId", {});
         auto res = rsp.Get();
         if (res.HasResult() && res.GetResult().Is(KgrValueType::Integer)) {
             return res.GetResult().AsInt();
+        } else {
+            return {};
+        }
+    }
+
+    std::optional<std::string> SlokedDocumentSetClient::GetUpstream() {
+        auto rsp = this->client.Invoke("getUpstream", {});
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
+            return res.GetResult().AsString();
         } else {
             return {};
         }
