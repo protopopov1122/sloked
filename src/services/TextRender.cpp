@@ -70,28 +70,23 @@ namespace sloked {
      public:
         SlokedTextRenderContext(std::unique_ptr<KgrPipe> pipe,
             SlokedEditorDocumentSet &documents, const SlokedCharWidth &charWidth, SlokedTextTaggerFactory<int> &taggerFactory)
-            : SlokedServiceContext(std::move(pipe)), documents(documents), charWidth(charWidth), taggerFactory(taggerFactory), handle(documents.Empty()), document(nullptr) {}
+            : SlokedServiceContext(std::move(pipe)), documents(documents), charWidth(charWidth), taggerFactory(taggerFactory), handle(documents.Empty()), document(nullptr) {
+                
+            this->RegisterMethod("attach", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Attach(method, params, rsp); });
+            this->RegisterMethod("render", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Render(method, params, rsp); });
+        }
 
      protected:
-        void ProcessRequest(const KgrValue &message) override {
-            const auto &prms = message.AsDictionary();
-            if (this->document == nullptr) {
-                auto doc = this->documents.OpenDocument(static_cast<SlokedEditorDocumentSet::DocumentId>(prms["id"].AsInt()));
-                if (doc.has_value()) {
-                    this->handle = std::move(doc.value());
-                    this->document = std::make_unique<DocumentContent>(this->handle.GetObject(), this->charWidth, this->taggerFactory);
-                    this->SendResponse(true);
-                } else {
-                    this->SendResponse(false);
-                }
-            } else {
-                this->SendResponse(this->Render(prms));
+        void Attach(const std::string &method, const KgrValue &params, Response &rsp) {
+            auto doc = this->documents.OpenDocument(static_cast<SlokedEditorDocumentSet::DocumentId>(params.AsInt()));
+            if (doc.has_value()) {
+                this->handle = std::move(doc.value());
+                this->document = std::make_unique<DocumentContent>(this->handle.GetObject(), this->charWidth, this->taggerFactory);
             }
         }
 
-     private:
-        KgrValue Render(const KgrDictionary &dict) {
-            const auto &dim = dict["dim"].AsDictionary();
+        void Render(const std::string &method, const KgrValue &params, Response &rsp) {
+            const auto &dim = params.AsDictionary();
             auto line = static_cast<TextPosition::Line>(dim["line"].AsInt());
             auto column = static_cast<TextPosition::Column>(dim["column"].AsInt());
             this->document->frame.Update(TextPosition{
@@ -137,11 +132,13 @@ namespace sloked {
                 { "line", static_cast<int64_t>(line - offset.line) },
                 { "column", static_cast<int64_t>(realColumn - offset.column) }
             };
-            return KgrDictionary {
+            rsp.Result(KgrDictionary {
                 { "cursor", std::move(cursor) },
                 { "content", std::move(fragments) }
-            };
+            });
         }
+
+     private:
 
         struct DocumentContent {
             DocumentContent(SlokedEditorDocument &document, const SlokedCharWidth &charWidth, SlokedTextTaggerFactory<int> &taggerFactory)
@@ -185,30 +182,21 @@ namespace sloked {
     }
 
     SlokedTextRenderClient::SlokedTextRenderClient(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet::DocumentId docId)
-        : pipe(std::move(pipe)) {
-        this->pipe->Write(KgrDictionary {
-                { "id", static_cast<int64_t>(docId) }
-        });
-        this->pipe->Wait();
-        this->pipe->Drop();
+        : client(std::move(pipe)) {
+        auto rsp = this->client.Invoke("attach", static_cast<int64_t>(docId));
     }
 
     std::optional<KgrValue> SlokedTextRenderClient::Render(const TextPosition &pos, const TextPosition &dim) {
-        this->pipe->DropAll();
-        this->pipe->Write(KgrDictionary {
-            {
-                "dim", KgrDictionary {
-                    { "height", static_cast<int64_t>(dim.line) },
-                    { "width", static_cast<int64_t>(dim.column) },
-                    { "line", static_cast<int64_t>(pos.line) },
-                    { "column", static_cast<int64_t>(pos.column) }
-                }
-            }
+        auto rsp = this->client.Invoke("render", KgrDictionary {
+            { "height", static_cast<int64_t>(dim.line) },
+            { "width", static_cast<int64_t>(dim.column) },
+            { "line", static_cast<int64_t>(pos.line) },
+            { "column", static_cast<int64_t>(pos.column) }
         });
-        auto renderRes = this->pipe->ReadWait();
-        if (!renderRes.AsDictionary()["success"].AsBoolean()) {
+        auto renderRes = rsp.Get();
+        if (!renderRes.HasResult()) {
             return {};
         }
-        return std::move(renderRes.AsDictionary()["result"]);
+        return std::move(renderRes.GetResult());
     }
 }

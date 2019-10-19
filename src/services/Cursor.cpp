@@ -33,74 +33,102 @@ namespace sloked {
      public:
         SlokedCursorContext(std::unique_ptr<KgrPipe> pipe,
             SlokedEditorDocumentSet &documents)
-            : SlokedServiceContext(std::move(pipe)), documents(documents), handle(documents.Empty()), document(nullptr) {}
+            : SlokedServiceContext(std::move(pipe)), documents(documents), handle(documents.Empty()), document(nullptr) {
+            
+            this->RegisterMethod("connect", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Connect(method, params, rsp); });
+            this->RegisterMethod("insert", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Insert(method, params, rsp); });
+            this->RegisterMethod("moveUp", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->MoveUp(method, params, rsp); });
+            this->RegisterMethod("moveDown", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->MoveDown(method, params, rsp); });
+            this->RegisterMethod("moveBackward", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->MoveBackward(method, params, rsp); });
+            this->RegisterMethod("moveForward", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->MoveForward(method, params, rsp); });
+            this->RegisterMethod("newLine", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->NewLine(method, params, rsp); });
+            this->RegisterMethod("deleteBackward", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->DeleteBackward(method, params, rsp); });
+            this->RegisterMethod("deleteForward", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->DeleteForward(method, params, rsp); });
+            this->RegisterMethod("undo", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Undo(method, params, rsp); });
+            this->RegisterMethod("redo", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Redo(method, params, rsp); });
+            this->RegisterMethod("getPosition", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->GetPosition(method, params, rsp); });
+        }
 
      protected:
-        void ProcessRequest(const KgrValue &message) override {
-            const auto &prms = message.AsDictionary();
-            auto command = static_cast<SlokedCursorService::Command>(prms["command"].AsInt());
-            if (command != SlokedCursorService::Command::Connect &&
-                this->document == nullptr) {
-                return;
+        void Connect(const std::string &method, const KgrValue &params, Response &rsp) {
+            auto doc = this->documents.OpenDocument(static_cast<SlokedEditorDocumentSet::DocumentId>(params.AsInt()));
+            if (doc.has_value()) {
+                this->handle = std::move(doc.value());
+                this->document = std::make_unique<DocumentContent>(this->handle.GetObject());
+                rsp.Result(true);
+            } else {
+                rsp.Result(false);
             }
-            switch (command) {
-                case SlokedCursorService::Command::Connect: {
-                    auto doc = this->documents.OpenDocument(static_cast<SlokedEditorDocumentSet::DocumentId>(prms["id"].AsInt()));
-                    if (doc.has_value()) {
-                        this->handle = std::move(doc.value());
-                        this->document = std::make_unique<DocumentContent>(this->handle.GetObject());
-                        this->SendResponse(true);
-                    } else {
-                        this->SendResponse(false);
-                    }
-                } break;
-                
-                case SlokedCursorService::Command::Insert:
-                    this->document->cursor.Insert(this->document->conv.Convert(prms["content"].AsString()));
-                    break;
+        }
 
-                case SlokedCursorService::Command::MoveUp:
-                    this->document->cursor.MoveUp(1);
-                    break;
+        void Insert(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document != nullptr) {
+                this->document->cursor.Insert(this->document->conv.Convert(params.AsString()));
+            }
+        }
 
-                case SlokedCursorService::Command::MoveDown:
-                    this->document->cursor.MoveDown(1);
-                    break;
+        void MoveUp(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document != nullptr) {
+                this->document->cursor.MoveUp(1);
+            }
+        }
 
-                case SlokedCursorService::Command::MoveBackward:
-                    this->document->cursor.MoveBackward(1);
-                    break;
+        void MoveDown(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document != nullptr) {
+                this->document->cursor.MoveDown(1);
+            }
+        }
 
-                case SlokedCursorService::Command::MoveForward:
-                    this->document->cursor.MoveForward(1);
-                    break;
+        void MoveBackward(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document != nullptr) {
+                this->document->cursor.MoveBackward(1);
+            }
+        }
 
-                case SlokedCursorService::Command::NewLine:
-                    this->document->cursor.NewLine("");
-                    break;
+        void MoveForward(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document != nullptr) {
+                this->document->cursor.MoveForward(1);
+            }
+        }
 
-                case SlokedCursorService::Command::DeleteBackward:
-                    this->document->cursor.DeleteBackward();
-                    break;
+        void NewLine(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document != nullptr) {
+                this->document->cursor.NewLine("");
+            }
+        }
 
-                case SlokedCursorService::Command::DeleteForward:
-                    this->document->cursor.DeleteForward();
-                    break;
+        void DeleteBackward(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document != nullptr) {
+                this->document->cursor.DeleteBackward();
+            }
+        }
 
-                case SlokedCursorService::Command::Undo:
-                    this->document->cursor.Undo();
-                    break;
+        void DeleteForward(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document != nullptr) {
+                this->document->cursor.DeleteForward();
+            }
+        }
 
-                case SlokedCursorService::Command::Redo:
-                    this->document->cursor.Redo();
-                    break;
+        void Undo(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document != nullptr) {
+                this->document->cursor.Undo();
+            }
+        }
 
-                case SlokedCursorService::Command::Info:
-                    this->SendResponse(KgrDictionary {
-                        { "line", static_cast<int64_t>(this->document->cursor.GetLine()) },
-                        { "column", static_cast<int64_t>(this->document->cursor.GetColumn()) }
-                    });
-                    break;
+        void Redo(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document != nullptr) {
+                this->document->cursor.Redo();
+            }
+        }
+
+        void GetPosition(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document != nullptr) {
+                rsp.Result(KgrDictionary {
+                    { "line", static_cast<int64_t>(this->document->cursor.GetLine()) },
+                    { "column", static_cast<int64_t>(this->document->cursor.GetColumn()) }
+                });
+            } else {
+                rsp.Result({});
             }
         }
 
@@ -132,91 +160,65 @@ namespace sloked {
     }
 
     SlokedCursorClient::SlokedCursorClient(std::unique_ptr<KgrPipe> pipe)
-        : pipe(std::move(pipe)) {}
+        : client(std::move(pipe)) {}
 
     bool SlokedCursorClient::Connect(SlokedEditorDocumentSet::DocumentId docId) {
-        this->pipe->Write(KgrDictionary {
-                { "command", static_cast<int>(SlokedCursorService::Command::Connect) },
-                { "id", static_cast<int64_t>(docId) }
-        });
-        auto res = this->pipe->ReadWait();
-        return res.AsDictionary()["success"].AsBoolean() &&
-            res.AsDictionary()["result"].AsBoolean();
+        auto rsp = this->client.Invoke("connect", static_cast<int64_t>(docId));
+        auto res = rsp.Get();
+        return res.HasResult() &&
+            res.GetResult().AsBoolean();
     }
 
     void SlokedCursorClient::Insert(const std::string &content) {
-        this->pipe->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::Insert) },
-            { "content", content }
-        });
+        this->client.Invoke("insert", content);
     }
     
     void SlokedCursorClient::MoveUp() {
-        this->pipe->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::MoveUp) }
-        });
+        this->client.Invoke("moveUp", {});
     }
     
     void SlokedCursorClient::MoveDown() {
-        this->pipe->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::MoveDown) }
-        });
+        this->client.Invoke("moveDown", {});
     }
     
     void SlokedCursorClient::MoveBackward() {
-        this->pipe->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::MoveBackward) }
-        });
+        this->client.Invoke("moveBackward", {});
     }
     
     void SlokedCursorClient::MoveForward() {
-        this->pipe->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::MoveForward) }
-        });
+        this->client.Invoke("moveForward", {});
     }
     
     void SlokedCursorClient::NewLine() {
-        this->pipe->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::NewLine) }
-        });
+        this->client.Invoke("newLine", {});
     }
     
     void SlokedCursorClient::DeleteBackward() {
-        this->pipe->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::DeleteBackward) }
-        });
+        this->client.Invoke("deleteBackward", {});
     }
     
     void SlokedCursorClient::DeleteForward() {
-        this->pipe->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::DeleteForward) }
-        });
+        this->client.Invoke("deleteForward", {});
     }
     
     void SlokedCursorClient::Undo() {
-        this->pipe->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::Undo) }
-        });
+        this->client.Invoke("undo", {});
     }
     
     void SlokedCursorClient::Redo() {
-        this->pipe->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::Redo) }
-        });
+        this->client.Invoke("redo", {});
     }
 
     std::optional<TextPosition> SlokedCursorClient::GetPosition() {
-        this->pipe->Write(KgrDictionary {
-            { "command", static_cast<int>(SlokedCursorService::Command::Info) }
-        });
-        auto cursorRes = this->pipe->ReadWait();
-        if (!cursorRes.AsDictionary()["success"].AsBoolean()) {
+        auto rsp = this->client.Invoke("getPosition", {});
+        auto clientRes = rsp.Get();
+        if (!clientRes.HasResult()) {
             return {};
         } else {
-            const auto &cursor = cursorRes.AsDictionary()["result"];
+            const auto &cursor = clientRes.GetResult().AsDictionary();
             return TextPosition {
-                static_cast<TextPosition::Line>(cursor.AsDictionary()["line"].AsInt()),
-                static_cast<TextPosition::Column>(cursor.AsDictionary()["column"].AsInt())
+                static_cast<TextPosition::Line>(cursor["line"].AsInt()),
+                static_cast<TextPosition::Column>(cursor["column"].AsInt())
             };
         }
     }

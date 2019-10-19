@@ -63,7 +63,6 @@ namespace sloked {
         CtrlF,
         CtrlG,
         CtrlH,
-        CtrlI,
         CtrlK,
         CtrlL,
         CtrlN,

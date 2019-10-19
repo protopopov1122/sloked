@@ -36,21 +36,6 @@ namespace sloked {
 
     class SlokedCursorService : public KgrService {
      public:
-        enum class Command {
-            Connect,
-            Insert,
-            MoveUp,
-            MoveDown,
-            MoveBackward,
-            MoveForward,
-            NewLine,
-            DeleteBackward,
-            DeleteForward,
-            Undo,
-            Redo,
-            Info
-        };
-
         SlokedCursorService(SlokedEditorDocumentSet &, KgrContextManager<KgrLocalContext> &);
         bool Attach(std::unique_ptr<KgrPipe>) override;
     
@@ -76,7 +61,7 @@ namespace sloked {
         std::optional<TextPosition> GetPosition();
 
      private:
-        std::unique_ptr<KgrPipe> pipe;
+        SlokedServiceClient client;
     };
 }
 

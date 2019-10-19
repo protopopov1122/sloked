@@ -66,7 +66,7 @@ namespace sloked {
                 this->cursorClient.DeleteForward();
                 break;
             
-            case SlokedControlKey::Escape:
+            case SlokedControlKey::Home:
                 this->cursorClient.Undo();
                 break;
             

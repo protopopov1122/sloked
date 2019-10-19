@@ -86,7 +86,6 @@ namespace sloked {
         { '\006', SlokedControlKey::CtrlF },
         { '\007', SlokedControlKey::CtrlG },
         { '\010', SlokedControlKey::CtrlH },
-        { '\011', SlokedControlKey::CtrlI },
         { '\013', SlokedControlKey::CtrlK },
         { '\014', SlokedControlKey::CtrlL },
         { '\016', SlokedControlKey::CtrlN },

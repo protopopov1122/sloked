@@ -25,23 +25,92 @@
 #include "sloked/kgr/local/Context.h"
 #include "sloked/core/Error.h"
 #include "sloked/kgr/Value.h"
+#include <utility>
+#include <map>
 #include <queue>
 #include <functional>
 
 namespace sloked {
 
-   class SlokedServiceContext : public KgrLocalContext {
-    public:
-      using KgrLocalContext::KgrLocalContext;
-      void Run() override;
+	class SlokedServiceContext : public KgrLocalContext {
+	 public:
+		using KgrLocalContext::KgrLocalContext;
+		void Run() final;
 
-    protected:
-      void SendResponse(KgrValue &&);
-      void SendError(KgrValue &&);
+	 protected:
+		class Response {
+		 public:
+			Response(SlokedServiceContext &, const KgrValue &);
+			void Result(KgrValue &&);
+			void Error(KgrValue &&);
 
-      virtual void ProcessRequest(const KgrValue &) = 0;
-      virtual void HandleError(const SlokedError &);
-   };
+		 private:
+			SlokedServiceContext &ctx;
+			const KgrValue &id;
+		};
+
+		friend class Response;
+		using MethodHandler = std::function<void(const std::string &, const KgrValue &, Response &)>;
+
+		void RegisterMethod(const std::string &, MethodHandler);
+		virtual void InvokeMethod(const std::string &, const KgrValue &, Response &);
+		virtual void HandleError(const SlokedError &, Response *);
+
+	 private:
+		void SendResponse(const KgrValue &, KgrValue &&);
+		void SendError(const KgrValue &, KgrValue &&);
+
+		std::map<std::string, MethodHandler> methods;
+	};
+
+	class SlokedServiceClient {
+	 public:
+	 	class Response {
+		 public:
+			Response(bool, KgrValue &&);
+			bool HasResult() const;
+			const KgrValue &GetResult() const;
+			const KgrValue &GetError() const;
+
+		 private:
+			bool has_result;
+			KgrValue content;
+		};
+
+		class ResponseHandle {
+		 public:
+			ResponseHandle(int64_t, std::map<int64_t, std::queue<Response>> &, std::function<void()>, std::function<void()>);
+			ResponseHandle(const ResponseHandle &) = delete;
+			ResponseHandle(ResponseHandle &&) = default;
+			~ResponseHandle();
+
+			ResponseHandle &operator=(const ResponseHandle &) = delete;
+			ResponseHandle &operator=(ResponseHandle &&) = default;
+
+			void Drop();
+			Response Get();
+			std::optional<Response> GetOptional();
+
+		 private:
+			int64_t id;
+			std::map<int64_t, std::queue<Response>> &responses;
+			std::function<void()> receiveOne;
+			std::function<void()> receivePending;
+		};
+
+		SlokedServiceClient(std::unique_ptr<KgrPipe>);
+		KgrPipe::Status GetStatus() const;
+		ResponseHandle Invoke(const std::string &, KgrValue &&);
+		void Close();
+
+	 private:
+		void ReceiveOne();
+		void ReceivePending();
+
+		std::unique_ptr<KgrPipe> pipe;
+		int64_t nextId;
+		std::map<int64_t, std::queue<Response>> responses;
+	};
 }
 
 #endif

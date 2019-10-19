@@ -52,7 +52,7 @@ namespace sloked {
         std::optional<KgrValue> Render(const TextPosition &, const TextPosition &);
 
      private:
-        std::unique_ptr<KgrPipe> pipe;
+        SlokedServiceClient client;
     };
 }
 
