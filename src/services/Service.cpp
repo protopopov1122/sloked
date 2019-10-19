@@ -53,7 +53,7 @@ namespace sloked {
         }
     }
 
-    void SlokedServiceContext::RegisterMethod(const std::string &method, MethodHandler handler) {
+    void SlokedServiceContext::BindMethod(const std::string &method, MethodHandler handler) {
         this->methods.emplace(method, std::move(handler));
     }
 

@@ -72,8 +72,8 @@ namespace sloked {
             SlokedEditorDocumentSet &documents, const SlokedCharWidth &charWidth, SlokedTextTaggerFactory<int> &taggerFactory)
             : SlokedServiceContext(std::move(pipe)), documents(documents), charWidth(charWidth), taggerFactory(taggerFactory), handle(documents.Empty()), document(nullptr) {
                 
-            this->RegisterMethod("attach", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Attach(method, params, rsp); });
-            this->RegisterMethod("render", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Render(method, params, rsp); });
+            this->BindMethod("attach", &SlokedTextRenderContext::Attach);
+            this->BindMethod("render", &SlokedTextRenderContext::Render);
         }
 
      protected:

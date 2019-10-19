@@ -7,14 +7,14 @@ namespace sloked {
         SlokedDocumentSetContext(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet &documents)
             : SlokedServiceContext(std::move(pipe)), documents(documents), document(documents.Empty()) {
             
-            this->RegisterMethod("new", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->New(method, params, rsp); });
-            this->RegisterMethod("open", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Open(method, params, rsp); });
-            this->RegisterMethod("openById", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->OpenById(method, params, rsp); });
-            this->RegisterMethod("save", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Save(method, params, rsp); });
-            this->RegisterMethod("saveAs", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->SaveAs(method, params, rsp); });
-            this->RegisterMethod("close", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Close(method, params, rsp); });
-            this->RegisterMethod("getId", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->GetId(method, params, rsp); });
-            this->RegisterMethod("getUpstream", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->GetUpstream(method, params, rsp); });
+            this->BindMethod("new", &SlokedDocumentSetContext::New);
+            this->BindMethod("open", &SlokedDocumentSetContext::Open);
+            this->BindMethod("openById", &SlokedDocumentSetContext::OpenById);
+            this->BindMethod("save", &SlokedDocumentSetContext::Save);
+            this->BindMethod("saveAs", &SlokedDocumentSetContext::SaveAs);
+            this->BindMethod("close", &SlokedDocumentSetContext::Close);
+            this->BindMethod("getId", &SlokedDocumentSetContext::GetId);
+            this->BindMethod("getUpstream", &SlokedDocumentSetContext::GetUpstream);
         }
 
      protected:

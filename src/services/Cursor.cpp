@@ -35,18 +35,18 @@ namespace sloked {
             SlokedEditorDocumentSet &documents)
             : SlokedServiceContext(std::move(pipe)), documents(documents), handle(documents.Empty()), document(nullptr) {
             
-            this->RegisterMethod("connect", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Connect(method, params, rsp); });
-            this->RegisterMethod("insert", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Insert(method, params, rsp); });
-            this->RegisterMethod("moveUp", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->MoveUp(method, params, rsp); });
-            this->RegisterMethod("moveDown", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->MoveDown(method, params, rsp); });
-            this->RegisterMethod("moveBackward", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->MoveBackward(method, params, rsp); });
-            this->RegisterMethod("moveForward", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->MoveForward(method, params, rsp); });
-            this->RegisterMethod("newLine", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->NewLine(method, params, rsp); });
-            this->RegisterMethod("deleteBackward", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->DeleteBackward(method, params, rsp); });
-            this->RegisterMethod("deleteForward", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->DeleteForward(method, params, rsp); });
-            this->RegisterMethod("undo", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Undo(method, params, rsp); });
-            this->RegisterMethod("redo", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->Redo(method, params, rsp); });
-            this->RegisterMethod("getPosition", [this](const std::string &method, const KgrValue &params, Response &rsp) { this->GetPosition(method, params, rsp); });
+            this->BindMethod("connect", &SlokedCursorContext::Connect);
+            this->BindMethod("insert", &SlokedCursorContext::Insert);
+            this->BindMethod("moveUp", &SlokedCursorContext::MoveUp);
+            this->BindMethod("moveDown", &SlokedCursorContext::MoveDown);
+            this->BindMethod("moveBackward", &SlokedCursorContext::MoveBackward);
+            this->BindMethod("moveForward", &SlokedCursorContext::MoveForward);
+            this->BindMethod("newLine", &SlokedCursorContext::NewLine);
+            this->BindMethod("deleteBackward", &SlokedCursorContext::DeleteBackward);
+            this->BindMethod("deleteForward", &SlokedCursorContext::DeleteForward);
+            this->BindMethod("undo", &SlokedCursorContext::Undo);
+            this->BindMethod("redo", &SlokedCursorContext::Redo);
+            this->BindMethod("getPosition", &SlokedCursorContext::GetPosition);
         }
 
      protected:

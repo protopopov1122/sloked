@@ -52,7 +52,15 @@ namespace sloked {
 		friend class Response;
 		using MethodHandler = std::function<void(const std::string &, const KgrValue &, Response &)>;
 
-		void RegisterMethod(const std::string &, MethodHandler);
+		void BindMethod(const std::string &, MethodHandler);
+
+		template <typename T>
+		void BindMethod(const std::string &method, void (T::*impl)(const std::string &, const KgrValue &, Response &)) {
+			this->BindMethod(method, [this, impl](const std::string &method, const KgrValue &params, Response &rsp) {
+				(static_cast<T *>(this)->*impl)(method, params, rsp);
+			});
+		}
+
 		virtual void InvokeMethod(const std::string &, const KgrValue &, Response &);
 		virtual void HandleError(const SlokedError &, Response *);
 
