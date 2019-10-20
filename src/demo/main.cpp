@@ -40,9 +40,11 @@
 #include "sloked/services/TextRender.h"
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentSet.h"
+#include "sloked/services/Screen.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/editor/Tabs.h"
 #include "sloked/screen/components/ComponentTree.h"
+#include "sloked/core/Synchronized.h"
 
 using namespace sloked;
 
@@ -118,9 +120,14 @@ int main(int argc, const char **argv) {
 
     KgrLocalServer portServer;
     KgrLocalNamedServer server(portServer);
+    KgrLocalServer portScreenServer;
+    KgrLocalNamedServer screenServer(portScreenServer);
     KgrRunnableContextManagerHandle<KgrLocalContext> ctxManagerHandle;
     KgrContextManager<KgrLocalContext> &ctxManager = ctxManagerHandle.GetManager();
     ctxManagerHandle.Start();
+    KgrRunnableContextManagerHandle<KgrLocalContext> ctxScreenManagerHandle;
+    KgrContextManager<KgrLocalContext> &ctxScreenManager = ctxScreenManagerHandle.GetManager();
+    ctxScreenManagerHandle.Start();
 
     char INPUT_PATH[1024], OUTPUT_PATH[1024];
     realpath(argv[1], INPUT_PATH);
@@ -134,23 +141,32 @@ int main(int argc, const char **argv) {
     SlokedCharWidth charWidth;
     TestFragmentFactory fragmentFactory;
 
-    server.Register("text::render", std::make_unique<SlokedTextRenderService>(documents, charWidth, fragmentFactory, ctxManager));
-    server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, ctxManager));
-    server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
-
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
 
     TerminalComponentHandle screen(console, terminalEncoding, charWidth);
-    auto &multi = screen.NewMultiplexer();
-    auto mainWindow = multi.NewWindow(TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
-    auto &splitter = mainWindow->GetComponent().NewSplitter(Splitter::Direction::Vertical);
-    auto tabberWindow = splitter.NewWindow(Splitter::Constraints(1.0f));
-    auto cmdlineWindow = splitter.NewWindow(Splitter::Constraints(0.0f, 1));
-    tabberWindow->GetComponent().NewTabber();
-    SlokedEditorTabs tabs(SlokedComponentTree::Traverse(screen, "/0/0/self").AsTabber(), terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), server.GetConnector("documents"));
+    SlokedSynchronized<SlokedScreenComponent &> screenHandle(screen);
 
-    auto tab = tabs.Open(INPUT_PATH, "system", "system");
+    server.Register("text::render", std::make_unique<SlokedTextRenderService>(documents, charWidth, fragmentFactory, ctxManager));
+    server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, ctxManager));
+    server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
+    screenServer.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), ctxScreenManager));
+
+    SlokedScreenClient screenClient(screenServer.Connect("screen"));
+    SlokedDocumentSetClient documentClient(server.Connect("documents"));
+    documentClient.Open(INPUT_PATH, "system", "system");
+
+    screenClient.Handle.NewMultiplexer("/");
+    auto mainWindow = screenClient.Multiplexer.NewWindow("/self", TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
+    screenClient.Handle.NewSplitter(mainWindow.value(), Splitter::Direction::Vertical);
+    screenClient.Splitter.NewWindow(mainWindow.value() + "/self", Splitter::Constraints(1.0f));
+    auto tabber = screenClient.Splitter.NewWindow(mainWindow.value() + "/self", Splitter::Constraints(0.0f, 1));
+    screenClient.Handle.NewTabber("/0/0");
+    auto tab1 = screenClient.Tabber.NewWindow("/0/0/self");
+    screenClient.Handle.NewTextEditor(tab1.value(), documentClient.GetId().value());
+    // SlokedEditorTabs tabs(SlokedComponentTree::Traverse(screen, "/0/0/self").AsTabber(), terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), server.GetConnector("documents"));
+
+    // auto tab = tabs.Open(INPUT_PATH, "system", "system");
 
     bool work = true;
     screen.SetInputHandler([&](const SlokedKeyboardInput &cmd) {
@@ -158,8 +174,8 @@ int main(int argc, const char **argv) {
             return false;
         } else switch (std::get<1>(cmd.value)) {            
             case SlokedControlKey::Escape: {
-                tab->Save(OUTPUT_PATH);
-                tab->Close();
+                documentClient.Save(OUTPUT_PATH);
+                // tab->Close();
                 work = false;
             } break;
 
@@ -170,18 +186,23 @@ int main(int argc, const char **argv) {
     });
 
     while (work) {
-        screen.UpdateDimensions();
-        console.SetGraphicsMode(SlokedTextGraphics::Off);
-        console.ClearScreen();
-        screen.Render();
-        console.Flush();
+        screenHandle.Lock([&](auto &screen) {
+            screen.UpdateDimensions();
+            console.SetGraphicsMode(SlokedTextGraphics::Off);
+            console.ClearScreen();
+            screen.Render();
+            console.Flush();
+        });
         auto input = terminal.GetInput();
         for (const auto &evt : input) {
-            screen.ProcessInput(evt);
+            screenHandle.Lock([&](auto &screen) {
+                screen.ProcessInput(evt);
+            });
         }
     }
-    tabs.CloseAll();
+    // tabs.CloseAll();
 
+    ctxScreenManagerHandle.Stop();
     ctxManagerHandle.Stop();
     return EXIT_SUCCESS;
 }

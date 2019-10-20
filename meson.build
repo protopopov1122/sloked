@@ -59,6 +59,7 @@ sloked_src = [
   'src/screen/widgets/TextEditor.cpp',
   'src/services/Cursor.cpp',
   'src/services/DocumentSet.cpp',
+  'src/services/Screen.cpp',
   'src/services/Service.cpp',
   'src/services/TextRender.cpp',
   'src/text/TextBlock.cpp',
