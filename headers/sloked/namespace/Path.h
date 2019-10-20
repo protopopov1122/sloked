@@ -49,6 +49,7 @@ namespace sloked {
         SlokedPath GetParent() const;
         SlokedPath GetChild(std::string_view) const;
         bool IsChildOrSelf(const SlokedPath &) const;
+        SlokedPath Shift(std::size_t = 1) const;
 
         bool operator==(const SlokedPath &) const;
 

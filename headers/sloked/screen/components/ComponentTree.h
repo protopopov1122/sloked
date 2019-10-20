@@ -19,29 +19,19 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_TERMINAL_COMPONENTS_TEXTPANECOMPONENT_H_
-#define SLOKED_SCREEN_TERMINAL_COMPONENTS_TEXTPANECOMPONENT_H_
+#ifndef SLOKED_SCREEN_COMPONENTS_COMPONENTTREE_H_
+#define SLOKED_SCREEN_COMPONENTS_COMPONENTTREE_H_
 
-#include "sloked/screen/terminal/Terminal.h"
-#include "sloked/screen/widgets/TextPaneWidget.h"
-#include <memory>
+#include "sloked/namespace/Path.h"
+#include "sloked/screen/components/ComponentHandle.h"
+#include "sloked/screen/components/SplitterComponent.h"
+#include <map>
 
 namespace sloked {
 
-    class TerminalTextPaneComponent : public SlokedScreenComponent {
+    class SlokedComponentTree {
      public:
-        TerminalTextPaneComponent(SlokedTerminal &, std::unique_ptr<SlokedTextPaneWidget>);
-        
-        void Render() override;
-        void UpdateDimensions() override;
-        
-     protected:
-        using SlokedScreenComponent::SlokedScreenComponent;
-        void ProcessComponentInput(const SlokedKeyboardInput &) override;
-
-     private:
-        SlokedTerminal &term;
-        std::unique_ptr<SlokedTextPaneWidget> widget;
+        static SlokedScreenComponent &Traverse(SlokedScreenComponent &, const SlokedPath &);
     };
 }
 

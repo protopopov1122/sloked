@@ -20,6 +20,7 @@
 */
 
 #include "sloked/namespace/Path.h"
+#include "sloked/core/Error.h"
 #include <algorithm>
 #include <iostream>
 
@@ -127,6 +128,25 @@ namespace sloked {
         } else {
             SlokedPath self = this->RelativeTo(path);
             return self.IsChildOrSelf(path);
+        }
+    }
+
+    SlokedPath SlokedPath::Shift(std::size_t count) const {
+        auto begin = this->path.begin();
+        if (begin != this->path.end() &&
+            (*begin == "" || *begin == "." || *begin == "..")) {
+            ++begin;
+        }
+        if (count > static_cast<std::size_t>(std::distance(begin, this->path.end()))) {
+            throw SlokedError("Path: too large shift");
+        } else {
+            SlokedPath shifted;
+            shifted.path = std::vector(begin + count, this->path.end());
+            if (begin != this->path.begin()) {
+                shifted.path.insert(shifted.path.begin(), *this->path.begin());
+            }
+            shifted.Normalize();
+            return shifted;
         }
     }
 

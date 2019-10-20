@@ -25,7 +25,7 @@
 namespace sloked {
 
     TerminalTextPaneComponent::TerminalTextPaneComponent(SlokedTerminal &term, std::unique_ptr<SlokedTextPaneWidget> widget)
-        : term(term), widget(std::move(widget)) {}
+        : SlokedScreenComponent(Type::TextPane), term(term), widget(std::move(widget)) {}
 
     void TerminalTextPaneComponent::Render() {
         if (this->widget) {

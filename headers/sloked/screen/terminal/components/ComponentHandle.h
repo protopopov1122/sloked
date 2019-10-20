@@ -38,6 +38,8 @@ namespace sloked {
         void Render() override;
         void UpdateDimensions() override;
         
+        bool HasComponent() const override;
+        SlokedScreenComponent &GetComponent() const override;
         SlokedScreenComponent &NewTextPane(std::unique_ptr<SlokedTextPaneWidget>) override;
         SlokedSplitterComponent &NewSplitter(Splitter::Direction) override;
         SlokedTabberComponent &NewTabber() override;

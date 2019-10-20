@@ -105,7 +105,7 @@ namespace sloked {
     }
 
     TerminalTabberComponent::TerminalTabberComponent(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : tabber(term), encoding(encoding), charWidth(charWidth) {}
+        : SlokedTabberComponent(Type::Tabber), tabber(term), encoding(encoding), charWidth(charWidth) {}
 
     std::size_t TerminalTabberComponent::GetWindowCount() const {
         return this->components.size();

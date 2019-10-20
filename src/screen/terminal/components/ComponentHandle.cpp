@@ -23,11 +23,24 @@
 #include "sloked/screen/terminal/components/SplitterComponent.h"
 #include "sloked/screen/terminal/components/TabberComponent.h"
 #include "sloked/screen/terminal/components/MultiplexerComponent.h"
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
     TerminalComponentHandle::TerminalComponentHandle(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : terminal(term), encoding(encoding), charWidth(charWidth), component(nullptr) {}
+        : SlokedComponentHandle(Type::Handle), terminal(term), encoding(encoding), charWidth(charWidth), component(nullptr) {}
+
+    bool TerminalComponentHandle::HasComponent() const {
+        return this->component != nullptr;
+    }
+
+    SlokedScreenComponent &TerminalComponentHandle::GetComponent() const {
+        if (this->component) {
+            return *this->component;
+        } else {
+            throw SlokedError("ComponentHandle: Component not defined");
+        }
+    }
 
     SlokedScreenComponent &TerminalComponentHandle::NewTextPane(std::unique_ptr<SlokedTextPaneWidget> widget) {
         auto component = std::make_unique<TerminalTextPaneComponent>(this->terminal, std::move(widget));

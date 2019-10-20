@@ -42,6 +42,9 @@ namespace sloked {
 
         virtual std::shared_ptr<Window> NewWindow() = 0;
         virtual std::shared_ptr<Window> NewWindow(Window::Id) = 0;
+    
+     protected:
+        using SlokedScreenComponent::SlokedScreenComponent;
     };
 }
 

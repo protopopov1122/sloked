@@ -42,6 +42,7 @@
 #include "sloked/services/DocumentSet.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/editor/Tabs.h"
+#include "sloked/screen/components/ComponentTree.h"
 
 using namespace sloked;
 
@@ -146,8 +147,8 @@ int main(int argc, const char **argv) {
     auto &splitter = mainWindow->GetComponent().NewSplitter(Splitter::Direction::Vertical);
     auto tabberWindow = splitter.NewWindow(Splitter::Constraints(1.0f));
     auto cmdlineWindow = splitter.NewWindow(Splitter::Constraints(0.0f, 1));
-    auto &tabber = tabberWindow->GetComponent().NewTabber();
-    SlokedEditorTabs tabs(tabber, terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), server.GetConnector("documents"));
+    tabberWindow->GetComponent().NewTabber();
+    SlokedEditorTabs tabs(SlokedComponentTree::Traverse(screen, "/0/0/self").AsTabber(), terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), server.GetConnector("documents"));
 
     auto tab = tabs.Open(INPUT_PATH, "system", "system");
 

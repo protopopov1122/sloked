@@ -42,6 +42,9 @@ namespace sloked {
         virtual std::size_t GetWindowCount() const = 0;
 
         virtual std::shared_ptr<Window> NewWindow(const TextPosition &, const TextPosition &) = 0;
+    
+     protected:
+        using SlokedScreenComponent::SlokedScreenComponent;
     };
 }
 

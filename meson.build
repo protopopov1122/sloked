@@ -43,6 +43,7 @@ sloked_src = [
   'src/namespace/Virtual.cpp',
   'src/namespace/posix/Filesystem.cpp',
   'src/screen/Component.cpp',
+  'src/screen/ComponentTree.cpp',
   'src/screen/Splitter.cpp',
   'src/screen/terminal/multiplexer/TerminalWindow.cpp',
   'src/screen/terminal/multiplexer/TerminalBuffer.cpp',

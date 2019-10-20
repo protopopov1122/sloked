@@ -20,10 +20,52 @@
 */
 
 #include "sloked/screen/Component.h"
+#include "sloked/screen/components/ComponentHandle.h"
+#include "sloked/screen/components/MultiplexerComponent.h"
+#include "sloked/screen/components/SplitterComponent.h"
+#include "sloked/screen/components/TabberComponent.h"
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
-    SlokedScreenComponent::SlokedScreenComponent() = default;
+    SlokedScreenComponent::SlokedScreenComponent(Type type)
+        : type(type) {}
+
+    SlokedScreenComponent::Type SlokedScreenComponent::GetType() const {
+        return this->type;
+    }
+
+    SlokedComponentHandle &SlokedScreenComponent::AsHandle() {
+        if (this->type == Type::Handle) {
+            return *static_cast<SlokedComponentHandle *>(this);
+        } else {
+            throw SlokedError("Component: Not a handle");
+        }
+    }
+
+    SlokedMultiplexerComponent &SlokedScreenComponent::AsMultiplexer() {
+        if (this->type == Type::Multiplexer) {
+            return *static_cast<SlokedMultiplexerComponent *>(this);
+        } else {
+            throw SlokedError("Component: Not a multiplexer");
+        }
+    }
+
+    SlokedSplitterComponent &SlokedScreenComponent::AsSplitter() {
+        if (this->type == Type::Splitter) {
+            return *static_cast<SlokedSplitterComponent *>(this);
+        } else {
+            throw SlokedError("Component: Not a splitter");
+        }
+    }
+
+    SlokedTabberComponent &SlokedScreenComponent::AsTabber() {
+        if (this->type == Type::Tabber) {
+            return *static_cast<SlokedTabberComponent *>(this);
+        } else {
+            throw SlokedError("Component: Not a tabber");
+        }
+    }
     
     void SlokedScreenComponent::ProcessInput(const SlokedKeyboardInput &input) {
         bool res = false;

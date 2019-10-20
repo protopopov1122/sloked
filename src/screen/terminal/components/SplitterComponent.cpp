@@ -113,7 +113,7 @@ namespace sloked {
     }
 
     TerminalSplitterComponent::TerminalSplitterComponent(SlokedTerminal &term, Splitter::Direction dir, const Encoding &enc, const SlokedCharWidth &chWidth)
-        : splitter(term, dir, enc, chWidth), encoding(enc), charWidth(chWidth), focus(0) {}
+        : SlokedSplitterComponent(Type::Splitter), splitter(term, dir, enc, chWidth), encoding(enc), charWidth(chWidth), focus(0) {}
 
     std::shared_ptr<TerminalSplitterComponent::Window> TerminalSplitterComponent::GetFocus() const {
         if (this->focus < this->components.size()) {

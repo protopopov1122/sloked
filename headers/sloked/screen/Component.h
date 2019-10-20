@@ -27,13 +27,31 @@
 #include <functional>
 
 namespace sloked {
+    
+    class SlokedComponentHandle;
+    class SlokedMultiplexerComponent;
+    class SlokedSplitterComponent;
+    class SlokedTabberComponent;
+
 
     class SlokedScreenComponent {
      public:
         using InputHandler = std::function<bool(const SlokedKeyboardInput &)>;
+        enum class Type {
+           Handle,
+           Multiplexer,
+           Splitter,
+           Tabber,
+           TextPane
+        };
 
-        SlokedScreenComponent();
         virtual ~SlokedScreenComponent() = default;
+
+        Type GetType() const;
+        SlokedComponentHandle &AsHandle();
+        SlokedMultiplexerComponent &AsMultiplexer();
+        SlokedSplitterComponent &AsSplitter();
+        SlokedTabberComponent &AsTabber();
 
         void ProcessInput(const SlokedKeyboardInput &);
         void SetInputHandler(InputHandler);
@@ -43,9 +61,11 @@ namespace sloked {
         virtual void UpdateDimensions() = 0;
 
      protected:
+        SlokedScreenComponent(Type);
         virtual void ProcessComponentInput(const SlokedKeyboardInput &) = 0;
 
      private:
+        Type type;
         InputHandler inputHandler;
     };
 }
