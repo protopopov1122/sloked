@@ -39,9 +39,9 @@ namespace sloked {
         }
 
         void RemoveListener(const T &listener) override {
-            std::remove_if(this->listeners.begin(), this->listeners.end(), [&](const auto &l) {
+            this->listeners.erase(std::remove_if(this->listeners.begin(), this->listeners.end(), [&](const auto &l) {
                 return l.get() == &listener;
-            });
+            }));
         }
 
         void ClearListeners() override {

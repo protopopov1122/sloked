@@ -35,9 +35,9 @@ namespace sloked {
 
     void SlokedTextMatcherBase::Rewind(const TextPosition &position) {
         TextPosition start{position.line, 0};
-        std::remove_if(this->occurences.begin(), this->occurences.end(), [&](const auto &match) {
+        this->occurences.erase(std::remove_if(this->occurences.begin(), this->occurences.end(), [&](const auto &match) {
             return match.start >= start;
-        });
+        }));
         this->current_line = position.line;
         this->Search();
     }

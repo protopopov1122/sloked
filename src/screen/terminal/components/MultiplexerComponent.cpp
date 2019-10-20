@@ -56,7 +56,7 @@ namespace sloked {
 
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::SetFocus() {
         if (this->IsOpened()) {
-            std::remove(this->root.focus.begin(), this->root.focus.end(), this->id);
+            this->root.focus.erase(std::remove(this->root.focus.begin(), this->root.focus.end(), this->id));
             this->root.focus.push_back(this->id);
         } else {
             throw SlokedError("Window already closed");
@@ -65,7 +65,7 @@ namespace sloked {
 
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Move(const TextPosition &pos) {
         if (this->window) {
-            this->window->SetPosition(pos.line, pos.column);
+            this->window->Move(pos);
         } else {
             throw SlokedError("Window already closed");
         }
@@ -81,7 +81,7 @@ namespace sloked {
 
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Close() {
         if (this->IsOpened()) {
-            std::remove(this->root.focus.begin(), this->root.focus.end(), this->id);
+            this->root.focus.erase(std::remove(this->root.focus.begin(), this->root.focus.end(), this->id));
             this->component.reset();
             this->window.reset();
             this->root.windows.erase(this->id);

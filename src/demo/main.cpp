@@ -157,12 +157,12 @@ int main(int argc, const char **argv) {
     documentClient.Open(INPUT_PATH, "system", "system");
 
     screenClient.Handle.NewMultiplexer("/");
-    auto mainWindow = screenClient.Multiplexer.NewWindow("/self", TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
+    auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
     screenClient.Handle.NewSplitter(mainWindow.value(), Splitter::Direction::Vertical);
-    screenClient.Splitter.NewWindow(mainWindow.value() + "/self", Splitter::Constraints(1.0f));
-    auto tabber = screenClient.Splitter.NewWindow(mainWindow.value() + "/self", Splitter::Constraints(0.0f, 1));
+    screenClient.Splitter.NewWindow(mainWindow.value(), Splitter::Constraints(1.0f));
+    auto tabber = screenClient.Splitter.NewWindow(mainWindow.value(), Splitter::Constraints(0.0f, 1));
     screenClient.Handle.NewTabber("/0/0");
-    auto tab1 = screenClient.Tabber.NewWindow("/0/0/self");
+    auto tab1 = screenClient.Tabber.NewWindow("/0/0");
     screenClient.Handle.NewTextEditor(tab1.value(), documentClient.GetId().value());
     // SlokedEditorTabs tabs(SlokedComponentTree::Traverse(screen, "/0/0/self").AsTabber(), terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), server.GetConnector("documents"));
 

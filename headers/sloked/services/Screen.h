@@ -64,6 +64,13 @@ namespace sloked {
          public:
             MultiplexerClient(SlokedServiceClient &);
             std::optional<std::string> NewWindow(const std::string &, const TextPosition &, const TextPosition &) const;
+            std::size_t GetWindowCount(const std::string &) const;
+            std::optional<std::string> GetFocus(const std::string &) const;
+            std::optional<bool> WindowHasFocus(const std::string &) const;
+            bool SetFocus(const std::string &) const;
+            bool Close(const std::string &) const;
+            bool MoveWindow(const std::string &, const TextPosition &) const;
+            bool ResizeWindow(const std::string &, const TextPosition &) const;
 
          private:
             SlokedServiceClient &client;

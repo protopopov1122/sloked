@@ -88,9 +88,9 @@ namespace sloked {
     }
 
     void TransactionStreamMultiplexer::RemoveListener(const SlokedTransactionStream::Listener &l) {
-        std::remove_if(this->anonymousListeners.begin(), this->anonymousListeners.end(), [&](const auto &listener) {
+        this->anonymousListeners.erase(std::remove_if(this->anonymousListeners.begin(), this->anonymousListeners.end(), [&](const auto &listener) {
             return listener.get() == std::addressof(l);
-        });
+        }));
     }
 
     void TransactionStreamMultiplexer::ClearListeners() {

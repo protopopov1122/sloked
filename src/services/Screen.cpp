@@ -40,6 +40,12 @@ namespace sloked {
             this->BindMethod("handle.newTabber", &SlokedScreenContext::HandleNewTabber);
             this->BindMethod("handle.newTextEditor", &SlokedScreenContext::HandleNewTextEditor);
             this->BindMethod("multiplexer.newWindow", &SlokedScreenContext::MultiplexerNewWindow);
+            this->BindMethod("multiplexer.getInfo", &SlokedScreenContext::MultiplexerGetInfo);
+            this->BindMethod("multiplexer.windowHasFocus", &SlokedScreenContext::MultiplexerWindowHasFocus);
+            this->BindMethod("multiplexer.setFocus", &SlokedScreenContext::MultiplexerSetFocus);
+            this->BindMethod("multiplexer.close", &SlokedScreenContext::MultiplexerClose);
+            this->BindMethod("multiplexer.moveWindow", &SlokedScreenContext::MultiplexerMoveWindow);
+            this->BindMethod("multiplexer.resizeWindow", &SlokedScreenContext::MultiplexerResizeWindow);
             this->BindMethod("splitter.newWindow", &SlokedScreenContext::SplitterNewWindow);
             this->BindMethod("tabber.newWindow", &SlokedScreenContext::TabberNewWindow);
         }
@@ -111,11 +117,136 @@ namespace sloked {
             };
             root.Lock([&](auto &screen) {
                 try {
-                    auto &multiplexer = SlokedComponentTree::Traverse(screen, path).AsMultiplexer();
+                    auto &multiplexer = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsMultiplexer();
                     auto win = multiplexer.NewWindow(pos, dim);
                     rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
                 } catch (const SlokedError &err) {
                     rsp.Result({});
+                }
+            });
+        }
+
+        void MultiplexerGetInfo(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &multiplexer = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsMultiplexer();
+                    KgrDictionary response {
+                        { "windowCount", static_cast<int64_t>(multiplexer.GetWindowCount()) }
+                    };
+                    if (multiplexer.GetFocus()) {
+                        response.Put("focus", path.GetChild(std::to_string(multiplexer.GetFocus()->GetId())).ToString());
+                    }
+                    rsp.Result(std::move(response));
+                } catch (const SlokedError &err) {
+                    rsp.Result({});
+                }
+            });
+        }
+
+        void MultiplexerWindowHasFocus(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            SlokedPath multiplexerPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &multiplexer = SlokedComponentTree::Traverse(screen, multiplexerPath).AsMultiplexer();
+                    auto win = multiplexer.GetWindow(winId);
+                    if (win) {
+                        rsp.Result(win->HasFocus());
+                    } else {
+                        rsp.Result({});
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result({});
+                }
+            });
+        }
+
+        void MultiplexerSetFocus(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            SlokedPath multiplexerPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &multiplexer = SlokedComponentTree::Traverse(screen, multiplexerPath).AsMultiplexer();
+                    auto win = multiplexer.GetWindow(winId);
+                    if (win) {
+                        win->SetFocus();
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result(false);
+                }
+            });   
+        }
+
+        void MultiplexerClose(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            SlokedPath multiplexerPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &multiplexer = SlokedComponentTree::Traverse(screen, multiplexerPath).AsMultiplexer();
+                    auto win = multiplexer.GetWindow(winId);
+                    if (win) {
+                        win->Close();
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result(false);
+                }
+            }); 
+        }
+
+        void MultiplexerMoveWindow(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsDictionary()["path"].AsString()};
+            SlokedPath multiplexerPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            TextPosition pos {
+                static_cast<TextPosition::Line>(params.AsDictionary()["pos"].AsDictionary()["line"].AsInt()),
+                static_cast<TextPosition::Column>(params.AsDictionary()["pos"].AsDictionary()["column"].AsInt())
+            };
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &multiplexer = SlokedComponentTree::Traverse(screen, multiplexerPath).AsMultiplexer();
+                    auto win = multiplexer.GetWindow(winId);
+                    if (win) {
+                        win->Move(pos);
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result(false);
+                }
+            });
+        }
+
+        void MultiplexerResizeWindow(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsDictionary()["path"].AsString()};
+            SlokedPath multiplexerPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            TextPosition pos {
+                static_cast<TextPosition::Line>(params.AsDictionary()["size"].AsDictionary()["line"].AsInt()),
+                static_cast<TextPosition::Column>(params.AsDictionary()["size"].AsDictionary()["column"].AsInt())
+            };
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &multiplexer = SlokedComponentTree::Traverse(screen, multiplexerPath).AsMultiplexer();
+                    auto win = multiplexer.GetWindow(winId);
+                    if (win) {
+                        win->Resize(pos);
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result(false);
                 }
             });
         }
@@ -127,7 +258,7 @@ namespace sloked {
                 params.AsDictionary()["constraints"].AsDictionary()["max"].AsInt());
             root.Lock([&](auto &screen) {
                 try {
-                    auto &splitter = SlokedComponentTree::Traverse(screen, path).AsSplitter();
+                    auto &splitter = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsSplitter();
                     auto win = splitter.NewWindow(constraints);
                     rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
                 } catch (const SlokedError &err) {
@@ -140,7 +271,7 @@ namespace sloked {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
             root.Lock([&](auto &screen) {
                 try {
-                    auto &tabber = SlokedComponentTree::Traverse(screen, path).AsTabber();
+                    auto &tabber = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsTabber();
                     auto win = tabber.NewWindow();
                     rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
                 } catch (const SlokedError &err) {
@@ -226,6 +357,76 @@ namespace sloked {
         } else {
             return {};
         }
+    }
+
+    std::size_t SlokedScreenClient::MultiplexerClient::GetWindowCount(const std::string &path) const {
+        auto rsp = client.Invoke("multiplexer.getInfo", path);
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object)) {
+            return static_cast<std::size_t>(res.GetResult().AsDictionary()["windowCount"].AsInt());
+        } else {
+            return 0;
+        }
+    }
+
+    std::optional<std::string> SlokedScreenClient::MultiplexerClient::GetFocus(const std::string &path) const {
+        auto rsp = client.Invoke("multiplexer.getInfo", path);
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object) && res.GetResult().AsDictionary().Has("focus")) {
+            return res.GetResult().AsDictionary()["focus"].AsString();
+        } else {
+            return {};
+        }
+    }
+
+    std::optional<bool> SlokedScreenClient::MultiplexerClient::WindowHasFocus(const std::string &path) const {
+        auto rsp = client.Invoke("multiplexer.windowHasFocus", path);
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::Boolean)) {
+            return res.GetResult().AsBoolean();
+        } else {
+            return {};
+        }
+    }
+
+    bool SlokedScreenClient::MultiplexerClient::SetFocus(const std::string &path) const {
+        auto rsp = client.Invoke("multiplexer.setFocus", path);
+        auto res = rsp.Get();
+        return res.HasResult() && res.GetResult().AsBoolean();
+    }
+
+    bool SlokedScreenClient::MultiplexerClient::Close(const std::string &path) const {
+        auto rsp = client.Invoke("multiplexer.close", path);
+        auto res = rsp.Get();
+        return res.HasResult() && res.GetResult().AsBoolean();
+    }
+
+    bool SlokedScreenClient::MultiplexerClient::MoveWindow(const std::string &path, const TextPosition &pos) const {
+        auto rsp = client.Invoke("multiplexer.moveWindow", KgrDictionary {
+            { "path", path },
+            {
+                "pos", KgrDictionary {
+                    { "line", static_cast<int64_t>(pos.line) },
+                    { "column", static_cast<int64_t>(pos.column) }
+                }
+            }
+        });   
+        auto res = rsp.Get();
+        return res.HasResult() && res.GetResult().AsBoolean();
+    }
+
+    bool SlokedScreenClient::MultiplexerClient::ResizeWindow(const std::string &path, const TextPosition &dim) const {
+        auto rsp = client.Invoke("multiplexer.resizeWindow", KgrDictionary {
+            { "path", path },
+            {
+                "size", KgrDictionary {
+                    { "line", static_cast<int64_t>(dim.line) },
+                    { "column", static_cast<int64_t>(dim.column) }
+                }
+            }
+        });   
+        auto res = rsp.Get();
+        return res.HasResult() && res.GetResult().AsBoolean();
     }
     
     SlokedScreenClient::SplitterClient::SplitterClient(SlokedServiceClient &client)
