@@ -47,6 +47,10 @@ namespace sloked {
         return this->id;
     }
 
+    void TerminalSplitterComponent::TerminalSplitterWindow::SetId(Id id) {
+        this->id = id;
+    }
+
     void TerminalSplitterComponent::TerminalSplitterWindow::SetFocus() {
         if (this->component) {
             this->root.focus = this->id;
@@ -148,6 +152,9 @@ namespace sloked {
         auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
         auto window = std::make_shared<TerminalSplitterWindow>(term.index, std::move(component), *this);
         this->components.insert(this->components.begin() + idx, window);
+        for (std::size_t i = 0; i < this->components.size(); i++) {
+            this->components.at(i)->SetId(i);
+        }
         return window;
     }
 

@@ -30,6 +30,7 @@
 #include "sloked/screen/Splitter.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
+#include "sloked/screen/components/ComponentHandle.h"
 
 namespace sloked {
 
@@ -80,6 +81,14 @@ namespace sloked {
          public:
             SplitterClient(SlokedServiceClient &);
             std::optional<std::string> NewWindow(const std::string &, const Splitter::Constraints &) const;
+            std::optional<std::string> NewWindow(const std::string &, SlokedComponentWindow::Id, const Splitter::Constraints &) const;
+            std::size_t GetWindowCount(const std::string &) const;
+            std::optional<std::string> GetFocus(const std::string &) const;
+            std::optional<bool> WindowHasFocus(const std::string &) const;
+            bool SetFocus(const std::string &) const;
+            bool Close(const std::string &) const;
+            std::optional<std::string> MoveWindow(const std::string &, SlokedComponentWindow::Id) const;
+            bool UpdateWindowConstraints(const std::string &, const Splitter::Constraints &) const;
 
          private:
             SlokedServiceClient &client;

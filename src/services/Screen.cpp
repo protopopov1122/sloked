@@ -47,6 +47,13 @@ namespace sloked {
             this->BindMethod("multiplexer.moveWindow", &SlokedScreenContext::MultiplexerMoveWindow);
             this->BindMethod("multiplexer.resizeWindow", &SlokedScreenContext::MultiplexerResizeWindow);
             this->BindMethod("splitter.newWindow", &SlokedScreenContext::SplitterNewWindow);
+            this->BindMethod("splitter.insertWindow", &SlokedScreenContext::SplitterInsertWindow);
+            this->BindMethod("splitter.getInfo", &SlokedScreenContext::SplitterGetInfo);
+            this->BindMethod("splitter.windowHasFocus", &SlokedScreenContext::SplitterWindowHasFocus);
+            this->BindMethod("splitter.setFocus", &SlokedScreenContext::SplitterSetFocus);
+            this->BindMethod("splitter.close", &SlokedScreenContext::SplitterClose);
+            this->BindMethod("splitter.updateWindowConstraints", &SlokedScreenContext::SplitterUpdateWindowConstraints);
+            this->BindMethod("splitter.moveWindow", &SlokedScreenContext::SplitterMoveWindow);
             this->BindMethod("tabber.newWindow", &SlokedScreenContext::TabberNewWindow);
         }
 
@@ -260,7 +267,154 @@ namespace sloked {
                 try {
                     auto &splitter = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsSplitter();
                     auto win = splitter.NewWindow(constraints);
-                    rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
+                    if (win) {
+                        rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
+                    } else {
+                        rsp.Result({});
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result({});
+                }
+            });
+        }
+
+        void SplitterInsertWindow(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsDictionary()["path"].AsString()};
+            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            Splitter::Constraints constraints(params.AsDictionary()["constraints"].AsDictionary()["dim"].AsNumber(),
+                params.AsDictionary()["constraints"].AsDictionary()["min"].AsInt(),
+                params.AsDictionary()["constraints"].AsDictionary()["max"].AsInt());
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
+                    auto win = splitter.NewWindow(winId, constraints);
+                    if (win) {
+                        rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
+                    } else {
+                        rsp.Result({});
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result({});
+                }
+            });
+        }
+
+        void SplitterGetInfo(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &splitter = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsSplitter();
+                    KgrDictionary response {
+                        { "windowCount", static_cast<int64_t>(splitter.GetWindowCount()) }
+                    };
+                    if (splitter.GetFocus()) {
+                        response.Put("focus", path.GetChild(std::to_string(splitter.GetFocus()->GetId())).ToString());
+                    }
+                    rsp.Result(std::move(response));
+                } catch (const SlokedError &err) {
+                    rsp.Result({});
+                }
+            });
+        }
+
+        void SplitterWindowHasFocus(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
+                    auto win = splitter.GetWindow(winId);
+                    if (win) {
+                        rsp.Result(win->HasFocus());
+                    } else {
+                        rsp.Result({});
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result({});
+                }
+            });
+        }
+
+        void SplitterSetFocus(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
+                    auto win = splitter.GetWindow(winId);
+                    if (win) {
+                        win->SetFocus();
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result(false);
+                }
+            });   
+        }
+
+        void SplitterClose(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
+                    auto win = splitter.GetWindow(winId);
+                    if (win) {
+                        win->Close();
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result(false);
+                }
+            }); 
+        }
+
+        void SplitterUpdateWindowConstraints(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsDictionary()["path"].AsString()};
+            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            Splitter::Constraints constraints(params.AsDictionary()["constraints"].AsDictionary()["dim"].AsNumber(),
+                params.AsDictionary()["constraints"].AsDictionary()["min"].AsInt(),
+                params.AsDictionary()["constraints"].AsDictionary()["max"].AsInt());
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
+                    auto win = splitter.GetWindow(winId);
+                    if (win) {
+                        win->UpdateConstraints(constraints);
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result(false);
+                }
+            });
+        }
+
+        void SplitterMoveWindow(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsDictionary()["path"].AsString()};
+            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            auto newWinId = static_cast<SlokedComponentWindow::Id>(params.AsDictionary()["position"].AsInt());
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
+                    auto win = splitter.GetWindow(winId);
+                    if (win) {
+                        win->Move(newWinId);
+                        rsp.Result(splitterPath.GetChild(std::to_string(newWinId)).ToString());
+                    } else {
+                        rsp.Result({});
+                    }
                 } catch (const SlokedError &err) {
                     rsp.Result({});
                 }
@@ -449,6 +603,95 @@ namespace sloked {
         } else {
             return {};
         }
+    }
+
+    std::optional<std::string> SlokedScreenClient::SplitterClient::NewWindow(const std::string &path, SlokedComponentWindow::Id winId, const Splitter::Constraints &constraints) const {
+        auto rsp = client.Invoke("splitter.insertWindow", KgrDictionary {
+            { "path", SlokedPath(path).GetChild(std::to_string(winId)).ToString() },
+            {
+                "constraints", KgrDictionary {
+                    { "dim", constraints.GetDimensions() },
+                    { "min", static_cast<int64_t>(constraints.GetMinimum()) },
+                    { "max", static_cast<int64_t>(constraints.GetMaximum()) }
+                }
+            }
+        });
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
+            return res.GetResult().AsString();
+        } else {
+            return {};
+        }
+    }
+
+    std::size_t SlokedScreenClient::SplitterClient::GetWindowCount(const std::string &path) const {
+        auto rsp = client.Invoke("splitter.getInfo", path);
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object)) {
+            return static_cast<std::size_t>(res.GetResult().AsDictionary()["windowCount"].AsInt());
+        } else {
+            return 0;
+        }
+    }
+
+    std::optional<std::string> SlokedScreenClient::SplitterClient::GetFocus(const std::string &path) const {
+        auto rsp = client.Invoke("splitter.getInfo", path);
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object) && res.GetResult().AsDictionary().Has("focus")) {
+            return res.GetResult().AsDictionary()["focus"].AsString();
+        } else {
+            return {};
+        }
+    }
+
+    std::optional<bool> SlokedScreenClient::SplitterClient::WindowHasFocus(const std::string &path) const {
+        auto rsp = client.Invoke("splitter.windowHasFocus", path);
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::Boolean)) {
+            return res.GetResult().AsBoolean();
+        } else {
+            return {};
+        }
+    }
+
+    bool SlokedScreenClient::SplitterClient::SetFocus(const std::string &path) const {
+        auto rsp = client.Invoke("splitter.setFocus", path);
+        auto res = rsp.Get();
+        return res.HasResult() && res.GetResult().AsBoolean();
+    }
+
+    bool SlokedScreenClient::SplitterClient::Close(const std::string &path) const {
+        auto rsp = client.Invoke("splitter.close", path);
+        auto res = rsp.Get();
+        return res.HasResult() && res.GetResult().AsBoolean();
+    }
+
+    std::optional<std::string> SlokedScreenClient::SplitterClient::MoveWindow(const std::string &path, SlokedComponentWindow::Id winId) const {
+        auto rsp = client.Invoke("splitter.moveWindow", KgrDictionary {
+            { "path", path },
+            { "position", static_cast<int64_t>(winId) }
+        });
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
+            return res.GetResult().AsString();
+        } else {
+            return {};
+        }
+    }
+
+    bool SlokedScreenClient::SplitterClient::UpdateWindowConstraints(const std::string &path, const Splitter::Constraints &constraints) const {
+        auto rsp = client.Invoke("splitter.updateWindowConstraints", KgrDictionary {
+            { "path", path },
+            {
+                "constraints", KgrDictionary {
+                    { "dim", constraints.GetDimensions() },
+                    { "min", static_cast<int64_t>(constraints.GetMinimum()) },
+                    { "max", static_cast<int64_t>(constraints.GetMaximum()) }
+                }
+            }
+        });
+        auto res = rsp.Get();
+        return res.HasResult() && res.GetResult().AsBoolean();
     }
 
     SlokedScreenClient::TabberClient::TabberClient(SlokedServiceClient &client)
