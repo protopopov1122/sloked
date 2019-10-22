@@ -55,6 +55,12 @@ namespace sloked {
             this->BindMethod("splitter.updateWindowConstraints", &SlokedScreenContext::SplitterUpdateWindowConstraints);
             this->BindMethod("splitter.moveWindow", &SlokedScreenContext::SplitterMoveWindow);
             this->BindMethod("tabber.newWindow", &SlokedScreenContext::TabberNewWindow);
+            this->BindMethod("tabber.insertWindow", &SlokedScreenContext::TabberInsertWindow);
+            this->BindMethod("tabber.getInfo", &SlokedScreenContext::TabberGetInfo);
+            this->BindMethod("tabber.windowHasFocus", &SlokedScreenContext::TabberWindowHasFocus);
+            this->BindMethod("tabber.setFocus", &SlokedScreenContext::TabberSetFocus);
+            this->BindMethod("tabber.close", &SlokedScreenContext::TabberClose);
+            this->BindMethod("tabber.moveWindow", &SlokedScreenContext::TabberMoveWindow);
         }
 
      private:
@@ -126,7 +132,11 @@ namespace sloked {
                 try {
                     auto &multiplexer = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsMultiplexer();
                     auto win = multiplexer.NewWindow(pos, dim);
-                    rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
+                    if (win) {
+                        rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
+                    } else {
+                        rsp.Result({});
+                    }
                 } catch (const SlokedError &err) {
                     rsp.Result({});
                 }
@@ -433,6 +443,123 @@ namespace sloked {
                 }
             });   
         }
+
+        void TabberInsertWindow(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsDictionary()["path"].AsString()};
+            SlokedPath tabberPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &tabber = SlokedComponentTree::Traverse(screen, tabberPath).AsTabber();
+                    auto win = tabber.NewWindow(winId);
+                    if (win) {
+                        rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
+                    } else {
+                        rsp.Result({});
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result({});
+                }
+            });   
+        }
+
+        void TabberGetInfo(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &tabber = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsTabber();
+                    KgrDictionary response {
+                        { "windowCount", static_cast<int64_t>(tabber.GetWindowCount()) }
+                    };
+                    if (tabber.GetFocus()) {
+                        response.Put("focus", path.GetChild(std::to_string(tabber.GetFocus()->GetId())).ToString());
+                    }
+                    rsp.Result(std::move(response));
+                } catch (const SlokedError &err) {
+                    rsp.Result({});
+                }
+            });
+        }
+
+        void TabberWindowHasFocus(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            SlokedPath tabberPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &tabber = SlokedComponentTree::Traverse(screen, tabberPath).AsTabber();
+                    auto win = tabber.GetWindow(winId);
+                    if (win) {
+                        rsp.Result(win->HasFocus());
+                    } else {
+                        rsp.Result({});
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result({});
+                }
+            });
+        }
+
+        void TabberSetFocus(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            SlokedPath tabberPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &tabber = SlokedComponentTree::Traverse(screen, tabberPath).AsTabber();
+                    auto win = tabber.GetWindow(winId);
+                    if (win) {
+                        win->SetFocus();
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result(false);
+                }
+            });   
+        }
+
+        void TabberClose(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            SlokedPath tabberPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &tabber = SlokedComponentTree::Traverse(screen, tabberPath).AsTabber();
+                    auto win = tabber.GetWindow(winId);
+                    if (win) {
+                        win->Close();
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result(false);
+                }
+            }); 
+        }
+
+        void TabberMoveWindow(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsDictionary()["path"].AsString()};
+            SlokedPath tabberPath = path.GetParent().GetChild("self");
+            auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
+            auto newWinId = static_cast<SlokedComponentWindow::Id>(params.AsDictionary()["position"].AsInt());
+            root.Lock([&](auto &screen) {
+                try {
+                    auto &tabber = SlokedComponentTree::Traverse(screen, tabberPath).AsTabber();
+                    auto win = tabber.GetWindow(winId);
+                    if (win) {
+                        win->Move(newWinId);
+                        rsp.Result(tabberPath.GetChild(std::to_string(newWinId)).ToString());
+                    } else {
+                        rsp.Result({});
+                    }
+                } catch (const SlokedError &err) {
+                    rsp.Result({});
+                }
+            });
+        }
     
         SlokedSynchronized<SlokedScreenComponent &> &root;
         const Encoding &encoding;
@@ -700,6 +827,73 @@ namespace sloked {
     std::optional<std::string> SlokedScreenClient::TabberClient::NewWindow(const std::string &path) const {
         auto rsp = client.Invoke("tabber.newWindow", KgrDictionary {
             { "path", path }
+        });
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
+            return res.GetResult().AsString();
+        } else {
+            return {};
+        }
+    }
+
+    std::optional<std::string> SlokedScreenClient::TabberClient::NewWindow(const std::string &path, SlokedComponentWindow::Id winId) const {
+        auto rsp = client.Invoke("tabber.insertWindow", KgrDictionary {
+            { "path", SlokedPath(path).GetChild(std::to_string(winId)).ToString() }
+        });
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
+            return res.GetResult().AsString();
+        } else {
+            return {};
+        }
+    }
+
+    std::size_t SlokedScreenClient::TabberClient::GetWindowCount(const std::string &path) const {
+        auto rsp = client.Invoke("tabber.getInfo", path);
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object)) {
+            return static_cast<std::size_t>(res.GetResult().AsDictionary()["windowCount"].AsInt());
+        } else {
+            return 0;
+        }
+    }
+
+    std::optional<std::string> SlokedScreenClient::TabberClient::GetFocus(const std::string &path) const {
+        auto rsp = client.Invoke("tabber.getInfo", path);
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object) && res.GetResult().AsDictionary().Has("focus")) {
+            return res.GetResult().AsDictionary()["focus"].AsString();
+        } else {
+            return {};
+        }
+    }
+
+    std::optional<bool> SlokedScreenClient::TabberClient::WindowHasFocus(const std::string &path) const {
+        auto rsp = client.Invoke("tabber.windowHasFocus", path);
+        auto res = rsp.Get();
+        if (res.HasResult() && res.GetResult().Is(KgrValueType::Boolean)) {
+            return res.GetResult().AsBoolean();
+        } else {
+            return {};
+        }
+    }
+
+    bool SlokedScreenClient::TabberClient::SetFocus(const std::string &path) const {
+        auto rsp = client.Invoke("tabber.setFocus", path);
+        auto res = rsp.Get();
+        return res.HasResult() && res.GetResult().AsBoolean();
+    }
+
+    bool SlokedScreenClient::TabberClient::Close(const std::string &path) const {
+        auto rsp = client.Invoke("tabber.close", path);
+        auto res = rsp.Get();
+        return res.HasResult() && res.GetResult().AsBoolean();
+    }
+
+    std::optional<std::string> SlokedScreenClient::TabberClient::MoveWindow(const std::string &path, SlokedComponentWindow::Id winId) const {
+        auto rsp = client.Invoke("tabber.moveWindow", KgrDictionary {
+            { "path", path },
+            { "position", static_cast<int64_t>(winId) }
         });
         auto res = rsp.Get();
         if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {

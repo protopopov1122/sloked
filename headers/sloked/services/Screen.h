@@ -98,6 +98,13 @@ namespace sloked {
          public:
             TabberClient(SlokedServiceClient &);
             std::optional<std::string> NewWindow(const std::string &) const;
+            std::optional<std::string> NewWindow(const std::string &, SlokedComponentWindow::Id) const;
+            std::size_t GetWindowCount(const std::string &) const;
+            std::optional<std::string> GetFocus(const std::string &) const;
+            std::optional<bool> WindowHasFocus(const std::string &) const;
+            bool SetFocus(const std::string &) const;
+            bool Close(const std::string &) const;
+            std::optional<std::string> MoveWindow(const std::string &, SlokedComponentWindow::Id) const;
 
          private:
             SlokedServiceClient &client;

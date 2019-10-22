@@ -58,6 +58,7 @@ namespace sloked {
             bool HasFocus() const override;
             SlokedComponentHandle &GetComponent() const override;
             Id GetId() const override;
+            void SetId(Id);
 
             void SetFocus() override;
             void Move(Id) override;

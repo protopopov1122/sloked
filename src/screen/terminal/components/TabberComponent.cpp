@@ -47,6 +47,10 @@ namespace sloked {
         return this->id;
     }
 
+    void TerminalTabberComponent::TerminalTabberWindow::SetId(Id id) {
+        this->id = id;
+    }
+
     void TerminalTabberComponent::TerminalTabberWindow::SetFocus() {
         if (this->component) {
             this->root.tabber.SelectTab(this->id);
@@ -140,7 +144,10 @@ namespace sloked {
         auto term = this->tabber.NewTab(idx);
         auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
         auto window = std::make_shared<TerminalTabberWindow>(term.index, std::move(component), *this);
-        this->components.push_back(window);
+        this->components.insert(this->components.begin() + idx, window);
+        for (std::size_t i = 0; i < this->components.size(); i++) {
+            this->components.at(i)->SetId(i);
+        }
         return window;
     }
 
