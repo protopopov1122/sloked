@@ -41,6 +41,7 @@ namespace sloked {
         virtual SlokedSplitterComponent &NewSplitter(Splitter::Direction) = 0;
         virtual SlokedTabberComponent &NewTabber() = 0;
         virtual SlokedMultiplexerComponent &NewMultiplexer() = 0;
+        virtual void Close() = 0;
     
      protected:
         using SlokedScreenComponent::SlokedScreenComponent;

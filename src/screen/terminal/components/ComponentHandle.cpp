@@ -70,6 +70,10 @@ namespace sloked {
         return ref;
     }
 
+    void TerminalComponentHandle::Close() {
+        this->component.reset();
+    }
+
     void TerminalComponentHandle::Render() {
         if (this->component) {
             this->component->Render();

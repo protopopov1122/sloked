@@ -44,6 +44,7 @@ namespace sloked {
         SlokedSplitterComponent &NewSplitter(Splitter::Direction) override;
         SlokedTabberComponent &NewTabber() override;
         SlokedMultiplexerComponent &NewMultiplexer() override;
+        void Close() override;
 
      protected:
         void ProcessComponentInput(const SlokedKeyboardInput &) override;

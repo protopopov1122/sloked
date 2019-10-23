@@ -41,6 +41,7 @@
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentSet.h"
 #include "sloked/services/Screen.h"
+#include "sloked/services/ScreenInput.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/editor/Tabs.h"
 #include "sloked/screen/components/ComponentTree.h"
@@ -151,6 +152,7 @@ int main(int argc, const char **argv) {
     server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, ctxManager));
     server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
     screenServer.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), ctxScreenManager));
+    screenServer.Register("screen::input", std::make_unique<SlokedScreenInputService>(screenHandle, terminalEncoding, ctxScreenManager));
 
     SlokedScreenClient screenClient(screenServer.Connect("screen"));
     SlokedDocumentSetClient documentClient(server.Connect("documents"));
@@ -168,23 +170,12 @@ int main(int argc, const char **argv) {
 
     // auto tab = tabs.Open(INPUT_PATH, "system", "system");
 
-    bool work = true;
-    screen.SetInputHandler([&](const SlokedKeyboardInput &cmd) {
-        if (cmd.value.index() == 0) {
-            return false;
-        } else switch (std::get<1>(cmd.value)) {            
-            case SlokedControlKey::Escape: {
-                documentClient.Save(OUTPUT_PATH);
-                // tab->Close();
-                work = false;
-            } break;
-
-            default:
-                return false;
-        }
-        return true;
+    SlokedScreenInputClient screenInput(screenServer.Connect("screen::input"));
+    screenInput.Connect("/", false, {
+        { SlokedControlKey::Escape, false }
     });
 
+    bool work = true;
     while (work) {
         screenHandle.Lock([&](auto &screen) {
             screen.UpdateDimensions();
@@ -198,6 +189,11 @@ int main(int argc, const char **argv) {
             screenHandle.Lock([&](auto &screen) {
                 screen.ProcessInput(evt);
             });
+        }
+        auto closeEvents = screenInput.GetInput();
+        if (!closeEvents.empty()) {
+            documentClient.Save(OUTPUT_PATH);
+            work = false;
         }
     }
     // tabs.CloseAll();
