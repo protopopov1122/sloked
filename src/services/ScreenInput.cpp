@@ -38,9 +38,9 @@ namespace sloked {
         }
 
         virtual ~SlokedScreenInputContext() {
-            if (this->path.has_value()) {
+            if (this->listener.has_value()) {
                 root.Lock([&](auto &component) {
-                    SlokedComponentTree::Traverse(component, this->path.value()).SetInputHandler([](const auto &) { return false; });
+                    SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
                 });
             }
         }
@@ -54,10 +54,10 @@ namespace sloked {
             this->subscribes.clear();
             root.Lock([&](auto &component) {
                 try {
-                    if (this->path.has_value()) {
-                        SlokedComponentTree::Traverse(component, this->path.value()).SetInputHandler([](const auto &) { return false; });
+                    if (this->listener.has_value()) {
+                        SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
                     }
-                    SlokedComponentTree::Traverse(component, path).AsHandle().SetInputHandler([this](const auto &evt) {
+                    this->listener = SlokedComponentTree::Traverse(component, path).AsHandle().AttachInputHandler([this](const auto &evt) {
                         std::unique_lock<std::mutex> lock(this->mtx);
                         if ((evt.value.index() == 0 && this->subscribeOnText) ||
                             (evt.value.index() == 1 && this->subscribes.find(std::make_pair(std::get<1>(evt.value), evt.alt)) != this->subscribes.end())) {
@@ -94,10 +94,11 @@ namespace sloked {
             this->input.clear();
             this->subscribeOnText = false;
             this->subscribes.clear();
-            if (this->path.has_value()) {
+            if (this->listener.has_value()) {
                 root.Lock([&](auto &component) {
-                    SlokedComponentTree::Traverse(component, this->path.value()).SetInputHandler([](const auto &) { return false; });
+                    SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
                 });
+                this->listener.reset();
                 this->path.reset();
             }
         }
@@ -129,6 +130,7 @@ namespace sloked {
         SlokedSynchronized<SlokedScreenComponent &> &root;
         const Encoding &encoding;
         std::optional<SlokedPath> path;
+        std::optional<SlokedComponentListener> listener;
         std::mutex mtx;
         std::vector<SlokedKeyboardInput> input;
         bool subscribeOnText;

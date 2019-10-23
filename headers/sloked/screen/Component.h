@@ -25,6 +25,7 @@
 #include "sloked/core/Position.h"
 #include "sloked/screen/Keyboard.h"
 #include <functional>
+#include <map>
 
 namespace sloked {
     
@@ -32,7 +33,17 @@ namespace sloked {
     class SlokedMultiplexerComponent;
     class SlokedSplitterComponent;
     class SlokedTabberComponent;
+    class SlokedScreenComponent;
 
+    class SlokedComponentListener {
+     private:
+        friend class SlokedScreenComponent;
+        SlokedComponentListener(SlokedScreenComponent &component, std::size_t id)
+            : component(std::addressof(component)), id(id) {}
+
+        SlokedScreenComponent *component;
+        std::size_t id;
+    };
 
     class SlokedScreenComponent {
      public:
@@ -54,8 +65,8 @@ namespace sloked {
         SlokedTabberComponent &AsTabber();
 
         void ProcessInput(const SlokedKeyboardInput &);
-        void SetInputHandler(InputHandler);
-        void ResetInputHandler();
+        SlokedComponentListener AttachInputHandler(InputHandler);
+        void DetachInputHandle(const SlokedComponentListener &);
         
         virtual void Render() = 0;
         virtual void UpdateDimensions() = 0;
@@ -66,7 +77,8 @@ namespace sloked {
 
      private:
         Type type;
-        InputHandler inputHandler;
+        std::map<std::size_t, InputHandler> inputHandler;
+        std::size_t nextInputId;
     };
 }
 

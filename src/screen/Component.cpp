@@ -29,7 +29,7 @@
 namespace sloked {
 
     SlokedScreenComponent::SlokedScreenComponent(Type type)
-        : type(type) {}
+        : type(type), nextInputId(0) {}
 
     SlokedScreenComponent::Type SlokedScreenComponent::GetType() const {
         return this->type;
@@ -69,19 +69,23 @@ namespace sloked {
     
     void SlokedScreenComponent::ProcessInput(const SlokedKeyboardInput &input) {
         bool res = false;
-        if (this->inputHandler) {
-            res = this->inputHandler(input);
+        for (const auto &kv : this->inputHandler) {
+            res |= kv.second(input);
         }
         if (!res) {
             this->ProcessComponentInput(input);
         }
     }
 
-    void SlokedScreenComponent::SetInputHandler(InputHandler handler) {
-        this->inputHandler = handler;
+    SlokedComponentListener SlokedScreenComponent::AttachInputHandler(InputHandler handler) {
+        auto id = this->nextInputId++;
+        this->inputHandler[id] = handler;
+        return SlokedComponentListener{*this, id};
     }
 
-    void SlokedScreenComponent::ResetInputHandler() {
-        this->inputHandler = 0;
+    void SlokedScreenComponent::DetachInputHandle(const SlokedComponentListener &listener) {
+        if (this == listener.component) {
+            this->inputHandler.erase(listener.id);
+        }
     }
 }
