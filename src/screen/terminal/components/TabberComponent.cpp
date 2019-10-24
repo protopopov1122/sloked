@@ -164,6 +164,10 @@ namespace sloked {
         }
     }
 
+    TextPosition TerminalTabberComponent::GetDimensions() {
+        return this->tabber.GetDimensions();
+    }
+
     void TerminalTabberComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {
         auto idx = this->tabber.GetCurrentTab();
         if (idx.has_value() && idx < this->components.size()) {

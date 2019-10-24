@@ -162,6 +162,10 @@ namespace sloked {
         }
     }
 
+    TextPosition TerminalMultiplexerComponent::GetDimensions() {
+        return { this->terminal.GetHeight(), this->terminal.GetWidth() };
+    }
+
     void TerminalMultiplexerComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {
         if (!this->focus.empty()) {
             this->windows.at(this->focus.back())->ProcessInput(input);

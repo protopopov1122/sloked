@@ -146,6 +146,10 @@ namespace sloked {
         }
     }
 
+    TextPosition TerminalTabber::GetDimensions() {
+        return { this->term.GetHeight(), this->term.GetWidth() };
+    }
+
     SlokedIndexed<SlokedTerminal &, TerminalTabber::TabId>  TerminalTabber::NewTab() {
         auto tab = std::make_shared<TerminalTab>([this](auto tabPtr) {
             if (this->current_tab < this->tabs.size()) {

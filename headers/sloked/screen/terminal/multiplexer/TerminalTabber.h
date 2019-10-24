@@ -40,6 +40,7 @@ namespace sloked {
         std::optional<TabId> GetCurrentTab() const;
         SlokedTerminal &GetTab(TabId) const;
 
+        TextPosition GetDimensions();
         SlokedIndexed<SlokedTerminal &, TabId> NewTab();
         SlokedIndexed<SlokedTerminal &, TabId> NewTab(TabId);
         bool SelectTab(TabId);

@@ -42,6 +42,7 @@
 #include "sloked/services/DocumentSet.h"
 #include "sloked/services/Screen.h"
 #include "sloked/services/ScreenInput.h"
+#include "sloked/services/TextPane.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/editor/Tabs.h"
 #include "sloked/screen/components/ComponentTree.h"
@@ -153,6 +154,7 @@ int main(int argc, const char **argv) {
     server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
     screenServer.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), ctxScreenManager));
     screenServer.Register("screen::input", std::make_unique<SlokedScreenInputService>(screenHandle, terminalEncoding, ctxScreenManager));
+    screenServer.Register("screen::text::pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxScreenManager));
 
     SlokedScreenClient screenClient(screenServer.Connect("screen"));
     SlokedDocumentSetClient documentClient(server.Connect("documents"));
@@ -175,8 +177,18 @@ int main(int argc, const char **argv) {
         { SlokedControlKey::Escape, false }
     });
 
+    SlokedTextPaneClient paneClient(screenServer.Connect("screen::text::pane"));
+    paneClient.Connect("/0/1", false, {});
+    auto &render = paneClient.GetRender();
+
+    int i = 0;
     bool work = true;
     while (work) {
+        render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
+        render.ClearScreen();
+        render.SetPosition(0, 0);
+        render.Write(std::to_string(i++));
+        render.Flush();
         screenHandle.Lock([&](auto &screen) {
             screen.UpdateDimensions();
             console.SetGraphicsMode(SlokedTextGraphics::Off);

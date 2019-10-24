@@ -52,6 +52,7 @@ namespace sloked {
         bool Move(WinId, WinId);
         bool CloseTerminal(WinId);
         void Update();
+        TextPosition GetDimensions();
 
      private:
         using Window = std::pair<std::shared_ptr<TerminalWindow>, Splitter::Constraints>;

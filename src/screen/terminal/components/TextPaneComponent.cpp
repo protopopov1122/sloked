@@ -35,6 +35,10 @@ namespace sloked {
     }
 
     void TerminalTextPaneComponent::UpdateDimensions() {}
+
+    TextPosition TerminalTextPaneComponent::GetDimensions() {
+        return { this->term.GetHeight(), this->term.GetWidth() };
+    }
     
     void TerminalTextPaneComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {
         if (this->widget) {

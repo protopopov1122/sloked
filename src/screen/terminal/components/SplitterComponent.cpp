@@ -176,6 +176,10 @@ namespace sloked {
         }
     }
 
+    TextPosition TerminalSplitterComponent::GetDimensions() {
+        return this->splitter.GetDimensions();
+    }
+
     void TerminalSplitterComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {
         if (this->focus < this->components.size()) {
             this->components.at(this->focus)->ProcessInput(input);

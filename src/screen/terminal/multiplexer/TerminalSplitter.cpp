@@ -179,4 +179,8 @@ namespace sloked {
             }
         }
     }
+
+    TextPosition TerminalSplitter::GetDimensions() {
+        return { this->term.GetHeight(), this->term.GetWidth() };
+    }
 }

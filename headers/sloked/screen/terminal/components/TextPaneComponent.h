@@ -34,6 +34,7 @@ namespace sloked {
         
         void Render() override;
         void UpdateDimensions() override;
+        TextPosition GetDimensions() override;
         
      protected:
         using SlokedScreenComponent::SlokedScreenComponent;

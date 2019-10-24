@@ -87,6 +87,10 @@ namespace sloked {
         }
     }
 
+    TextPosition TerminalComponentHandle::GetDimensions() {
+        return { this->terminal.GetHeight(), this->terminal.GetWidth() };
+    }
+
     void TerminalComponentHandle::ProcessComponentInput(const SlokedKeyboardInput &input) {
         if (this->component) {
             this->component->ProcessInput(input);

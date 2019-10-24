@@ -37,6 +37,7 @@ namespace sloked {
 
         void Render() override;
         void UpdateDimensions() override;
+        TextPosition GetDimensions() override;
         
         bool HasComponent() const override;
         SlokedScreenComponent &GetComponent() const override;
