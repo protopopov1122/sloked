@@ -32,8 +32,7 @@ namespace sloked {
             : SlokedServiceContext(std::move(pipe)), root(root), encoding(encoding) {
             
             this->BindMethod("connect", &SlokedScreenInputContext::Connect);
-            this->BindMethod("subscribe", &SlokedScreenInputContext::Subscribe);
-            this->BindMethod("unsubscribe", &SlokedScreenInputContext::Unsubscribe);
+            this->BindMethod("close", &SlokedScreenInputContext::Close);
             this->BindMethod("getInput", &SlokedScreenInputContext::GetInput);
         }
 
@@ -47,7 +46,7 @@ namespace sloked {
     
      private:
         void Connect(const std::string &method, const KgrValue &params, Response &rsp) {
-            SlokedPath path{params.AsString()};
+            SlokedPath path{params.AsDictionary()["path"].AsString()};
             std::unique_lock<std::mutex> lock(this->mtx);
             this->input.clear();
             this->subscribeOnText = false;
@@ -71,6 +70,13 @@ namespace sloked {
                         }
                     });
                     this->path = path;
+                    this->subscribeOnText = params.AsDictionary()["text"].AsBoolean();
+                    const auto &keys = params.AsDictionary()["keys"].AsArray();
+                    for (const auto &key : keys) {
+                        auto code = static_cast<SlokedControlKey>(key.AsDictionary()["code"].AsInt());
+                        auto alt = key.AsDictionary()["alt"].AsBoolean();
+                        this->subscribes.emplace(std::make_pair(code, alt));
+                    }
                     rsp.Result(true);
                 } catch (const SlokedError &err) {
                     rsp.Result(false);
@@ -78,18 +84,7 @@ namespace sloked {
             });
         }
 
-        void Subscribe(const std::string &method, const KgrValue &params, Response &rsp) {
-            std::unique_lock<std::mutex> lock(this->mtx);
-            this->subscribeOnText = params.AsDictionary()["text"].AsBoolean();
-            const auto &keys = params.AsDictionary()["keys"].AsArray();
-            for (const auto &key : keys) {
-                auto code = static_cast<SlokedControlKey>(key.AsDictionary()["code"].AsInt());
-                auto alt = key.AsDictionary()["alt"].AsBoolean();
-                this->subscribes.emplace(std::make_pair(code, alt));
-            }
-        }
-
-        void Unsubscribe(const std::string &method, const KgrValue &params, Response &rsp) {
+        void Close(const std::string &method, const KgrValue &params, Response &rsp) {
             std::unique_lock<std::mutex> lock(this->mtx);
             this->input.clear();
             this->subscribeOnText = false;
@@ -150,29 +145,25 @@ namespace sloked {
         : client(std::move(pipe)) {}
 
     bool SlokedScreenInputClient::Connect(const std::string &path, bool text, const std::vector<std::pair<SlokedControlKey, bool>> &keys) {
-        auto rsp = this->client.Invoke("connect", path);
-        auto res = rsp.Get();
-        if (res.HasResult() && res.GetResult().AsBoolean()) {
-            KgrDictionary params {
-                { "text", text }
-            };
-            KgrArray array;
-            for (const auto &key : keys) {
-                array.Append(KgrDictionary {
-                    { "code", static_cast<int64_t>(key.first) },
-                    { "alt", key.second }
-                });
-            }
-            params.Put("keys", std::move(array));
-            this->client.Invoke("subscribe", std::move(params));
-            return true;
-        } else {
-            return false;
+        KgrDictionary params {
+            { "path", path },
+            { "text", text }
+        };
+        KgrArray array;
+        for (const auto &key : keys) {
+            array.Append(KgrDictionary {
+                { "code", static_cast<int64_t>(key.first) },
+                { "alt", key.second }
+            });
         }
+        params.Put("keys", std::move(array));
+        auto rsp = this->client.Invoke("connect", std::move(params));
+        auto res = rsp.Get();
+        return res.HasResult() && res.GetResult().AsBoolean();
     }
 
     void SlokedScreenInputClient::Close() {
-        this->client.Invoke("unsubscribe", {});
+        this->client.Invoke("close", {});
     }
 
     std::vector<SlokedKeyboardInput> SlokedScreenInputClient::GetInput() {
