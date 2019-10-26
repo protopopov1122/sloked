@@ -101,13 +101,14 @@ namespace sloked {
             }
         }
 
+        operator SlokedSpan<const T>() {
+            return SlokedSpan<const T>(this->data_ptr, this->sz);
+        }
+
      private:
         T *data_ptr;
         std::size_t sz;
     };
-
-    template <typename T>
-    using SlokedConstSpan = SlokedSpan<const T>;
 }
 
 #endif

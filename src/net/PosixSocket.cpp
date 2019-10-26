@@ -84,6 +84,17 @@ namespace sloked {
         }
     }
 
+    bool SlokedPosixSocket::Wait(long timeout) {
+        struct timeval tv;
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(this->socket, &rfds);
+        
+        tv.tv_sec = 0;
+        tv.tv_usec = timeout * 1000;
+        return select(this->socket + 1, &rfds, nullptr, nullptr, &tv) > 0;
+    }
+
     std::optional<uint8_t> SlokedPosixSocket::Read() {
         if (IsSocketValid(this->socket)) {
             uint8_t byte;
@@ -118,7 +129,7 @@ namespace sloked {
         }
     }
 
-    void SlokedPosixSocket::Write(SlokedConstSpan<uint8_t> data) {
+    void SlokedPosixSocket::Write(SlokedSpan<const uint8_t> data) {
         if (IsSocketValid(this->socket)) {
             if (!data.Empty()) {
                 auto res = write(this->socket, data.Data(), data.Size());
@@ -132,7 +143,7 @@ namespace sloked {
     }
 
     void SlokedPosixSocket::Write(uint8_t byte) {
-        this->Write(SlokedConstSpan<uint8_t>(&byte, 1));
+        this->Write(SlokedSpan<const uint8_t>(&byte, 1));
     }
 
     SlokedPosixServerSocket::SlokedPosixServerSocket(int fd)
@@ -188,8 +199,23 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedSocket> SlokedPosixServerSocket::Accept() {
-        int socket = accept(this->socket, nullptr, nullptr);
+    std::unique_ptr<SlokedSocket> SlokedPosixServerSocket::Accept(long timeout) {
+        int socket = InvalidSocket;
+        if (timeout != 0) {
+            struct timeval tv;
+            fd_set rfds;
+            FD_ZERO(&rfds);
+            FD_SET(this->socket, &rfds);
+            
+            tv.tv_sec = 0;
+            tv.tv_usec = timeout * 1000;
+            auto result = select(this->socket + 1, &rfds, nullptr, nullptr, &tv);
+            if (result > 0) {
+                socket = accept(this->socket, nullptr, nullptr);
+            }
+        } else {
+            socket = accept(this->socket, nullptr, nullptr);
+        }
         if (IsSocketValid(socket)) {
             return std::make_unique<SlokedPosixSocket>(socket);
         } else {

@@ -41,9 +41,10 @@ namespace sloked {
         bool Valid() final;
         void Close() final;
         std::size_t Available() final;
+        bool Wait(long) final;
         std::optional<uint8_t> Read() final;
         std::vector<uint8_t> Read(std::size_t) final;
-        void Write(SlokedConstSpan<uint8_t>) final;
+        void Write(SlokedSpan<const uint8_t>) final;
         void Write(uint8_t) final;
         
         static constexpr int InvalidSocket = -1;
@@ -67,7 +68,7 @@ namespace sloked {
         bool Valid() final;
         void Start() final;
         void Close() final;
-        std::unique_ptr<SlokedSocket> Accept() final;
+        std::unique_ptr<SlokedSocket> Accept(long = 0) final;
 
         static constexpr int InvalidSocket = -1;
 

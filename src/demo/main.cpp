@@ -48,6 +48,7 @@
 #include "sloked/screen/components/ComponentTree.h"
 #include "sloked/core/Synchronized.h"
 #include "sloked/net/PosixSocket.h"
+#include "sloked/kgr/net/MasterServer.h"
 
 using namespace sloked;
 
@@ -132,6 +133,10 @@ int main(int argc, const char **argv) {
     KgrContextManager<KgrLocalContext> &ctxScreenManager = ctxScreenManagerHandle.GetManager();
     ctxScreenManagerHandle.Start();
 
+    SlokedPosixSocketFactory socketFactory;
+    KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", 1234));
+    masterServer.Start();
+
     char INPUT_PATH[1024], OUTPUT_PATH[1024];
     realpath(argv[1], INPUT_PATH);
     realpath(argv[2], OUTPUT_PATH);
@@ -211,6 +216,7 @@ int main(int argc, const char **argv) {
     }
     // tabs.CloseAll();
 
+    masterServer.Stop();
     ctxScreenManagerHandle.Stop();
     ctxManagerHandle.Stop();
     return EXIT_SUCCESS;

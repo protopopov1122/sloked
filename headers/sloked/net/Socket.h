@@ -40,9 +40,10 @@ namespace sloked {
         virtual bool Valid() = 0;
         virtual void Close() = 0;
         virtual std::size_t Available() = 0;
+        virtual bool Wait(long) = 0;
         virtual std::optional<uint8_t> Read() = 0;
         virtual std::vector<uint8_t> Read(std::size_t) = 0;
-        virtual void Write(SlokedConstSpan<uint8_t>) = 0;
+        virtual void Write(SlokedSpan<const uint8_t>) = 0;
         virtual void Write(uint8_t) = 0;
 
      protected:
@@ -60,7 +61,7 @@ namespace sloked {
         virtual bool Valid() = 0;
         virtual void Start() = 0;
         virtual void Close() = 0;
-        virtual std::unique_ptr<SlokedSocket> Accept() = 0;
+        virtual std::unique_ptr<SlokedSocket> Accept(long = 0) = 0;
 
      protected:
         SlokedServerSocket() = default;
