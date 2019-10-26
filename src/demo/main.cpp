@@ -47,8 +47,7 @@
 #include "sloked/editor/Tabs.h"
 #include "sloked/screen/components/ComponentTree.h"
 #include "sloked/core/Synchronized.h"
-#include "sloked/kgr/net/PosixSocket.h"
-// #include <cstring>
+#include "sloked/net/PosixSocket.h"
 
 using namespace sloked;
 
@@ -121,33 +120,6 @@ int main(int argc, const char **argv) {
         std::cout << "Format: " << argv[0] << " source destination" << std::endl;
         return EXIT_FAILURE;
     }
-
-    // KgrPosixSocketFactory factory;
-    // auto srv = factory.Bind("localhost", 1235);
-    // srv->Start();
-    // std::thread([&] {
-    //     std::unique_ptr<KgrSocket> socket;
-    //     while ((socket = srv->Accept()) != nullptr) {
-    //         std::thread([socket = std::move(socket)]() {
-    //             std::cout << "Connect" << std::endl;
-    //             while (true) {
-    //                 auto res = socket->Read(1);
-    //                 if (res.empty()) {
-    //                     break;
-    //                 }
-    //                 std::cout << static_cast<int>(res.at(0)) << std::endl;
-    //             }
-    //             std::cout << "Disconnect" << std::endl;
-    //         }).detach();
-    //     }
-    //     srv->Close();
-    // }).detach();
-    // auto client = factory.Connect("localhost", 1235);
-    // const char *STR = "Hello, world!";
-    // client->Write(reinterpret_cast<const uint8_t *>(STR), strlen(STR) + 1);
-    // client->Close();
-    // while (true) {}
-    // return EXIT_SUCCESS;
 
     KgrLocalServer portServer;
     KgrLocalNamedServer server(portServer);

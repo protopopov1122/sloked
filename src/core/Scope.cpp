@@ -23,10 +23,10 @@
 
 namespace sloked {
 
-    OnScopeExit::OnScopeExit(std::function<void()> callback)
+    OnDestroy::OnDestroy(std::function<void()> callback)
         : callback(std::move(callback)) {}
 
-    OnScopeExit::~OnScopeExit() {
+    OnDestroy::~OnDestroy() {
         if (this->callback) {
             this->callback();
         }

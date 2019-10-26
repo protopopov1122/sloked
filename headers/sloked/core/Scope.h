@@ -27,10 +27,10 @@
 
 namespace sloked {
 
-    class OnScopeExit {
+    class OnDestroy {
      public:
-        OnScopeExit(std::function<void()>);
-        ~OnScopeExit();
+        OnDestroy(std::function<void()>);
+        ~OnDestroy();
 
      private:
         std::function<void()> callback;

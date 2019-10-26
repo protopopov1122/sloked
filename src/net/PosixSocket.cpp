@@ -19,10 +19,11 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/kgr/net/PosixSocket.h"
+#include "sloked/net/PosixSocket.h"
 #include "sloked/core/Error.h"
 #include "sloked/core/Scope.h"
 #include <unistd.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <netdb.h>
 
@@ -32,21 +33,21 @@ namespace sloked {
         return fd >= 0;
     }
 
-    KgrPosixSocket::KgrPosixSocket(int fd)
+    SlokedPosixSocket::SlokedPosixSocket(int fd)
         : socket(fd) {}
         
-    KgrPosixSocket::KgrPosixSocket(KgrPosixSocket &&socket) {
+    SlokedPosixSocket::SlokedPosixSocket(SlokedPosixSocket &&socket) {
         this->socket = socket.socket;
         socket.socket = InvalidSocket;
     }
 
-    KgrPosixSocket::~KgrPosixSocket() {
+    SlokedPosixSocket::~SlokedPosixSocket() {
         if (IsSocketValid(this->socket)) {
             close(this->socket);
         }
     }
 
-    KgrPosixSocket &KgrPosixSocket::operator=(KgrPosixSocket &&socket) {
+    SlokedPosixSocket &SlokedPosixSocket::operator=(SlokedPosixSocket &&socket) {
         if (IsSocketValid(this->socket)) {
             close(this->socket);
         }
@@ -55,25 +56,52 @@ namespace sloked {
         return *this;
     }
 
-    void KgrPosixSocket::Open(int fd) {
+    void SlokedPosixSocket::Open(int fd) {
         if (IsSocketValid(this->socket)) {
             close(this->socket);
         }
         this->socket = fd;
     }
 
-    bool KgrPosixSocket::IsValid() {
+    bool SlokedPosixSocket::Valid() {
         return IsSocketValid(this->socket);
     }
 
-    void KgrPosixSocket::Close() {
+    void SlokedPosixSocket::Close() {
         if (IsSocketValid(this->socket)) {
             close(this->socket);
             this->socket = InvalidSocket;
         }
     }
 
-    std::vector<uint8_t> KgrPosixSocket::Read(std::size_t count) {
+    std::size_t SlokedPosixSocket::Available() {
+        if (IsSocketValid(this->socket)) {
+            unsigned long size;
+            ioctl(this->socket, FIONREAD, &size);
+            return static_cast<std::size_t>(size);
+        } else {
+            throw SlokedError("PosixSocket: Invalid socket");
+        }
+    }
+
+    std::optional<uint8_t> SlokedPosixSocket::Read() {
+        if (IsSocketValid(this->socket)) {
+            uint8_t byte;
+            auto res = read(this->socket, &byte, 1);
+            if (res > 0) {
+                return byte;
+            } else if (res == 0) {
+                return {};
+            } else {
+                throw SlokedError("PosixSocket: Read error");
+            }
+
+        } else {
+            throw SlokedError("PosixSocket: Invalid socket");
+        }
+    }
+
+    std::vector<uint8_t> SlokedPosixSocket::Read(std::size_t count) {
         if (IsSocketValid(this->socket)) {
             std::vector<uint8_t> dest;
             std::unique_ptr<uint8_t[]> buffer(new uint8_t[count]);
@@ -90,33 +118,38 @@ namespace sloked {
         }
     }
 
-    void KgrPosixSocket::Write(const uint8_t *src, std::size_t count) {
+    void SlokedPosixSocket::Write(SlokedConstSpan<uint8_t> data) {
         if (IsSocketValid(this->socket)) {
-            auto res = write(this->socket, src, count);
-            if (res == -1) {
-                throw SlokedError("PosixSocket: Write error");
+            if (!data.Empty()) {
+                auto res = write(this->socket, data.Data(), data.Size());
+                if (res == -1) {
+                    throw SlokedError("PosixSocket: Write error");
+                }
             }
-
         } else {
             throw SlokedError("PosixSocket: Invalid socket");
         }
     }
 
-    KgrPosixServerSocket::KgrPosixServerSocket(int fd)
+    void SlokedPosixSocket::Write(uint8_t byte) {
+        this->Write(SlokedConstSpan<uint8_t>(&byte, 1));
+    }
+
+    SlokedPosixServerSocket::SlokedPosixServerSocket(int fd)
         : socket(fd) {}
 
-    KgrPosixServerSocket::KgrPosixServerSocket(KgrPosixServerSocket &&socket) {
+    SlokedPosixServerSocket::SlokedPosixServerSocket(SlokedPosixServerSocket &&socket) {
         this->socket = socket.socket;
         socket.socket = InvalidSocket; 
     }
 
-    KgrPosixServerSocket::~KgrPosixServerSocket() {
+    SlokedPosixServerSocket::~SlokedPosixServerSocket() {
         if (IsSocketValid(this->socket)) {
             close(this->socket);
         }
     }
 
-    KgrPosixServerSocket &KgrPosixServerSocket::operator=(KgrPosixServerSocket &&socket) {
+    SlokedPosixServerSocket &SlokedPosixServerSocket::operator=(SlokedPosixServerSocket &&socket) {
         if (IsSocketValid(this->socket)) {
             close(this->socket);
         }
@@ -125,18 +158,18 @@ namespace sloked {
         return *this;
     }
 
-    void KgrPosixServerSocket::Open(int fd) {
+    void SlokedPosixServerSocket::Open(int fd) {
         if (IsSocketValid(this->socket)) {
             close(this->socket);
         }
         this->socket = fd;
     }
 
-    bool KgrPosixServerSocket::IsValid() {
+    bool SlokedPosixServerSocket::Valid() {
         return IsSocketValid(this->socket);
     }
 
-    void KgrPosixServerSocket::Start() {
+    void SlokedPosixServerSocket::Start() {
         constexpr int MaxQueueLength = 128;
         if (IsSocketValid(this->socket)) {
             auto res = listen(this->socket, MaxQueueLength);
@@ -148,30 +181,30 @@ namespace sloked {
         }
     }
 
-    void KgrPosixServerSocket::Close() {
+    void SlokedPosixServerSocket::Close() {
         if (IsSocketValid(this->socket)) {
             close(this->socket);
             this->socket = InvalidSocket;
         }
     }
 
-    std::unique_ptr<KgrSocket> KgrPosixServerSocket::Accept() {
+    std::unique_ptr<SlokedSocket> SlokedPosixServerSocket::Accept() {
         int socket = accept(this->socket, nullptr, nullptr);
         if (IsSocketValid(socket)) {
-            return std::make_unique<KgrPosixSocket>(socket);
+            return std::make_unique<SlokedPosixSocket>(socket);
         } else {
             return nullptr;
         }
     }
 
-    std::unique_ptr<KgrSocket> KgrPosixSocketFactory::Connect(const std::string &host, uint16_t port) {
+    std::unique_ptr<SlokedSocket> SlokedPosixSocketFactory::Connect(const std::string &host, uint16_t port) {
         // Resolve hostname
         struct addrinfo *result = nullptr;
         int err = getaddrinfo(host.c_str(), nullptr, nullptr, &result);
         if (err != 0 || result == nullptr) {
             throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; address resolution error: " + std::to_string(err));
         }
-        OnScopeExit freeResult([&result] {
+        OnDestroy freeResult([&result] {
             freeaddrinfo(result);
         });
         // Open a socket
@@ -187,7 +220,7 @@ namespace sloked {
                     addr.sin_port = htons(port);
                     err = connect(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
                     if (err == 0) {
-                        return std::make_unique<KgrPosixSocket>(fd);
+                        return std::make_unique<SlokedPosixSocket>(fd);
                     }
                 } break;
 
@@ -196,7 +229,7 @@ namespace sloked {
                     addr.sin6_port = htons(port);
                     err = connect(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
                     if (err == 0) {
-                        return std::make_unique<KgrPosixSocket>(fd);
+                        return std::make_unique<SlokedPosixSocket>(fd);
                     }
                 } break;
 
@@ -210,14 +243,14 @@ namespace sloked {
         throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; unsupported AF");
     }
 
-    std::unique_ptr<KgrServerSocket> KgrPosixSocketFactory::Bind(const std::string &host, uint16_t port) {
+    std::unique_ptr<SlokedServerSocket> SlokedPosixSocketFactory::Bind(const std::string &host, uint16_t port) {
         // Resolve hostname
         struct addrinfo *result = nullptr;
         int err = getaddrinfo(host.c_str(), nullptr, nullptr, &result);
         if (err != 0 || result == nullptr) {
             throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; address resolution error: " + std::to_string(err));
         }
-        OnScopeExit freeResult([&result] {
+        OnDestroy freeResult([&result] {
             freeaddrinfo(result);
         });
         // Open a socket
@@ -248,6 +281,6 @@ namespace sloked {
             throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; binding error: " + std::to_string(errno));
         }
         // Build an instance of the server
-        return std::make_unique<KgrPosixServerSocket>(fd);
+        return std::make_unique<SlokedPosixServerSocket>(fd);
     }
 }
