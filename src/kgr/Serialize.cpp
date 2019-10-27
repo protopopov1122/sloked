@@ -48,8 +48,10 @@ namespace sloked {
                     std::string str{value.AsString()};
                     static std::regex newLine("\\\\n");
                     static std::regex quote("\\\\\"");
+                    static std::regex backslash("\\\\\\\\");
                     str = std::regex_replace(str, newLine, "\n");
                     str = std::regex_replace(str, quote, "\"");
+                    str = std::regex_replace(str, backslash, "\\");
                     return KgrValue(str);
                 }
             }
@@ -106,6 +108,8 @@ namespace sloked {
                 std::string str{value.AsString()};
                 static std::regex newLine("\n");
                 static std::regex quote("\"");
+                static std::regex backslash("\\\\");
+                str = std::regex_replace(str, backslash, "\\\\");
                 str = std::regex_replace(str, newLine, "\\n");
                 str = std::regex_replace(str, quote, "\\\"");
                 return std::make_unique<JsonConstantNode>(str, DefaultPosition);

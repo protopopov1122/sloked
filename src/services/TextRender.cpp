@@ -99,6 +99,7 @@ namespace sloked {
 
             KgrArray fragments;
             TextPosition::Line lineNumber = 0;
+            std::vector<std::pair<std::string, const TaggedTextFragment<int> *>> result;
             this->document->frame.Visit(0, std::min(static_cast<TextPosition::Line>(dim["height"].AsInt()), static_cast<TextPosition::Line>(this->document->frame.GetLastLine()) + 1), [&](const auto lineView) {
                 std::string line{lineView};
                 std::string fullLine{this->document->text.GetLine(this->document->frame.GetOffset().line + lineNumber)};
@@ -106,23 +107,51 @@ namespace sloked {
                 const auto lineLength = this->document->conv.GetDestination().CodepointCount(line);
                 std::size_t frameOffset = this->document->frame.GetOffset().column;
                 
+                const TaggedTextFragment<int> *lastTag = nullptr;
+                TextPosition tagStart{0, 0};
                 TextCharWidthIterator iter(fullLine, frameOffset, this->document->conv.GetDestination(), this->charWidth);
                 for (TextPosition::Column column = 0; column < lineLength; column++, iter.Next()) {
                     auto tag = this->document->tags.Get(TextPosition{this->document->frame.GetOffset().line + lineNumber, iter.GetRealColumn()});
-                    auto pos = this->document->conv.GetDestination().GetCodepoint(line, column);
-                    auto fragment = line.substr(pos.first, pos.second);
-                    fragments.Append(KgrDictionary {
-                        { "tag", tag != nullptr },
-                        { "content", KgrValue(this->document->conv.ReverseConvert(fragment)) }
-                    });
+                    if (tag != lastTag) {
+                        auto pos = this->document->conv.GetDestination().GetCodepoint(line, column);
+                        auto startPos = this->document->conv.GetDestination().GetCodepoint(line, tagStart.column);
+                        auto fragment = line.substr(startPos.first, pos.first - startPos.first);
+                        result.push_back(std::make_pair(fragment, lastTag));
+                        // fragments.Append(KgrDictionary {
+                        //     { "tag", lastTag != nullptr },
+                        //     { "content", KgrValue(this->document->conv.ReverseConvert(fragment)) }
+                        // });
+                        lastTag = tag;
+                        tagStart = {lineNumber, column};
+                    }
                 }
+                auto pos = this->document->conv.GetDestination().GetCodepoint(line, lineLength - 1);
+                auto startPos = this->document->conv.GetDestination().GetCodepoint(this->document->frame.GetLine(tagStart.line), tagStart.column);
+                auto fragment = line.substr(startPos.first, pos.first + pos.second);
+                result.push_back(std::make_pair(fragment, lastTag));
+                
                 if (lineNumber++ < this->document->frame.GetLastLine()) {
-                    fragments.Append(KgrDictionary {
-                        { "tag", false },
-                        { "content", KgrValue("\n") }
-                    });
+                    result.push_back(std::make_pair(std::string{"\n"}, nullptr));
                 }
             });
+
+            std::vector<std::pair<std::string, const TaggedTextFragment<int> *>> optimizedResult;
+            for (const auto &chunk : result) {
+                if (optimizedResult.empty()) {
+                    optimizedResult.push_back(chunk);
+                } else if (optimizedResult.back().second == chunk.second) {
+                    *std::prev(optimizedResult.end()) = std::make_pair(optimizedResult.back().first + chunk.first, chunk.second);
+                } else {
+                    optimizedResult.push_back(chunk);
+                }
+            }
+
+            for (const auto &chunk : optimizedResult) {
+                fragments.Append(KgrDictionary {
+                    { "tag", chunk.second != nullptr },
+                    { "content", KgrValue(this->document->conv.ReverseConvert(chunk.first)) }
+                });
+            }
             
             std::string realLine{this->document->text.GetLine(line)};
             auto realPos = this->charWidth.GetRealPosition(realLine, column, this->document->conv.GetDestination());
