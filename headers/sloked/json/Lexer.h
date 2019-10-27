@@ -71,7 +71,8 @@ namespace sloked {
         void Shift(std::size_t);
 
         std::istream &input;
-        std::string current_line;
+        std::string line_content;
+        std::string_view current_line;
         JsonSourcePosition position;
     };
 }

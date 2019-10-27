@@ -31,10 +31,6 @@ namespace sloked {
     }
     
     std::unique_ptr<JsonASTNode> JsonDefaultParser::Parse() {
-        return this->NextElement();
-    }
-
-    std::unique_ptr<JsonASTNode> JsonDefaultParser::NextElement() {
         return this->NextValue();
     }
 
@@ -63,7 +59,7 @@ namespace sloked {
         this->Shift();
         std::vector<std::shared_ptr<JsonASTNode>> elements;
         while (this->lexem.has_value() && !this->IsSymbol(JsonLexem::Symbol::ClosingBracket)) {
-            auto element = this->NextElement();
+            auto element = this->NextValue();
             if (element) {
                 elements.push_back(std::move(element));
             } else {
@@ -107,7 +103,7 @@ namespace sloked {
             }
             this->Shift();
 
-            auto value = this->NextElement();
+            auto value = this->NextValue();
             if (value) {
                 members.emplace(key, std::move(value));
             } else {
@@ -140,7 +136,11 @@ namespace sloked {
         }
 
         JsonSourcePosition position = this->lexem.value().position;
-        if (this->lexem.value().type == JsonLexem::Type::Boolean) {
+        if (this->HasString()) {
+            return std::make_unique<JsonConstantNode>(this->NextString(), position);
+        } else if (this->HasInteger()) {
+            return this->NextInteger();
+        } else if (this->lexem.value().type == JsonLexem::Type::Boolean) {
             auto value = std::get<bool>(this->lexem.value().value);
             this->Shift();
             return std::make_unique<JsonConstantNode>(value, position);
@@ -149,10 +149,6 @@ namespace sloked {
             return std::make_unique<JsonConstantNode>(position);
         } else if (this->HasNumber()) {
             return this->NextNumber();
-        } else if (this->HasInteger()) {
-            return this->NextInteger();
-        } else if (this->HasString()) {
-            return std::make_unique<JsonConstantNode>(this->NextString(), position);
         } else {
             this->ThrowError("Expected integer|number|boolean|string");
         }
@@ -206,7 +202,23 @@ namespace sloked {
     }
 
     void JsonDefaultParser::Shift() {
-        this->lexem = this->lexer.Next();
+        constexpr std::size_t BufferSize = 1024;
+        if (this->buffer.empty()) {
+            while (this->buffer.size() < BufferSize) {
+                auto lexem = this->lexer.Next();
+                if (lexem.has_value()) {
+                    this->buffer.push(std::move(lexem.value()));
+                } else {
+                    break;
+                }
+            }
+        }
+        if (!this->buffer.empty()) {
+            this->lexem = std::move(this->buffer.front());
+            this->buffer.pop();
+        } else {
+            this->lexem = {};
+        }
     }
 
     bool JsonDefaultParser::IsSymbol(JsonLexem::Symbol symbol) const {

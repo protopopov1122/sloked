@@ -22,6 +22,7 @@
 #include "sloked/kgr/Serialize.h"
 #include "sloked/json/Parser.h"
 #include <sstream>
+#include <regex>
 
 namespace sloked {
 
@@ -43,8 +44,14 @@ namespace sloked {
                 case JsonConstantNode::DataType::Boolean:
                     return KgrValue(value.AsBoolean());
 
-                case JsonConstantNode::DataType::String:
-                    return KgrValue(value.AsString());
+                case JsonConstantNode::DataType::String: {
+                    std::string str{value.AsString()};
+                    static std::regex newLine("\\\\n");
+                    static std::regex quote("\\\\\"");
+                    str = std::regex_replace(str, newLine, "\n");
+                    str = std::regex_replace(str, quote, "\"");
+                    return KgrValue(str);
+                }
             }
             return {};
         }
@@ -95,8 +102,14 @@ namespace sloked {
             case KgrValueType::Boolean:
                 return std::make_unique<JsonConstantNode>(value.AsBoolean(), DefaultPosition);
 
-            case KgrValueType::String:
-                return std::make_unique<JsonConstantNode>(value.AsString(), DefaultPosition);
+            case KgrValueType::String: {
+                std::string str{value.AsString()};
+                static std::regex newLine("\n");
+                static std::regex quote("\"");
+                str = std::regex_replace(str, newLine, "\\n");
+                str = std::regex_replace(str, quote, "\\\"");
+                return std::make_unique<JsonConstantNode>(str, DefaultPosition);
+            }
 
             case KgrValueType::Array: {
                 std::vector<std::shared_ptr<JsonASTNode>> array;

@@ -49,6 +49,7 @@
 #include "sloked/core/Synchronized.h"
 #include "sloked/net/PosixSocket.h"
 #include "sloked/kgr/net/MasterServer.h"
+#include "sloked/kgr/net/SlaveServer.h"
 
 using namespace sloked;
 
@@ -136,6 +137,8 @@ int main(int argc, const char **argv) {
     SlokedPosixSocketFactory socketFactory;
     KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", 1234));
     masterServer.Start();
+    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", 1234));
+    slaveServer.Start();
 
     char INPUT_PATH[1024], OUTPUT_PATH[1024];
     realpath(argv[1], INPUT_PATH);
@@ -216,6 +219,7 @@ int main(int argc, const char **argv) {
     }
     // tabs.CloseAll();
 
+    slaveServer.Stop();
     masterServer.Stop();
     ctxScreenManagerHandle.Stop();
     ctxManagerHandle.Stop();

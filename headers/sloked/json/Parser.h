@@ -25,6 +25,7 @@
 #include "sloked/json/AST.h"
 #include "sloked/json/Lexer.h"
 #include <iosfwd>
+#include <queue>
 
 namespace sloked {
 
@@ -40,7 +41,6 @@ namespace sloked {
         std::unique_ptr<JsonASTNode> Parse() override;
 
      private:
-        std::unique_ptr<JsonASTNode> NextElement();
         std::unique_ptr<JsonASTNode> NextValue();
         bool HasArray() const;
         std::unique_ptr<JsonASTNode> NextArray();
@@ -61,6 +61,7 @@ namespace sloked {
 
         JsonLexemStream &lexer;
         std::optional<JsonLexem> lexem;
+        std::queue<JsonLexem> buffer;
     };
 }
 
