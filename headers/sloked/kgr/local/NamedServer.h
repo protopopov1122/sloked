@@ -23,6 +23,7 @@
 #define SLOKED_KGR_LOCAL_NAMEDSERVER_H_
 
 #include "sloked/kgr/NamedServer.h"
+#include <mutex>
 
 namespace sloked {
 
@@ -39,6 +40,7 @@ namespace sloked {
      private:
         KgrServer &server;
         std::map<std::string, KgrServer::ServiceId> names;
+        std::mutex mtx;
     };
 }
 

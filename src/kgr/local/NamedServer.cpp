@@ -28,6 +28,7 @@ namespace sloked {
         : server(server) {}
 
     std::unique_ptr<KgrPipe> KgrLocalNamedServer::Connect(const std::string &name) {
+        std::unique_lock<std::mutex> lock(this->mtx);
         if (this->names.count(name) != 0) {
             return this->server.Connect(this->names.at(name));
         } else {
@@ -36,12 +37,14 @@ namespace sloked {
     }
 
     KgrLocalNamedServer::Connector KgrLocalNamedServer::GetConnector(const std::string &name) {
+        std::unique_lock<std::mutex> lock(this->mtx);
         return [this, name]() {
             return this->Connect(name);
         };
     }
     
     void KgrLocalNamedServer::Register(const std::string &name, std::unique_ptr<KgrService> service) {
+        std::unique_lock<std::mutex> lock(this->mtx);
         if (this->names.count(name) == 0) {
             this->names[name] = this->server.Register(std::move(service));
         } else {
@@ -50,10 +53,12 @@ namespace sloked {
     }
 
     bool KgrLocalNamedServer::Registered(const std::string &name) {
+        std::unique_lock<std::mutex> lock(this->mtx);
         return this->names.count(name) == 0;
     }
 
     void KgrLocalNamedServer::Deregister(const std::string &name) {
+        std::unique_lock<std::mutex> lock(this->mtx);
         if (this->names.count(name) != 0) {
             auto srvId = this->names.at(name);
             this->server.Deregister(srvId);

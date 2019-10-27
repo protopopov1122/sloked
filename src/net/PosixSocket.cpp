@@ -76,7 +76,7 @@ namespace sloked {
 
     std::size_t SlokedPosixSocket::Available() {
         if (IsSocketValid(this->socket)) {
-            unsigned long size;
+            int size;
             ioctl(this->socket, FIONREAD, &size);
             return static_cast<std::size_t>(size);
         } else {

@@ -21,7 +21,7 @@
 
 #include "sloked/kgr/net/MasterServer.h"
 #include "sloked/core/Error.h"
-#include "sloked/core/StateMachine.h"
+#include "sloked/kgr/net/Interface.h"
 #include <thread>
 #include <cstring>
 #include <iostream>
@@ -33,49 +33,74 @@ namespace sloked {
         Destroy
     };
 
-    class KgrMasterNetServerContext : public SlokedStateMachine<ContextState> {
+    class KgrMasterNetServerContext {
      public:
-        KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work)
-            : SlokedStateMachine<ContextState>(ContextState::Initial), socket(std::move(socket)), work(work) {
-            this->BindState(ContextState::Initial, &KgrMasterNetServerContext::OnInitial);
-            this->BindState(ContextState::Loop, [this] {
-                if (std::string_view(reinterpret_cast<const char *>(this->data.data()), this->data.size()) == "\r\n") {
-                    this->Transition(ContextState::Destroy);
-                }
-                this->socket->Write(SlokedSpan(this->data.data(), this->data.size()));
-                this->data.clear();
+        KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, KgrNamedServer &server)
+            : net(std::move(socket)), work(work), server(server), nextPipeId(0) {
+
+            this->net.BindMethod("connect", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+                std::unique_lock<std::mutex> lock(this->mtx);
+                const auto &service = params.AsString();
+                auto pipe = this->server.Connect(service);
+                auto pipeId = this->nextPipeId++;
+                pipe->SetMessageListener([this, pipeId] {
+                    std::unique_lock<std::mutex> lock(this->mtx);
+                    auto &pipe = *this->pipes.at(pipeId);
+                    while (!pipe.Empty()) {
+                        this->net.Invoke("send", KgrDictionary {
+                            { "pipe", pipeId },
+                            { "data", pipe.Read() }
+                        });
+                    }
+                });
+                this->pipes.emplace(pipeId, std::move(pipe));
+                rsp.Result(pipeId);
             });
-            this->BindState(ContextState::Destroy, &KgrMasterNetServerContext::OnDestroy);
+
+            this->net.BindMethod("send", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+                std::unique_lock<std::mutex> lock(this->mtx);
+                const auto pipeId = params.AsDictionary()["pipe"].AsInt();
+                const auto &data = params.AsDictionary()["data"];
+                if (this->pipes.count(pipeId)) {
+                    this->pipes.at(pipeId)->Write(KgrValue{data});
+                    rsp.Result(true);
+                } else {
+                    rsp.Result(false);
+                }
+            });
+
+            this->net.BindMethod("close", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+                std::unique_lock<std::mutex> lock(this->mtx);
+                const auto pipeId = params.AsInt();
+                if (this->pipes.count(pipeId)) {
+                    this->pipes.erase(pipeId);
+                    rsp.Result(true);
+                } else {
+                    rsp.Result(false);
+                }
+            });
         }
 
         void Start() {
             constexpr long Timeout = 50;
-            this->RunStep();
-            while (work.load() && this->GetState() == ContextState::Loop) {
-                if (this->socket->Wait(Timeout)) {
-                    auto data = this->socket->Read(this->socket->Available());
-                    this->data.insert(this->data.end(), data.begin(), data.end());
-                    this->RunStep();
+            while (work.load() && this->net.Valid()) {
+                if (this->net.Wait(Timeout)) {
+                    this->net.Receive();
+                    this->net.Process();
                 }
             }
-            this->RunTransition(ContextState::Destroy);
+            if (this->net.Valid()) {
+                this->net.Close();
+            }
         }
 
      private:
-        void OnInitial() {
-            const char *MSG = "HELLO\n";
-            this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(MSG), strlen(MSG)));
-            this->Transition(ContextState::Loop);
-        }
-
-        void OnDestroy() {
-            const char *BYE = "BYE\n";
-            this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(BYE), strlen(BYE)));
-        }
-
-        std::unique_ptr<SlokedSocket> socket;
+        KgrNetInterface net;
         const std::atomic<bool> &work;
-        std::vector<uint8_t> data;
+        KgrNamedServer &server;
+        std::map<int64_t, std::unique_ptr<KgrPipe>> pipes;
+        int64_t nextPipeId;
+        std::mutex mtx;
     };
 
     KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket)
@@ -106,7 +131,7 @@ namespace sloked {
                 if (client) {
                     SlokedCounter<std::size_t>::Handle counterHandle(this->workers);
                     std::thread([this, counter = std::move(counterHandle), socket = std::move(client)]() mutable {
-                        KgrMasterNetServerContext ctx(std::move(socket), this->work);
+                        KgrMasterNetServerContext ctx(std::move(socket), this->work, this->server);
                         ctx.Start();
                     }).detach();
                 }
