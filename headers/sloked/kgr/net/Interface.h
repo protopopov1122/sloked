@@ -25,6 +25,8 @@
 #include "sloked/kgr/Value.h"
 #include "sloked/net/Socket.h"
 #include <functional>
+#include <mutex>
+#include <condition_variable>
 #include <queue>
 #include <map>
 
@@ -53,6 +55,7 @@ namespace sloked {
             ResponseHandle &operator=(const ResponseHandle &) = delete;
             ResponseHandle &operator=(ResponseHandle &&) = default;
             bool HasResponse() const;
+            bool WaitResponse(long) const;
             Response GetResponse() const;
 
          private:
@@ -97,6 +100,8 @@ namespace sloked {
         int64_t nextId;
         std::queue<KgrValue> incoming;
         std::map<int64_t, std::queue<Response>> responses;
+        std::mutex response_mtx;
+        std::condition_variable response_cv;
         std::map<std::string, std::function<void(const std::string &, const KgrValue &, Responder &)>> methods;
     };
 }

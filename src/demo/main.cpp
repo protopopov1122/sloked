@@ -137,8 +137,12 @@ int main(int argc, const char **argv) {
     SlokedPosixSocketFactory socketFactory;
     KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", 1234));
     masterServer.Start();
+    KgrMasterNetServer masterScreenServer(screenServer, socketFactory.Bind("localhost", 1235));
+    masterScreenServer.Start();
     KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", 1234));
     slaveServer.Start();
+    KgrSlaveNetServer slaveScreenServer(socketFactory.Connect("localhost", 1235));
+    slaveScreenServer.Start();
 
     char INPUT_PATH[1024], OUTPUT_PATH[1024];
     realpath(argv[1], INPUT_PATH);
@@ -161,12 +165,12 @@ int main(int argc, const char **argv) {
     server.Register("text::render", std::make_unique<SlokedTextRenderService>(documents, charWidth, fragmentFactory, ctxManager));
     server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, ctxManager));
     server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
-    screenServer.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), ctxScreenManager));
+    screenServer.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, slaveServer.GetConnector("text::cursor"), slaveServer.GetConnector("text::render"), ctxScreenManager));
     screenServer.Register("screen::input", std::make_unique<SlokedScreenInputService>(screenHandle, terminalEncoding, ctxScreenManager));
     screenServer.Register("screen::text::pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxScreenManager));
 
-    SlokedScreenClient screenClient(screenServer.Connect("screen"));
-    SlokedDocumentSetClient documentClient(server.Connect("documents"));
+    SlokedScreenClient screenClient(slaveScreenServer.Connect("screen"));
+    SlokedDocumentSetClient documentClient(slaveServer.Connect("documents"));
     documentClient.Open(INPUT_PATH, "system", "system");
 
     screenClient.Handle.NewMultiplexer("/");

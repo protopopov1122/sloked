@@ -82,7 +82,7 @@ namespace sloked {
         }
 
         void Start() {
-            constexpr long Timeout = 50;
+            constexpr long Timeout = 100;
             while (work.load() && this->net.Valid()) {
                 if (this->net.Wait(Timeout)) {
                     this->net.Receive();
@@ -126,7 +126,7 @@ namespace sloked {
             lock.unlock();
             SlokedCounter<std::size_t>::Handle workerCounter(this->workers);
             while (this->work.load()) {
-                constexpr long Timeout = 1;
+                constexpr long Timeout = 100;
                 auto client = this->srvSocket->Accept(Timeout);
                 if (client) {
                     SlokedCounter<std::size_t>::Handle counterHandle(this->workers);

@@ -23,6 +23,9 @@
 #include "sloked/core/Error.h"
 #include "sloked/core/Locale.h"
 #include "sloked/kgr/Serialize.h"
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 namespace sloked {
 
@@ -51,18 +54,28 @@ namespace sloked {
 
     KgrNetInterface::ResponseHandle::ResponseHandle(KgrNetInterface &net, int64_t id)
         : net(&net), id(id) {
+        std::unique_lock<std::mutex> lock(this->net->response_mtx);
         this->net->responses[this->id] = {};
     }
 
     KgrNetInterface::ResponseHandle::~ResponseHandle() {
+        std::unique_lock<std::mutex> lock(this->net->response_mtx);
         this->net->responses.erase(this->id);
     }
 
     bool KgrNetInterface::ResponseHandle::HasResponse() const {
+        std::unique_lock<std::mutex> lock(this->net->response_mtx);
+        return !this->net->responses.at(this->id).empty();
+    }
+
+    bool KgrNetInterface::ResponseHandle::WaitResponse(long timeout) const {
+        std::unique_lock<std::mutex> lock(this->net->response_mtx);
+        this->net->response_cv.wait_for(lock, timeout * 1ms);
         return !this->net->responses.at(this->id).empty();
     }
 
     KgrNetInterface::Response KgrNetInterface::ResponseHandle::GetResponse() const {
+        std::unique_lock<std::mutex> lock(this->net->response_mtx);
         auto &queue = this->net->responses.at(this->id);
         if (!queue.empty()) {
             auto res = std::move(queue.front());
@@ -160,7 +173,9 @@ namespace sloked {
         this->socket->Close();
         this->buffer.clear();
         this->incoming = {};
+        std::unique_lock<std::mutex> lock(this->response_mtx);
         this->responses.clear();
+        this->response_cv.notify_all();
     }
 
     void KgrNetInterface::BindMethod(const std::string &method, std::function<void(const std::string &, const KgrValue &, Responder &)> handler) {
@@ -197,11 +212,14 @@ namespace sloked {
 
     void KgrNetInterface::ActionResponse(const KgrValue &msg) {
         int64_t id = msg.AsDictionary()["id"].AsInt();
+        std::unique_lock<std::mutex> lock(this->response_mtx);
         if (this->responses.count(id) != 0) {
             if (msg.AsDictionary().Has("result")) {
                 this->responses.at(id).push(Response(msg.AsDictionary()["result"], true));
+                this->response_cv.notify_all();
             } else if (msg.AsDictionary().Has("error")) {
                 this->responses.at(id).push(Response(msg.AsDictionary()["error"], true));
+                this->response_cv.notify_all();
             }
         }
     }
@@ -210,6 +228,8 @@ namespace sloked {
         this->socket->Close();
         this->buffer.clear();
         this->incoming = {};
+        std::unique_lock<std::mutex> lock(this->response_mtx);
         this->responses.clear();
+        this->response_cv.notify_all();
     }
 }

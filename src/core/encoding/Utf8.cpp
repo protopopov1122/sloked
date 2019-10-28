@@ -124,13 +124,14 @@ namespace sloked {
         }
 
         bool IterateCodepoints(std::string_view str, std::function<bool(std::size_t, std::size_t, char32_t)> callback) const override {
+            bool res = true;
+            const std::size_t string_len = str.size();
 #define ASSERT_WIDTH(x) do { \
-                            if (i + (x) - 1 >= str.size()) { \
+                            if (i + (x) - 1 >= string_len) { \
                                 return false; \
                             } \
                         } while (false)
-            bool res = true;
-            for (std::size_t i = 0; i < str.size() && res;) {
+            for (std::size_t i = 0; i < string_len && res;) {
                 char32_t result;
                 std::size_t width = 0;
                 char current = str[i];

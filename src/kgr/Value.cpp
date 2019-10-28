@@ -161,11 +161,39 @@ namespace sloked {
         }
     }
 
+    bool KgrDictionary::Has(const char *key) const {
+        return this->content.count(key) != 0;
+    }
+
+    const KgrValue &KgrDictionary::Get(const char *key) const {
+        if (this->Has(key)) {
+            return this->content.at(key);
+        } else {
+            throw SlokedError("KgrDictionary: Unknown key \'" + std::string{key} + "\'");
+        }
+    }
+
     const KgrValue &KgrDictionary::operator[](const std::string &key) const {
         if (this->Has(key)) {
             return this->content.at(key);
         } else {
             throw SlokedError("KgrDictionary: Unknown key \'" + key + "\'");
+        }
+    }
+
+    KgrValue &KgrDictionary::operator[](const char *key) {
+        if (this->Has(key)) {
+            return this->content[key];
+        } else {
+            throw SlokedError("KgrDictionary: Unknown key \'" + std::string{key} + "\'");
+        }
+    }
+
+    const KgrValue &KgrDictionary::operator[](const char *key) const {
+        if (this->Has(key)) {
+            return this->content.at(key);
+        } else {
+            throw SlokedError("KgrDictionary: Unknown key \'" + std::string{key} + "\'");
         }
     }
 

@@ -28,6 +28,9 @@
 #include <thread>
 #include <condition_variable>
 #include <list>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 namespace sloked {
 
@@ -128,6 +131,7 @@ namespace sloked {
                     this->notifications = 0;
                     notificationLock.unlock();
                     this->manager.Run();
+                    std::this_thread::sleep_for(5ms);
                 }
             });
         }

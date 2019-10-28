@@ -100,8 +100,12 @@ namespace sloked {
         bool Empty() const;
         bool Has(const std::string &) const;
         const KgrValue &Get(const std::string &) const;
+        bool Has(const char *) const;
+        const KgrValue &Get(const char *) const;
         const KgrValue &operator[](const std::string &) const;
         KgrValue &operator[](const std::string &);
+        const KgrValue &operator[](const char *) const;
+        KgrValue &operator[](const char *);
 
         ConstIterator begin() const;
         ConstIterator end() const;

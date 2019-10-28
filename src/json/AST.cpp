@@ -37,7 +37,7 @@ namespace sloked {
                 break;
 
             case JsonConstantNode::DataType::Number:
-                this->out << node.AsNumber();
+                this->out << std::fixed << node.AsNumber();
                 break;
 
             case JsonConstantNode::DataType::Boolean:

@@ -69,7 +69,7 @@ namespace sloked {
         this->work = true;
         SlokedCounter<std::size_t>::Handle handle(this->workers);
         std::thread([this, handle = std::move(handle)] {
-            constexpr long Timeout = 50;
+            constexpr long Timeout = 100;
             while (this->work.load() && this->net.Valid()) {
                 if (this->net.Wait(Timeout)) {
                     this->net.Receive();
@@ -97,7 +97,8 @@ namespace sloked {
             return nullptr;
         }
         auto rsp = this->net.Invoke("connect", service);
-        while (!rsp.HasResponse() && this->work.load()) {}
+        constexpr long Timeout = 50;
+        while (!rsp.WaitResponse(Timeout) && this->work.load()) {}
         if (rsp.HasResponse()) {
             const auto &res = rsp.GetResponse();
             if (res.HasResult()) {
