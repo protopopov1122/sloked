@@ -28,44 +28,6 @@
 
 namespace sloked {
 
-    class TextCharWidthIterator {
-     public:
-        TextCharWidthIterator(std::string_view line, TextPosition::Column offset, const Encoding &encoding, const SlokedCharWidth &charWidth)
-            : line(line), column(0), offset(offset), encoding(encoding), charWidth(charWidth) {
-            this->line_codepoints = this->encoding.CodepointCount(this->line);
-            this->line_real_length = this->charWidth.GetRealPosition(this->line, this->line_codepoints, this->encoding).second;
-            if  (this->offset < this->line_real_length) {
-                this->SeekColumn();
-            }
-        }
-
-        TextPosition::Column GetRealColumn() const {
-            return this->column;
-        }
-
-        void Next() {
-            if (this->offset++ < this->line_real_length) {
-                this->SeekColumn();
-            }
-        }
-
-     private:
-        void SeekColumn() {
-            auto realPos = this->charWidth.GetRealPosition(this->line, this->column + 1, this->encoding);
-            while (realPos.first <= this->offset && this->column + 1 < this->line_codepoints) {
-                realPos = this->charWidth.GetRealPosition(this->line, ++this->column + 1, this->encoding);
-            }
-        }
-
-        std::string line;
-        std::size_t line_codepoints;
-        std::size_t line_real_length;
-        TextPosition::Column column;
-        TextPosition::Column offset;
-        const Encoding &encoding;
-        const SlokedCharWidth &charWidth;
-    };
-
     class SlokedTextRenderContext : public SlokedServiceContext {
      public:
         SlokedTextRenderContext(std::unique_ptr<KgrPipe> pipe,
@@ -98,39 +60,14 @@ namespace sloked {
                 });
 
             KgrArray fragments;
-            TextPosition::Line lineNumber = 0;
             std::vector<std::pair<std::string, const TaggedTextFragment<int> *>> result;
-            this->document->frame.Visit(0, std::min(static_cast<TextPosition::Line>(dim["height"].AsInt()), static_cast<TextPosition::Line>(this->document->frame.GetLastLine()) + 1), [&](const auto lineView) {
-                std::string line{lineView};
-                std::string fullLine{this->document->text.GetLine(this->document->frame.GetOffset().line + lineNumber)};
-
-                const auto lineLength = this->document->conv.GetDestination().CodepointCount(line);
-                std::size_t frameOffset = this->document->frame.GetOffset().column;
-                
-                const TaggedTextFragment<int> *lastTag = nullptr;
-                TextPosition tagStart{0, 0};
-                TextCharWidthIterator iter(fullLine, frameOffset, this->document->conv.GetDestination(), this->charWidth);
-                for (TextPosition::Column column = 0; column < lineLength; column++, iter.Next()) {
-                    auto tag = this->document->tags.Get(TextPosition{this->document->frame.GetOffset().line + lineNumber, iter.GetRealColumn()});
-                    if (tag != lastTag) {
-                        auto pos = this->document->conv.GetDestination().GetCodepoint(line, column);
-                        auto startPos = this->document->conv.GetDestination().GetCodepoint(line, tagStart.column);
-                        auto fragment = line.substr(startPos.first, pos.first - startPos.first);
-                        result.push_back(std::make_pair(fragment, lastTag));
-                        // fragments.Append(KgrDictionary {
-                        //     { "tag", lastTag != nullptr },
-                        //     { "content", KgrValue(this->document->conv.ReverseConvert(fragment)) }
-                        // });
-                        lastTag = tag;
-                        tagStart = {lineNumber, column};
-                    }
+            this->document->frame.VisitSymbols([&](auto lineNumber, auto columnOffset, const auto &line) {
+                for (std::size_t column = 0; column < line.size(); column++) {
+                    auto tag = this->document->tags.Get(TextPosition{lineNumber, columnOffset + column});
+                    result.push_back(std::make_pair(line.at(column).second, tag));
                 }
-                auto pos = this->document->conv.GetDestination().GetCodepoint(line, lineLength - 1);
-                auto startPos = this->document->conv.GetDestination().GetCodepoint(this->document->frame.GetLine(tagStart.line), tagStart.column);
-                auto fragment = line.substr(startPos.first, pos.first + pos.second);
-                result.push_back(std::make_pair(fragment, lastTag));
                 
-                if (lineNumber++ < this->document->frame.GetLastLine()) {
+                if (lineNumber + 1 < this->document->text.GetLastLine()) {
                     result.push_back(std::make_pair(std::string{"\n"}, nullptr));
                 }
             });

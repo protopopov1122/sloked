@@ -20,6 +20,7 @@
 */
 
 #include "sloked/text/TextFrame.h"
+#include <list>
 #include <iostream>
 #include <sstream>
 
@@ -45,9 +46,7 @@ namespace sloked {
 
     std::string_view TextFrameView::GetLine(std::size_t idx) const {
         if (this->offset.line + idx <= this->text.GetLastLine() && idx <= this->size.line) {
-            std::string line {this->PreprocessLine(this->text.GetLine(this->offset.line + idx))};
-            this->buffer[idx] = line;
-            return this->buffer[idx];
+            return this->buffer[idx].content;
         } else {
             return "";
         }
@@ -74,7 +73,9 @@ namespace sloked {
         }
         this->size = dim;
         this->buffer.clear();
-        this->buffer.insert(this->buffer.end(), this->size.line + 1, "");
+        this->text.Visit(this->offset.line, std::min(this->size.line, static_cast<TextPosition::Line>(this->text.GetLastLine() - this->offset.line) + 1), [&](const auto line) {
+            this->buffer.push_back(this->CutLine(line));
+        });
     }
 
     const TextPosition &TextFrameView::GetOffset() const {
@@ -83,6 +84,13 @@ namespace sloked {
 
     const TextPosition &TextFrameView::GetSize() const {
         return this->size;
+    }
+
+    void TextFrameView::VisitSymbols(std::function<void(std::size_t, std::size_t, const std::vector<std::pair<char32_t, std::string>> &)> callback) const {
+        std::size_t counter = this->offset.line;
+        for (const auto &line : this->buffer) {
+            callback(counter++, line.leftOffset, line.symbols);
+        }
     }
 
     std::ostream &TextFrameView::dump(std::ostream &os) const {
@@ -99,29 +107,64 @@ namespace sloked {
     void TextFrameView::VisitLines(std::function<void(std::size_t, std::string_view)> callback) const {
         std::size_t lineId = 0;
         this->text.Visit(this->offset.line, std::min(this->size.line, static_cast<TextPosition::Line>(this->text.GetLastLine() - this->offset.line) + 1), [&](const auto line) {
-            callback(lineId++, this->PreprocessLine(line));
+            callback(lineId, this->buffer[lineId].content);
+            lineId++;
         });
     }
 
-    std::string TextFrameView::PreprocessLine(std::string_view line) const {
-        std::stringstream ss;
+    TextFrameView::Line TextFrameView::CutLine(std::string_view line) const {
+        std::list<std::pair<char32_t, std::string>> content;
+        std::stringstream fullLine;
         this->encoding.IterateCodepoints(line, [&](auto start, auto length, auto chr) {
             if (chr != u'\t') {
-                ss << line.substr(start, length);
+                content.push_back(std::make_pair(chr, std::string{line.substr(start, length)}));
+                fullLine << line.substr(start, length);
             } else {
-                ss << this->charWidth.GetTab(this->encoding);
+                content.push_back(std::make_pair(chr, this->charWidth.GetTab(this->encoding)));
+                fullLine << this->charWidth.GetTab(this->encoding);
             }
             return true;
         });
-        auto offsetLine = this->encoding.GetCodepoint(ss.str(), this->offset.column);
-        auto sizeLine = this->encoding.GetCodepoint(ss.str(), this->offset.column + this->size.column);
-        if (offsetLine.second != 0) {
-            return ss.str().substr(offsetLine.first,
-                sizeLine.second != 0
-                    ? sizeLine.first - offsetLine.first
-                    : std::string::npos);
+        auto leftOffset = this->encoding.GetCodepoint(fullLine.str(), this->offset.column);
+        auto rightOffset = this->encoding.GetCodepoint(fullLine.str(), this->offset.column + this->size.column);
+        std::size_t leftSymbolOffset = 0;
+        if (leftOffset.second != 0) {
+            TextPosition::Column currentPosition = 0;
+            for (auto it = content.begin(); it != content.end();) {
+                const auto &symbol = *it;
+                auto length = symbol.second.size();
+                if (currentPosition + length < leftOffset.first) {
+                    leftSymbolOffset++;
+                    auto curIt = it++;
+                    content.erase(curIt);
+                } else if (currentPosition < leftOffset.first && currentPosition + length >= leftOffset.first) {
+                    auto cut = leftOffset.first - currentPosition;
+                    it->second = it->second.substr(cut, it->second.size() - cut);
+                    ++it;
+                } else if (currentPosition >= leftOffset.first && (currentPosition + length < rightOffset.first || rightOffset.second == 0)) {
+                    ++it;
+                } else if (currentPosition < rightOffset.first && currentPosition + length >= rightOffset.first) {
+                    auto cut = currentPosition + length - rightOffset.first;
+                    it->second = it->second.substr(cut, it->second.size() - cut);
+                    ++it;
+                } else {
+                    content.erase(it, content.end());
+                    break;
+                }
+                currentPosition += length;
+            }
+
+            fullLine.str("");
+            for (const auto &symbol : content) {
+                fullLine << symbol.second;
+            }
+            return {
+                std::vector<std::pair<char32_t, std::string>>(content.begin(), content.end()),
+                fullLine.str(),
+                leftSymbolOffset
+            };
         } else {
-            return "";
+            return {{}, "", 0};
         }
     }
 }
