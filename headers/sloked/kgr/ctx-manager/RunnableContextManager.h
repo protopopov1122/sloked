@@ -131,7 +131,6 @@ namespace sloked {
                     this->notifications = 0;
                     notificationLock.unlock();
                     this->manager.Run();
-                    std::this_thread::sleep_for(5ms);
                 }
             });
         }
