@@ -24,19 +24,17 @@
 namespace sloked {
 
     SlokedCharWidth::SlokedCharWidth()
-        : tab_width(4) {}
+        : tab_width(4), tab(tab_width, U' ') {}
 
     std::size_t SlokedCharWidth::GetCharWidth(char32_t chr) const {
-        switch (chr) {
-            case '\t':
-                return this->tab_width;
-            
-            default:
-                return 1;
+        if (chr != '\t') {
+            return 1;
+        } else {
+            return this->tab_width;
         }
     }
     
-    std::pair<std::size_t, std::size_t> SlokedCharWidth::GetRealPosition(const std::string &str, std::size_t idx, const Encoding &encoding) const {
+    std::pair<std::size_t, std::size_t> SlokedCharWidth::GetRealPosition(std::string_view str, std::size_t idx, const Encoding &encoding) const {
         std::pair<std::size_t, std::size_t> res{0, 0};
         encoding.IterateCodepoints(str, [&](auto start, auto length, auto value) {
             res.first = res.second;
@@ -47,7 +45,7 @@ namespace sloked {
     }
 
     std::string SlokedCharWidth::GetTab(const Encoding &encoding) const {
-        return encoding.Encode(std::u32string(this->tab_width, U' '));
+        return encoding.Encode(this->tab);
     }
 
     void SlokedCharWidth::SetTabWidth(std::size_t width) {

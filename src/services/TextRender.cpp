@@ -60,37 +60,46 @@ namespace sloked {
                 });
 
             KgrArray fragments;
-            std::vector<std::pair<std::string, const TaggedTextFragment<int> *>> result;
+            std::optional<std::pair<std::string, const TaggedTextFragment<int> *>> back;
             this->document->frame.VisitSymbols([&](auto lineNumber, auto columnOffset, const auto &line) {
                 for (std::size_t column = 0; column < line.size(); column++) {
                     auto tag = this->document->tags.Get(TextPosition{lineNumber, columnOffset + column});
-                    result.push_back(std::make_pair(std::string{line.at(column)}, tag));
+                    if (!back.has_value()) {
+                        back = std::make_pair(line.at(column), tag);
+                    } else if (back.value().second != tag) {
+                        fragments.Append(KgrDictionary {
+                            { "tag", back.value().second != nullptr },
+                            { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
+                        });
+                        back = std::make_pair(line.at(column), tag);
+                    } else {
+                        back.value().first.append(line.at(column));
+                    }
                 }
                 
                 if (lineNumber + 1 < this->document->text.GetLastLine()) {
-                    result.push_back(std::make_pair(std::string{"\n"}, nullptr));
+                    if (!back.has_value()) {
+                        back = std::make_pair("\n", nullptr);
+                    } else if (back.value().second != nullptr) {
+                        fragments.Append(KgrDictionary {
+                            { "tag", back.value().second != nullptr },
+                            { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
+                        });
+                        back = std::make_pair("\n", nullptr);
+                    } else {
+                        back.value().first.append("\n");
+                    }
                 }
+
             });
-
-            std::vector<std::pair<std::string, const TaggedTextFragment<int> *>> optimizedResult;
-            for (const auto &chunk : result) {
-                if (optimizedResult.empty()) {
-                    optimizedResult.push_back(chunk);
-                } else if (optimizedResult.back().second == chunk.second) {
-                    *std::prev(optimizedResult.end()) = std::make_pair(optimizedResult.back().first + chunk.first, chunk.second);
-                } else {
-                    optimizedResult.push_back(chunk);
-                }
-            }
-
-            for (const auto &chunk : optimizedResult) {
+            if (back.has_value()) {
                 fragments.Append(KgrDictionary {
-                    { "tag", chunk.second != nullptr },
-                    { "content", KgrValue(this->document->conv.ReverseConvert(chunk.first)) }
+                    { "tag", back.value().second != nullptr },
+                    { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
                 });
             }
             
-            std::string realLine{this->document->text.GetLine(line)};
+            auto realLine = this->document->text.GetLine(line);
             auto realPos = this->charWidth.GetRealPosition(realLine, column, this->document->conv.GetDestination());
             auto realColumn = column < this->document->conv.GetDestination().CodepointCount(realLine) ? realPos.first : realPos.second;
             const auto &offset = this->document->frame.GetOffset();

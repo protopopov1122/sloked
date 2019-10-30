@@ -433,8 +433,7 @@ namespace sloked {
         if (flush) {
             fprintf(this->state->fd, "%s", this->buffer.str().c_str());
             fflush(this->state->fd);
-            this->buffer.clear();
-            this->buffer.str(std::string());
+            this->buffer.str("");
             this->disable_flush = false;
         } else {
             this->disable_flush = true;

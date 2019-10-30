@@ -171,13 +171,22 @@ namespace sloked {
             return std::string(buffer);
         }
 
-        std::string Encode(std::u32string_view u32str) const override {
-            std::unique_ptr<char[]> buffer(new char[u32str.size() * 4]);
-            char *buffer_ptr = buffer.get();
+        static char *EncodeImpl(char *buffer, std::u32string_view u32str) {
             for (char32_t u32chr : u32str) {
-                buffer_ptr += Char32ToUtf8(buffer_ptr, u32chr);
+                buffer += Char32ToUtf8(buffer, u32chr);
             }
-            return std::string(buffer.get(), buffer_ptr - buffer.get());
+            return buffer;
+        }
+
+        std::string Encode(std::u32string_view u32str) const override {
+            constexpr std::size_t MaxStaticBuffer = 16;
+            if (u32str.size() < MaxStaticBuffer){
+                char buffer[MaxStaticBuffer * 4];
+                return std::string(buffer, EncodeImpl(buffer, u32str) - buffer);
+            } else {
+                std::unique_ptr<char[]> buffer(new char[u32str.size() * 4]);
+                return std::string(buffer.get(), EncodeImpl(buffer.get(), u32str) - buffer.get());
+            }
         }
     };
 

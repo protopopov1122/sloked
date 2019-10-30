@@ -71,12 +71,13 @@ namespace sloked {
     void BufferedTerminal::Flush() {
         this->term.Flush(false);
         this->term.ShowCursor(false);
-        std::unique_ptr<char32_t[]> buffer(new char32_t[this->width * this->height]);
+        const auto fullSize = this->width * this->height;
+        std::unique_ptr<char32_t[]> buffer(new char32_t[fullSize]);
         std::size_t buffer_ptr = 0;
         std::size_t buffer_start = 0;
 
         BufferedGraphicsMode prev_g;
-        for (std::size_t i = 0; i < this->width * this->height; i++) {
+        for (std::size_t i = 0; i < fullSize; i++) {
             Character &chr = this->buffer[i];
             if (chr.graphics.has_value() && !(chr.graphics.value() == prev_g)) {
                 this->dump_buffer(std::u32string_view(buffer.get(), buffer_ptr), buffer_start);
@@ -104,9 +105,13 @@ namespace sloked {
     }
 
     void BufferedTerminal::UpdateSize() {
+        const auto prevSize = this->width * this->height;
         this->width = term.GetWidth();
         this->height = term.GetHeight();
-        this->buffer = std::unique_ptr<Character[]>(new Character[this->width * this->height]);
+        const auto newSize = this->width * this->height;
+        if (prevSize < newSize) {
+            this->buffer = std::unique_ptr<Character[]>(new Character[this->width * this->height]);
+        }
     }
     
     void BufferedTerminal::SetPosition(Line l, Column c) {

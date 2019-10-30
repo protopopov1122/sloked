@@ -81,17 +81,26 @@ namespace sloked {
             return std::string(buffer, 4);
         }
 
-        std::string Encode(std::u32string_view u32str) const {
-            std::unique_ptr<char[]> buffer(new char[u32str.size() * 4]);
-            char *buffer_ptr = buffer.get();
+        static char *EncodeImpl(char *buffer, std::u32string_view u32str) {
             for (std::size_t i = 0; i < u32str.size(); i++) {
                 char32_t chr = u32str[i];
-                *buffer_ptr++ = static_cast<char>(chr & 0xff);
-                *buffer_ptr++ = static_cast<char>((chr >> 8) & 0xff);
-                *buffer_ptr++ = static_cast<char>((chr >> 16) & 0xff);
-                *buffer_ptr++ = static_cast<char>((chr >> 24) & 0xff);
+                *buffer++ = static_cast<char>(chr & 0xff);
+                *buffer++ = static_cast<char>((chr >> 8) & 0xff);
+                *buffer++ = static_cast<char>((chr >> 16) & 0xff);
+                *buffer++ = static_cast<char>((chr >> 24) & 0xff);
             }
-            return std::string(buffer.get(), buffer_ptr - buffer.get());
+            return buffer;
+        }
+
+        std::string Encode(std::u32string_view u32str) const {
+            constexpr std::size_t MaxStaticBuffer = 16;
+            if (u32str.size() < MaxStaticBuffer){
+                char buffer[MaxStaticBuffer * 4];
+                return std::string(buffer, EncodeImpl(buffer, u32str) - buffer);
+            } else {
+                std::unique_ptr<char[]> buffer(new char[u32str.size() * 4]);
+                return std::string(buffer.get(), EncodeImpl(buffer.get(), u32str) - buffer.get());
+            }
         }
     };
     
