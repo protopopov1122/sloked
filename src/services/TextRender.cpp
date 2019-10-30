@@ -61,6 +61,7 @@ namespace sloked {
 
             KgrArray fragments;
             std::optional<std::pair<std::string, const TaggedTextFragment<int> *>> back;
+            std::string newline = this->document->conv.Convert("\n");
             this->document->frame.VisitSymbols([&](auto lineNumber, auto columnOffset, const auto &line) {
                 for (std::size_t column = 0; column < line.size(); column++) {
                     auto tag = this->document->tags.Get(TextPosition{lineNumber, columnOffset + column});
@@ -79,15 +80,15 @@ namespace sloked {
                 
                 if (lineNumber + 1 < this->document->text.GetLastLine()) {
                     if (!back.has_value()) {
-                        back = std::make_pair("\n", nullptr);
+                        back = std::make_pair(newline, nullptr);
                     } else if (back.value().second != nullptr) {
                         fragments.Append(KgrDictionary {
                             { "tag", back.value().second != nullptr },
                             { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
                         });
-                        back = std::make_pair("\n", nullptr);
+                        back = std::make_pair(newline, nullptr);
                     } else {
-                        back.value().first.append("\n");
+                        back.value().first.append(newline);
                     }
                 }
 
