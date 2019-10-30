@@ -64,7 +64,7 @@ namespace sloked {
             this->document->frame.VisitSymbols([&](auto lineNumber, auto columnOffset, const auto &line) {
                 for (std::size_t column = 0; column < line.size(); column++) {
                     auto tag = this->document->tags.Get(TextPosition{lineNumber, columnOffset + column});
-                    result.push_back(std::make_pair(line.at(column).second, tag));
+                    result.push_back(std::make_pair(std::string{line.at(column)}, tag));
                 }
                 
                 if (lineNumber + 1 < this->document->text.GetLastLine()) {

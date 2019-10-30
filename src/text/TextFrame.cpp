@@ -46,7 +46,7 @@ namespace sloked {
 
     std::string_view TextFrameView::GetLine(std::size_t idx) const {
         if (this->offset.line + idx <= this->text.GetLastLine() && idx <= this->size.line) {
-            return this->buffer[idx].content;
+            return this->buffer[idx] ? this->buffer[idx]->content : "";
         } else {
             return "";
         }
@@ -86,10 +86,14 @@ namespace sloked {
         return this->size;
     }
 
-    void TextFrameView::VisitSymbols(std::function<void(std::size_t, std::size_t, const std::vector<std::pair<char32_t, std::string>> &)> callback) const {
+    void TextFrameView::VisitSymbols(std::function<void(std::size_t, std::size_t, const std::vector<std::string_view> &)> callback) const {
         std::size_t counter = this->offset.line;
         for (const auto &line : this->buffer) {
-            callback(counter++, line.leftOffset, line.symbols);
+            if (line) {
+                callback(counter++, line->leftOffset, line->symbols);
+            } else {
+                callback(counter++, 0, {});
+            }
         }
     }
 
@@ -107,64 +111,69 @@ namespace sloked {
     void TextFrameView::VisitLines(std::function<void(std::size_t, std::string_view)> callback) const {
         std::size_t lineId = 0;
         this->text.Visit(this->offset.line, std::min(this->size.line, static_cast<TextPosition::Line>(this->text.GetLastLine() - this->offset.line) + 1), [&](const auto line) {
-            callback(lineId, this->buffer[lineId].content);
+            if (this->buffer[lineId]) {
+                callback(lineId, this->buffer[lineId]->content);
+            } else {
+                callback(lineId, "");
+            }
             lineId++;
         });
     }
 
-    TextFrameView::Line TextFrameView::CutLine(std::string_view line) const {
-        std::list<std::pair<char32_t, std::string>> content;
-        std::stringstream fullLine;
+    std::unique_ptr<TextFrameView::Line> TextFrameView::CutLine(std::string_view line) const {
+        std::list<std::string_view> content;
+        auto result = std::make_unique<Line>(Line {
+            {},
+            std::string{this->charWidth.GetTab(this->encoding)},
+            "",
+            0
+        });
+
+        std::string preprocessedLine;
         this->encoding.IterateCodepoints(line, [&](auto start, auto length, auto chr) {
             if (chr != u'\t') {
-                content.push_back(std::make_pair(chr, std::string{line.substr(start, length)}));
-                fullLine << line.substr(start, length);
+                content.push_back(line.substr(start, length));
+                preprocessedLine.append(line.substr(start, length));
             } else {
-                content.push_back(std::make_pair(chr, this->charWidth.GetTab(this->encoding)));
-                fullLine << this->charWidth.GetTab(this->encoding);
+                content.push_back(result->tab);
+                preprocessedLine.append(line.substr(start, length));
             }
             return true;
         });
-        auto leftOffset = this->encoding.GetCodepoint(fullLine.str(), this->offset.column);
-        auto rightOffset = this->encoding.GetCodepoint(fullLine.str(), this->offset.column + this->size.column);
-        std::size_t leftSymbolOffset = 0;
+        auto leftOffset = this->encoding.GetCodepoint(preprocessedLine, this->offset.column);
+        auto rightOffset = this->encoding.GetCodepoint(preprocessedLine, this->offset.column + this->size.column);
+        auto leftIter = content.begin();
+        auto rightIter = content.end();
         if (leftOffset.second != 0) {
             TextPosition::Column currentPosition = 0;
             for (auto it = content.begin(); it != content.end();) {
                 const auto &symbol = *it;
-                auto length = symbol.second.size();
+                auto length = symbol.size();
                 if (currentPosition + length < leftOffset.first) {
-                    leftSymbolOffset++;
-                    auto curIt = it++;
-                    content.erase(curIt);
+                    result->leftOffset++;
+                    leftIter = ++it;
                 } else if (currentPosition < leftOffset.first && currentPosition + length >= leftOffset.first) {
                     auto cut = leftOffset.first - currentPosition;
-                    it->second = it->second.substr(cut, it->second.size() - cut);
+                    *it = it->substr(cut, it->size() - cut);
                     ++it;
                 } else if (currentPosition >= leftOffset.first && (currentPosition + length < rightOffset.first || rightOffset.second == 0)) {
                     ++it;
                 } else if (currentPosition < rightOffset.first && currentPosition + length >= rightOffset.first) {
                     auto cut = currentPosition + length - rightOffset.first;
-                    it->second = it->second.substr(cut, it->second.size() - cut);
+                    *it = it->substr(cut, it->size() - cut);
                     ++it;
                 } else {
-                    content.erase(it, content.end());
+                    rightIter = it;
                     break;
                 }
                 currentPosition += length;
             }
 
-            fullLine.str("");
-            for (const auto &symbol : content) {
-                fullLine << symbol.second;
-            }
-            return {
-                std::vector<std::pair<char32_t, std::string>>(content.begin(), content.end()),
-                fullLine.str(),
-                leftSymbolOffset
-            };
+            result->symbols.insert(result->symbols.end(), leftIter, rightIter);
+            result->content = preprocessedLine.substr(leftOffset.first, rightOffset.first - leftOffset.first);
+            return result;
         } else {
-            return {{}, "", 0};
+            return nullptr;
         }
     }
 }

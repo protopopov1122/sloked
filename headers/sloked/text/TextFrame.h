@@ -42,27 +42,28 @@ namespace sloked {
         void Update(const TextPosition &, const TextPosition &);
         const TextPosition &GetOffset() const;
         const TextPosition &GetSize() const;
-        void VisitSymbols(std::function<void(std::size_t, std::size_t, const std::vector<std::pair<char32_t, std::string>> &)>) const;
+        void VisitSymbols(std::function<void(std::size_t, std::size_t, const std::vector<std::string_view> &)>) const;
 
      protected:
         std::ostream &dump(std::ostream &) const override;
 
      private:
         struct Line {
-            std::vector<std::pair<char32_t, std::string>> symbols;
+            std::vector<std::string_view> symbols;
+            std::string tab;
             std::string content;
             std::size_t leftOffset;
         };
 
         void VisitLines(std::function<void(std::size_t, std::string_view)>) const;
-        Line CutLine(std::string_view) const;
+        std::unique_ptr<Line> CutLine(std::string_view) const;
 
         const TextBlockView &text;
         const Encoding &encoding;
         const SlokedCharWidth &charWidth;
         TextPosition offset;
         TextPosition size;
-        std::vector<Line> buffer;
+        std::vector<std::unique_ptr<Line>> buffer;
     };
 }
 
