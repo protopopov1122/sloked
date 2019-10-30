@@ -21,12 +21,99 @@
 
 #include "sloked/kgr/Serialize.h"
 #include "sloked/json/Parser.h"
+#include "sloked/core/Error.h"
 #include <sstream>
-#include <regex>
 
 namespace sloked {
 
     static const JsonSourcePosition DefaultPosition{"", 0, 0};
+
+    static void unescape(std::string_view src, std::string &dst) {
+        while (!src.empty()) {
+            if (src[0] == '\\') {
+                if (src.size() == 1) {
+                    throw SlokedError("JsonSerializer: Unescaping error");
+                }
+                src.remove_prefix(1);
+                switch (src[0]) {
+                    case '\"':
+                    case '/':
+                    case '\\':
+                        dst.push_back(src[0]);
+                        break;
+
+                    case 'b':
+                        dst.push_back('\b');
+                        break;
+
+                    case 'f':
+                        dst.push_back('\f');
+                        break;
+                        
+                    case 'n':
+                        dst.push_back('\n');
+                        break;
+                        
+                    case 'r':
+                        dst.push_back('\r');
+                        break;
+                        
+                    case 't':
+                        dst.push_back('\t');
+                        break;
+
+                    default:
+                        throw SlokedError("JsonSerializer: Unescaping error");
+                }
+            } else {
+                dst.push_back(src[0]);
+            }
+            src.remove_prefix(1);
+        }
+    }    
+
+    static void escape(std::string_view src, std::string &dst) {
+        while (!src.empty()) {
+            switch (src[0]) {
+                case '\"':
+                    dst.append("\\\"");
+                    break;
+
+                case '/':
+                    dst.append("\\/");
+                    break;
+
+                case '\\':
+                    dst.append("\\\\");
+                    break;
+
+                case '\b':
+                    dst.append("\\b");
+                    break;
+
+                case '\f':
+                    dst.append("\\f");
+                    break;
+                    
+                case '\n':
+                    dst.append("\\n");
+                    break;
+                    
+                case '\r':
+                    dst.append("\\r");
+                    break;
+                    
+                case '\t':
+                    dst.append("\\t");
+                    break;
+
+                default:
+                    dst.push_back(src[0]);
+                    break;
+            }
+            src.remove_prefix(1);
+        }
+    }
 
     class KgrJsonDeserializeVisitor : public JsonASTVisitor<KgrValue> {
      public:
@@ -45,14 +132,9 @@ namespace sloked {
                     return KgrValue(value.AsBoolean());
 
                 case JsonConstantNode::DataType::String: {
-                    std::string str{value.AsString()};
-                    static std::regex newLine("\\\\n");
-                    static std::regex quote("\\\\\"");
-                    static std::regex backslash("\\\\\\\\");
-                    str = std::regex_replace(str, newLine, "\n");
-                    str = std::regex_replace(str, quote, "\"");
-                    str = std::regex_replace(str, backslash, "\\");
-                    return KgrValue(str);
+                    std::string res;
+                    unescape(value.AsString(), res);
+                    return KgrValue(std::move(res));
                 }
             }
             return {};
@@ -105,14 +187,9 @@ namespace sloked {
                 return std::make_unique<JsonConstantNode>(value.AsBoolean(), DefaultPosition);
 
             case KgrValueType::String: {
-                std::string str{value.AsString()};
-                static std::regex newLine("\n");
-                static std::regex quote("\"");
-                static std::regex backslash("\\\\");
-                str = std::regex_replace(str, backslash, "\\\\");
-                str = std::regex_replace(str, newLine, "\\n");
-                str = std::regex_replace(str, quote, "\\\"");
-                return std::make_unique<JsonConstantNode>(str, DefaultPosition);
+                std::string res;
+                escape(value.AsString(), res);
+                return std::make_unique<JsonConstantNode>(std::move(res), DefaultPosition);
             }
 
             case KgrValueType::Array: {
