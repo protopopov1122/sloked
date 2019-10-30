@@ -64,7 +64,10 @@ namespace sloked {
             std::string newline = this->document->conv.Convert("\n");
             this->document->frame.VisitSymbols([&](auto lineNumber, auto columnOffset, const auto &line) {
                 for (std::size_t column = 0; column < line.size(); column++) {
-                    auto tag = this->document->tags.Get(TextPosition{lineNumber, columnOffset + column});
+                    auto tag = this->document->tags.Get(TextPosition {
+                        static_cast<TextPosition::Line>(lineNumber),
+                        static_cast<TextPosition::Column>(columnOffset + column)
+                    });
                     if (!back.has_value()) {
                         back = std::make_pair(line.at(column), tag);
                     } else if (back.value().second != tag) {
