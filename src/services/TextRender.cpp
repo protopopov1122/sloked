@@ -28,6 +28,35 @@
 
 namespace sloked {
 
+    class DocumentUpdateListener : public SlokedTransactionStreamListener {
+     public:
+        DocumentUpdateListener(bool init = true)
+            : updated(init) {}
+
+        bool HasUpdates() const {
+            return this->updated;
+        }
+
+        void ResetUpdates() {
+            this->updated = false;
+        }
+
+        void OnCommit(const SlokedCursorTransaction &) override {
+            this->updated = true;
+        }
+
+        void OnRollback(const SlokedCursorTransaction &) override {
+            this->updated = true;
+        }
+
+        void OnRevert(const SlokedCursorTransaction &) override {
+            this->updated = true;
+        }
+
+     private:
+        bool updated;
+    };
+
     class SlokedTextRenderContext : public SlokedServiceContext {
      public:
         SlokedTextRenderContext(std::unique_ptr<KgrPipe> pipe,
@@ -51,56 +80,60 @@ namespace sloked {
             const auto &dim = params.AsDictionary();
             auto line = static_cast<TextPosition::Line>(dim["line"].AsInt());
             auto column = static_cast<TextPosition::Column>(dim["column"].AsInt());
-            this->document->frame.Update(TextPosition{
+            auto updated = this->document->frame.Update(TextPosition{
                     static_cast<TextPosition::Line>(dim["height"].AsInt()),
                     static_cast<TextPosition::Column>(dim["width"].AsInt())
                 }, TextPosition{
                     line,
                     column
-                });
+                }, this->document->updateListener->HasUpdates());
+            this->document->updateListener->ResetUpdates();
 
-            KgrArray fragments;
-            std::optional<std::pair<std::string, const TaggedTextFragment<int> *>> back;
-            std::string newline = this->document->conv.Convert("\n");
-            this->document->frame.VisitSymbols([&](auto lineNumber, auto columnOffset, const auto &line) {
-                for (std::size_t column = 0; column < line.size(); column++) {
-                    auto tag = this->document->tags.Get(TextPosition {
-                        static_cast<TextPosition::Line>(lineNumber),
-                        static_cast<TextPosition::Column>(columnOffset + column)
+            if (updated) {
+                KgrArray fragments;
+                std::optional<std::pair<std::string, const TaggedTextFragment<int> *>> back;
+                std::string newline = this->document->conv.Convert("\n");
+                this->document->frame.VisitSymbols([&](auto lineNumber, auto columnOffset, const auto &line) {
+                    for (std::size_t column = 0; column < line.size(); column++) {
+                        auto tag = this->document->tags.Get(TextPosition {
+                            static_cast<TextPosition::Line>(lineNumber),
+                            static_cast<TextPosition::Column>(columnOffset + column)
+                        });
+                        if (!back.has_value()) {
+                            back = std::make_pair(line.at(column), tag);
+                        } else if (back.value().second != tag) {
+                            fragments.Append(KgrDictionary {
+                                { "tag", back.value().second != nullptr },
+                                { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
+                            });
+                            back = std::make_pair(line.at(column), tag);
+                        } else {
+                            back.value().first.append(line.at(column));
+                        }
+                    }
+                    
+                    if (lineNumber + 1 < this->document->text.GetLastLine()) {
+                        if (!back.has_value()) {
+                            back = std::make_pair(newline, nullptr);
+                        } else if (back.value().second != nullptr) {
+                            fragments.Append(KgrDictionary {
+                                { "tag", back.value().second != nullptr },
+                                { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
+                            });
+                            back = std::make_pair(newline, nullptr);
+                        } else {
+                            back.value().first.append(newline);
+                        }
+                    }
+
+                });
+                if (back.has_value()) {
+                    fragments.Append(KgrDictionary {
+                        { "tag", back.value().second != nullptr },
+                        { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
                     });
-                    if (!back.has_value()) {
-                        back = std::make_pair(line.at(column), tag);
-                    } else if (back.value().second != tag) {
-                        fragments.Append(KgrDictionary {
-                            { "tag", back.value().second != nullptr },
-                            { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
-                        });
-                        back = std::make_pair(line.at(column), tag);
-                    } else {
-                        back.value().first.append(line.at(column));
-                    }
                 }
-                
-                if (lineNumber + 1 < this->document->text.GetLastLine()) {
-                    if (!back.has_value()) {
-                        back = std::make_pair(newline, nullptr);
-                    } else if (back.value().second != nullptr) {
-                        fragments.Append(KgrDictionary {
-                            { "tag", back.value().second != nullptr },
-                            { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
-                        });
-                        back = std::make_pair(newline, nullptr);
-                    } else {
-                        back.value().first.append(newline);
-                    }
-                }
-
-            });
-            if (back.has_value()) {
-                fragments.Append(KgrDictionary {
-                    { "tag", back.value().second != nullptr },
-                    { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
-                });
+                this->rendered = std::move(fragments);
             }
             
             auto realLine = this->document->text.GetLine(line);
@@ -113,7 +146,7 @@ namespace sloked {
             };
             rsp.Result(KgrDictionary {
                 { "cursor", std::move(cursor) },
-                { "content", std::move(fragments) }
+                { "content", this->rendered }
             });
         }
 
@@ -126,7 +159,9 @@ namespace sloked {
                   tags(lazyTags), frame(document.GetText(), document.GetEncoding(), charWidth) {
 
                 this->fragmentUpdater = std::make_shared<SlokedFragmentUpdater<int>>(this->text, this->tags, this->conv.GetDestination(), charWidth);
+                this->updateListener = std::make_shared<DocumentUpdateListener>();
                 this->transactionListeners.AddListener(this->fragmentUpdater);
+                this->transactionListeners.AddListener(this->updateListener);
             }
 
             ~DocumentContent() {
@@ -140,6 +175,7 @@ namespace sloked {
             SlokedCacheTaggedText<int> tags;
             TextFrameView frame;
             std::shared_ptr<SlokedFragmentUpdater<int>> fragmentUpdater;
+            std::shared_ptr<DocumentUpdateListener> updateListener;
         };
 
         SlokedEditorDocumentSet &documents;
@@ -147,6 +183,7 @@ namespace sloked {
         SlokedTextTaggerFactory<int> &taggerFactory;
         SlokedEditorDocumentSet::Document handle;
         std::unique_ptr<DocumentContent> document;
+        KgrArray rendered;
     };
 
 

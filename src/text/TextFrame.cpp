@@ -56,7 +56,9 @@ namespace sloked {
         return this->GetTotalLength() == 0;
     }
 
-    void TextFrameView::Update(const TextPosition &dim, const TextPosition &cursor) {
+    bool TextFrameView::Update(const TextPosition &dim, const TextPosition &cursor, bool force) {
+        auto prevPosition = this->offset;
+        auto prevSize = this->size;
         if (this->offset.line + dim.line - 1 < cursor.line) {
             this->offset.line = cursor.line - dim.line + 1;
         }
@@ -72,10 +74,16 @@ namespace sloked {
             this->offset.column = realColumn;
         }
         this->size = dim;
-        this->buffer.clear();
-        this->text.Visit(this->offset.line, std::min(this->size.line, static_cast<TextPosition::Line>(this->text.GetLastLine() - this->offset.line) + 1), [&](const auto line) {
-            this->buffer.push_back(this->CutLine(line));
-        });
+        if (force || prevPosition != this->offset || prevSize != this->size) {
+            if (!force && prevSize == this->size && prevPosition.column == this->offset.column) {
+                this->OptimizedRender(prevPosition);
+            } else {
+                this->FullRender();
+            }
+            return true;
+        } else {
+            return false;
+        }
     }
 
     const TextPosition &TextFrameView::GetOffset() const {
@@ -108,6 +116,32 @@ namespace sloked {
         return os;
     }
 
+    void TextFrameView::FullRender() {
+        this->buffer.clear();
+        this->text.Visit(this->offset.line, std::min(this->size.line, static_cast<TextPosition::Line>(this->text.GetLastLine() - this->offset.line) + 1), [&](const auto line) {
+            this->buffer.push_back(this->CutLine(line));
+        });
+    }
+
+    void TextFrameView::OptimizedRender(const TextPosition &prevOffset) {
+        auto start = this->offset.line;
+        std::size_t lineId = 0;
+        auto callback = [&](const auto line) {
+            this->buffer.insert(this->buffer.begin() + lineId++, this->CutLine(line));
+        };
+        if (prevOffset.line < this->offset.line) {
+            auto count = start - prevOffset.line;
+            this->buffer.erase(this->buffer.begin(), this->buffer.begin() + count);
+            lineId = this->buffer.size();
+            this->text.Visit(start + this->size.line - count, count, callback);
+        } else {
+            auto count = prevOffset.line - start;
+            this->buffer.erase(this->buffer.end() - count, this->buffer.end());
+            lineId = 0;
+            this->text.Visit(start, count, callback);
+        }
+    }
+
     void TextFrameView::VisitLines(std::function<void(std::size_t, std::string_view)> callback) const {
         std::size_t lineId = 0;
         this->text.Visit(this->offset.line, std::min(this->size.line, static_cast<TextPosition::Line>(this->text.GetLastLine() - this->offset.line) + 1), [&](const auto line) {
@@ -136,7 +170,7 @@ namespace sloked {
                 preprocessedLine.append(line.substr(start, length));
             } else {
                 content.push_back(result->tab);
-                preprocessedLine.append(line.substr(start, length));
+                preprocessedLine.append(result->tab);
             }
             return true;
         });

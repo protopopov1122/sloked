@@ -39,7 +39,7 @@ namespace sloked {
         std::string_view GetLine(std::size_t) const override;
         bool Empty() const override;
 
-        void Update(const TextPosition &, const TextPosition &);
+        bool Update(const TextPosition &, const TextPosition &, bool = true);
         const TextPosition &GetOffset() const;
         const TextPosition &GetSize() const;
         void VisitSymbols(std::function<void(std::size_t, std::size_t, const std::vector<std::string_view> &)>) const;
@@ -55,6 +55,8 @@ namespace sloked {
             std::size_t leftOffset;
         };
 
+        void FullRender();
+        void OptimizedRender(const TextPosition &);
         void VisitLines(std::function<void(std::size_t, std::string_view)>) const;
         std::unique_ptr<Line> CutLine(std::string_view) const;
 
