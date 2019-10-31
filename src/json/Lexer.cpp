@@ -242,15 +242,11 @@ namespace sloked {
             this->current_line.at(0) == '\u000A' ||
             this->current_line.at(0) == '\u000D' ||
             this->current_line.at(0) == '\u0020')) {
-            shift++;
-            if (shift == this->current_line.size()) {
+            this->Shift(1);
+            if (this->current_line.empty()) {
                 this->Shift(shift);
                 this->ReadBuffer();
             }
-        }
-        if (shift != 0) {
-            this->Shift(shift);
-            this->ReadBuffer();
         }
     }
 

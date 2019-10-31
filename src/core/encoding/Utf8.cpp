@@ -127,13 +127,13 @@ namespace sloked {
             bool res = true;
             const std::size_t string_len = str.size();
 #define ASSERT_WIDTH(x) do { \
-                            if (i + (x) - 1 >= string_len) { \
+                            if (i + (x) > string_len) { \
                                 return false; \
                             } \
                         } while (false)
-            for (std::size_t i = 0; i < string_len && res;) {
-                char32_t result;
-                std::size_t width = 0;
+            char32_t result;
+            std::size_t width;
+            for (std::size_t i = 0; i < string_len;) {
                 char current = str[i];
                 if ((current & 0xc0) != 0xc0){
                     width = 1;
@@ -158,7 +158,9 @@ namespace sloked {
                         | ((str[i + 2] & 0x3f) << 6)
                         | (str[i + 3] & 0x3f);
                 }
-                res = callback(i, width, result);
+                if (!callback(i, width, result)) {
+                    break;
+                }
                 i += width;
             }
 #undef ASSERT_WIDTH
