@@ -26,6 +26,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <netinet/tcp.h>
 
 namespace sloked {
 
@@ -34,7 +35,11 @@ namespace sloked {
     }
 
     SlokedPosixSocket::SlokedPosixSocket(int fd)
-        : socket(fd) {}
+        : socket(fd) {
+        
+        int one = 1;
+        setsockopt(fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
+    }
         
     SlokedPosixSocket::SlokedPosixSocket(SlokedPosixSocket &&socket) {
         this->socket = socket.socket;
