@@ -81,7 +81,7 @@ namespace sloked {
         bool Wait(long = 0) const;
         bool Valid() const;
         void Receive();
-        void Process();
+        void Process(std::size_t = 0);
         ResponseHandle Invoke(const std::string &, const KgrValue &);
         void Close();
         void BindMethod(const std::string &, std::function<void(const std::string &, const KgrValue &, Responder &)>);

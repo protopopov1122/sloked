@@ -136,8 +136,9 @@ namespace sloked {
         }
     }
 
-    void KgrNetInterface::Process() {
-        while (!this->incoming.empty()) {
+    void KgrNetInterface::Process(std::size_t count) {
+        bool allMessages = count == 0;
+        while (!this->incoming.empty() && (allMessages || count--)) {
             try {
                 auto msg = std::move(this->incoming.front());
                 this->incoming.pop();
@@ -218,7 +219,7 @@ namespace sloked {
                 this->responses.at(id).push(Response(msg.AsDictionary()["result"], true));
                 this->response_cv.notify_all();
             } else if (msg.AsDictionary().Has("error")) {
-                this->responses.at(id).push(Response(msg.AsDictionary()["error"], true));
+                this->responses.at(id).push(Response(msg.AsDictionary()["error"], false));
                 this->response_cv.notify_all();
             }
         }

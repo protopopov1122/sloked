@@ -50,8 +50,10 @@
 #include "sloked/net/PosixSocket.h"
 #include "sloked/kgr/net/MasterServer.h"
 #include "sloked/kgr/net/SlaveServer.h"
+#include <chrono>
 
 using namespace sloked;
+using namespace std::chrono_literals;
 
 class TestFragment : public SlokedTextTagger<int> {
  public:
@@ -125,6 +127,8 @@ int main(int argc, const char **argv) {
 
     KgrLocalServer portServer;
     KgrLocalNamedServer server(portServer);
+    KgrLocalServer portLocalServer;
+    KgrLocalNamedServer localServer(portLocalServer);
     KgrLocalServer portScreenServer;
     KgrLocalNamedServer screenServer(portScreenServer);
     KgrRunnableContextManagerHandle<KgrLocalContext> ctxManagerHandle;
@@ -139,9 +143,9 @@ int main(int argc, const char **argv) {
     masterServer.Start();
     KgrMasterNetServer masterScreenServer(screenServer, socketFactory.Bind("localhost", 1235));
     masterScreenServer.Start();
-    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", 1234));
+    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", 1234), localServer);
     slaveServer.Start();
-    KgrSlaveNetServer slaveScreenServer(socketFactory.Connect("localhost", 1235));
+    KgrSlaveNetServer slaveScreenServer(socketFactory.Connect("localhost", 1235), localServer);
     slaveScreenServer.Start();
 
     char INPUT_PATH[1024], OUTPUT_PATH[1024];
@@ -181,9 +185,6 @@ int main(int argc, const char **argv) {
     screenClient.Handle.NewTabber("/0/0");
     auto tab1 = screenClient.Tabber.NewWindow("/0/0");
     screenClient.Handle.NewTextEditor(tab1.value(), documentClient.GetId().value());
-    // SlokedEditorTabs tabs(SlokedComponentTree::Traverse(screen, "/0/0/self").AsTabber(), terminalEncoding, server.GetConnector("text::cursor"), server.GetConnector("text::render"), server.GetConnector("documents"));
-
-    // auto tab = tabs.Open(INPUT_PATH, "system", "system");
 
     SlokedScreenInputClient screenInput(screenServer.Connect("screen::input"));
     screenInput.Connect("/", false, {
@@ -221,7 +222,6 @@ int main(int argc, const char **argv) {
             work = false;
         }
     }
-    // tabs.CloseAll();
 
     slaveServer.Stop();
     masterServer.Stop();

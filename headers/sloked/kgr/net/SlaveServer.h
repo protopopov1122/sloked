@@ -32,7 +32,7 @@ namespace sloked {
 
     class KgrSlaveNetServer : public KgrNamedServer {
      public:
-        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>);
+        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, KgrNamedServer &);
         ~KgrSlaveNetServer();
         bool IsRunning() const;
         void Start();
@@ -46,11 +46,15 @@ namespace sloked {
         void Deregister(const std::string &) override;
 
      private:
+        void Accept();
+
         KgrNetInterface net;
         std::atomic<bool> work;
-        std::mutex mtx;
+        std::recursive_mutex mtx;
+        std::mutex send_mtx;
         SlokedCounter<std::size_t> workers;
         std::map<int64_t, std::unique_ptr<KgrPipe>> pipes;
+        KgrNamedServer &localServer;
     };
 }
 

@@ -139,7 +139,11 @@ namespace sloked {
     }
 
     SlokedServiceClient::SlokedServiceClient(std::unique_ptr<KgrPipe> pipe)
-        : pipe(std::move(pipe)), nextId(0) {}
+        : pipe(std::move(pipe)), nextId(0) {
+        if (this->pipe == nullptr) {
+            throw SlokedError("SlokedServiceClient: Pipe can't be null");
+        }
+    }
 
     KgrPipe::Status SlokedServiceClient::GetStatus() const {
         if (this->pipe) {

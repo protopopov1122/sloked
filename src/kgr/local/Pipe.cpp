@@ -33,6 +33,10 @@ namespace sloked {
             std::unique_lock<std::mutex> olock(this->output->content_mtx);
             this->input->content = {};
             this->descriptor->status = Status::Closed;
+            olock.unlock();
+            if (this->output->callback) {
+                this->output->callback();
+            }
         }
     }
     

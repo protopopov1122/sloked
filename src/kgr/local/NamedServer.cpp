@@ -54,7 +54,7 @@ namespace sloked {
 
     bool KgrLocalNamedServer::Registered(const std::string &name) {
         std::unique_lock<std::mutex> lock(this->mtx);
-        return this->names.count(name) == 0;
+        return this->names.count(name) != 0;
     }
 
     void KgrLocalNamedServer::Deregister(const std::string &name) {
