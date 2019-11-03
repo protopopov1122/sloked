@@ -22,12 +22,17 @@
 #include "sloked/kgr/net/MasterServer.h"
 #include "sloked/core/Error.h"
 #include "sloked/kgr/net/Interface.h"
+#include "sloked/kgr/net/Config.h"
 #include <thread>
 #include <cstring>
 #include <set>
-#include <algorithm>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 namespace sloked {
+
+    static std::chrono::system_clock Clock;
 
     class KgrMasterNetServerContext {
      public:
@@ -176,7 +181,10 @@ namespace sloked {
                         { "pipe", pipeId },
                         { "service", this->service }
                     });
-                    while (!rsp.WaitResponse(50) && this->srv.work.load()) {
+                    auto start = Clock.now();
+                    while (!rsp.WaitResponse(KgrNetConfig::RequestTimeout) &&
+                        this->srv.work.load() &&
+                        Clock.now() - start < KgrNetConfig::ResponseTimeout * 1ms) {
                         this->srv.Accept(1);
                     }
                     if (rsp.HasResponse()) {
@@ -211,8 +219,7 @@ namespace sloked {
         };
 
         void Accept(std::size_t count = 0) {
-            constexpr long Timeout = 50;
-            if (this->net.Wait(Timeout)) {
+            if (this->net.Wait(KgrNetConfig::RequestTimeout)) {
                 this->net.Receive();
                 this->net.Process(count);
             }
@@ -251,8 +258,7 @@ namespace sloked {
             lock.unlock();
             SlokedCounter<std::size_t>::Handle workerCounter(this->workers);
             while (this->work.load()) {
-                constexpr long Timeout = 50;
-                auto client = this->srvSocket->Accept(Timeout);
+                auto client = this->srvSocket->Accept(KgrNetConfig::RequestTimeout);
                 if (client) {
                     SlokedCounter<std::size_t>::Handle counterHandle(this->workers);
                     std::thread([this, counter = std::move(counterHandle), socket = std::move(client)]() mutable {

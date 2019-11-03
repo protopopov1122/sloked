@@ -173,6 +173,7 @@ int main(int argc, const char **argv) {
     screenServer.Register("screen::input", std::make_unique<SlokedScreenInputService>(screenHandle, terminalEncoding, ctxScreenManager));
     screenServer.Register("screen::text::pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxScreenManager));
 
+
     SlokedScreenClient screenClient(slaveScreenServer.Connect("screen"));
     SlokedDocumentSetClient documentClient(slaveServer.Connect("documents"));
     documentClient.Open(INPUT_PATH, "system", "system");

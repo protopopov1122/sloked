@@ -109,6 +109,7 @@ namespace sloked {
             } else if (res == 0) {
                 return {};
             } else {
+                this->Close();
                 throw SlokedError("PosixSocket: Read error");
             }
 
@@ -126,6 +127,7 @@ namespace sloked {
                 dest.insert(dest.end(), buffer.get(), buffer.get() + res);
                 return dest;
             } else {
+                this->Close();
                 throw SlokedError("PosixSocket: Read error");
             }
 
@@ -139,6 +141,7 @@ namespace sloked {
             if (!data.Empty()) {
                 auto res = write(this->socket, data.Data(), data.Size());
                 if (res == -1) {
+                    this->Close();
                     throw SlokedError("PosixSocket: Write error");
                 }
             }
@@ -190,6 +193,7 @@ namespace sloked {
         if (IsSocketValid(this->socket)) {
             auto res = listen(this->socket, MaxQueueLength);
             if (res != 0) {
+                this->Close();
                 throw SlokedError("PosixServerSocket: Error starting server");
             }
         } else {
@@ -268,9 +272,11 @@ namespace sloked {
                     break;
             }
             if (err != 0) {
+                close(fd);
                 throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; connection error: " + std::to_string(errno));
             }
         }
+        close(fd);
         throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; unsupported AF");
     }
 
@@ -306,9 +312,11 @@ namespace sloked {
             } break;
 
             default:
+                close(fd);
                 throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; unsupported AF: " + std::to_string(result->ai_family));
         }
         if (err != 0) {
+            close(fd);
             throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; binding error: " + std::to_string(errno));
         }
         // Build an instance of the server

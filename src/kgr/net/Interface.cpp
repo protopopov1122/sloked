@@ -207,7 +207,11 @@ namespace sloked {
                 this->InvokeMethod(method, params, responder);
             }
         } catch (const SlokedError &err) {
-            responder.Error(err.what());
+            if (this->socket->Valid()) {
+                responder.Error(err.what());
+            } else {
+                throw;
+            }
         }
     }
 

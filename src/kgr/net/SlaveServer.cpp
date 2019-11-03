@@ -22,8 +22,8 @@
 #include "sloked/kgr/net/SlaveServer.h"
 #include "sloked/kgr/local/Pipe.h"
 #include "sloked/core/Error.h"
+#include "sloked/kgr/net/Config.h"
 #include <thread>
-#include <iostream>
 
 namespace sloked {
 
@@ -133,9 +133,7 @@ namespace sloked {
             return nullptr;
         }
         auto rsp = this->net.Invoke("connect", service);
-        constexpr long Timeout = 50;
-        while (!rsp.WaitResponse(Timeout) && this->work.load()) {}
-        if (rsp.HasResponse()) {
+        if (rsp.WaitResponse(KgrNetConfig::ResponseTimeout) && this->work.load()) {
             const auto &res = rsp.GetResponse();
             if (res.HasResult()) {
                 std::unique_lock lock(this->mtx);
@@ -157,6 +155,8 @@ namespace sloked {
                 this->pipes.emplace(pipeId, std::move(pipe1));
                 this->net.Invoke("activate", pipeId);
                 return std::move(pipe2);
+            } else {
+                throw SlokedError(res.GetError().AsString());
             }
         }
         return nullptr;
@@ -173,8 +173,8 @@ namespace sloked {
         if (!this->localServer.Registered(serviceName)) {
             this->localServer.Register(serviceName, std::move(service));
             auto rsp = this->net.Invoke("bind", serviceName);
-            while (!rsp.WaitResponse(50) && this->work.load()) {}
-            if (!rsp.HasResponse() || !rsp.GetResponse().GetResult().AsBoolean()) {
+            if (!(rsp.WaitResponse(KgrNetConfig::ResponseTimeout) && this->work.load()) ||
+                 !rsp.GetResponse().GetResult().AsBoolean()) {
                 this->localServer.Deregister(serviceName);
                 throw SlokedError("KgrSlaveServer: Error registering service " + serviceName);
             }
@@ -188,9 +188,8 @@ namespace sloked {
             return true;
         } else {
             auto rsp = this->net.Invoke("bound", service);
-            constexpr long Timeout = 50;
-            while (!rsp.WaitResponse(Timeout) && this->work.load()) {}
-            return rsp.HasResponse() && rsp.GetResponse().GetResult().AsBoolean();
+            return rsp.WaitResponse(KgrNetConfig::ResponseTimeout) && this->work.load() &&
+                rsp.HasResponse() && rsp.GetResponse().GetResult().AsBoolean();
         }
     }
 
@@ -198,9 +197,8 @@ namespace sloked {
         if (this->localServer.Registered(service)) {
             this->localServer.Deregister(service);
             auto rsp = this->net.Invoke("unbind", service);
-            constexpr long Timeout = 50;
-            while (!rsp.WaitResponse(Timeout) && this->work.load()) {}
-            if (!rsp.HasResponse() || !rsp.GetResponse().GetResult().AsBoolean()) {
+            if (!(rsp.WaitResponse(KgrNetConfig::ResponseTimeout) && this->work.load()) ||
+                !rsp.GetResponse().GetResult().AsBoolean()) {
                 throw SlokedError("KgrSlaveServer: Error deregistering " + service);
             }
         } else {
@@ -209,8 +207,7 @@ namespace sloked {
     }
 
     void KgrSlaveNetServer::Accept() {
-        constexpr long Timeout = 50;
-        if (this->net.Wait(Timeout)) {
+        if (this->net.Wait(KgrNetConfig::RequestTimeout)) {
             this->net.Receive();
             this->net.Process();
         }
