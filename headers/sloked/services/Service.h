@@ -28,7 +28,10 @@
 #include <utility>
 #include <map>
 #include <queue>
+#include <list>
 #include <functional>
+#include <variant>
+#include <chrono>
 
 namespace sloked {
 
@@ -36,23 +39,30 @@ namespace sloked {
 	 public:
 		using KgrLocalContext::KgrLocalContext;
 		void Run() final;
+		State GetState() const final;
 
 	 protected:
 		class Response {
 		 public:
 			Response(SlokedServiceContext &, const KgrValue &);
+			Response(const Response &);
+			Response(Response &&);
+
+			Response &operator=(const Response &);
+			Response &operator=(const Response &&);
 			void Result(KgrValue &&);
 			void Error(KgrValue &&);
 
 		 private:
-			SlokedServiceContext &ctx;
-			const KgrValue &id;
+			std::reference_wrapper<SlokedServiceContext> ctx;
+			std::variant<std::reference_wrapper<const KgrValue>, KgrValue> id;
 		};
 
 		friend class Response;
 		using MethodHandler = std::function<void(const std::string &, const KgrValue &, Response &)>;
 
 		void BindMethod(const std::string &, MethodHandler);
+		void Defer(std::function<bool()>, std::function<void()>);
 
 		template <typename T>
 		void BindMethod(const std::string &method, void (T::*impl)(const std::string &, const KgrValue &, Response &)) {
@@ -69,6 +79,8 @@ namespace sloked {
 		void SendError(const KgrValue &, KgrValue &&);
 
 		std::map<std::string, MethodHandler> methods;
+		std::list<std::pair<std::function<bool()>, std::function<void()>>> deferred;
+		std::chrono::time_point<std::chrono::system_clock> lastDeferredCheck;
 	};
 
 	class SlokedServiceClient {
@@ -89,7 +101,7 @@ namespace sloked {
 		 public:
 			ResponseHandle(int64_t, std::map<int64_t, std::queue<Response>> &, std::function<void()>, std::function<void()>);
 			ResponseHandle(const ResponseHandle &) = delete;
-			ResponseHandle(ResponseHandle &&) = default;
+			ResponseHandle(ResponseHandle &&);
 			~ResponseHandle();
 
 			ResponseHandle &operator=(const ResponseHandle &) = delete;
@@ -98,6 +110,7 @@ namespace sloked {
 			void Drop();
 			Response Get();
 			std::optional<Response> GetOptional();
+			bool Has();
 
 		 private:
 			int64_t id;

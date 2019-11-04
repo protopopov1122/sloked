@@ -126,7 +126,7 @@ namespace sloked {
                 while (this->work.load()) {
                     std::unique_lock<std::mutex> notificationLock(this->notificationMutex);
                     while (!this->manager.HasPendingActions() && this->work.load() && this->notifications.load() == 0) {
-                        this->notificationCV.wait(notificationLock);
+                        this->notificationCV.wait_for(notificationLock, std::chrono::milliseconds(25));
                     }
                     this->notifications = 0;
                     notificationLock.unlock();

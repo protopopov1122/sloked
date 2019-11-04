@@ -31,16 +31,18 @@
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/services/Service.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
+#include "sloked/kgr/NamedServer.h"
 
 namespace sloked {
 
     class SlokedCursorService : public KgrService {
      public:
-        SlokedCursorService(SlokedEditorDocumentSet &, KgrContextManager<KgrLocalContext> &);
+        SlokedCursorService(SlokedEditorDocumentSet &, KgrServer::Connector, KgrContextManager<KgrLocalContext> &);
         bool Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
         SlokedEditorDocumentSet &documents;
+        KgrServer::Connector renderConnector;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
 
@@ -59,6 +61,7 @@ namespace sloked {
         void Undo();
         void Redo();
         std::optional<TextPosition> GetPosition();
+        std::optional<std::pair<KgrValue, TextPosition>> Render(const TextPosition &);
 
      private:
         SlokedServiceClient client;

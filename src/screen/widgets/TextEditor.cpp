@@ -81,18 +81,14 @@ namespace sloked {
     }
 
     void SlokedTextEditor::Render(SlokedTextPane &pane) {
-        const auto &cursor = this->cursorClient.GetPosition();
-        if (!cursor.has_value()) {
-            return;
-        }
-        auto renderRes = this->renderClient.Render(cursor.value(), TextPosition {
+        auto renderRes = this->cursorClient.Render(TextPosition {
             pane.GetHeight(),
             pane.GetWidth() - 1
         });
         if (!renderRes.has_value()) {
             return;
         }
-        const auto &res = renderRes.value();
+        const auto &res = renderRes.value().first;
 
         pane.SetGraphicsMode(this->background);
         pane.ClearScreen();

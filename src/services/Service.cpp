@@ -21,16 +21,91 @@
 
 #include "sloked/services/Service.h"
 
+using namespace std::chrono_literals;
+
 namespace sloked {
+    static std::chrono::system_clock Clock;
+    static const auto DeferredCheckInterval = 10ms;
+
     SlokedServiceContext::Response::Response(SlokedServiceContext &ctx, const KgrValue &id)
-        : ctx(ctx), id(id) {}
+        : ctx(ctx), id(std::cref(id)) {}
+
+    SlokedServiceContext::Response::Response(const Response &rsp)
+        : ctx(rsp.ctx), id(KgrValue{}) {
+        switch (rsp.id.index()) {
+            case 0:
+                this->id = KgrValue{std::get<0>(rsp.id)};
+                break;
+
+            case 1:
+                this->id = std::get<1>(rsp.id);
+                break;
+        }
+    }
+
+    SlokedServiceContext::Response::Response(Response &&rsp)
+        : ctx(std::move(rsp.ctx)), id(KgrValue{}) {
+        switch (rsp.id.index()) {
+            case 0:
+                this->id = KgrValue{std::get<0>(rsp.id)};
+                break;
+
+            case 1:
+                this->id = std::move(std::get<1>(rsp.id));
+                break;
+        }
+    }
+
+    SlokedServiceContext::Response &SlokedServiceContext::Response::operator=(const Response &rsp) {
+        this->ctx = rsp.ctx;
+        switch (rsp.id.index()) {
+            case 0:
+                this->id = KgrValue{std::get<0>(rsp.id)};
+                break;
+
+            case 1:
+                this->id = std::get<1>(rsp.id);
+                break;
+        }
+        return *this;
+    }
+    
+    SlokedServiceContext::Response &SlokedServiceContext::Response::operator=(const Response &&rsp) {
+        this->ctx = std::move(rsp.ctx);
+        switch (rsp.id.index()) {
+            case 0:
+                this->id = KgrValue{std::get<0>(rsp.id)};
+                break;
+
+            case 1:
+                this->id = std::move(std::get<1>(rsp.id));
+                break;
+        }
+        return *this;
+    }
 
     void SlokedServiceContext::Response::Result(KgrValue &&result) {
-        this->ctx.SendResponse(this->id, std::forward<KgrValue>(result));
+        switch (this->id.index()) {
+            case 0:
+                this->ctx.get().SendResponse(std::get<0>(this->id).get(), std::forward<KgrValue>(result));
+                break;
+
+            case 1:
+                this->ctx.get().SendResponse(std::get<1>(this->id), std::forward<KgrValue>(result));
+                break;
+        }
     }
 
     void SlokedServiceContext::Response::Error(KgrValue &&error) {
-        this->ctx.SendError(this->id, std::forward<KgrValue>(error));
+        switch (this->id.index()) {
+            case 0:
+                this->ctx.get().SendError(std::get<0>(this->id).get(), std::forward<KgrValue>(error));
+                break;
+
+            case 1:
+                this->ctx.get().SendError(std::get<1>(this->id), std::forward<KgrValue>(error));
+                break;
+        }
     }
 
     void SlokedServiceContext::Run() {
@@ -48,13 +123,39 @@ namespace sloked {
                     this->InvokeMethod(method, params, *response);
                 }
             }
+            if (std::chrono::duration_cast<std::chrono::milliseconds>(Clock.now() - this->lastDeferredCheck) < DeferredCheckInterval) {
+                return;
+            }
+            for (auto it = this->deferred.begin(); it != this->deferred.end(); ++it) {
+                if (it->first()) {
+                    it->second();
+                    this->deferred.erase(it);
+                    break;
+                }
+            }
         } catch (const SlokedError &err) {
             this->HandleError(err, response.get());
         }
     }
 
+    KgrServiceContext::State SlokedServiceContext::GetState() const {
+        auto state = this->KgrLocalContext::GetState();
+        if (state == State::Idle) {
+            for (const auto &deferred : this->deferred) {
+                if (deferred.first()) {
+                    return State::Pending;
+                }
+            }
+        }
+        return state;
+    }
+
     void SlokedServiceContext::BindMethod(const std::string &method, MethodHandler handler) {
         this->methods.emplace(method, std::move(handler));
+    }
+
+    void SlokedServiceContext::Defer(std::function<bool()> ready, std::function<void()> callback) {
+        this->deferred.push_back(std::make_pair(std::move(ready), std::move(callback)));
     }
 
     void SlokedServiceContext::InvokeMethod(const std::string &method, const KgrValue &, Response &) {
@@ -106,9 +207,16 @@ namespace sloked {
         : id(id), responses(responses), receiveOne(std::move(receiveOne)), receivePending(std::move(receivePending)) {
         this->responses[this->id] = std::queue<Response>{};
     }
+
+    SlokedServiceClient::ResponseHandle::ResponseHandle(ResponseHandle &&rsp)
+        : id(rsp.id), responses(rsp.responses), receiveOne(std::move(rsp.receiveOne)), receivePending(std::move(rsp.receivePending)) {
+        rsp.id = -1;   
+    }
     
     SlokedServiceClient::ResponseHandle::~ResponseHandle() {
-        this->responses.erase(this->id);
+        if (this->responses.count(this->id) != 0) {
+            this->responses.erase(this->id);
+        }
     }
 
     void SlokedServiceClient::ResponseHandle::Drop() {
@@ -136,6 +244,11 @@ namespace sloked {
         } else {
             return {};
         }
+    }
+
+    bool SlokedServiceClient::ResponseHandle::Has() {
+        this->receivePending();
+        return !this->responses.at(this->id).empty();
     }
 
     SlokedServiceClient::SlokedServiceClient(std::unique_ptr<KgrPipe> pipe)
