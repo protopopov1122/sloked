@@ -32,6 +32,7 @@
 #include <functional>
 #include <variant>
 #include <chrono>
+#include <mutex>
 
 namespace sloked {
 
@@ -99,7 +100,7 @@ namespace sloked {
 
 		class ResponseHandle {
 		 public:
-			ResponseHandle(int64_t, std::map<int64_t, std::queue<Response>> &, std::function<void()>, std::function<void()>);
+			ResponseHandle(int64_t, SlokedServiceClient &);
 			ResponseHandle(const ResponseHandle &) = delete;
 			ResponseHandle(ResponseHandle &&);
 			~ResponseHandle();
@@ -114,10 +115,9 @@ namespace sloked {
 
 		 private:
 			int64_t id;
-			std::map<int64_t, std::queue<Response>> &responses;
-			std::function<void()> receiveOne;
-			std::function<void()> receivePending;
+			std::reference_wrapper<SlokedServiceClient> client;
 		};
+		friend class ResponseHandle;
 
 		SlokedServiceClient(std::unique_ptr<KgrPipe>);
 		KgrPipe::Status GetStatus() const;
@@ -125,9 +125,15 @@ namespace sloked {
 		void Close();
 
 	 private:
+		void SetupHandle(int64_t);
+		void ClearHandle(int64_t);
+		bool Has(int64_t);
+		Response Get(int64_t);
+		void Drop(int64_t);
 		void ReceiveOne();
 		void ReceivePending();
 
+		std::unique_ptr<std::recursive_mutex> mtx;
 		std::unique_ptr<KgrPipe> pipe;
 		int64_t nextId;
 		std::map<int64_t, std::queue<Response>> responses;

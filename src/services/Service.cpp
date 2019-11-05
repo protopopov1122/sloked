@@ -203,56 +203,42 @@ namespace sloked {
         }
     }
 
-    SlokedServiceClient::ResponseHandle::ResponseHandle(int64_t id, std::map<int64_t, std::queue<Response>> &responses, std::function<void()> receiveOne, std::function<void()> receivePending)
-        : id(id), responses(responses), receiveOne(std::move(receiveOne)), receivePending(std::move(receivePending)) {
-        this->responses[this->id] = std::queue<Response>{};
+    SlokedServiceClient::ResponseHandle::ResponseHandle(int64_t id, SlokedServiceClient &client)
+        : id(id), client(client) {
+        this->client.get().SetupHandle(id);
     }
 
     SlokedServiceClient::ResponseHandle::ResponseHandle(ResponseHandle &&rsp)
-        : id(rsp.id), responses(rsp.responses), receiveOne(std::move(rsp.receiveOne)), receivePending(std::move(rsp.receivePending)) {
-        rsp.id = -1;   
+        : id(rsp.id), client(rsp.client) {
+        rsp.id = -1;
     }
     
     SlokedServiceClient::ResponseHandle::~ResponseHandle() {
-        if (this->responses.count(this->id) != 0) {
-            this->responses.erase(this->id);
-        }
+        this->client.get().ClearHandle(this->id);
     }
 
     void SlokedServiceClient::ResponseHandle::Drop() {
-        while (this->responses.at(this->id).empty()) {
-            this->receiveOne();
-        }
-        this->responses.at(this->id).pop();
+        this->client.get().Drop(this->id);
     }
 
     SlokedServiceClient::Response SlokedServiceClient::ResponseHandle::Get() {
-        while (this->responses.at(this->id).empty()) {
-            this->receiveOne();
-        }
-        auto rsp = this->responses.at(this->id).front();
-        this->responses.at(this->id).pop();
-        return rsp;
+        return this->client.get().Get(this->id);
     }
 
     std::optional<SlokedServiceClient::Response> SlokedServiceClient::ResponseHandle::GetOptional() {
-        this->receivePending();
-        if (!this->responses.at(this->id).empty()) {
-            auto rsp = this->responses.at(this->id).front();
-            this->responses.at(this->id).pop();
-            return rsp;
+        if (this->client.get().Has(this->id)) {
+            return this->client.get().Get(this->id);
         } else {
             return {};
         }
     }
 
     bool SlokedServiceClient::ResponseHandle::Has() {
-        this->receivePending();
-        return !this->responses.at(this->id).empty();
+        return this->client.get().Has(this->id);
     }
 
     SlokedServiceClient::SlokedServiceClient(std::unique_ptr<KgrPipe> pipe)
-        : pipe(std::move(pipe)), nextId(0) {
+        : mtx(std::make_unique<std::recursive_mutex>()), pipe(std::move(pipe)), nextId(0) {
         if (this->pipe == nullptr) {
             throw SlokedError("SlokedServiceClient: Pipe can't be null");
         }
@@ -273,16 +259,54 @@ namespace sloked {
             { "method", method },
             { "params", params }
         });
-        return ResponseHandle(id, this->responses, [this]() { this->ReceiveOne(); }, [this]() { this->ReceivePending(); });
+        return ResponseHandle(id, *this);
     }
 
     void SlokedServiceClient::Close() {
         this->pipe->Close();
     }
 
+    void SlokedServiceClient::SetupHandle(int64_t id) {
+        std::unique_lock lock(*this->mtx);
+        this->responses.emplace(id, std::queue<Response>{});
+    }
+
+    void SlokedServiceClient::ClearHandle(int64_t id) {
+        std::unique_lock lock(*this->mtx);
+        if (this->responses.count(id)) {
+            this->responses.erase(id);
+        }
+    }
+
+    bool SlokedServiceClient::Has(int64_t id) {
+        this->ReceivePending();
+        std::unique_lock lock(*this->mtx);
+        return this->responses.count(id) != 0 &&
+            !this->responses.at(id).empty();
+    }
+
+    SlokedServiceClient::Response SlokedServiceClient::Get(int64_t id) {
+        while (!this->Has(id)) {
+            this->ReceiveOne();
+        }
+        std::unique_lock lock(*this->mtx);
+        auto rsp = std::move(this->responses.at(id).front());
+        this->responses.at(id).pop();
+        return rsp;
+    }
+    
+    void SlokedServiceClient::Drop(int64_t id) {
+        while (!this->Has(id)) {
+            this->ReceiveOne();
+        }
+        std::unique_lock lock(*this->mtx);
+        this->responses.at(id).pop();
+    }
+
     void SlokedServiceClient::ReceiveOne() {
         auto rsp = this->pipe->ReadWait();
         int64_t rspId = rsp.AsDictionary()["id"].AsInt();
+        std::unique_lock lock(*this->mtx);
         if (this->responses.count(rspId) == 0) {
             return;
         }
