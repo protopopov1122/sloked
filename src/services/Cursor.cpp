@@ -152,24 +152,25 @@ namespace sloked {
                     { "column", static_cast<int64_t>(this->document->cursor.GetColumn()) }
                 }));
 
-                this->Defer([renderClient = this->renderClient, renderResponse] {
-                    return renderResponse->Has();
-                }, [this, response = std::move(rsp), renderClient = this->renderClient, renderResponse]() mutable {
-                    auto res = renderResponse->GetOptional();
-                    if (res.has_value() && res.value().HasResult()) {
-                        response.Result(KgrDictionary {
-                            { "render", res.value().GetResult() },
-                            {
-                                "cursor",
-                                KgrDictionary {
-                                    { "line", static_cast<int64_t>(this->document->cursor.GetLine()) },
-                                    { "column", static_cast<int64_t>(this->document->cursor.GetColumn()) }
+                this->Defer([this, renderClient = this->renderClient, response = std::move(rsp), renderResponse](Callback cb) mutable {
+                    renderResponse->Notify(cb);
+                    return [this, renderClient, response = std::move(response), renderResponse]() mutable {
+                        auto res = renderResponse->GetOptional();
+                        if (res.has_value() && res.value().HasResult()) {
+                            response.Result(KgrDictionary {
+                                { "render", res.value().GetResult() },
+                                {
+                                    "cursor",
+                                    KgrDictionary {
+                                        { "line", static_cast<int64_t>(this->document->cursor.GetLine()) },
+                                        { "column", static_cast<int64_t>(this->document->cursor.GetColumn()) }
+                                    }
                                 }
-                            }
-                        });
-                    } else {
-                        response.Result({});
-                    }
+                            });
+                        } else {
+                            response.Result({});
+                        }
+                    };
                 });
             } else {
                 rsp.Result({});

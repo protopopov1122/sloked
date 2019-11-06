@@ -31,8 +31,8 @@
 #include <list>
 #include <functional>
 #include <variant>
-#include <chrono>
 #include <mutex>
+#include <condition_variable>
 
 namespace sloked {
 
@@ -61,9 +61,10 @@ namespace sloked {
 
 		friend class Response;
 		using MethodHandler = std::function<void(const std::string &, const KgrValue &, Response &)>;
+	 	using Callback = std::function<void()>;
 
 		void BindMethod(const std::string &, MethodHandler);
-		void Defer(std::function<bool()>, std::function<void()>);
+		void Defer(std::function<Callback(Callback)>);
 
 		template <typename T>
 		void BindMethod(const std::string &method, void (T::*impl)(const std::string &, const KgrValue &, Response &)) {
@@ -80,8 +81,10 @@ namespace sloked {
 		void SendError(const KgrValue &, KgrValue &&);
 
 		std::map<std::string, MethodHandler> methods;
-		std::list<std::pair<std::function<bool()>, std::function<void()>>> deferred;
-		std::chrono::time_point<std::chrono::system_clock> lastDeferredCheck;
+		mutable std::mutex mtx;
+		int64_t nextDeferredId;
+		std::map<int64_t, std::function<void()>> deferred;
+		std::queue<std::function<void()>> pending;
 	};
 
 	class SlokedServiceClient {
@@ -106,12 +109,13 @@ namespace sloked {
 			~ResponseHandle();
 
 			ResponseHandle &operator=(const ResponseHandle &) = delete;
-			ResponseHandle &operator=(ResponseHandle &&) = default;
+			ResponseHandle &operator=(ResponseHandle &&);
 
 			void Drop();
 			Response Get();
 			std::optional<Response> GetOptional();
 			bool Has();
+			void Notify(std::function<void()>);
 
 		 private:
 			int64_t id;
@@ -125,18 +129,18 @@ namespace sloked {
 		void Close();
 
 	 private:
-		void SetupHandle(int64_t);
+	 	void SetCallback(int64_t, std::function<void()>);
 		void ClearHandle(int64_t);
 		bool Has(int64_t);
 		Response Get(int64_t);
 		void Drop(int64_t);
-		void ReceiveOne();
-		void ReceivePending();
 
-		std::unique_ptr<std::recursive_mutex> mtx;
+		std::unique_ptr<std::mutex> mtx;
+		std::unique_ptr<std::condition_variable> cv;
 		std::unique_ptr<KgrPipe> pipe;
 		int64_t nextId;
-		std::map<int64_t, std::queue<Response>> responses;
+		std::map<int64_t, std::queue<Response>> pending;
+		std::map<int64_t, std::function<void()>> callbacks;
 	};
 }
 
