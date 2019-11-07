@@ -152,7 +152,7 @@ namespace sloked {
                     { "column", static_cast<int64_t>(this->document->cursor.GetColumn()) }
                 }));
 
-                this->Defer([this, renderClient = this->renderClient, response = std::move(rsp), renderResponse](Callback cb) mutable {
+                this->Defer(std::make_unique<SlokedDynamicAsyncTask>([this, renderClient = this->renderClient, response = std::move(rsp), renderResponse](Callback cb) mutable {
                     renderResponse->Notify(cb);
                     return [this, renderClient, response = std::move(response), renderResponse]() mutable {
                         auto res = renderResponse->GetOptional();
@@ -170,8 +170,9 @@ namespace sloked {
                         } else {
                             response.Result({});
                         }
+                        return false;
                     };
-                });
+                }));
             } else {
                 rsp.Result({});
             }

@@ -25,6 +25,7 @@
 #include "sloked/kgr/local/Context.h"
 #include "sloked/core/Error.h"
 #include "sloked/kgr/Value.h"
+#include "sloked/core/EventLoop.h"
 #include <utility>
 #include <map>
 #include <queue>
@@ -40,6 +41,7 @@ namespace sloked {
 	 public:
 		using KgrLocalContext::KgrLocalContext;
 		void Run() final;
+		void SetActivationListener(std::function<void()>) final;
 		State GetState() const final;
 
 	 protected:
@@ -64,7 +66,7 @@ namespace sloked {
 	 	using Callback = std::function<void()>;
 
 		void BindMethod(const std::string &, MethodHandler);
-		void Defer(std::function<Callback(Callback)>);
+		void Defer(std::unique_ptr<SlokedAsyncTask>);
 
 		template <typename T>
 		void BindMethod(const std::string &method, void (T::*impl)(const std::string &, const KgrValue &, Response &)) {
@@ -81,10 +83,7 @@ namespace sloked {
 		void SendError(const KgrValue &, KgrValue &&);
 
 		std::map<std::string, MethodHandler> methods;
-		mutable std::mutex mtx;
-		int64_t nextDeferredId;
-		std::map<int64_t, std::function<void()>> deferred;
-		std::queue<std::function<void()>> pending;
+		SlokedDefaultEventLoop eventLoop;
 	};
 
 	class SlokedServiceClient {

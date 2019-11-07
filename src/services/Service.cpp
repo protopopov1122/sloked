@@ -119,23 +119,22 @@ namespace sloked {
                     this->InvokeMethod(method, params, *response);
                 }
             }
-            std::unique_lock lock(this->mtx);
-            while (!this->pending.empty()) {
-                auto callback = std::move(this->pending.front());
-                this->pending.pop();
-                lock.unlock();
-                callback();
-                lock.lock();
+            if (this->eventLoop.HasPending()) {
+                this->eventLoop.Run();
             }
         } catch (const SlokedError &err) {
             this->HandleError(err, response.get());
         }
     }
 
+    void SlokedServiceContext::SetActivationListener(std::function<void()> callback) {
+        this->KgrLocalContext::SetActivationListener(callback);
+        this->eventLoop.SetListener(callback);
+    }
+
     KgrServiceContext::State SlokedServiceContext::GetState() const {
         auto state = this->KgrLocalContext::GetState();
-        std::unique_lock lock(this->mtx);
-        if (state == State::Idle && !this->pending.empty()) {
+        if (state == State::Idle && this->eventLoop.HasPending()) {
             state = State::Pending;
         }
         return state;
@@ -145,15 +144,8 @@ namespace sloked {
         this->methods.emplace(method, std::move(handler));
     }
 
-    void SlokedServiceContext::Defer(std::function<Callback(Callback)> fn) {
-        std::unique_lock lock(this->mtx);
-        int64_t deferredId = this->nextDeferredId++;
-        auto callback = fn([this, deferredId]() mutable {
-            std::unique_lock lock(this->mtx);
-            this->pending.push(std::move(this->deferred.at(deferredId)));
-            this->deferred.erase(deferredId);
-        });
-        this->deferred.emplace(deferredId, std::move(callback));
+    void SlokedServiceContext::Defer(std::unique_ptr<SlokedAsyncTask> task) {
+        this->eventLoop.Attach(std::move(task));
     }
 
     void SlokedServiceContext::InvokeMethod(const std::string &method, const KgrValue &, Response &) {

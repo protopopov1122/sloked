@@ -9,6 +9,7 @@ sloked_src = [
   'src/core/DynamicBitset.cpp',
   'src/core/Encoding.cpp',
   'src/core/Error.cpp',
+  'src/core/EventLoop.cpp',
   'src/core/Locale.cpp',
   'src/core/NewLine.cpp',
   'src/core/Position.cpp',

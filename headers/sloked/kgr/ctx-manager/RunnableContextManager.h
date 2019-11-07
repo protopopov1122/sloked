@@ -28,9 +28,6 @@
 #include <thread>
 #include <condition_variable>
 #include <list>
-#include <chrono>
-
-using namespace std::chrono_literals;
 
 namespace sloked {
 
@@ -126,7 +123,7 @@ namespace sloked {
                 while (this->work.load()) {
                     std::unique_lock<std::mutex> notificationLock(this->notificationMutex);
                     while (!this->manager.HasPendingActions() && this->work.load() && this->notifications.load() == 0) {
-                        this->notificationCV.wait_for(notificationLock, std::chrono::milliseconds(25));
+                        this->notificationCV.wait(notificationLock);
                     }
                     this->notifications = 0;
                     notificationLock.unlock();
