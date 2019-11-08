@@ -11,6 +11,7 @@ sloked_src = [
   'src/core/Error.cpp',
   'src/core/EventLoop.cpp',
   'src/core/Locale.cpp',
+  'src/core/Logger.cpp',
   'src/core/NewLine.cpp',
   'src/core/Position.cpp',
   'src/core/Scope.cpp',
