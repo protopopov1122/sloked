@@ -15,6 +15,7 @@ sloked_src = [
   'src/core/NewLine.cpp',
   'src/core/Position.cpp',
   'src/core/Scope.cpp',
+  'src/core/String.cpp',
   'src/core/encoding/Utf8.cpp',
   'src/core/encoding/Utf32LE.cpp',
   'src/demo/main.cpp',

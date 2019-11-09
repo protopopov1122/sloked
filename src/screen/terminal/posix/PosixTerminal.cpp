@@ -20,6 +20,7 @@
 */
 
 #include "sloked/screen/terminal/posix/PosixTerminal.h"
+#include "sloked/core/String.h"
 #include <optional>
 #include <map>
 #include <array>
@@ -30,19 +31,6 @@
 #include <unistd.h>
 
 namespace sloked {
-
-    bool starts_with(std::string_view s1, std::string_view s2) {
-        if (s1.size() >= s2.size()) {
-            for (std::size_t i = 0; i < s2.size(); i++) {
-                if (s1[i] != s2[i]) {
-                    return false;
-                }
-            }
-            return true;
-        } else {
-            return false;
-        }
-    }
 
     static const std::vector<std::pair<std::string, SlokedControlKey>> TermcapSpecialKeys = {
         { "ku", SlokedControlKey::ArrowUp },

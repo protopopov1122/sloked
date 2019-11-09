@@ -20,6 +20,7 @@
 */
 
 #include "sloked/json/Lexer.h"
+#include "sloked/core/String.h"
 #include <map>
 #include <iostream>
 
@@ -36,19 +37,6 @@ namespace sloked {
         { ',', JsonLexem::Symbol::Comma },
         { ':', JsonLexem::Symbol::Colon }
     };
-
-    static bool starts_with(std::string_view s1, std::string_view s2) {
-        if (s1.size() >= s2.size()) {
-            for (std::size_t i = 0; i < s2.size(); i++) {
-                if (s1[i] != s2[i]) {
-                    return false;
-                }
-            }
-            return true;
-        } else {
-            return false;
-        }
-    }
 
     static bool MatchInteger(std::string_view str, std::string &match) {
         match = "";
