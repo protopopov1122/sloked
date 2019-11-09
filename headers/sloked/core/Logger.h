@@ -22,12 +22,11 @@
 #ifndef SLOKED_CORE_LOGGER_H_
 #define SLOKED_CORE_LOGGER_H_
 
-#include "sloked/Base.h"
+#include "sloked/core/RangeMap.h"
 #include <memory>
 #include <sstream>
 #include <chrono>
 #include <functional>
-#include <map>
 
 #define SlokedLoggerTag __FILE__
 
@@ -35,41 +34,53 @@ namespace sloked {
 
     class SlokedLoggingSink {
      public:
-        using Formatter = std::function<std::string(uint8_t, const std::string &, std::chrono::time_point<std::chrono::system_clock>, const std::string &)>;
+        using Formatter = std::function<std::string(const std::string &, const std::string &, std::chrono::time_point<std::chrono::system_clock>, const std::string &)>;
         virtual ~SlokedLoggingSink() = default;
-        virtual void Log(uint8_t, const std::string &, std::chrono::time_point<std::chrono::system_clock>, const std::string &) = 0;
+        virtual void Log(const std::string &, const std::string &, std::chrono::time_point<std::chrono::system_clock>, const std::string &) = 0;
 
         static std::unique_ptr<SlokedLoggingSink> TextFile(const std::string &, Formatter);
         static std::unique_ptr<SlokedLoggingSink> Null();
-        static Formatter TabularFormat(uint8_t, uint8_t);
+        static Formatter TabularFormat(uint8_t, uint8_t, uint8_t);
     };
 
     class SlokedLogging {
      public:
         using Level = uint8_t;
         virtual ~SlokedLogging() = default;
-        virtual std::shared_ptr<SlokedLoggingSink> Sink(Level) const = 0;
+        virtual std::string GetLevel(Level) const = 0;
+        virtual SlokedLoggingSink &Sink(Level) const = 0;
     };
 
     class SlokedLoggingManager : public SlokedLogging {
      public:
         SlokedLoggingManager(std::shared_ptr<SlokedLoggingSink> = nullptr);
-        void SetDefaultSink(std::shared_ptr<SlokedLoggingSink>);
+        void DefineLevel(Level, const std::string &);
         void SetSink(Level, std::shared_ptr<SlokedLoggingSink>);
-        std::shared_ptr<SlokedLoggingSink> Sink(Level) const final;
+        void SetSink(Level, Level, std::shared_ptr<SlokedLoggingSink>);
+        std::string GetLevel(Level) const final;
+        SlokedLoggingSink &Sink(Level) const final;
 
         static SlokedLoggingManager Global;
         
      private:
-        std::map<Level, std::shared_ptr<SlokedLoggingSink>> logLevels;
-        std::shared_ptr<SlokedLoggingSink> defaultSink;
+        RangeMap<Level, std::shared_ptr<SlokedLoggingSink>> logLevels;
+        std::map<Level, std::string> levelNames;
+    };
+
+    class SlokedLogLevel {
+     public:
+        static constexpr SlokedLogging::Level Debug = 0;
+        static constexpr SlokedLogging::Level Info = 10;
+        static constexpr SlokedLogging::Level Warning = 20;
+        static constexpr SlokedLogging::Level Error = 30;
+        static constexpr SlokedLogging::Level Critical = 40;
     };
 
     class SlokedLogger {
      public:
         class Entry {
          public:
-            Entry(SlokedLogging::Level, const std::string &, SlokedLoggingSink &);
+            Entry(std::string, const std::string &, SlokedLoggingSink &);
             Entry(const Entry &) = delete;
             Entry(Entry &&) = default;
 
@@ -85,20 +96,25 @@ namespace sloked {
             }
 
          private:
-            SlokedLogging::Level level;
+            std::string level;
             const std::string &tag;
             SlokedLoggingSink &sink;
             std::chrono::time_point<std::chrono::system_clock> timestamp;
             std::stringstream content;
         };
 
-        SlokedLogger(const std::string &, SlokedLogging::Level, SlokedLogging & = SlokedLoggingManager::Global);
+        SlokedLogger(const std::string &, SlokedLogging::Level = SlokedLogLevel::Info, SlokedLogging & = SlokedLoggingManager::Global);
 
         Entry To(SlokedLogging::Level) const;
+        Entry Debug() const;
+        Entry Info() const;
+        Entry Warning() const;
+        Entry Error() const;
+        Entry Critical() const;
 
         template <typename T>
         Entry operator<<(const T &value) const {
-            Entry entry(this->defaultLevel, this->tag, *this->logging.Sink(this->defaultLevel));
+            Entry entry(this->logging.GetLevel(this->defaultLevel), this->tag, this->logging.Sink(this->defaultLevel));
             entry << value;
             return entry;
         }
@@ -107,11 +123,6 @@ namespace sloked {
         std::string tag;
         SlokedLogging::Level defaultLevel;
         SlokedLogging &logging;
-    };
-
-    class SlokedLogLevel {
-     public:
-        static constexpr SlokedLogging::Level Info = 0;
     };
 }
 

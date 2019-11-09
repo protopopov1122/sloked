@@ -50,6 +50,7 @@
 #include "sloked/net/PosixSocket.h"
 #include "sloked/kgr/net/MasterServer.h"
 #include "sloked/kgr/net/SlaveServer.h"
+#include "sloked/core/Logger.h"
 #include <chrono>
 
 using namespace sloked;
@@ -125,6 +126,11 @@ int main(int argc, const char **argv) {
         return EXIT_FAILURE;
     }
 
+    SlokedLoggingManager::Global.SetSink(SlokedLogLevel::Warning, SlokedLoggingSink::TextFile("./sloked.log", SlokedLoggingSink::TabularFormat(10, 30, 30)));
+    SlokedLogger logger(SlokedLoggerTag);
+
+    logger.Debug() << "Initialization";
+
     KgrLocalServer portServer;
     KgrLocalNamedServer server(portServer);
     KgrLocalServer portLocalServer;
@@ -138,6 +144,8 @@ int main(int argc, const char **argv) {
     KgrContextManager<KgrLocalContext> &ctxScreenManager = ctxScreenManagerHandle.GetManager();
     ctxScreenManagerHandle.Start();
 
+    logger.Debug() << "Local servers started";
+
     SlokedPosixSocketFactory socketFactory;
     KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", 1234));
     masterServer.Start();
@@ -148,11 +156,15 @@ int main(int argc, const char **argv) {
     KgrSlaveNetServer slaveScreenServer(socketFactory.Connect("localhost", 1235), localServer);
     slaveScreenServer.Start();
 
+    logger.Debug() << "Network servers started";
+
     char INPUT_PATH[1024], OUTPUT_PATH[1024];
     realpath(argv[1], INPUT_PATH);
     realpath(argv[2], OUTPUT_PATH);
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     SlokedEditorDocumentSet documents(root);
+
+    logger.Debug() << "Namespaces and documents initialized";
 
     SlokedLocale::Setup();
     const Encoding &terminalEncoding = Encoding::Get("system");
@@ -160,11 +172,15 @@ int main(int argc, const char **argv) {
     SlokedCharWidth charWidth;
     TestFragmentFactory fragmentFactory;
 
+    logger.Debug() << "Misc. initialization";
+
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
 
     TerminalComponentHandle screen(console, terminalEncoding, charWidth);
     SlokedSynchronized<SlokedScreenComponent &> screenHandle(screen);
+
+    logger.Debug() << "Screen initialized";
 
     server.Register("text::render", std::make_unique<SlokedTextRenderService>(documents, charWidth, fragmentFactory, ctxManager));
     server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, server.GetConnector("text::render"), ctxManager));
@@ -172,6 +188,8 @@ int main(int argc, const char **argv) {
     screenServer.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, slaveServer.GetConnector("text::cursor"), slaveServer.GetConnector("text::render"), ctxScreenManager));
     screenServer.Register("screen::input", std::make_unique<SlokedScreenInputService>(screenHandle, terminalEncoding, ctxScreenManager));
     screenServer.Register("screen::text::pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxScreenManager));
+
+    logger.Debug() << "Services bound";
 
 
     SlokedScreenClient screenClient(slaveScreenServer.Connect("screen"));
@@ -196,6 +214,8 @@ int main(int argc, const char **argv) {
     paneClient.Connect("/0/1", false, {});
     auto &render = paneClient.GetRender();
 
+    logger.Debug() << "Editor initialized";
+
     int i = 0;
     bool work = true;
     while (work) {
@@ -219,14 +239,19 @@ int main(int argc, const char **argv) {
         }
         auto closeEvents = screenInput.GetInput();
         if (!closeEvents.empty()) {
+            logger.Debug() << "Saving document";
             documentClient.Save(OUTPUT_PATH);
             work = false;
         }
     }
 
+    logger.Debug() << "Stopping servers";
+
     slaveServer.Stop();
     masterServer.Stop();
     ctxScreenManagerHandle.Stop();
     ctxManagerHandle.Stop();
+
+    logger.Debug() << "Shutdown";
     return EXIT_SUCCESS;
 }
