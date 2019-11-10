@@ -216,7 +216,12 @@ namespace sloked {
 
 		template <typename T = bool>
         void Define(const std::string &keys, T &&value = false) {
-			auto option = std::make_shared<SlokedCLIOption>(std::forward<T>(value));
+			std::shared_ptr<SlokedCLIOption> option;
+			if constexpr (std::is_integral_v<T>) {
+				option = std::make_shared<SlokedCLIOption>(static_cast<int64_t>((value)));
+			} else {
+				option = std::make_shared<SlokedCLIOption>(std::forward<T>(value));
+			}
 			std::string_view allKeys = keys;
 			while (!allKeys.empty()) {
 				auto keyEnd = allKeys.find(',');
@@ -250,7 +255,11 @@ namespace sloked {
 
 		template <typename T>
 		auto Option(T &&value) const {
-			return SlokedCLIValue(std::forward<T>(value));
+			if constexpr (std::is_integral_v<T>) {
+				return SlokedCLIValue(static_cast<int64_t>((value)));
+			} else {
+				return SlokedCLIValue(std::forward<T>(value));
+			}
 		}
     
      private:

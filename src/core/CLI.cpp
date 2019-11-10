@@ -164,12 +164,24 @@ namespace sloked {
             switch (option.GetType()) {
                 case SlokedCLIValue::Type::Integer: {
                     std::string value{!arg.empty() ? arg : args.Next()};
-                    option.SetValue(static_cast<int64_t>(std::stoll(value)));
+                    long long int_value;
+                    try {
+                        int_value = std::stoll(value);
+                    } catch (const std::invalid_argument &ex) {
+                        throw SlokedError("CLI: Error converting '" + value + "' to integer");
+                    }
+                    option.SetValue<long long>(int_value);
                 } break;
 
                 case SlokedCLIValue::Type::Float: {
                     std::string value{!arg.empty() ? arg : args.Next()};
-                    option.SetValue(std::stod(value));
+                    double float_value;
+                    try {
+                        float_value = std::stod(value);
+                    } catch (const std::invalid_argument &ex) {
+                        throw SlokedError("CLI: Error converting '" + value + "' to float");
+                    }
+                    option.SetValue<double>(float_value);
                 } break;
 
                 case SlokedCLIValue::Type::Boolean:

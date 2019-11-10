@@ -126,6 +126,8 @@ int main(int argc, const char **argv) {
     cli.Define("--encoding", "system");
     cli.Define("--newline", "system");
     cli.Define("-o,--output", cli.Option<std::string>());
+    cli.Define("--net-port", cli.Option<int>(1234));
+    cli.Define("--screen-net-port", cli.Option<int>(1235));
     cli.Parse(argc, argv);
     if (cli.Size() == 0) {
         std::cout << "Format: " << argv[0] << " file" << std::endl;
@@ -153,13 +155,13 @@ int main(int argc, const char **argv) {
     logger.Debug() << "Local servers started";
 
     SlokedPosixSocketFactory socketFactory;
-    KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", 1234));
+    KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", cli["net-port"].As<int>()));
     masterServer.Start();
-    KgrMasterNetServer masterScreenServer(screenServer, socketFactory.Bind("localhost", 1235));
+    KgrMasterNetServer masterScreenServer(screenServer, socketFactory.Bind("localhost", cli["screen-net-port"].As<int>()));
     masterScreenServer.Start();
-    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", 1234), localServer);
+    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), localServer);
     slaveServer.Start();
-    KgrSlaveNetServer slaveScreenServer(socketFactory.Connect("localhost", 1235), localServer);
+    KgrSlaveNetServer slaveScreenServer(socketFactory.Connect("localhost", cli["screen-net-port"].As<int>()), localServer);
     slaveScreenServer.Start();
 
     logger.Debug() << "Network servers started";
