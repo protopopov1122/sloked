@@ -5,8 +5,8 @@ if meson.get_compiler('cpp').get_id() == 'gcc' or meson.get_compiler('cpp').get_
 endif
 
 sloked_src = [
-  'src/cli/Options.cpp',
   'src/core/CharWidth.cpp',
+  'src/core/CLI.cpp',
   'src/core/DynamicBitset.cpp',
   'src/core/Encoding.cpp',
   'src/core/Error.cpp',

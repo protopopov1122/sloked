@@ -51,7 +51,7 @@
 #include "sloked/kgr/net/MasterServer.h"
 #include "sloked/kgr/net/SlaveServer.h"
 #include "sloked/core/Logger.h"
-#include "sloked/cli/Options.h"
+#include "sloked/core/CLI.h"
 #include <chrono>
 
 using namespace sloked;
@@ -123,12 +123,11 @@ class TestFragmentFactory : public SlokedTextTaggerFactory<int> {
 
 int main(int argc, const char **argv) {
     SlokedCLI cli;
-    cli.Define("encoding", SlokedCLIValue(std::string{"system"}));
-    cli.Define("newline", SlokedCLIValue(std::string{"system"}));
-    cli.Define('o', "output", SlokedCLIValue::Type::String);
-    SlokedCLIArguments args(argc - 1, argv + 1);
-    cli.Parse(args);
-    if (cli.ArgCount() == 0) {
+    cli.Define("--encoding", "system");
+    cli.Define("--newline", "system");
+    cli.Define("-o,--output", cli.Option<std::string>());
+    cli.Parse(argc, argv);
+    if (cli.Size() == 0) {
         std::cout << "Format: " << argv[0] << " file" << std::endl;
         return EXIT_FAILURE;
     }
@@ -167,11 +166,7 @@ int main(int argc, const char **argv) {
 
     char INPUT_PATH[1024], OUTPUT_PATH[1024];
     realpath(std::string{cli.At(0)}.data(), INPUT_PATH);
-    if (cli.Has('o')) {
-        realpath(cli['o'].AsString().data(), OUTPUT_PATH);
-    } else {
-        realpath(std::string{cli.At(0)}.data(), OUTPUT_PATH);
-    }
+    realpath(cli["output"].As<std::string>().data(), OUTPUT_PATH);
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     SlokedEditorDocumentSet documents(root);
 
@@ -205,7 +200,7 @@ int main(int argc, const char **argv) {
 
     SlokedScreenClient screenClient(slaveScreenServer.Connect("screen"));
     SlokedDocumentSetClient documentClient(slaveServer.Connect("documents"));
-    documentClient.Open(INPUT_PATH, cli["encoding"].AsString(), cli["newline"].AsString());
+    documentClient.Open(INPUT_PATH, cli["encoding"].As<std::string>(), cli["newline"].As<std::string>());
 
     screenClient.Handle.NewMultiplexer("/");
     auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
