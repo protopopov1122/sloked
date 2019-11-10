@@ -172,6 +172,13 @@ namespace sloked {
         return this->DeserializeValue(*node);
     }
 
+    KgrValue KgrJsonSerializer::Deserialize(std::istream &is) const {
+        JsonDefaultLexemStream lexer(is);
+        JsonDefaultParser parser(lexer);
+        auto node = parser.Parse();
+        return this->DeserializeValue(*node);
+    }
+
     std::unique_ptr<JsonASTNode> KgrJsonSerializer::SerializeValue(const KgrValue &value) const {
         switch (value.GetType()) {
             case KgrValueType::Null:

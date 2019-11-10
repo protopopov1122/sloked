@@ -52,6 +52,8 @@
 #include "sloked/kgr/net/SlaveServer.h"
 #include "sloked/core/Logger.h"
 #include "sloked/core/CLI.h"
+#include "sloked/editor/Configuration.h"
+#include "sloked/kgr/Path.h"
 #include <chrono>
 
 using namespace sloked;
@@ -121,16 +123,28 @@ class TestFragmentFactory : public SlokedTextTaggerFactory<int> {
     }
 };
 
+static const KgrDictionary DefaultConfiguration {
+    { "encoding", "system" },
+    { "newline", "system" },
+    {
+        "network", KgrDictionary {
+            { "port", 1234 },
+            { "screenPort", 1235 }
+        }
+    }
+};
+
 int main(int argc, const char **argv) {
+    SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
     SlokedCLI cli;
-    cli.Define("--encoding", "system");
-    cli.Define("--newline", "system");
+    cli.Define("--encoding", mainConfig.Find("/encoding").AsString());
+    cli.Define("--newline", mainConfig.Find("/newline").AsString());
     cli.Define("-o,--output", cli.Option<std::string>());
-    cli.Define("--net-port", cli.Option<int>(1234));
-    cli.Define("--screen-net-port", cli.Option<int>(1235));
+    cli.Define("--net-port", mainConfig.Find("/network/port").AsInt());
+    cli.Define("--screen-net-port", mainConfig.Find("/network/screenPort").AsInt());
     cli.Parse(argc, argv);
     if (cli.Size() == 0) {
-        std::cout << "Format: " << argv[0] << " file" << std::endl;
+        std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
         return EXIT_FAILURE;
     }
 

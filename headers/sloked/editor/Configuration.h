@@ -19,34 +19,28 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_KGR_SERIALIZE_H_
-#define SLOKED_KGR_SERIALIZE_H_
+#ifndef SLOKED_EDITOR_CONFIGURATION_H_
+#define SLOKED_EDITOR_CONFIGURATION_H_
 
 #include "sloked/kgr/Value.h"
-#include "sloked/json/AST.h"
-#include <vector>
 
 namespace sloked {
 
-    class KgrSerializer {
+    class SlokedConfiguration {
      public:
-        using Blob = std::string;
-
-        virtual ~KgrSerializer() = default;
-        virtual Blob Serialize(const KgrValue &) const = 0;
-        virtual KgrValue Deserialize(const Blob &) const = 0;
-        virtual KgrValue Deserialize(std::istream &) const = 0;
+        virtual ~SlokedConfiguration() = default;
+        virtual KgrValue Find(const std::string &) const = 0;
+        static KgrValue LoadFile(const std::string &);
     };
 
-    class KgrJsonSerializer : public KgrSerializer {
+    class SlokedXdgConfiguration : public SlokedConfiguration {
      public:
-        Blob Serialize(const KgrValue &) const override;
-        KgrValue Deserialize(const Blob &) const override;
-        KgrValue Deserialize(std::istream &) const override;
+        SlokedXdgConfiguration(const std::string &, const KgrValue &);
+        KgrValue Find(const std::string &) const override;
 
      private:
-        std::unique_ptr<JsonASTNode> SerializeValue(const KgrValue &) const;
-        KgrValue DeserializeValue(const JsonASTNode &) const;
+        KgrValue config;
+        KgrValue fallback;
     };
 }
 
