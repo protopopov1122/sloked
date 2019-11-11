@@ -28,7 +28,7 @@ namespace sloked {
 
     class SlokedScreenInputContext : public SlokedServiceContext {
      public:
-        SlokedScreenInputContext(std::unique_ptr<KgrPipe> pipe, SlokedSynchronized<SlokedScreenComponent &> &root, const Encoding &encoding)
+        SlokedScreenInputContext(std::unique_ptr<KgrPipe> pipe, SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding)
             : SlokedServiceContext(std::move(pipe)), root(root), encoding(encoding) {
             
             this->BindMethod("connect", &SlokedScreenInputContext::Connect);
@@ -122,7 +122,7 @@ namespace sloked {
             rsp.Result(std::move(array));
         }
 
-        SlokedSynchronized<SlokedScreenComponent &> &root;
+        SlokedMonitor<SlokedScreenComponent &> &root;
         const Encoding &encoding;
         std::optional<SlokedPath> path;
         std::optional<SlokedComponentListener> listener;
@@ -132,7 +132,7 @@ namespace sloked {
         std::set<std::pair<SlokedControlKey, bool>> subscribes;
     };
 
-    SlokedScreenInputService::SlokedScreenInputService(SlokedSynchronized<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
+    SlokedScreenInputService::SlokedScreenInputService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), contextManager(contextManager) {}
 
     bool SlokedScreenInputService::Attach(std::unique_ptr<KgrPipe> pipe) {

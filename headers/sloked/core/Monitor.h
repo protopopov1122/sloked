@@ -19,8 +19,8 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CORE_SYNCHRONIZED_H_
-#define SLOKED_CORE_SYNCHRONIZED_H_
+#ifndef SLOKED_CORE_MONITOR_H_
+#define SLOKED_CORE_MONITOR_H_
 
 #include "sloked/Base.h"
 #include <mutex>
@@ -29,16 +29,16 @@
 namespace sloked {
 
     template <typename T>
-    class SlokedSynchronized {
+    class SlokedMonitor {
      public:
-        SlokedSynchronized() = delete;
-        SlokedSynchronized(T data)
+        SlokedMonitor() = delete;
+        SlokedMonitor(T data)
             : data(std::forward<T>(data)) {}
-        SlokedSynchronized(const SlokedSynchronized<T> &) = delete;
-        SlokedSynchronized(SlokedSynchronized<T> &&) = default;
+        SlokedMonitor(const SlokedMonitor<T> &) = delete;
+        SlokedMonitor(SlokedMonitor<T> &&) = default;
 
-        SlokedSynchronized &operator=(const SlokedSynchronized<T> &) = delete;
-        SlokedSynchronized &operator=(SlokedSynchronized<T> &&) = default;
+        SlokedMonitor &operator=(const SlokedMonitor<T> &) = delete;
+        SlokedMonitor &operator=(SlokedMonitor<T> &&) = default;
 
         void Lock(std::function<void(T &)> callback) {
             std::unique_lock<std::mutex> lock(this->mtx);

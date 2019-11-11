@@ -178,7 +178,7 @@ namespace sloked {
 
     class SlokedTextPaneContext : public SlokedServiceContext {
      public:
-        SlokedTextPaneContext(std::unique_ptr<KgrPipe> pipe, SlokedSynchronized<SlokedScreenComponent &> &root, const Encoding &encoding)
+        SlokedTextPaneContext(std::unique_ptr<KgrPipe> pipe, SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding)
             : SlokedServiceContext(std::move(pipe)), root(root), encoding(encoding) {
             
             this->BindMethod("connect", &SlokedTextPaneContext::Connect);
@@ -279,13 +279,13 @@ namespace sloked {
             rsp.Result(std::move(array));
         }
 
-        SlokedSynchronized<SlokedScreenComponent &> &root;
+        SlokedMonitor<SlokedScreenComponent &> &root;
         const Encoding &encoding;
         SlokedTextPaneComponent::Frame frame;
         std::optional<SlokedPath> path;
     };
 
-    SlokedTextPaneService::SlokedTextPaneService(SlokedSynchronized<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
+    SlokedTextPaneService::SlokedTextPaneService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), contextManager(contextManager) {}
 
     bool SlokedTextPaneService::Attach(std::unique_ptr<KgrPipe> pipe) {

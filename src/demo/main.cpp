@@ -46,7 +46,7 @@
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/editor/Tabs.h"
 #include "sloked/screen/components/ComponentTree.h"
-#include "sloked/core/Synchronized.h"
+#include "sloked/core/Monitor.h"
 #include "sloked/net/PosixSocket.h"
 #include "sloked/kgr/net/MasterServer.h"
 #include "sloked/kgr/net/SlaveServer.h"
@@ -200,7 +200,7 @@ int main(int argc, const char **argv) {
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
 
     TerminalComponentHandle screen(console, terminalEncoding, charWidth);
-    SlokedSynchronized<SlokedScreenComponent &> screenHandle(screen);
+    SlokedMonitor<SlokedScreenComponent &> screenHandle(screen);
 
     logger.Debug() << "Screen initialized";
 

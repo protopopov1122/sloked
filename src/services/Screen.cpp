@@ -30,7 +30,7 @@ namespace sloked {
 
     class SlokedScreenContext : public SlokedServiceContext {
      public:
-        SlokedScreenContext(std::unique_ptr<KgrPipe> pipe, SlokedSynchronized<SlokedScreenComponent &> &root, const Encoding &encoding,
+        SlokedScreenContext(std::unique_ptr<KgrPipe> pipe, SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding,
             KgrServer::Connector cursorService, KgrServer::Connector renderService)
             : SlokedServiceContext(std::move(pipe)), root(root), encoding(encoding),
               cursorService(std::move(cursorService)), renderService(std::move(renderService)) {
@@ -561,13 +561,13 @@ namespace sloked {
             });
         }
     
-        SlokedSynchronized<SlokedScreenComponent &> &root;
+        SlokedMonitor<SlokedScreenComponent &> &root;
         const Encoding &encoding;
         KgrServer::Connector cursorService;
         KgrServer::Connector renderService;
     };
 
-    SlokedScreenService::SlokedScreenService(SlokedSynchronized<SlokedScreenComponent &> &root, const Encoding &encoding,
+    SlokedScreenService::SlokedScreenService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding,
         KgrServer::Connector cursorService, KgrServer::Connector renderService, KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), cursorService(std::move(cursorService)), renderService(std::move(renderService)), contextManager(contextManager) {}
 

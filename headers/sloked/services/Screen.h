@@ -25,7 +25,7 @@
 #include "sloked/services/Service.h"
 #include "sloked/kgr/Service.h"
 #include "sloked/kgr/Server.h"
-#include "sloked/core/Synchronized.h"
+#include "sloked/core/Monitor.h"
 #include "sloked/screen/Component.h"
 #include "sloked/screen/Splitter.h"
 #include "sloked/core/Encoding.h"
@@ -36,11 +36,11 @@ namespace sloked {
 
     class SlokedScreenService : public KgrService {
      public:
-        SlokedScreenService(SlokedSynchronized<SlokedScreenComponent &> &, const Encoding &, KgrServer::Connector, KgrServer::Connector, KgrContextManager<KgrLocalContext> &);
+        SlokedScreenService(SlokedMonitor<SlokedScreenComponent &> &, const Encoding &, KgrServer::Connector, KgrServer::Connector, KgrContextManager<KgrLocalContext> &);
         bool Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
-        SlokedSynchronized<SlokedScreenComponent &> &root;
+        SlokedMonitor<SlokedScreenComponent &> &root;
         const Encoding &encoding;
         KgrServer::Connector cursorService;
         KgrServer::Connector renderService;
