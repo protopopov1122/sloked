@@ -39,6 +39,7 @@
 #include "sloked/kgr/ctx-manager/RunnableContextManager.h"
 #include "sloked/services/TextRender.h"
 #include "sloked/services/Cursor.h"
+#include "sloked/services/DocumentNotify.h"
 #include "sloked/services/DocumentSet.h"
 #include "sloked/services/Screen.h"
 #include "sloked/services/ScreenInput.h"
@@ -54,6 +55,7 @@
 #include "sloked/core/CLI.h"
 #include "sloked/editor/Configuration.h"
 #include "sloked/kgr/Path.h"
+#include "sloked/core/Semaphore.h"
 #include <chrono>
 
 using namespace sloked;
@@ -207,7 +209,8 @@ int main(int argc, const char **argv) {
     server.Register("text::render", std::make_unique<SlokedTextRenderService>(documents, charWidth, fragmentFactory, ctxManager));
     server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, server.GetConnector("text::render"), ctxManager));
     server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
-    screenServer.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, slaveServer.GetConnector("text::cursor"), slaveServer.GetConnector("text::render"), ctxScreenManager));
+    server.Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(documents, ctxManager));
+    screenServer.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, slaveServer.GetConnector("text::cursor"), slaveServer.GetConnector("document::notify"), ctxScreenManager));
     screenServer.Register("screen::input", std::make_unique<SlokedScreenInputService>(screenHandle, terminalEncoding, ctxScreenManager));
     screenServer.Register("screen::text::pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxScreenManager));
 
@@ -238,21 +241,32 @@ int main(int argc, const char **argv) {
 
     logger.Debug() << "Editor initialized";
 
+    std::atomic<bool> work = true;
+    SlokedSemaphore renderTrigger;
+    std::thread renderThread([&] {
+        while (work.load()) {
+            screenHandle.Lock([&](auto &screen) {
+                screen.UpdateDimensions();
+                console.SetGraphicsMode(SlokedTextGraphics::Off);
+                console.ClearScreen();
+                screen.Render();
+                console.Flush();
+            });
+            renderTrigger.WaitAll();
+        }
+    });
+    screenHandle.Lock([&](auto &screen) {
+        screen.OnUpdate([&] {
+            renderTrigger.Notify();
+        });
+    });
     int i = 0;
-    bool work = true;
-    while (work) {
+    while (work.load()) {
         render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
         render.ClearScreen();
         render.SetPosition(0, 0);
         render.Write(std::to_string(i++));
         render.Flush();
-        screenHandle.Lock([&](auto &screen) {
-            screen.UpdateDimensions();
-            console.SetGraphicsMode(SlokedTextGraphics::Off);
-            console.ClearScreen();
-            screen.Render();
-            console.Flush();
-        });
         auto input = terminal.GetInput();
         for (const auto &evt : input) {
             screenHandle.Lock([&](auto &screen) {
@@ -266,6 +280,8 @@ int main(int argc, const char **argv) {
             work = false;
         }
     }
+    renderTrigger.Notify();
+    renderThread.join();
 
     logger.Debug() << "Stopping servers";
 

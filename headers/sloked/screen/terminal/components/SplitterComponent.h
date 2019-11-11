@@ -47,6 +47,7 @@ namespace sloked {
       void Render() override;
       void UpdateDimensions() override;
       TextPosition GetDimensions() override;
+      void OnUpdate(std::function<void()>) override;
 
     protected:
       void ProcessComponentInput(const SlokedKeyboardInput &) override;
@@ -83,6 +84,7 @@ namespace sloked {
       const SlokedCharWidth &charWidth;
       std::vector<std::shared_ptr<TerminalSplitterWindow>> components;
       Window::Id focus;
+      std::function<void()> updateListener;
     };
 }
 

@@ -38,6 +38,7 @@ namespace sloked {
         void Render() override;
         void UpdateDimensions() override;
         TextPosition GetDimensions() override;
+        void OnUpdate(std::function<void()>) override;
         
         bool HasComponent() const override;
         SlokedScreenComponent &GetComponent() const override;
@@ -55,6 +56,7 @@ namespace sloked {
         const Encoding &encoding;
         const SlokedCharWidth &charWidth;
         std::unique_ptr<SlokedScreenComponent> component;
+        std::function<void()> updateListener;
     };
 }
 

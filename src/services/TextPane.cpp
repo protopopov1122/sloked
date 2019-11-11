@@ -89,11 +89,18 @@ namespace sloked {
             void SetRender(const KgrArray &render) {
                 std::unique_lock<std::mutex> lock(this->mtx);
                 this->render = std::make_shared<KgrArray>(std::move(render));
+                if (this->listener) {
+                    this->listener();
+                }
             }
 
             std::shared_ptr<KgrArray> GetRender() {
                 std::unique_lock<std::mutex> lock(this->mtx);
                 return this->render;
+            }
+
+            void OnUpdate(std::function<void()> listener) {
+                this->listener = listener;
             }
 
          private:
@@ -102,6 +109,7 @@ namespace sloked {
             bool catchText;
             std::mutex mtx;
             std::shared_ptr<KgrArray> render;
+            std::function<void()> listener;
         };
 
         SlokedTextPaneComponent(Frame &frame)
@@ -170,6 +178,10 @@ namespace sloked {
                         break;
                 }
             }
+        }
+
+        void OnUpdate(std::function<void()> listener) override {
+            this->frame.OnUpdate(std::move(listener));
         }
 
      private:

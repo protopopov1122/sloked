@@ -58,6 +58,9 @@ namespace sloked {
         if (this->IsOpened()) {
             this->root.focus.erase(std::remove(this->root.focus.begin(), this->root.focus.end(), this->id));
             this->root.focus.push_back(this->id);
+            if (this->root.updateListener) {
+                this->root.updateListener();
+            }
         } else {
             throw SlokedError("Window already closed");
         }
@@ -66,6 +69,9 @@ namespace sloked {
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Move(const TextPosition &pos) {
         if (this->window) {
             this->window->Move(pos);
+            if (this->root.updateListener) {
+                this->root.updateListener();
+            }
         } else {
             throw SlokedError("Window already closed");
         }
@@ -74,6 +80,9 @@ namespace sloked {
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Resize(const TextPosition &pos) {
         if (this->window) {
             this->window->Resize(pos);
+            if (this->root.updateListener) {
+                this->root.updateListener();
+            }
         } else {
             throw SlokedError("Window already closed");
         }
@@ -85,6 +94,9 @@ namespace sloked {
             this->component.reset();
             this->window.reset();
             this->root.windows.erase(this->id);
+            if (this->root.updateListener) {
+                this->root.updateListener();
+            }
         } else {
             throw SlokedError("Window already closed");
         }
@@ -147,6 +159,9 @@ namespace sloked {
         auto window = std::make_shared<TerminalMultiplexerWindow>(id, std::move(handle), std::move(terminal), *this);
         this->windows[id] = window;
         this->focus.push_back(id);
+        if (this->updateListener) {
+            this->updateListener();
+        }
         return window;
     }
 
@@ -164,6 +179,13 @@ namespace sloked {
 
     TextPosition TerminalMultiplexerComponent::GetDimensions() {
         return { this->terminal.GetHeight(), this->terminal.GetWidth() };
+    }
+
+    void TerminalMultiplexerComponent::OnUpdate(std::function<void()> listener) {
+        this->updateListener = listener;
+        for (auto &win : this->windows) {
+            win.second->GetComponent().OnUpdate(listener);
+        }
     }
 
     void TerminalMultiplexerComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {

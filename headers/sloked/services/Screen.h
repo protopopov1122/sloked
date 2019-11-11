@@ -43,7 +43,7 @@ namespace sloked {
         SlokedMonitor<SlokedScreenComponent &> &root;
         const Encoding &encoding;
         KgrServer::Connector cursorService;
-        KgrServer::Connector renderService;
+        KgrServer::Connector notifyService;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
 

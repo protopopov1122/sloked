@@ -32,6 +32,7 @@ namespace sloked {
         virtual ~SlokedTextPaneWidget() = default;
         virtual bool ProcessInput(const SlokedKeyboardInput &) = 0;
         virtual void Render(SlokedTextPane &) = 0;
+        virtual void OnUpdate(std::function<void()>) = 0;
     };
 }
 

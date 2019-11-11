@@ -27,7 +27,7 @@
 #include "sloked/screen/widgets/TextPaneWidget.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/services/Cursor.h"
-#include "sloked/services/TextRender.h"
+#include "sloked/services/DocumentNotify.h"
 
 namespace sloked {
 
@@ -37,12 +37,14 @@ namespace sloked {
 
         bool ProcessInput(const SlokedKeyboardInput &) override;
         void Render(SlokedTextPane &) override;
+        void OnUpdate(std::function<void()>) override;
 
      private:
         EncodingConverter conv;
         SlokedCursorClient cursorClient;
-        SlokedTextRenderClient renderClient;
+        SlokedDocumentNotifyClient notifyClient;
         SlokedBackgroundGraphics background;
+        std::function<void()> updateListener;
     };
 }
 

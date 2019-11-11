@@ -35,6 +35,7 @@ namespace sloked {
         void Render() override;
         void UpdateDimensions() override;
         TextPosition GetDimensions() override;
+        void OnUpdate(std::function<void()>) override;
         
      protected:
         using SlokedScreenComponent::SlokedScreenComponent;

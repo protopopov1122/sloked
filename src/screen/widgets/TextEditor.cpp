@@ -26,8 +26,11 @@
 namespace sloked {
 
     SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService, std::unique_ptr<KgrPipe> renderService, SlokedEditorDocumentSet::DocumentId docId, SlokedBackgroundGraphics bg)
-        : conv(encoding, SlokedLocale::SystemEncoding()), cursorClient(std::move(cursorService)), renderClient(std::move(renderService), docId), background(bg) {
+        : conv(encoding, SlokedLocale::SystemEncoding()), cursorClient(std::move(cursorService)), notifyClient(std::move(renderService), docId), background(bg) {
         this->cursorClient.Connect(docId);
+        notifyClient.OnUpdate([this] {
+            this->updateListener();
+        });
     }
 
     bool SlokedTextEditor::ProcessInput(const SlokedKeyboardInput &cmd) {
@@ -36,18 +39,22 @@ namespace sloked {
         } else switch (std::get<1>(cmd.value)) {
             case SlokedControlKey::ArrowUp:
                 this->cursorClient.MoveUp();
+                this->updateListener();
                 break;
             
             case SlokedControlKey::ArrowDown:
                 this->cursorClient.MoveDown();
+                this->updateListener();
                 break;
             
             case SlokedControlKey::ArrowLeft:
                 this->cursorClient.MoveBackward();
+                this->updateListener();
                 break;
             
             case SlokedControlKey::ArrowRight:
                 this->cursorClient.MoveForward();
+                this->updateListener();
                 break;
 
             case SlokedControlKey::Enter:
@@ -109,5 +116,9 @@ namespace sloked {
         
         const auto &realCursor = res.AsDictionary()["cursor"].AsDictionary();
         pane.SetPosition(realCursor["line"].AsInt(), realCursor["column"].AsInt());
+    }
+
+    void SlokedTextEditor::OnUpdate(std::function<void()> listener) {
+        this->updateListener = listener;
     }
 }

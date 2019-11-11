@@ -45,6 +45,7 @@ namespace sloked {
       void Render() override;
       void UpdateDimensions() override;
       TextPosition GetDimensions() override;
+      void OnUpdate(std::function<void()>) override;
 
     protected:
       void ProcessComponentInput(const SlokedKeyboardInput &) override;
@@ -84,6 +85,7 @@ namespace sloked {
       std::map<Window::Id, std::shared_ptr<TerminalMultiplexerWindow>> windows;
       std::list<Window::Id> focus;
       Window::Id nextId;
+      std::function<void()> updateListener;
    };
 }
 

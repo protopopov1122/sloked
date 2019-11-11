@@ -54,6 +54,9 @@ namespace sloked {
     void TerminalSplitterComponent::TerminalSplitterWindow::SetFocus() {
         if (this->component) {
             this->root.focus = this->id;
+            if (this->root.updateListener) {
+                this->root.updateListener();
+            }
         } else {
             throw SlokedError("Window already closed");
         }
@@ -62,6 +65,9 @@ namespace sloked {
     void TerminalSplitterComponent::TerminalSplitterWindow::UpdateConstraints(const Splitter::Constraints &constraints) {
         if (this->component) {
             this->root.splitter.UpdateConstraints(this->id, constraints);
+            if (this->root.updateListener) {
+                this->root.updateListener();
+            }
         } else {
             throw SlokedError("Window already closed");
         }
@@ -83,6 +89,9 @@ namespace sloked {
             for (std::size_t i = 0; i < this->root.components.size(); i++) {
                 this->root.components.at(i)->id = i;
             }
+            if (this->root.updateListener) {
+                this->root.updateListener();
+            }
         } else {
             throw SlokedError("Window already closed");
         }
@@ -93,6 +102,9 @@ namespace sloked {
             this->root.components.erase(this->root.components.begin() + this->id);
             this->root.splitter.CloseTerminal(this->id);
             this->component = nullptr;
+            if (this->root.updateListener) {
+                this->root.updateListener();
+            }
         } else {
             throw SlokedError("Window already closed");
         }
@@ -144,6 +156,9 @@ namespace sloked {
         auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
         auto window = std::make_shared<TerminalSplitterWindow>(term.index, std::move(component), *this);
         this->components.push_back(window);
+        if (this->updateListener) {
+            this->updateListener();
+        }
         return window;
     }
 
@@ -154,6 +169,9 @@ namespace sloked {
         this->components.insert(this->components.begin() + idx, window);
         for (std::size_t i = 0; i < this->components.size(); i++) {
             this->components.at(i)->SetId(i);
+        }
+        if (this->updateListener) {
+            this->updateListener();
         }
         return window;
     }
@@ -178,6 +196,13 @@ namespace sloked {
 
     TextPosition TerminalSplitterComponent::GetDimensions() {
         return this->splitter.GetDimensions();
+    }
+
+    void TerminalSplitterComponent::OnUpdate(std::function<void()> listener) {
+        this->updateListener = listener;
+        for (auto &win : this->components) {
+            win->GetComponent().OnUpdate(listener);
+        }
     }
 
     void TerminalSplitterComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {

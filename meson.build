@@ -71,6 +71,7 @@ sloked_src = [
   'src/screen/widgets/TextEditor.cpp',
   'src/services/ScreenInput.cpp',
   'src/services/Cursor.cpp',
+  'src/services/DocumentNotify.cpp',
   'src/services/DocumentSet.cpp',
   'src/services/Screen.cpp',
   'src/services/Service.cpp',

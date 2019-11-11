@@ -54,6 +54,9 @@ namespace sloked {
     void TerminalTabberComponent::TerminalTabberWindow::SetFocus() {
         if (this->component) {
             this->root.tabber.SelectTab(this->id);
+            if (this->root.updateListener) {
+                this->root.updateListener();
+            }
         } else {
             throw SlokedError("Window already closed");
         }
@@ -75,6 +78,9 @@ namespace sloked {
             for (std::size_t i = 0; i < this->root.components.size(); i++) {
                 this->root.components.at(i)->id = i;
             }
+            if (this->root.updateListener) {
+                this->root.updateListener();
+            }
         } else {
             throw SlokedError("Window already closed");
         }
@@ -85,6 +91,9 @@ namespace sloked {
             this->root.components.erase(this->root.components.begin() + this->id);
             this->root.tabber.CloseTab(this->id);
             this->component = nullptr;
+            if (this->root.updateListener) {
+                this->root.updateListener();
+            }
         } else {
             throw SlokedError("Window already closed");
         }
@@ -137,6 +146,9 @@ namespace sloked {
         auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
         auto window = std::make_shared<TerminalTabberWindow>(term.index, std::move(component), *this);
         this->components.push_back(window);
+        if (this->updateListener) {
+            this->updateListener();
+        }
         return window;
     }
 
@@ -147,6 +159,9 @@ namespace sloked {
         this->components.insert(this->components.begin() + idx, window);
         for (std::size_t i = 0; i < this->components.size(); i++) {
             this->components.at(i)->SetId(i);
+        }
+        if (this->updateListener) {
+            this->updateListener();
         }
         return window;
     }
@@ -166,6 +181,13 @@ namespace sloked {
 
     TextPosition TerminalTabberComponent::GetDimensions() {
         return this->tabber.GetDimensions();
+    }
+
+    void TerminalTabberComponent::OnUpdate(std::function<void()> listener) {
+        this->updateListener = listener;
+        for (auto &win : this->components) {
+            win->GetComponent().OnUpdate(listener);
+        }
     }
 
     void TerminalTabberComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {

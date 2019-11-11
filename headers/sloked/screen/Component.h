@@ -71,6 +71,7 @@ namespace sloked {
         virtual void Render() = 0;
         virtual void UpdateDimensions() = 0;
         virtual TextPosition GetDimensions() = 0;
+        virtual void OnUpdate(std::function<void()>) = 0;
 
      protected:
         SlokedScreenComponent(Type);

@@ -46,6 +46,10 @@ namespace sloked {
         auto component = std::make_unique<TerminalTextPaneComponent>(this->terminal, std::move(widget));
         TerminalTextPaneComponent &ref = *component;
         this->component = std::move(component);
+        this->component->OnUpdate(this->updateListener);
+        if (this->updateListener) {
+            this->updateListener();
+        }
         return ref;
     }
 
@@ -53,6 +57,10 @@ namespace sloked {
         auto component = std::make_unique<TerminalSplitterComponent>(this->terminal, dir, this->encoding, this->charWidth);
         TerminalSplitterComponent &ref = *component;
         this->component = std::move(component);
+        this->component->OnUpdate(this->updateListener);
+        if (this->updateListener) {
+            this->updateListener();
+        }
         return ref;
     }
 
@@ -60,6 +68,10 @@ namespace sloked {
         auto component = std::make_unique<TerminalTabberComponent>(this->terminal, this->encoding, this->charWidth);
         TerminalTabberComponent &ref = *component;
         this->component = std::move(component);
+        this->component->OnUpdate(this->updateListener);
+        if (this->updateListener) {
+            this->updateListener();
+        }
         return ref;
     }
 
@@ -67,6 +79,10 @@ namespace sloked {
         auto component = std::make_unique<TerminalMultiplexerComponent>(this->terminal, this->encoding, this->charWidth);
         TerminalMultiplexerComponent &ref = *component;
         this->component = std::move(component);
+        this->component->OnUpdate(this->updateListener);
+        if (this->updateListener) {
+            this->updateListener();
+        }
         return ref;
     }
 
@@ -89,6 +105,13 @@ namespace sloked {
 
     TextPosition TerminalComponentHandle::GetDimensions() {
         return { this->terminal.GetHeight(), this->terminal.GetWidth() };
+    }
+
+    void TerminalComponentHandle::OnUpdate(std::function<void()> listener) {
+        this->updateListener = listener;
+        if (this->component) {
+            this->component->OnUpdate(listener);
+        }
     }
 
     void TerminalComponentHandle::ProcessComponentInput(const SlokedKeyboardInput &input) {
