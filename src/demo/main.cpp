@@ -252,6 +252,7 @@ int main(int argc, const char **argv) {
                 screen.Render();
                 console.Flush();
             });
+            std::this_thread::sleep_for(25ms);
             renderTrigger.WaitAll();
         }
     });
