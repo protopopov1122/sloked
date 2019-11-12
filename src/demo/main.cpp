@@ -286,7 +286,9 @@ int main(int argc, const char **argv) {
     logger.Debug() << "Stopping servers";
 
     slaveServer.Stop();
+    slaveScreenServer.Stop();
     masterServer.Stop();
+    masterScreenServer.Stop();
     ctxScreenManagerHandle.Stop();
     ctxManagerHandle.Stop();
 
