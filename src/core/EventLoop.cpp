@@ -39,6 +39,9 @@ namespace sloked {
         }
     }
 
+    SlokedDefaultEventLoop::SlokedDefaultEventLoop()
+        : nextId{0} {}
+
     void SlokedDefaultEventLoop::Attach(std::unique_ptr<SlokedAsyncTask> task) {
         std::unique_lock lock(this->mtx);
         int64_t taskId = this->nextId++;

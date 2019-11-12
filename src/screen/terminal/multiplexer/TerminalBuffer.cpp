@@ -63,7 +63,7 @@ namespace sloked {
     }
 
     BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : term(term), encoding(encoding), charWidth(charWidth), cls(false), show_cursor(true), buffer(nullptr), line(0), col(0) {
+        : term(term), encoding(encoding), charWidth(charWidth), cls(false), show_cursor(true), buffer(nullptr), line(0), col(0), width(0), height(0) {
         this->Update();
         this->buffer = std::unique_ptr<Character[]>(new Character[this->width * this->height]);
     }

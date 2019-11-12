@@ -61,6 +61,7 @@ namespace sloked {
 
     class SlokedDefaultEventLoop : public SlokedEventLoop {
      public:
+        SlokedDefaultEventLoop();
         void Attach(std::unique_ptr<SlokedAsyncTask>) final;
         bool HasPending() const final;
         void Run() final;
