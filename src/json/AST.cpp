@@ -30,7 +30,7 @@ namespace sloked {
         JsonASTPrinter(std::ostream &os)
             : out(os) {}
 
-      void Visit(const JsonConstantNode &node) {
+      void Visit(const JsonConstantNode &node) override {
         switch (node.GetConstantType()) {
             case JsonConstantNode::DataType::Integer:
                 this->out << node.AsInteger();

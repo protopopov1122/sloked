@@ -167,7 +167,7 @@ namespace sloked {
             return res;
         }
 
-        std::string Encode(char32_t chr) const {
+        std::string Encode(char32_t chr) const override {
             char buffer[5] {0};
             Char32ToUtf8(buffer, chr);
             return std::string(buffer);

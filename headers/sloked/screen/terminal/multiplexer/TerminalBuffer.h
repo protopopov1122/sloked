@@ -36,6 +36,7 @@ namespace sloked {
      public:
         BufferedTerminal(SlokedTerminal &, const Encoding &, const SlokedCharWidth &);
 
+        using SlokedTerminal::Flush;
         void Flush();
         void UpdateSize();
     

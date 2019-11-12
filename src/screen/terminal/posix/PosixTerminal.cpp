@@ -183,13 +183,13 @@ namespace sloked {
           termcap(std::make_unique<Termcap>(std::string(getenv("TERM")))),
           disable_flush(false),
           width(0), height(0) {
-        fprintf(this->state->fd, this->termcap->GetString("ti"));
+        fprintf(this->state->fd, "%s", this->termcap->GetString("ti"));
         fflush(this->state->fd);
         this->Update();
     }
 
     PosixTerminal::~PosixTerminal() {
-        fprintf(this->state->fd, this->termcap->GetString("te"));
+        fprintf(this->state->fd, "%s", this->termcap->GetString("te"));
         fflush(this->state->fd);
     }
 
@@ -205,7 +205,7 @@ namespace sloked {
     void PosixTerminal::MoveUp(Line l) {
         if (!this->disable_flush) {
             while (l--) {
-                fprintf(this->state->fd, this->termcap->GetString("up"));
+                fprintf(this->state->fd, "%s", this->termcap->GetString("up"));
             }
             fflush(this->state->fd);
         } else {
@@ -218,7 +218,7 @@ namespace sloked {
     void PosixTerminal::MoveDown(Line l) {
         if (!this->disable_flush) {
             while (l--) {
-                fprintf(this->state->fd, this->termcap->GetString("do"));
+                fprintf(this->state->fd, "%s", this->termcap->GetString("do"));
             }
             fflush(this->state->fd);
         } else {
@@ -231,7 +231,7 @@ namespace sloked {
     void PosixTerminal::MoveBackward(Column c) {
         if (!this->disable_flush) {
             while (c--) {
-                fprintf(this->state->fd, this->termcap->GetString("le"));
+                fprintf(this->state->fd, "%s", this->termcap->GetString("le"));
             }
             fflush(this->state->fd);
         } else {
@@ -244,7 +244,7 @@ namespace sloked {
     void PosixTerminal::MoveForward(Column c) {
         if (!this->disable_flush) {
             while (c--) {
-                fprintf(this->state->fd, this->termcap->GetString("ri"));
+                fprintf(this->state->fd, "%s", this->termcap->GetString("ri"));
             }
             fflush(this->state->fd);
         } else {
@@ -257,9 +257,9 @@ namespace sloked {
     void PosixTerminal::ShowCursor(bool show) {
         if (!this->disable_flush) {
             if (show) {
-                fprintf(this->state->fd, this->termcap->GetString("ve"));
+                fprintf(this->state->fd, "%s", this->termcap->GetString("ve"));
             } else {
-                fprintf(this->state->fd, this->termcap->GetString("vi"));
+                fprintf(this->state->fd, "%s", this->termcap->GetString("vi"));
             }
             fflush(this->state->fd);
         } else {
@@ -273,7 +273,7 @@ namespace sloked {
 
     void PosixTerminal::ClearScreen() {
         if (!this->disable_flush) {
-            fprintf(this->state->fd, this->termcap->GetString("cl"));
+            fprintf(this->state->fd, "%s", this->termcap->GetString("cl"));
             fflush(this->state->fd);
         } else {
             this->buffer << this->termcap->GetString("cl");
@@ -283,7 +283,7 @@ namespace sloked {
     void PosixTerminal::ClearChars(Column cols) {
         std::string cl(cols, ' ');
         if (!this->disable_flush) {
-            fprintf(this->state->fd, cl.c_str());
+            fprintf(this->state->fd, "%s", cl.c_str());
             fflush(this->state->fd);
         } else {
             this->buffer << cl;

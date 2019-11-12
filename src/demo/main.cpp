@@ -63,8 +63,8 @@ using namespace std::chrono_literals;
 
 class TestFragment : public SlokedTextTagger<int> {
  public:
-    TestFragment(const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : text(text), encoding(encoding), charWidth(charWidth), current{0, 0} {}
+    TestFragment(const TextBlockView &text, const Encoding &encoding)
+        : text(text), encoding(encoding), current{0, 0} {}
 
     std::optional<TaggedTextFragment<int>> Next() override {
         if (this->cache.empty()) {
@@ -113,7 +113,6 @@ class TestFragment : public SlokedTextTagger<int> {
 
     const TextBlockView &text;
     const Encoding &encoding;
-    const SlokedCharWidth &charWidth;
     TextPosition current;
     std::queue<TaggedTextFragment<int>> cache;
 };
@@ -121,7 +120,7 @@ class TestFragment : public SlokedTextTagger<int> {
 class TestFragmentFactory : public SlokedTextTaggerFactory<int> {
  public:
     std::unique_ptr<SlokedTextTagger<int>> Create(const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth) const override {
-        return std::make_unique<TestFragment>(text, encoding, charWidth);
+        return std::make_unique<TestFragment>(text, encoding);
     }
 };
 

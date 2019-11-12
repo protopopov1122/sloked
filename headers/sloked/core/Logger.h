@@ -87,7 +87,7 @@ namespace sloked {
             ~Entry();
 
             Entry &operator=(const Entry &) = delete;
-            Entry &operator=(Entry &&) = default;
+            Entry &operator=(Entry &&) = delete;
 
             template <typename T>
             Entry &operator<<(const T &value) {

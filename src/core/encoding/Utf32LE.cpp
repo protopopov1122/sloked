@@ -71,7 +71,7 @@ namespace sloked {
             return res;
         }
 
-        std::string Encode(char32_t chr) const {
+        std::string Encode(char32_t chr) const override {
             char buffer[] = {
                 static_cast<char>(chr & 0xff),
                 static_cast<char>((chr >> 8) & 0xff),
@@ -92,7 +92,7 @@ namespace sloked {
             return buffer;
         }
 
-        std::string Encode(std::u32string_view u32str) const {
+        std::string Encode(std::u32string_view u32str) const override {
             constexpr std::size_t MaxStaticBuffer = 16;
             if (u32str.size() < MaxStaticBuffer){
                 char buffer[MaxStaticBuffer * 4];

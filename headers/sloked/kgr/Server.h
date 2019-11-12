@@ -46,6 +46,7 @@ namespace sloked {
     class KgrServer : public KgrAbstractServer<KgrServerServiceId> {
      public:
         using ServiceId = KgrServerServiceId;
+        using KgrAbstractServer<KgrServerServiceId>::Register;
         virtual ServiceId Register(std::unique_ptr<KgrService>) = 0;
     };
 }
