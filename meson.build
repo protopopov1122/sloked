@@ -92,13 +92,15 @@ sloked_src = [
   'src/text/cursor/TransactionFactory.cpp',
   'src/text/cursor/TransactionStreamMultiplexer.cpp',
   'src/text/search/Match.cpp',
-  'src/text/search/Replace.cpp'
+  'src/text/search/Replace.cpp',
+  'src/third-party/crypto/Botan.cpp'
 ]
 
 cpp = meson.get_compiler('cpp')
 ncurses = dependency('ncurses')
 threads = dependency('threads')
+botan = dependency('botan-2')
 
 sloked = executable('sloked', sloked_src,
   include_directories : include_directories('headers'),
-  dependencies : [ncurses, threads])
+  dependencies : [ncurses, threads, botan])
