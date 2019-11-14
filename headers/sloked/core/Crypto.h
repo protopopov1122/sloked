@@ -50,6 +50,7 @@ namespace sloked {
             virtual ~Cipher() = default;
             virtual Data Encrypt(const Data &) = 0;
             virtual Data Decrypt(const Data &) = 0;
+            virtual std::size_t BlockSize() const = 0;
 
             const EngineId Engine;
          protected:

@@ -53,6 +53,7 @@ sloked_src = [
   'src/namespace/View.cpp',
   'src/namespace/Virtual.cpp',
   'src/namespace/posix/Filesystem.cpp',
+  'src/net/CryptoSocket.cpp',
   'src/net/PosixSocket.cpp',
   'src/screen/Component.cpp',
   'src/screen/ComponentTree.cpp',

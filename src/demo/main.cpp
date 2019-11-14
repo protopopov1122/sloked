@@ -56,6 +56,8 @@
 #include "sloked/editor/Configuration.h"
 #include "sloked/kgr/Path.h"
 #include "sloked/core/Semaphore.h"
+#include "sloked/net/CryptoSocket.h"
+#include "sloked/third-party/crypto/Botan.h"
 #include <chrono>
 
 using namespace sloked;
@@ -169,14 +171,17 @@ int main(int argc, const char **argv) {
 
     logger.Debug() << "Local servers started";
 
-    SlokedPosixSocketFactory socketFactory;
+    SlokedPosixSocketFactory rawSocketFactory;
+    SlokedBotanCrypto crypto;
+    auto encryptionKey = crypto.DeriveKey("password", "salt");
+    SlokedCryptoSocketFactory socketFactory(rawSocketFactory, crypto, *encryptionKey);
     KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", cli["net-port"].As<int>()));
     masterServer.Start();
-    KgrMasterNetServer masterScreenServer(screenServer, socketFactory.Bind("localhost", cli["screen-net-port"].As<int>()));
+    KgrMasterNetServer masterScreenServer(screenServer, rawSocketFactory.Bind("localhost", cli["screen-net-port"].As<int>()));
     masterScreenServer.Start();
     KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), localServer);
     slaveServer.Start();
-    KgrSlaveNetServer slaveScreenServer(socketFactory.Connect("localhost", cli["screen-net-port"].As<int>()), localServer);
+    KgrSlaveNetServer slaveScreenServer(rawSocketFactory.Connect("localhost", cli["screen-net-port"].As<int>()), localServer);
     slaveScreenServer.Start();
 
     logger.Debug() << "Network servers started";

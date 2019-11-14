@@ -90,14 +90,18 @@ namespace sloked {
     }
 
     bool SlokedPosixSocket::Wait(long timeout) {
-        struct timeval tv;
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        FD_SET(this->socket, &rfds);
-        
-        tv.tv_sec = 0;
-        tv.tv_usec = timeout * 1000;
-        return select(this->socket + 1, &rfds, nullptr, nullptr, &tv) > 0;
+        if (IsSocketValid(this->socket)) {
+            struct timeval tv;
+            fd_set rfds;
+            FD_ZERO(&rfds);
+            FD_SET(this->socket, &rfds);
+            
+            tv.tv_sec = 0;
+            tv.tv_usec = timeout * 1000;
+            return select(this->socket + 1, &rfds, nullptr, nullptr, &tv) > 0;
+        } else {
+            return false;
+        }
     }
 
     std::optional<uint8_t> SlokedPosixSocket::Read() {
@@ -112,7 +116,6 @@ namespace sloked {
                 this->Close();
                 throw SlokedError("PosixSocket: Read error");
             }
-
         } else {
             throw SlokedError("PosixSocket: Invalid socket");
         }

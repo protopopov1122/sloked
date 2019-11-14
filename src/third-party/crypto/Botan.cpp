@@ -59,17 +59,19 @@ namespace sloked {
     SlokedBotanCrypto::BotanCipher::~BotanCipher() = default;
 
     SlokedCrypto::Data SlokedBotanCrypto::BotanCipher::Encrypt(const Data &input) {
-        Data output;
-        output.insert(output.end(), input.size(), 0);
-        this->impl->cipher->encrypt(input.data(), output.data());
+        Data output = input;
+        this->impl->cipher->encrypt(output);
         return output;
     }
 
     SlokedCrypto::Data SlokedBotanCrypto::BotanCipher::Decrypt(const Data &input) {
-        Data output;
-        output.insert(output.end(), input.size(), 0);
-        this->impl->cipher->decrypt(input.data(), output.data());
+        Data output = input;
+        this->impl->cipher->decrypt(output);
         return output;
+    }
+
+    std::size_t SlokedBotanCrypto::BotanCipher::BlockSize() const {
+        return this->impl->cipher->block_size();
     }
 
     struct SlokedBotanCrypto::Impl {

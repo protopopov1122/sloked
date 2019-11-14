@@ -34,7 +34,7 @@ namespace sloked {
         SlokedSocket(const SlokedSocket &) = delete;
         SlokedSocket(SlokedSocket &&) = delete;
         virtual ~SlokedSocket() = default;
-        SlokedSocket &operator=(const SlokedSocket &&) = delete;
+        SlokedSocket &operator=(const SlokedSocket &) = delete;
         SlokedSocket &operator=(SlokedSocket &&) = delete;
 
         virtual bool Valid() = 0;
@@ -55,7 +55,7 @@ namespace sloked {
         SlokedServerSocket(const SlokedServerSocket &) = delete;
         SlokedServerSocket(SlokedServerSocket &&) = delete;
         virtual ~SlokedServerSocket() = default;
-        SlokedServerSocket &operator=(const SlokedServerSocket &&) = delete;
+        SlokedServerSocket &operator=(const SlokedServerSocket &) = delete;
         SlokedServerSocket &operator=(SlokedServerSocket &&) = delete;
 
         virtual bool Valid() = 0;

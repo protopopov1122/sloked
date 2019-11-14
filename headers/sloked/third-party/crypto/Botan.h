@@ -45,6 +45,7 @@ namespace sloked {
             virtual ~BotanCipher();
             Data Encrypt(const Data &) final;
             Data Decrypt(const Data &) final;
+            std::size_t BlockSize() const final;
 
          private:
             struct Impl;
