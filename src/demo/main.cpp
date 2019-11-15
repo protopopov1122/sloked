@@ -56,6 +56,7 @@
 #include "sloked/editor/Configuration.h"
 #include "sloked/kgr/Path.h"
 #include "sloked/core/Semaphore.h"
+#include "sloked/sched/Timer.h"
 // #include "sloked/net/CryptoSocket.h"
 // #include "sloked/third-party/crypto/Botan.h"
 #include <chrono>
@@ -169,6 +170,9 @@ int main(int argc, const char **argv) {
     KgrContextManager<KgrLocalContext> &ctxScreenManager = ctxScreenManagerHandle.GetManager();
     ctxScreenManagerHandle.Start();
 
+    SlokedTimerScheduler timer;
+    timer.Start();
+
     logger.Debug() << "Local servers started";
 
     SlokedPosixSocketFactory socketFactory;
@@ -266,6 +270,13 @@ int main(int argc, const char **argv) {
         });
     });
     int i = 0;
+    timer.Sleep(10s, [&] {
+        render.SetGraphicsMode(SlokedBackgroundGraphics::Red);
+        render.ClearScreen();
+        render.SetPosition(0, 0);
+        render.Write("CRAP");
+        render.Flush();
+    });
     while (work.load()) {
         render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
         render.ClearScreen();
@@ -285,11 +296,13 @@ int main(int argc, const char **argv) {
             work = false;
         }
     }
+    timer.Stop();
     renderTrigger.Notify();
     renderThread.join();
 
     logger.Debug() << "Stopping servers";
 
+    timer.Stop();
     slaveServer.Stop();
     slaveScreenServer.Stop();
     masterServer.Stop();

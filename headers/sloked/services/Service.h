@@ -25,7 +25,7 @@
 #include "sloked/kgr/local/Context.h"
 #include "sloked/core/Error.h"
 #include "sloked/kgr/Value.h"
-#include "sloked/core/EventLoop.h"
+#include "sloked/sched/EventLoop.h"
 #include <utility>
 #include <map>
 #include <queue>

@@ -54,9 +54,11 @@ namespace sloked {
 
         void Wait(std::function<bool(T)> cond) {
             std::unique_lock<std::mutex> lock(mutex);
-            this->cv.wait(lock, [&] {
-                return cond(this->counter.load());
-            });
+            if (!cond(this->counter.load())) {
+                this->cv.wait(lock, [&] {
+                    return cond(this->counter.load());
+                });
+            }
         }
 
         class Handle {

@@ -19,8 +19,8 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CORE_EVENTLOOP_H_
-#define SLOKED_CORE_EVENTLOOP_H_
+#ifndef SLOKED_SCHED_EVENTLOOP_H_
+#define SLOKED_SCHED_EVENTLOOP_H_
 
 #include "sloked/Base.h"
 #include <functional>

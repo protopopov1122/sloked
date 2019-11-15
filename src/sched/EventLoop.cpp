@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/core/EventLoop.h"
+#include "sloked/sched/EventLoop.h"
 #include "sloked/core/Error.h"
 
 namespace sloked {
