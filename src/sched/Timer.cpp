@@ -24,6 +24,36 @@
 
 namespace sloked {
 
+    bool SlokedTimerScheduler::Task::Pending() const {
+        return this->pending.load();
+    }
+
+    const SlokedTimerScheduler::TimePoint &SlokedTimerScheduler::Task::GetTime() const {
+        return this->at;
+    }
+
+    void SlokedTimerScheduler::Task::Run() {
+        this->pending = this->interval.has_value();
+        this->callback();
+    }
+
+    void SlokedTimerScheduler::Task::Cancel() {
+        this->pending = false;
+        std::unique_lock lock(this->sched.mtx);
+        this->sched.tasks.erase(this);
+        this->sched.cv.notify_all();
+    }
+
+    SlokedTimerScheduler::Task::Task(SlokedTimerScheduler &sched, TimePoint at, Callback callback, std::optional<TimeDiff> interval)
+        : sched(sched), pending(true), at(std::move(at)), callback(std::move(callback)), interval(std::move(interval)) {}
+
+    void SlokedTimerScheduler::Task::NextInterval() {
+        if (this->pending.load()) {
+            this->at = std::chrono::system_clock::now();
+            this->at += this->interval.value();
+        }
+    }
+
     SlokedTimerScheduler::SlokedTimerScheduler()
         : work(false) {}
 
@@ -50,36 +80,59 @@ namespace sloked {
         }
     }
 
-    void SlokedTimerScheduler::At(TimePoint time, Callback callback) {
+    std::shared_ptr<SlokedTimerScheduler::Task> SlokedTimerScheduler::At(TimePoint time, Callback callback) {
         std::unique_lock lock(this->mtx);
-        this->tasks.push(std::make_pair(std::move(time), std::move(callback)));
+        std::shared_ptr<Task> task(new Task(*this, std::move(time), std::move(callback)));
+        this->tasks.emplace(task.get(), task);
         this->cv.notify_all();
+        return task;
     }
 
-    void SlokedTimerScheduler::Sleep(TimeDiff diff, Callback callback) {
+    std::shared_ptr<SlokedTimerScheduler::Task> SlokedTimerScheduler::Sleep(TimeDiff diff, Callback callback) {
         auto now = std::chrono::system_clock::now();
         now += diff;
-        this->At(now, std::move(callback));
+        return this->At(now, std::move(callback));
     }
 
-    bool SlokedTimerScheduler::TaskCompare::operator()(const Task &t1, const Task &t2) const {
-        return t1.first >= t2.first;
+    std::shared_ptr<SlokedTimerScheduler::Task> SlokedTimerScheduler::Interval(TimeDiff diff, Callback callback) {
+        auto now = std::chrono::system_clock::now();
+        now += diff;
+        std::unique_lock lock(this->mtx);
+        std::shared_ptr<Task> task(new Task(*this, std::move(now), std::move(callback), std::move(diff)));
+        this->tasks.emplace(task.get(), task);
+        this->cv.notify_all();
+        return task;
+    }
+
+    bool SlokedTimerScheduler::TaskCompare::operator()(Task *t1, Task *t2) const {
+        return t1 != t2 && t1->GetTime() < t2->GetTime();
     }
 
     void SlokedTimerScheduler::Run() {
         std::unique_lock lock(this->mtx);
         auto now = std::chrono::system_clock::now();
-        while (this->work.load() && !this->tasks.empty() && this->tasks.top().first <= now) {
-            auto task = std::move(this->tasks.top());
-            this->tasks.pop();
-            lock.unlock();
-            task.second();
-            lock.lock();
+        while (this->work.load() && !this->tasks.empty() && (this->tasks.begin()->second)->GetTime() <= now) {
+            auto task = this->tasks.begin();
+            bool erase = true;
+            if (task->second->Pending()) {
+                lock.unlock();
+                task->second->Run();
+                erase = !task->second->Pending();
+                lock.lock();
+            }
+            if (erase) {
+                this->tasks.erase(task->first);
+            } else {
+                std::shared_ptr<Task> taskHandle = task->second;
+                this->tasks.erase(task->first);
+                taskHandle->NextInterval();
+                this->tasks[taskHandle.get()] = taskHandle;
+            }
         }
         if (this->tasks.empty()) {
             this->cv.wait(lock);
         } else {
-            this->cv.wait_for(lock, this->tasks.top().first - now);
+            this->cv.wait_for(lock, (this->tasks.begin()->second)->GetTime() - now);
         }
     }
 }

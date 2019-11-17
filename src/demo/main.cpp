@@ -270,13 +270,6 @@ int main(int argc, const char **argv) {
         });
     });
     int i = 0;
-    timer.Sleep(10s, [&] {
-        render.SetGraphicsMode(SlokedBackgroundGraphics::Red);
-        render.ClearScreen();
-        render.SetPosition(0, 0);
-        render.Write("CRAP");
-        render.Flush();
-    });
     while (work.load()) {
         render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
         render.ClearScreen();

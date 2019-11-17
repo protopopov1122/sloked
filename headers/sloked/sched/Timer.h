@@ -23,13 +23,15 @@
 #define SLOKED_SCHED_TIMER_H_
 
 #include "sloked/core/Counter.h"
-#include <queue>
+#include <map>
+#include <atomic>
 #include <utility>
 #include <chrono>
 #include <functional>
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+#include <optional>
 
 namespace sloked {
 
@@ -38,23 +40,43 @@ namespace sloked {
         using TimePoint = std::chrono::time_point<std::chrono::system_clock, std::chrono::system_clock::duration>;
         using TimeDiff = std::chrono::system_clock::duration;
         using Callback = std::function<void()>;
+        class Task {
+         public:
+            friend class SlokedTimerScheduler;
+
+            bool Pending() const;
+            const TimePoint &GetTime() const;
+            void Run();
+            void Cancel();
+
+         private:
+            Task(SlokedTimerScheduler &, TimePoint, Callback, std::optional<TimeDiff> = {});
+            void NextInterval();
+
+            SlokedTimerScheduler &sched;
+            std::atomic<bool> pending;
+            TimePoint at;
+            Callback callback;
+            std::optional<TimeDiff> interval;
+        };
+        friend class Task;
 
         SlokedTimerScheduler();
         void Start();
         void Stop();
 
-        void At(TimePoint, Callback);
-        void Sleep(TimeDiff, Callback);
+        std::shared_ptr<Task> At(TimePoint, Callback);
+        std::shared_ptr<Task> Sleep(TimeDiff, Callback);
+        std::shared_ptr<Task> Interval(TimeDiff, Callback);
 
      private:
-        using Task = std::pair<TimePoint, Callback>;
         struct TaskCompare {
-            bool operator()(const Task &, const Task &) const;
+            bool operator()(Task *, Task *) const;
         };
 
         void Run();
 
-        std::priority_queue<Task, std::vector<Task>, TaskCompare> tasks;
+        std::map<Task *, std::shared_ptr<Task>, TaskCompare> tasks;
         std::atomic<bool> work;
         SlokedCounter<std::size_t> timer_thread;
         std::mutex mtx;
