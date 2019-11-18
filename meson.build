@@ -55,7 +55,7 @@ sloked_src = [
   'src/net/CryptoSocket.cpp',
   'src/net/PosixSocket.cpp',
   'src/sched/EventLoop.cpp',
-  'src/sched/Timer.cpp',
+  'src/sched/Scheduler.cpp',
   'src/screen/Component.cpp',
   'src/screen/ComponentTree.cpp',
   'src/screen/Splitter.cpp',

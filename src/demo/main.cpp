@@ -56,7 +56,7 @@
 #include "sloked/editor/Configuration.h"
 #include "sloked/kgr/Path.h"
 #include "sloked/core/Semaphore.h"
-#include "sloked/sched/Timer.h"
+#include "sloked/sched/Scheduler.h"
 // #include "sloked/net/CryptoSocket.h"
 // #include "sloked/third-party/crypto/Botan.h"
 #include <chrono>
@@ -170,8 +170,8 @@ int main(int argc, const char **argv) {
     KgrContextManager<KgrLocalContext> &ctxScreenManager = ctxScreenManagerHandle.GetManager();
     ctxScreenManagerHandle.Start();
 
-    SlokedTimerScheduler timer;
-    timer.Start();
+    SlokedDefaultSchedulerThread sched;
+    sched.Start();
 
     logger.Debug() << "Local servers started";
 
@@ -289,13 +289,13 @@ int main(int argc, const char **argv) {
             work = false;
         }
     }
-    timer.Stop();
+    sched.Stop();
     renderTrigger.Notify();
     renderThread.join();
 
     logger.Debug() << "Stopping servers";
 
-    timer.Stop();
+    sched.Stop();
     slaveServer.Stop();
     slaveScreenServer.Stop();
     masterServer.Stop();
