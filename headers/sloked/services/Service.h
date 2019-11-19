@@ -26,6 +26,7 @@
 #include "sloked/core/Error.h"
 #include "sloked/kgr/Value.h"
 #include "sloked/sched/EventLoop.h"
+#include "sloked/sched/Scheduler.h"
 #include <utility>
 #include <map>
 #include <queue>
@@ -120,6 +121,19 @@ namespace sloked {
 			int64_t id;
 			std::reference_wrapper<SlokedServiceClient> client;
 		};
+
+		class ResponseWaiter {
+		 public:
+			ResponseWaiter(ResponseHandle, SlokedSchedulerThread &);
+			void Wait(std::function<void(Response &)>);
+
+		 private:
+			std::mutex mtx;
+			std::queue<std::function<void(Response &)>> callbacks;
+			ResponseHandle handle;
+			SlokedSchedulerThread &sched;
+		};
+
 		friend class ResponseHandle;
 
 		SlokedServiceClient(std::unique_ptr<KgrPipe>);

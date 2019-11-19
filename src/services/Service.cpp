@@ -237,6 +237,33 @@ namespace sloked {
         this->client.get().SetCallback(this->id, std::move(callback));
     }
 
+    SlokedServiceClient::ResponseWaiter::ResponseWaiter(ResponseHandle handle, SlokedSchedulerThread &sched)
+        : handle(std::move(handle)), sched(sched) {
+        this->handle.Notify([this] {
+            std::unique_lock lock(this->mtx);
+            if (!this->callbacks.empty()) {
+                auto callback = std::move(this->callbacks.front());
+                this->callbacks.pop();
+                lock.unlock();
+                this->sched.Defer([this, callback = std::move(callback)] {
+                    auto res = this->handle.Get();
+                    callback(res);
+                });
+            }
+        });
+    }
+
+    void SlokedServiceClient::ResponseWaiter::Wait(std::function<void(Response &)> callback) {
+        std::unique_lock lock(this->mtx);
+        if (this->handle.Has()) {
+            auto res = this->handle.Get();
+            lock.unlock();
+            callback(res);
+        } else {
+            this->callbacks.push(std::move(callback));
+        }
+    }
+
     SlokedServiceClient::SlokedServiceClient(std::unique_ptr<KgrPipe> pipe)
         : mtx(std::make_unique<std::mutex>()), cv(std::make_unique<std::condition_variable>()), pipe(std::move(pipe)), nextId(0) {
         if (this->pipe == nullptr) {

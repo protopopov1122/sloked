@@ -33,7 +33,7 @@ namespace sloked {
 
     class SlokedTextEditor : public SlokedTextPaneWidget {
      public:
-        SlokedTextEditor(const Encoding &, std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black);
+        SlokedTextEditor(const Encoding &, SlokedSchedulerThread &, std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, std::function<void(bool)>, SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black);
 
         bool ProcessInput(const SlokedKeyboardInput &) override;
         void Render(SlokedTextPane &) override;

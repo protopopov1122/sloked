@@ -45,7 +45,6 @@
 #include "sloked/services/ScreenInput.h"
 #include "sloked/services/TextPane.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
-#include "sloked/editor/Tabs.h"
 #include "sloked/screen/components/ComponentTree.h"
 #include "sloked/core/Monitor.h"
 #include "sloked/net/PosixSocket.h"
@@ -133,7 +132,6 @@ static const KgrDictionary DefaultConfiguration {
     {
         "network", KgrDictionary {
             { "port", 1234 },
-            { "screenPort", 1235 }
         }
     }
 };
@@ -145,7 +143,6 @@ int main(int argc, const char **argv) {
     cli.Define("--newline", mainConfig.Find("/newline").AsString());
     cli.Define("-o,--output", cli.Option<std::string>());
     cli.Define("--net-port", mainConfig.Find("/network/port").AsInt());
-    cli.Define("--screen-net-port", mainConfig.Find("/network/screenPort").AsInt());
     cli.Parse(argc, argv);
     if (cli.Size() == 0) {
         std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
@@ -161,14 +158,9 @@ int main(int argc, const char **argv) {
     KgrLocalNamedServer server(portServer);
     KgrLocalServer portLocalServer;
     KgrLocalNamedServer localServer(portLocalServer);
-    KgrLocalServer portScreenServer;
-    KgrLocalNamedServer screenServer(portScreenServer);
     KgrRunnableContextManagerHandle<KgrLocalContext> ctxManagerHandle;
     KgrContextManager<KgrLocalContext> &ctxManager = ctxManagerHandle.GetManager();
     ctxManagerHandle.Start();
-    KgrRunnableContextManagerHandle<KgrLocalContext> ctxScreenManagerHandle;
-    KgrContextManager<KgrLocalContext> &ctxScreenManager = ctxScreenManagerHandle.GetManager();
-    ctxScreenManagerHandle.Start();
 
     SlokedDefaultSchedulerThread sched;
     sched.Start();
@@ -181,12 +173,8 @@ int main(int argc, const char **argv) {
     // SlokedCryptoSocketFactory socketFactory(rawSocketFactory, crypto, *encryptionKey);
     KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", cli["net-port"].As<int>()));
     masterServer.Start();
-    KgrMasterNetServer masterScreenServer(screenServer, socketFactory.Bind("localhost", cli["screen-net-port"].As<int>()));
-    masterScreenServer.Start();
     KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), localServer);
     slaveServer.Start();
-    KgrSlaveNetServer slaveScreenServer(socketFactory.Connect("localhost", cli["screen-net-port"].As<int>()), localServer);
-    slaveScreenServer.Start();
 
     logger.Debug() << "Network servers started";
 
@@ -218,14 +206,14 @@ int main(int argc, const char **argv) {
     server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, server.GetConnector("text::render"), ctxManager));
     server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
     server.Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(documents, ctxManager));
-    screenServer.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, slaveServer.GetConnector("text::cursor"), slaveServer.GetConnector("document::notify"), ctxScreenManager));
-    screenServer.Register("screen::input", std::make_unique<SlokedScreenInputService>(screenHandle, terminalEncoding, ctxScreenManager));
-    screenServer.Register("screen::text::pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxScreenManager));
+    server.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, sched, slaveServer.GetConnector("text::cursor"), slaveServer.GetConnector("document::notify"), ctxManager));
+    server.Register("screen::input", std::make_unique<SlokedScreenInputService>(screenHandle, terminalEncoding, ctxManager));
+    server.Register("screen::text::pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxManager));
 
     logger.Debug() << "Services bound";
 
 
-    SlokedScreenClient screenClient(slaveScreenServer.Connect("screen"));
+    SlokedScreenClient screenClient(slaveServer.Connect("screen"));
     SlokedDocumentSetClient documentClient(slaveServer.Connect("documents"));
     documentClient.Open(INPUT_PATH, cli["encoding"].As<std::string>(), cli["newline"].As<std::string>());
 
@@ -238,12 +226,12 @@ int main(int argc, const char **argv) {
     auto tab1 = screenClient.Tabber.NewWindow("/0/0");
     screenClient.Handle.NewTextEditor(tab1.value(), documentClient.GetId().value());
 
-    SlokedScreenInputClient screenInput(screenServer.Connect("screen::input"));
+    SlokedScreenInputClient screenInput(server.Connect("screen::input"));
     screenInput.Connect("/", false, {
         { SlokedControlKey::Escape, false }
     });
 
-    SlokedTextPaneClient paneClient(screenServer.Connect("screen::text::pane"));
+    SlokedTextPaneClient paneClient(server.Connect("screen::text::pane"));
     paneClient.Connect("/0/1", false, {});
     auto &render = paneClient.GetRender();
 
@@ -297,10 +285,7 @@ int main(int argc, const char **argv) {
 
     sched.Stop();
     slaveServer.Stop();
-    slaveScreenServer.Stop();
     masterServer.Stop();
-    masterScreenServer.Stop();
-    ctxScreenManagerHandle.Stop();
     ctxManagerHandle.Stop();
 
     logger.Debug() << "Shutdown";

@@ -208,14 +208,15 @@ namespace sloked {
         return true;
     }
 
-    SlokedCursorClient::SlokedCursorClient(std::unique_ptr<KgrPipe> pipe)
-        : client(std::move(pipe)) {}
+    SlokedCursorClient::SlokedCursorClient(std::unique_ptr<KgrPipe> pipe, SlokedSchedulerThread &sched)
+        : client(std::move(pipe)), sched(sched) {}
 
-    bool SlokedCursorClient::Connect(SlokedEditorDocumentSet::DocumentId docId) {
-        auto rsp = this->client.Invoke("connect", static_cast<int64_t>(docId));
-        auto res = rsp.Get();
-        return res.HasResult() &&
-            res.GetResult().AsBoolean();
+    void SlokedCursorClient::Connect(SlokedEditorDocumentSet::DocumentId docId, std::function<void(bool)> callback) {
+        auto waiter = std::make_shared<SlokedServiceClient::ResponseWaiter>(this->client.Invoke("connect", static_cast<int64_t>(docId)), this->sched);
+        waiter->Wait([waiter = std::move(waiter), callback = std::move(callback)](auto &res) {
+            auto result = res.HasResult() && res.GetResult().AsBoolean();
+            callback(result);
+        });
     }
 
     void SlokedCursorClient::Insert(const std::string &content) {
