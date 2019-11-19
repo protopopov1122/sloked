@@ -21,7 +21,6 @@ sloked_src = [
   'src/core/encoding/Utf32LE.cpp',
   'src/demo/main.cpp',
   'src/editor/Configuration.cpp',
-  'src/editor/Tabs.cpp',
   'src/editor/doc-mgr/Document.cpp',
   'src/editor/doc-mgr/DocumentSet.cpp',
   'src/editor/doc-mgr/DocumentUpstream.cpp',
