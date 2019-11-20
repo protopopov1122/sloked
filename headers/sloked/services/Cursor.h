@@ -48,8 +48,8 @@ namespace sloked {
 
     class SlokedCursorClient {
      public:
-        SlokedCursorClient(std::unique_ptr<KgrPipe>, SlokedSchedulerThread &);
-        void Connect(SlokedEditorDocumentSet::DocumentId, std::function<void(bool)>);
+        SlokedCursorClient(std::unique_ptr<KgrPipe>);
+        std::unique_ptr<SlokedAsyncTask> Connect(SlokedEditorDocumentSet::DocumentId, std::function<void(bool)>);
         void Insert(const std::string &);
         void MoveUp();
         void MoveDown();
@@ -65,7 +65,6 @@ namespace sloked {
 
      private:
         SlokedServiceClient client;
-        SlokedSchedulerThread &sched;
     };
 }
 

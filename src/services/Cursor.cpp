@@ -208,15 +208,48 @@ namespace sloked {
         return true;
     }
 
-    SlokedCursorClient::SlokedCursorClient(std::unique_ptr<KgrPipe> pipe, SlokedSchedulerThread &sched)
-        : client(std::move(pipe)), sched(sched) {}
+    class SlokedCursorConnectionTask : public SlokedAsyncTask {
+     public:
+        SlokedCursorConnectionTask(SlokedServiceClient::ResponseHandle rsp, std::function<void(bool)> callback)
+            : waiter(std::move(rsp)), callback(std::move(callback)) {
+            this->waiter.Wait([this](auto &res) {
+                std::unique_lock lock(this->mtx);
+                this->result = res.HasResult() && res.GetResult().AsBoolean();;
+                if (this->ready) {
+                    this->ready();
+                }
+            });
+        }
 
-    void SlokedCursorClient::Connect(SlokedEditorDocumentSet::DocumentId docId, std::function<void(bool)> callback) {
-        auto waiter = std::make_shared<SlokedServiceClient::ResponseWaiter>(this->client.Invoke("connect", static_cast<int64_t>(docId)), this->sched);
-        waiter->Wait([waiter = std::move(waiter), callback = std::move(callback)](auto &res) {
-            auto result = res.HasResult() && res.GetResult().AsBoolean();
-            callback(result);
-        });
+        void Wait(std::function<void()> ready) final {
+            std::unique_lock lock(this->mtx);
+            if (this->result.has_value()) {
+                ready();
+            } else {
+                this->ready = ready;
+            }
+        }
+
+        bool Run() final {
+            if (this->result.has_value()) {
+                this->callback(this->result.value());
+            }
+            return false;
+        }
+
+     private:
+        std::mutex mtx;
+        SlokedServiceClient::ResponseWaiter waiter;
+        std::function<void()> ready;
+        std::function<void(bool)> callback;
+        std::optional<bool> result;
+    };
+
+    SlokedCursorClient::SlokedCursorClient(std::unique_ptr<KgrPipe> pipe)
+        : client(std::move(pipe)) {}
+
+    std::unique_ptr<SlokedAsyncTask> SlokedCursorClient::Connect(SlokedEditorDocumentSet::DocumentId docId, std::function<void(bool)> callback) {
+        return std::make_unique<SlokedCursorConnectionTask>(this->client.Invoke("connect", static_cast<int64_t>(docId)), std::move(callback));
     }
 
     void SlokedCursorClient::Insert(const std::string &content) {

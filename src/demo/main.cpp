@@ -206,7 +206,7 @@ int main(int argc, const char **argv) {
     server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, server.GetConnector("text::render"), ctxManager));
     server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
     server.Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(documents, ctxManager));
-    server.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, sched, slaveServer.GetConnector("text::cursor"), slaveServer.GetConnector("document::notify"), ctxManager));
+    server.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, slaveServer.GetConnector("text::cursor"), slaveServer.GetConnector("document::notify"), ctxManager));
     server.Register("screen::input", std::make_unique<SlokedScreenInputService>(screenHandle, terminalEncoding, ctxManager));
     server.Register("screen::text::pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxManager));
 

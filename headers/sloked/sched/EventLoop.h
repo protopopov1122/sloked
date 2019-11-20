@@ -68,7 +68,7 @@ namespace sloked {
         void SetListener(std::function<void()>) final;
     
      private:
-        mutable std::mutex mtx;
+        mutable std::recursive_mutex mtx;
         std::queue<std::unique_ptr<SlokedAsyncTask>> pending;
         int64_t nextId;
         std::map<int64_t, std::unique_ptr<SlokedAsyncTask>> deferred;

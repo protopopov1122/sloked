@@ -30,9 +30,9 @@ namespace sloked {
 
     class SlokedScreenContext : public SlokedServiceContext {
      public:
-        SlokedScreenContext(std::unique_ptr<KgrPipe> pipe, SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, SlokedSchedulerThread &sched,
+        SlokedScreenContext(std::unique_ptr<KgrPipe> pipe, SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding,
             KgrServer::Connector cursorService, KgrServer::Connector notifyService)
-            : SlokedServiceContext(std::move(pipe)), root(root), encoding(encoding), sched(sched),
+            : SlokedServiceContext(std::move(pipe)), root(root), encoding(encoding),
               cursorService(std::move(cursorService)), notifyService(std::move(notifyService)) {
             
             this->BindMethod("handle.newMultiplexer", &SlokedScreenContext::HandleNewMultiplexer);
@@ -110,9 +110,12 @@ namespace sloked {
             root.Lock([&](auto &screen) {
                 try {
                     auto &handle = SlokedComponentTree::Traverse(screen, SlokedPath{path}).AsHandle();
-                    handle.NewTextPane(std::make_unique<SlokedTextEditor>(this->encoding, this->sched, this->cursorService(), this->notifyService(), documentId, [rsp = std::move(rsp)](auto res) mutable {
-                        rsp.Result(res);
-                    }));
+                    auto initCursor = [&](auto &cursorClient) {
+                        this->Defer(cursorClient.Connect(documentId, [rsp = std::move(rsp)](auto res) mutable {
+                            rsp.Result(res);
+                        }));
+                    };
+                    handle.NewTextPane(std::make_unique<SlokedTextEditor>(this->encoding, this->cursorService(), std::move(initCursor), this->notifyService(), documentId));
                 } catch (const SlokedError &err) {
                     rsp.Result(false);
                 }
@@ -564,17 +567,16 @@ namespace sloked {
     
         SlokedMonitor<SlokedScreenComponent &> &root;
         const Encoding &encoding;
-        SlokedSchedulerThread &sched;
         KgrServer::Connector cursorService;
         KgrServer::Connector notifyService;
     };
 
-    SlokedScreenService::SlokedScreenService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, SlokedSchedulerThread &sched,
+    SlokedScreenService::SlokedScreenService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding,
         KgrServer::Connector cursorService, KgrServer::Connector notifyService, KgrContextManager<KgrLocalContext> &contextManager)
-        : root(root), encoding(encoding), sched(sched), cursorService(std::move(cursorService)), notifyService(std::move(notifyService)), contextManager(contextManager) {}
+        : root(root), encoding(encoding), cursorService(std::move(cursorService)), notifyService(std::move(notifyService)), contextManager(contextManager) {}
 
     bool SlokedScreenService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedScreenContext>(std::move(pipe), this->root, this->encoding, this->sched, this->cursorService, this->notifyService);
+        auto ctx = std::make_unique<SlokedScreenContext>(std::move(pipe), this->root, this->encoding, this->cursorService, this->notifyService);
         this->contextManager.Attach(std::move(ctx));
         return true;
     }

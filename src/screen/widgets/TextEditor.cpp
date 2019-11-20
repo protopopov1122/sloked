@@ -25,10 +25,12 @@
 
 namespace sloked {
 
-    SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, SlokedSchedulerThread &sched, std::unique_ptr<KgrPipe> cursorService, std::unique_ptr<KgrPipe> renderService, SlokedEditorDocumentSet::DocumentId docId,
-        std::function<void(bool)> callback, SlokedBackgroundGraphics bg)
-        : conv(encoding, SlokedLocale::SystemEncoding()), cursorClient(std::move(cursorService), sched), notifyClient(std::move(renderService), docId), background(bg) {
-        this->cursorClient.Connect(docId, std::move(callback));
+    SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService, std::function<void(SlokedCursorClient &)> initClient,
+        std::unique_ptr<KgrPipe> renderService, SlokedEditorDocumentSet::DocumentId docId, SlokedBackgroundGraphics bg)
+        : conv(encoding, SlokedLocale::SystemEncoding()), cursorClient(std::move(cursorService)), notifyClient(std::move(renderService), docId), background(bg) {
+        if (initClient) {
+            initClient(this->cursorClient);
+        }
         notifyClient.OnUpdate([this] {
             this->updateListener();
         });

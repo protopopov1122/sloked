@@ -237,18 +237,16 @@ namespace sloked {
         this->client.get().SetCallback(this->id, std::move(callback));
     }
 
-    SlokedServiceClient::ResponseWaiter::ResponseWaiter(ResponseHandle handle, SlokedSchedulerThread &sched)
-        : handle(std::move(handle)), sched(sched) {
+    SlokedServiceClient::ResponseWaiter::ResponseWaiter(ResponseHandle handle)
+        : handle(std::move(handle)) {
         this->handle.Notify([this] {
             std::unique_lock lock(this->mtx);
             if (!this->callbacks.empty()) {
                 auto callback = std::move(this->callbacks.front());
                 this->callbacks.pop();
+                auto res = this->handle.Get();
                 lock.unlock();
-                this->sched.Defer([this, callback = std::move(callback)] {
-                    auto res = this->handle.Get();
-                    callback(res);
-                });
+                callback(res);
             }
         });
     }
@@ -284,7 +282,10 @@ namespace sloked {
                     }
                     this->cv->notify_all();
                     if (this->callbacks.count(rspId) != 0 && this->callbacks.at(rspId)) {
-                        this->callbacks.at(rspId)();
+                        auto callback = this->callbacks.at(rspId);
+                        lock.unlock();
+                        callback();
+                        lock.lock();
                     }
                 }
             });

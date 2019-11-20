@@ -124,14 +124,13 @@ namespace sloked {
 
 		class ResponseWaiter {
 		 public:
-			ResponseWaiter(ResponseHandle, SlokedSchedulerThread &);
+			ResponseWaiter(ResponseHandle);
 			void Wait(std::function<void(Response &)>);
 
 		 private:
 			std::mutex mtx;
 			std::queue<std::function<void(Response &)>> callbacks;
 			ResponseHandle handle;
-			SlokedSchedulerThread &sched;
 		};
 
 		friend class ResponseHandle;
