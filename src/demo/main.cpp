@@ -56,8 +56,8 @@
 #include "sloked/kgr/Path.h"
 #include "sloked/core/Semaphore.h"
 #include "sloked/sched/Scheduler.h"
-// #include "sloked/net/CryptoSocket.h"
-// #include "sloked/third-party/crypto/Botan.h"
+#include "sloked/net/Poll.h"
+#include "sloked/kgr/net/Config.h"
 #include <chrono>
 
 using namespace sloked;
@@ -168,12 +168,13 @@ int main(int argc, const char **argv) {
     logger.Debug() << "Local servers started";
 
     SlokedPosixSocketFactory socketFactory;
-    // SlokedBotanCrypto crypto;
-    // auto encryptionKey = crypto.DeriveKey("password", "salt");
-    // SlokedCryptoSocketFactory socketFactory(rawSocketFactory, crypto, *encryptionKey);
-    KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", cli["net-port"].As<int>()));
+    auto socketPoll = socketFactory.Poll();
+
+    SlokedDefaultSocketPollThread socketPoller(*socketPoll);
+    socketPoller.Start(KgrNetConfig::RequestTimeout);
+    KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", cli["net-port"].As<int>()), socketPoller);
     masterServer.Start();
-    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), localServer);
+    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), localServer, socketPoller);
     slaveServer.Start();
 
     logger.Debug() << "Network servers started";
@@ -278,6 +279,7 @@ int main(int argc, const char **argv) {
         }
     }
     sched.Stop();
+    socketPoller.Stop();
     renderTrigger.Notify();
     renderThread.join();
 

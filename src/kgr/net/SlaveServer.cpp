@@ -27,8 +27,8 @@
 
 namespace sloked {
 
-    KgrSlaveNetServer::KgrSlaveNetServer(std::unique_ptr<SlokedSocket> socket, KgrNamedServer &localServer)
-        : net(std::move(socket)), work(false), workers(0), localServer(localServer) {
+    KgrSlaveNetServer::KgrSlaveNetServer(std::unique_ptr<SlokedSocket> socket, KgrNamedServer &localServer, SlokedSocketPoller &poll)
+        : net(std::move(socket)), work(false), localServer(localServer), poll(poll) {
 
         this->net.BindMethod("send", [this](const std::string &method, const KgrValue &params, auto &rsp) {
             std::unique_lock lock(this->mtx);
@@ -100,32 +100,23 @@ namespace sloked {
 
     void KgrSlaveNetServer::Start() {
         std::unique_lock lock(this->mtx);
-        if (this->work.load()) {
+        if (this->work.exchange(true)) {
             return;
         }
-        this->work = true;
-        SlokedCounter<std::size_t>::Handle handle(this->workers);
-        std::thread([this, handle = std::move(handle)] {
-            while (this->work.load() && this->net.Valid()) {
-                this->Accept();
-            }
-            this->Accept();
-            for (const auto &pipe : this->pipes) {
-                pipe.second->Close();
-            }
-            if (this->net.Valid()) {
-                this->net.Close();
-            }
-        }).detach();
-        this->workers.Wait([](std::size_t count) { return count > 0; });
+        this->awaitableHandle = this->poll.Attach(std::make_unique<Awaitable>(*this));
     }
 
     void KgrSlaveNetServer::Stop() {
-        if (!this->work.load()) {
+        if (!this->work.exchange(false)) {
             return;
         }
-        this->work = false;
-        this->workers.Wait([](std::size_t count) { return count == 0; });
+        this->awaitableHandle.Detach();
+        for (const auto &pipe : this->pipes) {
+            pipe.second->Close();
+        }
+        if (this->net.Valid()) {
+            this->net.Close();
+        }
     }
 
     std::unique_ptr<KgrPipe> KgrSlaveNetServer::Connect(const std::string &service) {
@@ -210,6 +201,22 @@ namespace sloked {
         if (this->net.Wait(KgrNetConfig::RequestTimeout)) {
             this->net.Receive();
             this->net.Process();
+        }
+    }
+
+    KgrSlaveNetServer::Awaitable::Awaitable(KgrSlaveNetServer &self)
+        : self(self) {}
+
+    std::unique_ptr<SlokedSocketAwaitable> KgrSlaveNetServer::Awaitable::GetAwaitable() const {
+        return this->self.net.Awaitable();
+    }
+
+    void KgrSlaveNetServer::Awaitable::Process(bool success) {
+        if (success) {
+            this->self.Accept();
+        }
+        if (!this->self.net.Valid()) {
+            this->self.Stop();
         }
     }
 }

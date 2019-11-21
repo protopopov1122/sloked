@@ -43,6 +43,7 @@ namespace sloked {
         std::vector<uint8_t> Read(std::size_t) final;
         void Write(SlokedSpan<const uint8_t>) final;
         void Write(uint8_t) final;
+        std::unique_ptr<SlokedSocketAwaitable> Awaitable() const final;
 
      private:
         void Put(const uint8_t *, std::size_t);
@@ -66,6 +67,7 @@ namespace sloked {
         void Start() final;
         void Close() final;
         std::unique_ptr<SlokedSocket> Accept(long = 0) final;
+        std::unique_ptr<SlokedSocketAwaitable> Awaitable() const final;
 
      private:
         std::unique_ptr<SlokedServerSocket> serverSocket;
@@ -84,6 +86,7 @@ namespace sloked {
 
         std::unique_ptr<SlokedSocket> Connect(const std::string &, uint16_t) final;
         std::unique_ptr<SlokedServerSocket> Bind(const std::string &, uint16_t) final;
+        std::unique_ptr<SlokedSocketPoll> Poll() final;
 
      private:
         SlokedSocketFactory &socketFactory;

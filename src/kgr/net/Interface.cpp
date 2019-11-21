@@ -183,6 +183,10 @@ namespace sloked {
         this->methods[method] = handler;
     }
 
+    std::unique_ptr<SlokedSocketAwaitable> KgrNetInterface::Awaitable() const {
+        return this->socket->Awaitable();
+    }
+
     void KgrNetInterface::InvokeMethod(const std::string &method, const KgrValue &params, Responder &rsp) {
         rsp.Error("Unknown method: " + method);
     }

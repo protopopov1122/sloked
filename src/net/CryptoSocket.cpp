@@ -100,6 +100,10 @@ namespace sloked {
         }
     }
 
+    std::unique_ptr<SlokedSocketAwaitable> SlokedCryptoSocket::Awaitable() const {
+        return this->socket->Awaitable();
+    }
+
     void SlokedCryptoSocket::Put(const uint8_t *bytes, std::size_t length) {
         std::size_t totalLength = length;
         if (length % this->cipher->BlockSize() != 0) {
@@ -181,6 +185,10 @@ namespace sloked {
         }
     }
 
+    std::unique_ptr<SlokedSocketAwaitable> SlokedCryptoServerSocket::Awaitable() const {
+        return this->serverSocket->Awaitable();
+    }
+
     SlokedCryptoSocketFactory::SlokedCryptoSocketFactory(SlokedSocketFactory &socketFactory, SlokedCrypto &crypto, SlokedCrypto::Key &key)
         : socketFactory(socketFactory), crypto(crypto), key(key) {}
 
@@ -200,5 +208,9 @@ namespace sloked {
         } else {
             return nullptr;
         }
+    }
+
+    std::unique_ptr<SlokedSocketPoll> SlokedCryptoSocketFactory::Poll() {
+        return this->socketFactory.Poll();
     }
 }

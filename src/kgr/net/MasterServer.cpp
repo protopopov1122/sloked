@@ -235,49 +235,51 @@ namespace sloked {
         std::vector<std::string> remoteServices;
     };
 
-    KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket)
-        : server(server), srvSocket(std::move(socket)), work(false) {}
+    KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedSocketPoller &poll)
+        : server(server), srvSocket(std::move(socket)), poll(poll), work(false) {}
         
     bool KgrMasterNetServer::IsRunning() const {
         return this->work.load();
     }
 
     void KgrMasterNetServer::Start() {
-        std::unique_lock<std::mutex> lock(this->mtx);
         if (this->work.load()) {
             return;
         }
         if (!this->srvSocket->Valid()) {
             throw SlokedError("KgrNetMaster: Closed server socket");
         }
-        auto th = std::thread([this] {
-            this->srvSocket->Start();
-            std::unique_lock<std::mutex> lock(this->mtx);
-            this->work = true;
-            this->cv.notify_all();
-            lock.unlock();
-            SlokedCounter<std::size_t>::Handle workerCounter(this->workers);
-            while (this->work.load()) {
-                auto client = this->srvSocket->Accept(KgrNetConfig::RequestTimeout);
-                if (client) {
-                    SlokedCounter<std::size_t>::Handle counterHandle(this->workers);
-                    std::thread([this, counter = std::move(counterHandle), socket = std::move(client)]() mutable {
-                        KgrMasterNetServerContext ctx(std::move(socket), this->work, this->server);
-                        ctx.Start();
-                    }).detach();
-                }
-            }
-            this->srvSocket->Close();
-        });
-        th.detach();
-        this->cv.wait(lock, [this] { return this->work.load(); });
+        this->srvSocket->Start();
+        this->work = true;
+        this->awaiterHandle = this->poll.Attach(std::make_unique<Awaitable>(*this));
     }
 
     void KgrMasterNetServer::Stop() {
         if (!this->work.load()) {
             return;
         }
+        this->awaiterHandle.Detach();
         this->work = false;
         this->workers.Wait([](auto count) { return count == 0; });
+    }
+
+    KgrMasterNetServer::Awaitable::Awaitable(KgrMasterNetServer &self)
+        : self(self) {}
+
+    std::unique_ptr<SlokedSocketAwaitable> KgrMasterNetServer::Awaitable::GetAwaitable() const {
+        return this->self.srvSocket->Awaitable();
+    }
+
+    void KgrMasterNetServer::Awaitable::Process(bool success) {
+        if (success) {
+            auto client = this->self.srvSocket->Accept(KgrNetConfig::RequestTimeout);
+            if (client) {
+                SlokedCounter<std::size_t>::Handle counterHandle(this->self.workers);
+                std::thread([this, counter = std::move(counterHandle), socket = std::move(client)]() mutable {
+                    KgrMasterNetServerContext ctx(std::move(socket), this->self.work, this->self.server);
+                    ctx.Start();
+                }).detach();
+            }
+        }
     }
 }

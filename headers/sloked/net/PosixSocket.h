@@ -23,8 +23,20 @@
 #define SLOKED_NET_POSIXSOCKET_H_
 
 #include "sloked/net/Socket.h"
+#include <map>
+#include <mutex>
 
 namespace sloked {
+
+    class SlokedPosixAwaitable : public SlokedSocketAwaitable {
+     public:
+        SlokedPosixAwaitable(int);
+        int GetSocket() const;
+        SystemId GetSystemId() const final;
+
+     private:
+        int socket;
+    };
 
     class SlokedPosixSocket : public SlokedSocket {
      public:
@@ -46,6 +58,7 @@ namespace sloked {
         std::vector<uint8_t> Read(std::size_t) final;
         void Write(SlokedSpan<const uint8_t>) final;
         void Write(uint8_t) final;
+        std::unique_ptr<SlokedSocketAwaitable> Awaitable() const final;
         
         static constexpr int InvalidSocket = -1;
 
@@ -69,6 +82,7 @@ namespace sloked {
         void Start() final;
         void Close() final;
         std::unique_ptr<SlokedSocket> Accept(long = 0) final;
+        std::unique_ptr<SlokedSocketAwaitable> Awaitable() const final;
 
         static constexpr int InvalidSocket = -1;
 
@@ -76,11 +90,23 @@ namespace sloked {
         int socket;
     };
 
+    class SlokedPosixSocketPoll : public SlokedSocketPoll {
+     public:
+        SlokedSocketAwaitable::SystemId GetSystemId() const final;
+        std::function<void()> Attach(std::unique_ptr<SlokedSocketAwaitable>, std::function<void()>) final;
+        void Await(long = 0) final;
+
+     private:
+        std::mutex mtx;
+        std::map<int, std::function<void()>> sockets;
+    };
+
     class SlokedPosixSocketFactory : public SlokedSocketFactory {
      public:
         SlokedPosixSocketFactory() = default;
         std::unique_ptr<SlokedSocket> Connect(const std::string &, uint16_t) final;
         std::unique_ptr<SlokedServerSocket> Bind(const std::string &, uint16_t) final;
+        std::unique_ptr<SlokedSocketPoll> Poll() final;
     };
 }
 

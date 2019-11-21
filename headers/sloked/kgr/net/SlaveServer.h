@@ -23,6 +23,7 @@
 #define SLOKED_KGR_NET_SLAVESERVER_H_
 
 #include "sloked/core/Counter.h"
+#include "sloked/net/Poll.h"
 #include "sloked/kgr/net/Interface.h"
 #include "sloked/kgr/NamedServer.h"
 #include <mutex>
@@ -32,7 +33,7 @@ namespace sloked {
 
     class KgrSlaveNetServer : public KgrNamedServer {
      public:
-        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, KgrNamedServer &);
+        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, KgrNamedServer &, SlokedSocketPoller &);
         ~KgrSlaveNetServer();
         bool IsRunning() const;
         void Start();
@@ -48,13 +49,26 @@ namespace sloked {
      private:
         void Accept();
 
+        class Awaitable : public SlokedSocketPoller::Awaitable {
+         public:
+            Awaitable(KgrSlaveNetServer &);
+            std::unique_ptr<SlokedSocketAwaitable> GetAwaitable() const final;
+            void Process(bool) final;
+
+         private:
+            KgrSlaveNetServer &self;
+        };
+        friend class Awaitable;
+
         KgrNetInterface net;
         std::atomic<bool> work;
+        SlokedSocketPoller::Handle awaitableHandle;
         std::recursive_mutex mtx;
         std::mutex send_mtx;
         SlokedCounter<std::size_t> workers;
         std::map<int64_t, std::unique_ptr<KgrPipe>> pipes;
         KgrNamedServer &localServer;
+        SlokedSocketPoller &poll;
     };
 }
 

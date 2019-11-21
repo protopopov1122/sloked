@@ -26,9 +26,30 @@ namespace sloked {
     OnDestroy::OnDestroy(std::function<void()> callback)
         : callback(std::move(callback)) {}
 
+    OnDestroy::OnDestroy(OnDestroy &&scope)
+        : callback(scope.callback) {
+        scope.callback = nullptr;
+    }
+
     OnDestroy::~OnDestroy() {
         if (this->callback) {
             this->callback();
+        }
+    }
+
+    OnDestroy &OnDestroy::operator=(OnDestroy &&scope) {
+        if (this->callback) {
+            this->callback();
+        }
+        this->callback = scope.callback;
+        scope.callback = nullptr;
+        return *this;
+    }
+
+    void OnDestroy::Detach() {
+        if (this->callback) {
+            this->callback();
+            this->callback = nullptr;
         }
     }
 }

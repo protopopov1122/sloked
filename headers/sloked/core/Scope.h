@@ -29,8 +29,15 @@ namespace sloked {
 
     class OnDestroy {
      public:
-        OnDestroy(std::function<void()>);
+        OnDestroy(std::function<void()> = nullptr);
+        OnDestroy(const OnDestroy &) = delete;
+        OnDestroy(OnDestroy &&);
         ~OnDestroy();
+
+        OnDestroy &operator=(const OnDestroy &) = delete;
+        OnDestroy &operator=(OnDestroy &&);
+
+        void Detach();
 
      private:
         std::function<void()> callback;

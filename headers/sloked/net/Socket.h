@@ -23,11 +23,19 @@
 #define SLOKED_NET_SOCKET_H_
 
 #include "sloked/core/Span.h"
+#include "sloked/core/Scope.h"
 #include <vector>
 #include <optional>
 #include <memory>
 
 namespace sloked {
+
+    class SlokedSocketAwaitable {
+     public:
+        using SystemId = intptr_t;
+        virtual ~SlokedSocketAwaitable() = default;
+        virtual SystemId GetSystemId() const = 0;
+    };
 
     class SlokedSocket {
      public:
@@ -45,6 +53,7 @@ namespace sloked {
         virtual std::vector<uint8_t> Read(std::size_t) = 0;
         virtual void Write(SlokedSpan<const uint8_t>) = 0;
         virtual void Write(uint8_t) = 0;
+        virtual std::unique_ptr<SlokedSocketAwaitable> Awaitable() const = 0;
 
      protected:
         SlokedSocket() = default;
@@ -62,9 +71,18 @@ namespace sloked {
         virtual void Start() = 0;
         virtual void Close() = 0;
         virtual std::unique_ptr<SlokedSocket> Accept(long = 0) = 0;
+        virtual std::unique_ptr<SlokedSocketAwaitable> Awaitable() const = 0;
 
      protected:
         SlokedServerSocket() = default;
+    };
+
+    class SlokedSocketPoll {
+     public:
+        virtual ~SlokedSocketPoll() = default;
+        virtual SlokedSocketAwaitable::SystemId GetSystemId() const = 0;
+        virtual std::function<void()> Attach(std::unique_ptr<SlokedSocketAwaitable>, std::function<void()>) = 0;
+        virtual void Await(long = 0) = 0;
     };
 
     class SlokedSocketFactory {
@@ -78,6 +96,7 @@ namespace sloked {
 
         virtual std::unique_ptr<SlokedSocket> Connect(const std::string &, uint16_t) = 0;
         virtual std::unique_ptr<SlokedServerSocket> Bind(const std::string &, uint16_t) = 0;
+        virtual std::unique_ptr<SlokedSocketPoll> Poll() = 0;
 
      protected:
         SlokedSocketFactory() = default;

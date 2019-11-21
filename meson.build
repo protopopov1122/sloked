@@ -52,6 +52,7 @@ sloked_src = [
   'src/namespace/Virtual.cpp',
   'src/namespace/posix/Filesystem.cpp',
   'src/net/CryptoSocket.cpp',
+  'src/net/Poll.cpp',
   'src/net/PosixSocket.cpp',
   'src/sched/EventLoop.cpp',
   'src/sched/Scheduler.cpp',
