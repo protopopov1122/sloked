@@ -162,9 +162,6 @@ int main(int argc, const char **argv) {
     KgrContextManager<KgrLocalContext> &ctxManager = ctxManagerHandle.GetManager();
     ctxManagerHandle.Start();
 
-    SlokedDefaultSchedulerThread sched;
-    sched.Start();
-
     logger.Debug() << "Local servers started";
 
     SlokedPosixSocketFactory socketFactory;
@@ -278,16 +275,14 @@ int main(int argc, const char **argv) {
             work = false;
         }
     }
-    sched.Stop();
-    socketPoller.Stop();
     renderTrigger.Notify();
     renderThread.join();
 
     logger.Debug() << "Stopping servers";
 
-    sched.Stop();
     slaveServer.Stop();
     masterServer.Stop();
+    socketPoller.Stop();
     ctxManagerHandle.Stop();
 
     logger.Debug() << "Shutdown";

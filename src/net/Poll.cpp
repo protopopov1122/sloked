@@ -38,6 +38,22 @@ namespace sloked {
                     kv.second->Process(false);
                 }
                 this->poll.Await(timeout);
+                std::unique_lock queueLock(this->queueMtx);
+                if (!this->awaitableQueue.empty()) {
+                    for (auto &kv : this->awaitableQueue) {
+                        this->awaitables.emplace(kv.first, std::move(kv.second));
+                    }
+                    this->awaitableQueue.clear();
+                }
+                for (auto removalId : this->removalQueue) {
+                    if (this->awaitables.count(removalId) != 0) {
+                        this->awaitables.erase(removalId);
+                    }
+                    if (this->awaitableQueue.count(removalId) != 0) {
+                        this->awaitableQueue.erase(removalId);
+                    }
+                }
+                this->removalQueue.clear();
             }
         });
     }
@@ -53,21 +69,18 @@ namespace sloked {
     }
 
     SlokedDefaultSocketPollThread::Handle SlokedDefaultSocketPollThread::Attach(std::unique_ptr<Awaitable> awaitable) {
-        std::unique_lock lock(this->mtx);
+        std::unique_lock lock(this->queueMtx);
         auto id = this->nextId++;
-        this->awaitables.emplace(id, std::move(awaitable));
-        auto detacher = this->poll.Attach(this->awaitables.at(id)->GetAwaitable(), [this, id] {
-            std::unique_lock lock(this->mtx);
+        this->awaitableQueue.emplace(id, std::move(awaitable));
+        auto detacher = this->poll.Attach(this->awaitableQueue.at(id)->GetAwaitable(), [this, id] {
             if (this->awaitables.count(id) != 0) {
                 this->awaitables.at(id)->Process(true);
             }
         });
         return Handle([this, id, detacher = std::move(detacher)] {
-            std::unique_lock lock(this->mtx);
             detacher();
-            if (this->awaitables.count(id) != 0) {
-                this->awaitables.erase(id);
-            }
+            std::unique_lock lock(this->queueMtx);
+            this->removalQueue.push_back(id);
         });
     }
 }

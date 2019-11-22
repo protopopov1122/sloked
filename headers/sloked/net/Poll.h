@@ -58,9 +58,11 @@ namespace sloked {
         SlokedSocketPoll &poll;
         std::thread worker;
         std::atomic<bool> work;
-        std::mutex mtx;
-        std::size_t nextId;
         std::map<std::size_t, std::unique_ptr<Awaitable>> awaitables;
+        std::size_t nextId;
+        std::mutex queueMtx;
+        std::map<std::size_t, std::unique_ptr<Awaitable>> awaitableQueue;
+        std::vector<std::size_t> removalQueue;
     };
 }
 

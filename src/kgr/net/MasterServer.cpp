@@ -34,10 +34,10 @@ namespace sloked {
 
     static std::chrono::system_clock Clock;
 
-    class KgrMasterNetServerContext {
+    class KgrMasterNetServerContext : public SlokedSocketPoller::Awaitable {
      public:
-        KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, KgrNamedServer &server)
-            : net(std::move(socket)), work(work), server(server), nextPipeId(0) {
+        KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, SlokedCounter<std::size_t>::Handle counter, KgrNamedServer &server)
+            : net(std::move(socket)), work(work), server(server), nextPipeId(0), counterHandle(std::move(counterHandle)) {
 
             this->net.BindMethod("connect", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 const auto &service = params.AsString();
@@ -150,11 +150,7 @@ namespace sloked {
             });
         }
 
-        void Start() {
-            while (work.load() && this->net.Valid()) {
-                this->Accept();
-            }
-            this->Accept();
+        virtual ~KgrMasterNetServerContext() {
             for (const auto &pipe : this->pipes) {
                 pipe.second->Close();
             }
@@ -164,6 +160,26 @@ namespace sloked {
             if (this->net.Valid()) {
                 this->net.Close();
             }
+        }
+
+        std::unique_ptr<SlokedSocketAwaitable> GetAwaitable() const final {
+            return this->net.Awaitable();
+        }
+
+        void Process(bool success) final {
+            if (success) {
+                this->Accept();
+            }
+            if (!this->work.load()) {
+                if (this->net.Valid()) {
+                    this->Accept();
+                }
+                this->awaitableHandle.Detach();
+            }
+        }
+
+        void SetHandle(SlokedSocketPoller::Handle handle) {
+            this->awaitableHandle = std::move(handle);
         }
 
      private:
@@ -233,6 +249,8 @@ namespace sloked {
         std::recursive_mutex mtx;
         std::set<int64_t> frozenPipes;
         std::vector<std::string> remoteServices;
+        SlokedCounter<std::size_t>::Handle counterHandle;
+        SlokedSocketPoller::Handle awaitableHandle;
     };
 
     KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedSocketPoller &poll)
@@ -275,10 +293,10 @@ namespace sloked {
             auto client = this->self.srvSocket->Accept(KgrNetConfig::RequestTimeout);
             if (client) {
                 SlokedCounter<std::size_t>::Handle counterHandle(this->self.workers);
-                std::thread([this, counter = std::move(counterHandle), socket = std::move(client)]() mutable {
-                    KgrMasterNetServerContext ctx(std::move(socket), this->self.work, this->self.server);
-                    ctx.Start();
-                }).detach();
+                auto ctx = std::make_unique<KgrMasterNetServerContext>(std::move(client), this->self.work, std::move(counterHandle), this->self.server);
+                auto &ctx_ref = *ctx;
+                auto handle = this->self.poll.Attach(std::move(ctx));
+                ctx_ref.SetHandle(std::move(handle));
             }
         }
     }
