@@ -19,10 +19,10 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_NET_POLL_H_
-#define SLOKED_NET_POLL_H_
+#ifndef SLOKED_CORE_AWAITABLE_POLL_H_
+#define SLOKED_CORE_AWAITABLE_POLL_H_
 
-#include "sloked/net/Socket.h"
+#include "sloked/core/awaitable/Awaitable.h"
 #include "sloked/core/Counter.h"
 #include "sloked/core/Scope.h"
 #include <atomic>
@@ -32,30 +32,30 @@
 
 namespace sloked {
 
-    class SlokedSocketPoller {
+    class SlokedIOPoller {
      public:
         using Handle = OnDestroy;
 
         class Awaitable {
          public:
             virtual ~Awaitable() = default;
-            virtual std::unique_ptr<SlokedSocketAwaitable> GetAwaitable() const = 0;
+            virtual std::unique_ptr<SlokedIOAwaitable> GetAwaitable() const = 0;
             virtual void Process(bool) = 0;
         };
 
-        virtual ~SlokedSocketPoller() = default;
+        virtual ~SlokedIOPoller() = default;
         virtual Handle Attach(std::unique_ptr<Awaitable>) = 0;
     };
 
-    class SlokedDefaultSocketPollThread : public SlokedSocketPoller {
+    class SlokedDefaultIOPollThread : public SlokedIOPoller {
      public:
-        SlokedDefaultSocketPollThread(SlokedSocketPoll &);
+        SlokedDefaultIOPollThread(SlokedIOPoll &);
         void Start(long);
         void Stop();
         Handle Attach(std::unique_ptr<Awaitable>) final;
 
      private:
-        SlokedSocketPoll &poll;
+        SlokedIOPoll &poll;
         std::thread worker;
         std::atomic<bool> work;
         std::map<std::size_t, std::unique_ptr<Awaitable>> awaitables;

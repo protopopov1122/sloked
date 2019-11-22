@@ -100,7 +100,7 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedSocketAwaitable> SlokedCryptoSocket::Awaitable() const {
+    std::unique_ptr<SlokedIOAwaitable> SlokedCryptoSocket::Awaitable() const {
         return this->socket->Awaitable();
     }
 
@@ -185,7 +185,7 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedSocketAwaitable> SlokedCryptoServerSocket::Awaitable() const {
+    std::unique_ptr<SlokedIOAwaitable> SlokedCryptoServerSocket::Awaitable() const {
         return this->serverSocket->Awaitable();
     }
 
@@ -208,9 +208,5 @@ namespace sloked {
         } else {
             return nullptr;
         }
-    }
-
-    std::unique_ptr<SlokedSocketPoll> SlokedCryptoSocketFactory::Poll() {
-        return this->socketFactory.Poll();
     }
 }

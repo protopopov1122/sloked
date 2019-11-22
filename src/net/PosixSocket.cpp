@@ -34,20 +34,6 @@ namespace sloked {
         return fd >= 0;
     }
 
-    static const int PosixSystemId = 0;
-    static const intptr_t PosixSystemIdPtr = reinterpret_cast<intptr_t>(&PosixSystemId);
-
-    SlokedPosixAwaitable::SlokedPosixAwaitable(int socket)
-        : socket(socket) {}
-
-    int SlokedPosixAwaitable::GetSocket() const {
-        return this->socket;
-    }
-
-    SlokedPosixAwaitable::SystemId SlokedPosixAwaitable::GetSystemId() const {
-        return PosixSystemIdPtr;
-    }
-
     SlokedPosixSocket::SlokedPosixSocket(int fd)
         : socket(fd) {
         
@@ -171,7 +157,7 @@ namespace sloked {
         this->Write(SlokedSpan<const uint8_t>(&byte, 1));
     }
 
-    std::unique_ptr<SlokedSocketAwaitable> SlokedPosixSocket::Awaitable() const {
+    std::unique_ptr<SlokedIOAwaitable> SlokedPosixSocket::Awaitable() const {
         return std::make_unique<SlokedPosixAwaitable>(this->socket);
     }
 
@@ -253,64 +239,8 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedSocketAwaitable> SlokedPosixServerSocket::Awaitable() const {
+    std::unique_ptr<SlokedIOAwaitable> SlokedPosixServerSocket::Awaitable() const {
         return std::make_unique<SlokedPosixAwaitable>(this->socket);
-    }
-
-    SlokedSocketAwaitable::SystemId SlokedPosixSocketPoll::GetSystemId() const {
-        return PosixSystemIdPtr;
-    }
-
-    std::function<void()> SlokedPosixSocketPoll::Attach(std::unique_ptr<SlokedSocketAwaitable> awaitable, std::function<void()> callback) {
-        if (awaitable->GetSystemId() != this->GetSystemId()) {
-            throw SlokedError("SlokedSocketPoll: Unsupported awaitable type");
-        }
-        auto socket = static_cast<SlokedPosixAwaitable *>(awaitable.get())->GetSocket();
-        std::unique_lock lock(this->mtx);
-        this->sockets.emplace(socket, std::move(callback));
-        return [this, socket] {
-            std::unique_lock lock(this->mtx);
-            if (this->sockets.count(socket) != 0) {
-                this->sockets.erase(socket);
-            }
-        };
-    }
-
-    void SlokedPosixSocketPoll::Await(long timeout) {
-        struct timeval tv;
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        tv.tv_sec = 0;
-        tv.tv_usec = timeout * 1000;
-
-        int max_socket = std::numeric_limits<int>::min();
-        std::unique_lock lock(this->mtx);
-        if (this->sockets.empty()) {
-            return;
-        }
-
-        for (const auto &kv : this->sockets) {
-            FD_SET(kv.first, &rfds);
-            if (kv.first > max_socket) {
-                max_socket = kv.first;
-            }
-        }
-        lock.unlock();
-
-        int res = select(max_socket + 1, &rfds, nullptr, nullptr, timeout > 0 ? &tv : nullptr);
-        if (res > 0) {
-            std::vector<std::function<void()>> callbacks;
-            lock.lock();
-            for (const auto &kv : this->sockets) {
-                if (FD_ISSET(kv.first, &rfds)) {
-                    callbacks.push_back(kv.second);
-                }
-            }
-            lock.unlock();
-            for (const auto &callback : callbacks) {
-                callback();
-            }
-        }
     }
 
     std::unique_ptr<SlokedSocket> SlokedPosixSocketFactory::Connect(const std::string &host, uint16_t port) {
@@ -402,9 +332,5 @@ namespace sloked {
         }
         // Build an instance of the server
         return std::make_unique<SlokedPosixServerSocket>(fd);
-    }
-
-    std::unique_ptr<SlokedSocketPoll> SlokedPosixSocketFactory::Poll() {
-        return std::make_unique<SlokedPosixSocketPoll>();
     }
 }

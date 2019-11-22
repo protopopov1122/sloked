@@ -34,7 +34,7 @@ namespace sloked {
 
     static std::chrono::system_clock Clock;
 
-    class KgrMasterNetServerContext : public SlokedSocketPoller::Awaitable {
+    class KgrMasterNetServerContext : public SlokedIOPoller::Awaitable {
      public:
         KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, SlokedCounter<std::size_t>::Handle counter, KgrNamedServer &server)
             : net(std::move(socket)), work(work), server(server), nextPipeId(0), counterHandle(std::move(counterHandle)) {
@@ -151,6 +151,7 @@ namespace sloked {
         }
 
         virtual ~KgrMasterNetServerContext() {
+            std::unique_lock lock(this->mtx);
             for (const auto &pipe : this->pipes) {
                 pipe.second->Close();
             }
@@ -162,7 +163,7 @@ namespace sloked {
             }
         }
 
-        std::unique_ptr<SlokedSocketAwaitable> GetAwaitable() const final {
+        std::unique_ptr<SlokedIOAwaitable> GetAwaitable() const final {
             return this->net.Awaitable();
         }
 
@@ -178,7 +179,7 @@ namespace sloked {
             }
         }
 
-        void SetHandle(SlokedSocketPoller::Handle handle) {
+        void SetHandle(SlokedIOPoller::Handle handle) {
             this->awaitableHandle = std::move(handle);
         }
 
@@ -250,10 +251,10 @@ namespace sloked {
         std::set<int64_t> frozenPipes;
         std::vector<std::string> remoteServices;
         SlokedCounter<std::size_t>::Handle counterHandle;
-        SlokedSocketPoller::Handle awaitableHandle;
+        SlokedIOPoller::Handle awaitableHandle;
     };
 
-    KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedSocketPoller &poll)
+    KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedIOPoller &poll)
         : server(server), srvSocket(std::move(socket)), poll(poll), work(false) {}
         
     bool KgrMasterNetServer::IsRunning() const {
@@ -284,7 +285,7 @@ namespace sloked {
     KgrMasterNetServer::Awaitable::Awaitable(KgrMasterNetServer &self)
         : self(self) {}
 
-    std::unique_ptr<SlokedSocketAwaitable> KgrMasterNetServer::Awaitable::GetAwaitable() const {
+    std::unique_ptr<SlokedIOAwaitable> KgrMasterNetServer::Awaitable::GetAwaitable() const {
         return this->self.srvSocket->Awaitable();
     }
 

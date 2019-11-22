@@ -23,7 +23,7 @@
 #define SLOKED_KGR_NET_SLAVESERVER_H_
 
 #include "sloked/core/Counter.h"
-#include "sloked/net/Poll.h"
+#include "sloked/core/awaitable/Poll.h"
 #include "sloked/kgr/net/Interface.h"
 #include "sloked/kgr/NamedServer.h"
 #include <mutex>
@@ -33,7 +33,7 @@ namespace sloked {
 
     class KgrSlaveNetServer : public KgrNamedServer {
      public:
-        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, KgrNamedServer &, SlokedSocketPoller &);
+        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, KgrNamedServer &, SlokedIOPoller &);
         ~KgrSlaveNetServer();
         bool IsRunning() const;
         void Start();
@@ -49,10 +49,10 @@ namespace sloked {
      private:
         void Accept();
 
-        class Awaitable : public SlokedSocketPoller::Awaitable {
+        class Awaitable : public SlokedIOPoller::Awaitable {
          public:
             Awaitable(KgrSlaveNetServer &);
-            std::unique_ptr<SlokedSocketAwaitable> GetAwaitable() const final;
+            std::unique_ptr<SlokedIOAwaitable> GetAwaitable() const final;
             void Process(bool) final;
 
          private:
@@ -62,13 +62,13 @@ namespace sloked {
 
         KgrNetInterface net;
         std::atomic<bool> work;
-        SlokedSocketPoller::Handle awaitableHandle;
+        SlokedIOPoller::Handle awaitableHandle;
         std::recursive_mutex mtx;
         std::mutex send_mtx;
         SlokedCounter<std::size_t> workers;
         std::map<int64_t, std::unique_ptr<KgrPipe>> pipes;
         KgrNamedServer &localServer;
-        SlokedSocketPoller &poll;
+        SlokedIOPoller &poll;
     };
 }
 

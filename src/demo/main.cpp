@@ -56,7 +56,7 @@
 #include "sloked/kgr/Path.h"
 #include "sloked/core/Semaphore.h"
 #include "sloked/sched/Scheduler.h"
-#include "sloked/net/Poll.h"
+#include "sloked/core/awaitable/Poll.h"
 #include "sloked/kgr/net/Config.h"
 #include <chrono>
 
@@ -165,9 +165,9 @@ int main(int argc, const char **argv) {
     logger.Debug() << "Local servers started";
 
     SlokedPosixSocketFactory socketFactory;
-    auto socketPoll = socketFactory.Poll();
+    SlokedPosixSocketPoll socketPoll;
 
-    SlokedDefaultSocketPollThread socketPoller(*socketPoll);
+    SlokedDefaultIOPollThread socketPoller(socketPoll);
     socketPoller.Start(KgrNetConfig::RequestTimeout);
     KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", cli["net-port"].As<int>()), socketPoller);
     masterServer.Start();

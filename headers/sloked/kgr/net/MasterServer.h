@@ -23,7 +23,7 @@
 #define SLOKED_KGR_NET_MASTERSERVER_H_
 
 #include "sloked/net/Socket.h"
-#include "sloked/net/Poll.h"
+#include "sloked/core/awaitable/Poll.h"
 #include "sloked/kgr/NamedServer.h"
 #include "sloked/core/Counter.h"
 #include <atomic>
@@ -33,17 +33,17 @@ namespace sloked {
 
     class KgrMasterNetServer {
      public:
-        KgrMasterNetServer(KgrNamedServer &, std::unique_ptr<SlokedServerSocket>, SlokedSocketPoller &);
+        KgrMasterNetServer(KgrNamedServer &, std::unique_ptr<SlokedServerSocket>, SlokedIOPoller &);
         bool IsRunning() const;
         void Start();
         void Stop();
 
 
      private:
-        class Awaitable : public SlokedSocketPoller::Awaitable {
+        class Awaitable : public SlokedIOPoller::Awaitable {
          public:
             Awaitable(KgrMasterNetServer &);
-            std::unique_ptr<SlokedSocketAwaitable> GetAwaitable() const final;
+            std::unique_ptr<SlokedIOAwaitable> GetAwaitable() const final;
             void Process(bool) final;
 
          private:
@@ -53,8 +53,8 @@ namespace sloked {
 
         KgrNamedServer &server;
         std::unique_ptr<SlokedServerSocket> srvSocket;
-        SlokedSocketPoller &poll;
-        SlokedSocketPoller::Handle awaiterHandle;
+        SlokedIOPoller &poll;
+        SlokedIOPoller::Handle awaiterHandle;
         std::atomic<bool> work;
         SlokedCounter<std::size_t> workers;
     };

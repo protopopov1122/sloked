@@ -19,15 +19,15 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/net/Poll.h"
+#include "sloked/core/awaitable/Poll.h"
 
 namespace sloked {
 
 
-    SlokedDefaultSocketPollThread::SlokedDefaultSocketPollThread(SlokedSocketPoll &poll)
+    SlokedDefaultIOPollThread::SlokedDefaultIOPollThread(SlokedIOPoll &poll)
         : poll(poll), work(false), nextId{0} {}
 
-    void SlokedDefaultSocketPollThread::Start(long timeout) {
+    void SlokedDefaultIOPollThread::Start(long timeout) {
         if (this->work.exchange(true)) {
             return;
         }
@@ -58,7 +58,7 @@ namespace sloked {
         });
     }
 
-    void SlokedDefaultSocketPollThread::Stop() {
+    void SlokedDefaultIOPollThread::Stop() {
         if (!this->work.exchange(false)) {
             return;
         }
@@ -68,7 +68,7 @@ namespace sloked {
         }
     }
 
-    SlokedDefaultSocketPollThread::Handle SlokedDefaultSocketPollThread::Attach(std::unique_ptr<Awaitable> awaitable) {
+    SlokedDefaultIOPollThread::Handle SlokedDefaultIOPollThread::Attach(std::unique_ptr<Awaitable> awaitable) {
         std::unique_lock lock(this->queueMtx);
         auto id = this->nextId++;
         this->awaitableQueue.emplace(id, std::move(awaitable));

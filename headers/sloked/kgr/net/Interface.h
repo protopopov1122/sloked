@@ -85,7 +85,7 @@ namespace sloked {
         ResponseHandle Invoke(const std::string &, const KgrValue &);
         void Close();
         void BindMethod(const std::string &, std::function<void(const std::string &, const KgrValue &, Responder &)>);
-        std::unique_ptr<SlokedSocketAwaitable> Awaitable() const;
+        std::unique_ptr<SlokedIOAwaitable> Awaitable() const;
 
      protected:
         virtual void InvokeMethod(const std::string &, const KgrValue &, Responder &);

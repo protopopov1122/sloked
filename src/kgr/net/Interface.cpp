@@ -183,7 +183,7 @@ namespace sloked {
         this->methods[method] = handler;
     }
 
-    std::unique_ptr<SlokedSocketAwaitable> KgrNetInterface::Awaitable() const {
+    std::unique_ptr<SlokedIOAwaitable> KgrNetInterface::Awaitable() const {
         return this->socket->Awaitable();
     }
 

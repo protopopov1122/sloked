@@ -27,7 +27,7 @@
 
 namespace sloked {
 
-    KgrSlaveNetServer::KgrSlaveNetServer(std::unique_ptr<SlokedSocket> socket, KgrNamedServer &localServer, SlokedSocketPoller &poll)
+    KgrSlaveNetServer::KgrSlaveNetServer(std::unique_ptr<SlokedSocket> socket, KgrNamedServer &localServer, SlokedIOPoller &poll)
         : net(std::move(socket)), work(false), localServer(localServer), poll(poll) {
 
         this->net.BindMethod("send", [this](const std::string &method, const KgrValue &params, auto &rsp) {
@@ -207,7 +207,7 @@ namespace sloked {
     KgrSlaveNetServer::Awaitable::Awaitable(KgrSlaveNetServer &self)
         : self(self) {}
 
-    std::unique_ptr<SlokedSocketAwaitable> KgrSlaveNetServer::Awaitable::GetAwaitable() const {
+    std::unique_ptr<SlokedIOAwaitable> KgrSlaveNetServer::Awaitable::GetAwaitable() const {
         return this->self.net.Awaitable();
     }
 
