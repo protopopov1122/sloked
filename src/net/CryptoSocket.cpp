@@ -49,9 +49,10 @@ namespace sloked {
 
     bool SlokedCryptoSocket::Wait(long timeout) {
         if (this->Valid()) {
-            if (this->socket->Wait(timeout)) {
-                this->Fetch();
+            if (this->buffer.empty()) {
+                this->socket->Wait(timeout);
             }
+            this->Fetch();
             return this->buffer.size();
         } else {
             return false;

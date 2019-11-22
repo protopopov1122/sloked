@@ -79,6 +79,7 @@ namespace sloked {
         KgrNetInterface(std::unique_ptr<SlokedSocket>);
         virtual ~KgrNetInterface() = default;
         bool Wait(long = 0) const;
+        std::size_t Available() const;
         bool Valid() const;
         void Receive();
         void Process(std::size_t = 0);

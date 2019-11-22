@@ -212,7 +212,7 @@ namespace sloked {
     }
 
     void KgrSlaveNetServer::Awaitable::Process(bool success) {
-        if (success) {
+        if (success || this->self.net.Available() > 0) {
             this->self.Accept();
         }
         if (!this->self.net.Valid()) {

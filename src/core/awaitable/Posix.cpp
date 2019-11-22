@@ -39,11 +39,11 @@ namespace sloked {
     }
 
 
-    SlokedIOAwaitable::SystemId SlokedPosixSocketPoll::GetSystemId() const {
+    SlokedIOAwaitable::SystemId SlokedPosixAwaitablePoll::GetSystemId() const {
         return SlokedPosixAwaitable::PosixIOSystemId;
     }
 
-    std::function<void()> SlokedPosixSocketPoll::Attach(std::unique_ptr<SlokedIOAwaitable> awaitable, std::function<void()> callback) {
+    std::function<void()> SlokedPosixAwaitablePoll::Attach(std::unique_ptr<SlokedIOAwaitable> awaitable, std::function<void()> callback) {
         if (awaitable->GetSystemId() != this->GetSystemId()) {
             throw SlokedError("SlokedIOPoll: Unsupported awaitable type");
         }
@@ -58,7 +58,7 @@ namespace sloked {
         };
     }
 
-    void SlokedPosixSocketPoll::Await(long timeout) {
+    void SlokedPosixAwaitablePoll::Await(long timeout) {
         struct timeval tv;
         fd_set rfds;
         FD_ZERO(&rfds);

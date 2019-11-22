@@ -39,7 +39,7 @@ namespace sloked {
         int socket;
     };
 
-    class SlokedPosixSocketPoll : public SlokedIOPoll {
+    class SlokedPosixAwaitablePoll : public SlokedIOPoll {
      public:
         SlokedIOAwaitable::SystemId GetSystemId() const final;
         std::function<void()> Attach(std::unique_ptr<SlokedIOAwaitable>, std::function<void()>) final;

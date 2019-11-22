@@ -168,7 +168,7 @@ namespace sloked {
         }
 
         void Process(bool success) final {
-            if (success) {
+            if (success || this->net.Available() > 0) {
                 this->Accept();
             }
             if (!this->work.load()) {
