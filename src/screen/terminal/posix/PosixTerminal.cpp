@@ -183,13 +183,19 @@ namespace sloked {
           termcap(std::make_unique<Termcap>(std::string(getenv("TERM")))),
           disable_flush(false),
           width(0), height(0) {
-        fprintf(this->state->fd, "%s", this->termcap->GetString("ti"));
+        auto str = this->termcap->GetString("ti");
+        if (str != nullptr) {
+            fprintf(this->state->fd, "%s", str);
+        }
         fflush(this->state->fd);
         this->Update();
     }
 
     PosixTerminal::~PosixTerminal() {
-        fprintf(this->state->fd, "%s", this->termcap->GetString("te"));
+        auto str = this->termcap->GetString("te");
+        if (str != nullptr) {
+            fprintf(this->state->fd, "%s", str);
+        }
         fflush(this->state->fd);
     }
 
@@ -310,6 +316,18 @@ namespace sloked {
 
     FILE *PosixTerminal::GetOutputFile() {
         return this->state->fd;
+    }
+
+    bool PosixTerminal::WaitInput(long timeout) {
+        fd_set rfds;
+        struct timeval tv;
+        FD_ZERO(&rfds);
+        auto fno = fileno(this->state->input);
+        FD_SET(fno, &rfds);
+        tv.tv_sec = 0;
+        tv.tv_usec = timeout * 1000;
+
+        return select(fno + 1, &rfds, NULL, NULL, &tv) > 0;
     }
 
     std::vector<SlokedKeyboardInput> PosixTerminal::GetInput() {

@@ -165,7 +165,7 @@ int main(int argc, const char **argv) {
     logger.Debug() << "Local servers started";
 
     SlokedPosixSocketFactory socketFactory;
-    SlokedPosixSocketPoll socketPoll;
+    SlokedPosixAwaitablePoll socketPoll;
 
     SlokedDefaultIOPollThread socketPoller(socketPoll);
     socketPoller.Start(KgrNetConfig::RequestTimeout);
@@ -236,9 +236,24 @@ int main(int argc, const char **argv) {
     logger.Debug() << "Editor initialized";
 
     std::atomic<bool> work = true;
-    SlokedSemaphore renderTrigger;
-    std::thread renderThread([&] {
-        while (work.load()) {
+    std::atomic<std::size_t> renderFlag = true;
+    screenHandle.Lock([&](auto &screen) {
+        screen.OnUpdate([&] {
+            renderFlag = true;
+        });
+    });
+    int i = 0;
+
+    auto renderStatus = [&] {
+        render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
+        render.ClearScreen();
+        render.SetPosition(0, 0);
+        render.Write(std::to_string(i++));
+        render.Flush();
+    };
+    renderStatus();
+    while (work.load()) {
+        if (renderFlag.exchange(false)) {
             screenHandle.Lock([&](auto &screen) {
                 screen.UpdateDimensions();
                 console.SetGraphicsMode(SlokedTextGraphics::Off);
@@ -246,37 +261,24 @@ int main(int argc, const char **argv) {
                 screen.Render();
                 console.Flush();
             });
-            std::this_thread::sleep_for(25ms);
-            renderTrigger.WaitAll();
         }
-    });
-    screenHandle.Lock([&](auto &screen) {
-        screen.OnUpdate([&] {
-            renderTrigger.Notify();
-        });
-    });
-    int i = 0;
-    while (work.load()) {
-        render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
-        render.ClearScreen();
-        render.SetPosition(0, 0);
-        render.Write(std::to_string(i++));
-        render.Flush();
-        auto input = terminal.GetInput();
-        for (const auto &evt : input) {
-            screenHandle.Lock([&](auto &screen) {
-                screen.ProcessInput(evt);
-            });
-        }
-        auto closeEvents = screenInput.GetInput();
-        if (!closeEvents.empty()) {
-            logger.Debug() << "Saving document";
-            documentClient.Save(OUTPUT_PATH);
-            work = false;
+
+        if (terminal.WaitInput(25)) {
+            renderStatus();
+            auto input = terminal.GetInput();
+            for (const auto &evt : input) {
+                screenHandle.Lock([&](auto &screen) {
+                    screen.ProcessInput(evt);
+                });
+            }
+            auto closeEvents = screenInput.GetInput();
+            if (!closeEvents.empty()) {
+                logger.Debug() << "Saving document";
+                documentClient.Save(OUTPUT_PATH);
+                work = false;
+            }
         }
     }
-    renderTrigger.Notify();
-    renderThread.join();
 
     logger.Debug() << "Stopping servers";
 

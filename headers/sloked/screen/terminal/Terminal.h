@@ -46,6 +46,7 @@ namespace sloked {
     class SlokedTerminalInputSource {
      public:
         virtual ~SlokedTerminalInputSource() = default;
+        virtual bool WaitInput(long = 0) = 0;
         virtual std::vector<SlokedKeyboardInput> GetInput() = 0;
     };
 

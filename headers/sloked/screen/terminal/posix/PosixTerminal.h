@@ -50,6 +50,7 @@ namespace sloked {
         Line GetHeight() override;
 
         void Write(const std::string &) override;
+        bool WaitInput(long = 0) override;
         std::vector<SlokedKeyboardInput> GetInput() override;
 
         void SetGraphicsMode(SlokedTextGraphics) override;
