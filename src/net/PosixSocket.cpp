@@ -22,6 +22,7 @@
 #include "sloked/net/PosixSocket.h"
 #include "sloked/core/Error.h"
 #include "sloked/core/Scope.h"
+#include "sloked/core/posix/Time.h"
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -89,15 +90,14 @@ namespace sloked {
         }
     }
 
-    bool SlokedPosixSocket::Wait(long timeout) {
+    bool SlokedPosixSocket::Wait(std::chrono::system_clock::duration timeout) {
         if (IsSocketValid(this->socket)) {
             struct timeval tv;
             fd_set rfds;
             FD_ZERO(&rfds);
             FD_SET(this->socket, &rfds);
             
-            tv.tv_sec = 0;
-            tv.tv_usec = timeout * 1000;
+            DurationToTimeval(timeout, tv);
             return select(this->socket + 1, &rfds, nullptr, nullptr, &tv) > 0;
         } else {
             return false;
@@ -215,16 +215,15 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedSocket> SlokedPosixServerSocket::Accept(long timeout) {
+    std::unique_ptr<SlokedSocket> SlokedPosixServerSocket::Accept(std::chrono::system_clock::duration timeout) {
         int socket = InvalidSocket;
-        if (timeout != 0) {
+        if (timeout != std::chrono::system_clock::duration::zero()) {
             struct timeval tv;
             fd_set rfds;
             FD_ZERO(&rfds);
             FD_SET(this->socket, &rfds);
             
-            tv.tv_sec = 0;
-            tv.tv_usec = timeout * 1000;
+            DurationToTimeval(timeout, tv);
             auto result = select(this->socket + 1, &rfds, nullptr, nullptr, &tv);
             if (result > 0) {
                 socket = accept(this->socket, nullptr, nullptr);

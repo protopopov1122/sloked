@@ -21,6 +21,7 @@
 
 #include "sloked/screen/terminal/posix/PosixTerminal.h"
 #include "sloked/core/String.h"
+#include "sloked/core/posix/Time.h"
 #include <optional>
 #include <map>
 #include <array>
@@ -318,14 +319,13 @@ namespace sloked {
         return this->state->fd;
     }
 
-    bool PosixTerminal::WaitInput(long timeout) {
+    bool PosixTerminal::WaitInput(std::chrono::system_clock::duration timeout) {
         fd_set rfds;
         struct timeval tv;
         FD_ZERO(&rfds);
         auto fno = fileno(this->state->input);
         FD_SET(fno, &rfds);
-        tv.tv_sec = 0;
-        tv.tv_usec = timeout * 1000;
+        DurationToTimeval(timeout, tv);
 
         return select(fno + 1, &rfds, NULL, NULL, &tv) > 0;
     }

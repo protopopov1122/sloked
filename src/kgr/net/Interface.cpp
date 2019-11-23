@@ -68,9 +68,9 @@ namespace sloked {
         return !this->net->responses.at(this->id).empty();
     }
 
-    bool KgrNetInterface::ResponseHandle::WaitResponse(long timeout) const {
+    bool KgrNetInterface::ResponseHandle::WaitResponse(std::chrono::system_clock::duration timeout) const {
         std::unique_lock<std::mutex> lock(this->net->response_mtx);
-        this->net->response_cv.wait_for(lock, timeout * 1ms);
+        this->net->response_cv.wait_for(lock, timeout);
         return !this->net->responses.at(this->id).empty();
     }
 
@@ -108,7 +108,7 @@ namespace sloked {
     KgrNetInterface::KgrNetInterface(std::unique_ptr<SlokedSocket> socket)
         : socket(std::move(socket)), nextId(0) {}
 
-    bool KgrNetInterface::Wait(long timeout) const {
+    bool KgrNetInterface::Wait(std::chrono::system_clock::duration timeout) const {
         return this->socket->Wait(timeout);
     }
 
@@ -134,7 +134,7 @@ namespace sloked {
                 try {
                     this->incoming.push(serializer.Deserialize(conv.Convert(message)));
                 } catch (const SlokedError &err) {
-                    // Ignoring malformed requests
+                    throw SlokedError("KgrNetInterface: Malformed request");
                 }
             }
         }
@@ -153,9 +153,11 @@ namespace sloked {
                     this->ActionResponse(msg);
                 } else if (action == "close") {
                     this->ActionClose(msg);
+                } else {
+                    throw SlokedError("KgrNetInterface: Malformed request");
                 }
             } catch (const SlokedError &err) {
-                // Ignoring malformed requests
+                throw SlokedError("KgrNetInterface: Malformed request");
             }
         }
     }

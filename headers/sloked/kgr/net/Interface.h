@@ -28,6 +28,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <queue>
+#include <chrono>
 #include <map>
 
 namespace sloked {
@@ -55,7 +56,7 @@ namespace sloked {
             ResponseHandle &operator=(const ResponseHandle &) = delete;
             ResponseHandle &operator=(ResponseHandle &&) = default;
             bool HasResponse() const;
-            bool WaitResponse(long) const;
+            bool WaitResponse(std::chrono::system_clock::duration) const;
             Response GetResponse() const;
 
          private:
@@ -78,7 +79,7 @@ namespace sloked {
 
         KgrNetInterface(std::unique_ptr<SlokedSocket>);
         virtual ~KgrNetInterface() = default;
-        bool Wait(long = 0) const;
+        bool Wait(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) const;
         std::size_t Available() const;
         bool Valid() const;
         void Receive();

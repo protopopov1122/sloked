@@ -19,31 +19,24 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CORE_AWAITABLE_AWAITABLE_H_
-#define SLOKED_CORE_AWAITABLE_AWAITABLE_H_
+#ifndef SLOKED_CORE_POSIX_TIME_H_
+#define SLOKED_CORE_POSIX_TIME_H_
 
 #include "sloked/Base.h"
-#include <cinttypes>
-#include <functional>
-#include <memory>
 #include <chrono>
+#include <sys/time.h>
 
 namespace sloked {
 
-    class SlokedIOAwaitable {
-     public:
-        using SystemId = intptr_t;
-        virtual ~SlokedIOAwaitable() = default;
-        virtual SystemId GetSystemId() const = 0;
-    };
-
-    class SlokedIOPoll {
-     public:
-        virtual ~SlokedIOPoll() = default;
-        virtual SlokedIOAwaitable::SystemId GetSystemId() const = 0;
-        virtual std::function<void()> Attach(std::unique_ptr<SlokedIOAwaitable>, std::function<void()>) = 0;
-        virtual void Await(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) = 0;
-    };
+    template <typename T>
+    void DurationToTimeval(const T &src, struct timeval &tv) {
+        if (src  > std::chrono::seconds(1)) {
+            tv.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(src).count();
+            tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(src - std::chrono::seconds(tv.tv_sec)).count();
+        } else {
+            tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(src).count();
+        }
+    }
 }
 
 #endif

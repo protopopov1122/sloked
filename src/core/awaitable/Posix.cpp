@@ -21,6 +21,7 @@
 
 #include "sloked/core/awaitable/Posix.h"
 #include "sloked/core/Error.h"
+#include "sloked/core/posix/Time.h"
 
 namespace sloked {
 
@@ -58,12 +59,11 @@ namespace sloked {
         };
     }
 
-    void SlokedPosixAwaitablePoll::Await(long timeout) {
+    void SlokedPosixAwaitablePoll::Await(std::chrono::system_clock::duration timeout) {
         struct timeval tv;
         fd_set rfds;
         FD_ZERO(&rfds);
-        tv.tv_sec = 0;
-        tv.tv_usec = timeout * 1000;
+        DurationToTimeval(timeout, tv);
 
         int max_socket = std::numeric_limits<int>::min();
         std::unique_lock lock(this->mtx);
@@ -79,7 +79,7 @@ namespace sloked {
         }
         lock.unlock();
 
-        int res = select(max_socket + 1, &rfds, nullptr, nullptr, timeout > 0 ? &tv : nullptr);
+        int res = select(max_socket + 1, &rfds, nullptr, nullptr, timeout > std::chrono::system_clock::duration::zero() ? &tv : nullptr);
         if (res > 0) {
             std::vector<std::function<void()>> callbacks;
             lock.lock();

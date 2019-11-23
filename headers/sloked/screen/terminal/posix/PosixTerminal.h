@@ -27,6 +27,7 @@
 #include <string>
 #include <memory>
 #include <sstream>
+#include <chrono>
 
 namespace sloked {
     
@@ -50,7 +51,7 @@ namespace sloked {
         Line GetHeight() override;
 
         void Write(const std::string &) override;
-        bool WaitInput(long = 0) override;
+        bool WaitInput(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) override;
         std::vector<SlokedKeyboardInput> GetInput() override;
 
         void SetGraphicsMode(SlokedTextGraphics) override;

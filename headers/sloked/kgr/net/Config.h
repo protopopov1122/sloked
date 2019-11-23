@@ -23,12 +23,15 @@
 #define SLOKED_KGR_NET_CONFIG_H_
 
 #include "sloked/Base.h"
+#include <chrono>
 
 namespace sloked {
 
     struct KgrNetConfig {
-        static constexpr long RequestTimeout = 50;
-        static constexpr long ResponseTimeout = 250;
+        static constexpr std::chrono::system_clock::duration RequestTimeout = std::chrono::milliseconds(50);
+        static constexpr std::chrono::system_clock::duration ResponseTimeout = std::chrono::milliseconds(250);
+        static constexpr std::chrono::system_clock::duration InactivityTimeout = std::chrono::seconds(5);
+        static constexpr std::chrono::system_clock::duration InactivityThreshold = InactivityTimeout * 2;
     };
 }
 

@@ -27,6 +27,7 @@
 #include <cstring>
 #include <set>
 #include <chrono>
+#include <iostream>
 
 using namespace std::chrono_literals;
 
@@ -37,7 +38,9 @@ namespace sloked {
     class KgrMasterNetServerContext : public SlokedIOPoller::Awaitable {
      public:
         KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, SlokedCounter<std::size_t>::Handle counter, KgrNamedServer &server)
-            : net(std::move(socket)), work(work), server(server), nextPipeId(0), counterHandle(std::move(counterHandle)) {
+            : net(std::move(socket)), work(work), server(server), nextPipeId(0), counterHandle(std::move(counterHandle)), pinged{false} {
+
+            this->lastActivity = std::chrono::system_clock::now();
 
             this->net.BindMethod("connect", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 const auto &service = params.AsString();
@@ -148,6 +151,10 @@ namespace sloked {
                     rsp.Result(false);
                 }
             });
+
+            this->net.BindMethod("ping", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+                rsp.Result("pong");
+            });
         }
 
         virtual ~KgrMasterNetServerContext() {
@@ -169,7 +176,17 @@ namespace sloked {
 
         void Process(bool success) final {
             if (success || this->net.Available() > 0) {
+                this->pinged = false;
                 this->Accept();
+            } else if (this->work.load() && this->net.Valid()) {
+                auto now = std::chrono::system_clock::now();
+                auto idle = now - this->lastActivity;
+                if (idle > KgrNetConfig::InactivityThreshold && this->pinged) {
+                    throw SlokedError("KgrMasterServer: Connection inactive for " + std::to_string(idle.count()) + " ns");
+                } else if (idle > KgrNetConfig::InactivityTimeout && !this->pinged) {
+                    this->net.Invoke("ping", {});
+                    this->pinged = true;
+                }
             }
             if (!this->work.load()) {
                 if (this->net.Valid()) {
@@ -201,7 +218,7 @@ namespace sloked {
                     auto start = Clock.now();
                     while (!rsp.WaitResponse(KgrNetConfig::RequestTimeout) &&
                         this->srv.work.load() &&
-                        Clock.now() - start < KgrNetConfig::ResponseTimeout * 1ms) {
+                        Clock.now() - start < KgrNetConfig::ResponseTimeout) {
                         this->srv.Accept(1);
                     }
                     if (rsp.HasResponse()) {
@@ -239,6 +256,7 @@ namespace sloked {
             if (this->net.Wait(KgrNetConfig::RequestTimeout)) {
                 this->net.Receive();
                 this->net.Process(count);
+                this->lastActivity = std::chrono::system_clock::now();
             }
         }
 
@@ -252,6 +270,8 @@ namespace sloked {
         std::vector<std::string> remoteServices;
         SlokedCounter<std::size_t>::Handle counterHandle;
         SlokedIOPoller::Handle awaitableHandle;
+        std::chrono::system_clock::time_point lastActivity;
+        bool pinged;
     };
 
     KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedIOPoller &poll)

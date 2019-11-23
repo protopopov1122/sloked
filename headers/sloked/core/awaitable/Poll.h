@@ -50,7 +50,7 @@ namespace sloked {
     class SlokedDefaultIOPollThread : public SlokedIOPoller {
      public:
         SlokedDefaultIOPollThread(SlokedIOPoll &);
-        void Start(long);
+        void Start(std::chrono::system_clock::duration);
         void Stop();
         Handle Attach(std::unique_ptr<Awaitable>) final;
 

@@ -28,6 +28,7 @@
 #include <vector>
 #include <optional>
 #include <memory>
+#include <chrono>
 
 namespace sloked {
 
@@ -42,7 +43,7 @@ namespace sloked {
         virtual bool Valid() = 0;
         virtual void Close() = 0;
         virtual std::size_t Available() = 0;
-        virtual bool Wait(long) = 0;
+        virtual bool Wait(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) = 0;
         virtual std::optional<uint8_t> Read() = 0;
         virtual std::vector<uint8_t> Read(std::size_t) = 0;
         virtual void Write(SlokedSpan<const uint8_t>) = 0;
@@ -64,7 +65,7 @@ namespace sloked {
         virtual bool Valid() = 0;
         virtual void Start() = 0;
         virtual void Close() = 0;
-        virtual std::unique_ptr<SlokedSocket> Accept(long = 0) = 0;
+        virtual std::unique_ptr<SlokedSocket> Accept(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) = 0;
         virtual std::unique_ptr<SlokedIOAwaitable> Awaitable() const = 0;
 
      protected:

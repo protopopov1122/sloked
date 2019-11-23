@@ -44,7 +44,7 @@ namespace sloked {
         bool Valid() final;
         void Close() final;
         std::size_t Available() final;
-        bool Wait(long) final;
+        bool Wait(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
         std::optional<uint8_t> Read() final;
         std::vector<uint8_t> Read(std::size_t) final;
         void Write(SlokedSpan<const uint8_t>) final;
@@ -72,7 +72,7 @@ namespace sloked {
         bool Valid() final;
         void Start() final;
         void Close() final;
-        std::unique_ptr<SlokedSocket> Accept(long = 0) final;
+        std::unique_ptr<SlokedSocket> Accept(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
         std::unique_ptr<SlokedIOAwaitable> Awaitable() const final;
 
         static constexpr int InvalidSocket = -1;

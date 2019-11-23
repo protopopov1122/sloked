@@ -28,7 +28,9 @@
 namespace sloked {
 
     KgrSlaveNetServer::KgrSlaveNetServer(std::unique_ptr<SlokedSocket> socket, KgrNamedServer &localServer, SlokedIOPoller &poll)
-        : net(std::move(socket)), work(false), localServer(localServer), poll(poll) {
+        : net(std::move(socket)), work(false), localServer(localServer), poll(poll), pinged{false} {
+
+        this->lastActivity = std::chrono::system_clock::now();
 
         this->net.BindMethod("send", [this](const std::string &method, const KgrValue &params, auto &rsp) {
             std::unique_lock lock(this->mtx);
@@ -87,6 +89,10 @@ namespace sloked {
                 this->pipes.erase(remotePipe);
             }
             this->pipes.emplace(remotePipe, std::move(pipe));
+        });
+
+        this->net.BindMethod("ping", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+            rsp.Result("pong");
         });
     }
     
@@ -201,6 +207,18 @@ namespace sloked {
         if (this->net.Wait(KgrNetConfig::RequestTimeout)) {
             this->net.Receive();
             this->net.Process();
+            this->lastActivity = std::chrono::system_clock::now();
+        }
+    }
+
+    void KgrSlaveNetServer::Ping() {
+        auto now = std::chrono::system_clock::now();
+        auto idle = now - this->lastActivity;
+        if (idle > KgrNetConfig::InactivityThreshold && this->pinged) {
+            throw SlokedError("KgrSlaveServer: Connection inactive for " + std::to_string(idle.count()) + " ns");
+        } else if (idle > KgrNetConfig::InactivityTimeout && !this->pinged) {
+            this->net.Invoke("ping", {});
+            this->pinged = true;
         }
     }
 
@@ -213,7 +231,10 @@ namespace sloked {
 
     void KgrSlaveNetServer::Awaitable::Process(bool success) {
         if (success || this->self.net.Available() > 0) {
+            this->self.pinged = false;
             this->self.Accept();
+        } else if (this->self.net.Valid()) {
+            this->self.Ping();
         }
         if (!this->self.net.Valid()) {
             this->self.Stop();

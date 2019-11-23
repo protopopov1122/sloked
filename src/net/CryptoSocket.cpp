@@ -47,7 +47,7 @@ namespace sloked {
         }
     }
 
-    bool SlokedCryptoSocket::Wait(long timeout) {
+    bool SlokedCryptoSocket::Wait(std::chrono::system_clock::duration timeout) {
         if (this->Valid()) {
             if (this->buffer.empty()) {
                 this->socket->Wait(timeout);
@@ -173,7 +173,7 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedSocket> SlokedCryptoServerSocket::Accept(long timeout) {
+    std::unique_ptr<SlokedSocket> SlokedCryptoServerSocket::Accept(std::chrono::system_clock::duration timeout) {
         if (this->Valid()) {
             auto rawSocket = this->serverSocket->Accept(timeout);
             if (rawSocket) {

@@ -27,7 +27,7 @@ namespace sloked {
     SlokedDefaultIOPollThread::SlokedDefaultIOPollThread(SlokedIOPoll &poll)
         : poll(poll), work(false), nextId{0} {}
 
-    void SlokedDefaultIOPollThread::Start(long timeout) {
+    void SlokedDefaultIOPollThread::Start(std::chrono::system_clock::duration timeout) {
         if (this->work.exchange(true)) {
             return;
         }

@@ -263,7 +263,7 @@ int main(int argc, const char **argv) {
             });
         }
 
-        if (terminal.WaitInput(25)) {
+        if (terminal.WaitInput(std::chrono::milliseconds(25))) {
             renderStatus();
             auto input = terminal.GetInput();
             for (const auto &evt : input) {

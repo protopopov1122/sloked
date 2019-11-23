@@ -43,7 +43,7 @@ namespace sloked {
      public:
         SlokedIOAwaitable::SystemId GetSystemId() const final;
         std::function<void()> Attach(std::unique_ptr<SlokedIOAwaitable>, std::function<void()>) final;
-        void Await(long = 0) final;
+        void Await(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
 
      private:
         std::mutex mtx;

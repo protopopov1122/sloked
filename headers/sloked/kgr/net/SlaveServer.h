@@ -28,6 +28,7 @@
 #include "sloked/kgr/NamedServer.h"
 #include <mutex>
 #include <atomic>
+#include <chrono>
 
 namespace sloked {
 
@@ -48,6 +49,7 @@ namespace sloked {
 
      private:
         void Accept();
+        void Ping();
 
         class Awaitable : public SlokedIOPoller::Awaitable {
          public:
@@ -69,6 +71,8 @@ namespace sloked {
         std::map<int64_t, std::unique_ptr<KgrPipe>> pipes;
         KgrNamedServer &localServer;
         SlokedIOPoller &poll;
+        std::chrono::system_clock::time_point lastActivity;
+        bool pinged;
     };
 }
 

@@ -27,6 +27,7 @@
 #include "sloked/screen/Keyboard.h"
 #include "sloked/screen/Graphics.h"
 #include <vector>
+#include <chrono>
 
 namespace sloked {
 
@@ -46,7 +47,7 @@ namespace sloked {
     class SlokedTerminalInputSource {
      public:
         virtual ~SlokedTerminalInputSource() = default;
-        virtual bool WaitInput(long = 0) = 0;
+        virtual bool WaitInput(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) = 0;
         virtual std::vector<SlokedKeyboardInput> GetInput() = 0;
     };
 
