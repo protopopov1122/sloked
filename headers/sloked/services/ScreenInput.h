@@ -35,8 +35,6 @@ namespace sloked {
      public:
         SlokedScreenInputService(SlokedMonitor<SlokedScreenComponent &> &, const Encoding &, KgrContextManager<KgrLocalContext> &);
         bool Attach(std::unique_ptr<KgrPipe>) override;
-
-        static constexpr std::size_t MaxEvents = 4096;
     
      private:
         SlokedMonitor<SlokedScreenComponent &> &root;
@@ -46,13 +44,13 @@ namespace sloked {
     
     class SlokedScreenInputClient {
      public:
+        using Callback = std::function<void(const SlokedKeyboardInput &)>;
         SlokedScreenInputClient(std::unique_ptr<KgrPipe>);
-        bool Connect(const std::string &, bool, const std::vector<std::pair<SlokedControlKey, bool>> &);
+        void Listen(const std::string &, bool, const std::vector<std::pair<SlokedControlKey, bool>> &, Callback);
         void Close();
-        std::vector<SlokedKeyboardInput> GetInput();
 
      private:
-        SlokedServiceClient client;
+        std::unique_ptr<KgrPipe> pipe;
     };
 }
 

@@ -164,6 +164,8 @@ int main(int argc, const char **argv) {
 
     logger.Debug() << "Local servers started";
 
+    SlokedDefaultSchedulerThread sched;
+    sched.Start();
     SlokedPosixSocketFactory socketFactory;
     SlokedPosixAwaitablePoll socketPoll;
 
@@ -224,12 +226,8 @@ int main(int argc, const char **argv) {
     auto tab1 = screenClient.Tabber.NewWindow("/0/0");
     screenClient.Handle.NewTextEditor(tab1.value(), documentClient.GetId().value());
 
-    SlokedScreenInputClient screenInput(server.Connect("screen::input"));
-    screenInput.Connect("/", false, {
-        { SlokedControlKey::Escape, false }
-    });
 
-    SlokedTextPaneClient paneClient(server.Connect("screen::text::pane"));
+    SlokedTextPaneClient paneClient(slaveServer.Connect("screen::text::pane"));
     paneClient.Connect("/0/1", false, {});
     auto &render = paneClient.GetRender();
 
@@ -252,6 +250,16 @@ int main(int argc, const char **argv) {
         render.Flush();
     };
     renderStatus();
+    SlokedScreenInputClient screenInput(slaveServer.Connect("screen::input"));
+    screenInput.Listen("/", false, {
+        { SlokedControlKey::Escape, false }
+    }, [&](auto &evt) {
+        sched.Defer([&] {
+            logger.Debug() << "Saving document";
+            documentClient.Save(OUTPUT_PATH);
+            work = false;
+        });
+    });
     while (work.load()) {
         if (renderFlag.exchange(false)) {
             screenHandle.Lock([&](auto &screen) {
@@ -271,12 +279,6 @@ int main(int argc, const char **argv) {
                     screen.ProcessInput(evt);
                 });
             }
-            auto closeEvents = screenInput.GetInput();
-            if (!closeEvents.empty()) {
-                logger.Debug() << "Saving document";
-                documentClient.Save(OUTPUT_PATH);
-                work = false;
-            }
         }
     }
 
@@ -286,6 +288,7 @@ int main(int argc, const char **argv) {
     masterServer.Stop();
     socketPoller.Stop();
     ctxManagerHandle.Stop();
+    sched.Stop();
 
     logger.Debug() << "Shutdown";
     return EXIT_SUCCESS;

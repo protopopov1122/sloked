@@ -34,6 +34,7 @@ namespace sloked {
             tv.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(src).count();
             tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(src - std::chrono::seconds(tv.tv_sec)).count();
         } else {
+            tv.tv_sec = 0;
             tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(src).count();
         }
     }

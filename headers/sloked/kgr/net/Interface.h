@@ -106,6 +106,7 @@ namespace sloked {
         std::mutex response_mtx;
         std::condition_variable response_cv;
         std::map<std::string, std::function<void(const std::string &, const KgrValue &, Responder &)>> methods;
+        std::mutex write_mtx;
     };
 }
 

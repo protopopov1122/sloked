@@ -201,6 +201,7 @@ namespace sloked {
         KgrJsonSerializer serializer;
         EncodingConverter conv(SlokedLocale::SystemEncoding(), Encoding::Utf8);
         auto raw = conv.Convert(serializer.Serialize(msg));
+        std::unique_lock lock(this->write_mtx);
         this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(raw.data()), raw.size()));
         this->socket->Write('\0');
     }
