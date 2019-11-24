@@ -115,19 +115,19 @@ namespace sloked {
         std::set<std::pair<SlokedControlKey, bool>> subscribes;
     };
 
-    SlokedScreenInputService::SlokedScreenInputService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
+    SlokedScreenInputNotificationService::SlokedScreenInputNotificationService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), contextManager(contextManager) {}
 
-    bool SlokedScreenInputService::Attach(std::unique_ptr<KgrPipe> pipe) {
+    bool SlokedScreenInputNotificationService::Attach(std::unique_ptr<KgrPipe> pipe) {
         auto ctx = std::make_unique<SlokedScreenInputContext>(std::move(pipe), this->root, this->encoding);
         this->contextManager.Attach(std::move(ctx));
         return true;
     }
 
-    SlokedScreenInputClient::SlokedScreenInputClient(std::unique_ptr<KgrPipe> pipe)
+    SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe> pipe)
         : pipe(std::move(pipe)) {}
 
-    void SlokedScreenInputClient::Listen(const std::string &path, bool text, const std::vector<std::pair<SlokedControlKey, bool>> &keys, Callback callback) {
+    void SlokedScreenInputNotificationClient::Listen(const std::string &path, bool text, const std::vector<std::pair<SlokedControlKey, bool>> &keys, Callback callback) {
         KgrDictionary params {
             { "path", path },
             { "text", text }
@@ -159,7 +159,7 @@ namespace sloked {
         });
     }
 
-    void SlokedScreenInputClient::Close() {
+    void SlokedScreenInputNotificationClient::Close() {
         this->pipe->Write({});
         this->pipe = nullptr;
     }

@@ -31,9 +31,9 @@
 
 namespace sloked {
 
-    class SlokedScreenInputService : public KgrService {
+    class SlokedScreenInputNotificationService : public KgrService {
      public:
-        SlokedScreenInputService(SlokedMonitor<SlokedScreenComponent &> &, const Encoding &, KgrContextManager<KgrLocalContext> &);
+        SlokedScreenInputNotificationService(SlokedMonitor<SlokedScreenComponent &> &, const Encoding &, KgrContextManager<KgrLocalContext> &);
         bool Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
@@ -42,10 +42,10 @@ namespace sloked {
         KgrContextManager<KgrLocalContext> &contextManager;
     };
     
-    class SlokedScreenInputClient {
+    class SlokedScreenInputNotificationClient {
      public:
         using Callback = std::function<void(const SlokedKeyboardInput &)>;
-        SlokedScreenInputClient(std::unique_ptr<KgrPipe>);
+        SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe>);
         void Listen(const std::string &, bool, const std::vector<std::pair<SlokedControlKey, bool>> &, Callback);
         void Close();
 

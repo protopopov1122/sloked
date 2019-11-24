@@ -202,19 +202,19 @@ int main(int argc, const char **argv) {
 
     logger.Debug() << "Screen initialized";
 
-    server.Register("text::render", std::make_unique<SlokedTextRenderService>(documents, charWidth, fragmentFactory, ctxManager));
-    server.Register("text::cursor", std::make_unique<SlokedCursorService>(documents, server.GetConnector("text::render"), ctxManager));
-    server.Register("documents", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
+    server.Register("document::render", std::make_unique<SlokedTextRenderService>(documents, charWidth, fragmentFactory, ctxManager));
+    server.Register("document::cursor", std::make_unique<SlokedCursorService>(documents, server.GetConnector("document::render"), ctxManager));
+    server.Register("document::manager", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
     server.Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(documents, ctxManager));
-    server.Register("screen", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, slaveServer.GetConnector("text::cursor"), slaveServer.GetConnector("document::notify"), ctxManager));
-    server.Register("screen::input", std::make_unique<SlokedScreenInputService>(screenHandle, terminalEncoding, ctxManager));
-    server.Register("screen::text::pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxManager));
+    server.Register("screen::manager", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, slaveServer.GetConnector("document::cursor"), slaveServer.GetConnector("document::notify"), ctxManager));
+    server.Register("screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(screenHandle, terminalEncoding, ctxManager));
+    server.Register("screen::component::text.pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxManager));
 
     logger.Debug() << "Services bound";
 
 
-    SlokedScreenClient screenClient(slaveServer.Connect("screen"));
-    SlokedDocumentSetClient documentClient(slaveServer.Connect("documents"));
+    SlokedScreenClient screenClient(slaveServer.Connect("screen::manager"));
+    SlokedDocumentSetClient documentClient(slaveServer.Connect("document::manager"));
     documentClient.Open(INPUT_PATH, cli["encoding"].As<std::string>(), cli["newline"].As<std::string>());
 
     screenClient.Handle.NewMultiplexer("/");
@@ -227,7 +227,7 @@ int main(int argc, const char **argv) {
     screenClient.Handle.NewTextEditor(tab1.value(), documentClient.GetId().value());
 
 
-    SlokedTextPaneClient paneClient(slaveServer.Connect("screen::text::pane"));
+    SlokedTextPaneClient paneClient(slaveServer.Connect("screen::component::text.pane"));
     paneClient.Connect("/0/1", false, {});
     auto &render = paneClient.GetRender();
 
@@ -250,7 +250,7 @@ int main(int argc, const char **argv) {
         render.Flush();
     };
     renderStatus();
-    SlokedScreenInputClient screenInput(slaveServer.Connect("screen::input"));
+    SlokedScreenInputNotificationClient screenInput(slaveServer.Connect("screen::component::input.notify"));
     screenInput.Listen("/", false, {
         { SlokedControlKey::Escape, false }
     }, [&](auto &evt) {
