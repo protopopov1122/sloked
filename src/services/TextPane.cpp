@@ -429,12 +429,13 @@ namespace sloked {
         KgrArray renderCommands;
     };
 
-    SlokedTextPaneClient::SlokedTextPaneClient(std::unique_ptr<KgrPipe> pipe)
-        : client(std::move(pipe)), render(std::make_unique<SlokedTextPaneRender>(client)) {}
+    SlokedTextPaneClient::SlokedTextPaneClient(std::unique_ptr<KgrPipe> pipe, std::function<bool()> holdsLock)
+        : client(std::move(pipe)), holdsLock(std::move(holdsLock)), render(std::make_unique<SlokedTextPaneRender>(client)) {}
 
     SlokedTextPaneClient::~SlokedTextPaneClient() = default;
 
     bool SlokedTextPaneClient::Connect(const std::string &path, bool text, const std::vector<std::pair<SlokedControlKey, bool>> &keys) {
+        this->PreventDeadlock();
         KgrDictionary params {
             { "path", path },
             { "text", text }
@@ -461,6 +462,7 @@ namespace sloked {
     }
 
     std::vector<SlokedKeyboardInput> SlokedTextPaneClient::GetInput() {
+        this->PreventDeadlock();
         auto rsp = this->client.Invoke("getInput", {});
         auto res = rsp.Get();
         if (res.HasResult() && res.GetResult().Is(KgrValueType::Array)) {
@@ -481,6 +483,12 @@ namespace sloked {
             return input;
         } else {
             return {};
+        }
+    }
+
+    void SlokedTextPaneClient::PreventDeadlock() {
+        if (this->holdsLock && this->holdsLock()) {
+            throw SlokedError("TextPane: Deadlock prevented");
         }
     }
 }

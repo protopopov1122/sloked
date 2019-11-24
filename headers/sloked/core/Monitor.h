@@ -25,6 +25,7 @@
 #include "sloked/Base.h"
 #include <mutex>
 #include <functional>
+#include <thread>
 
 namespace sloked {
 
@@ -42,17 +43,36 @@ namespace sloked {
 
         void Lock(std::function<void(T &)> callback) {
             std::unique_lock<std::mutex> lock(this->mtx);
-            callback(this->data);
+            this->holder = std::this_thread::get_id();
+            try {
+                callback(this->data);
+                this->holder = std::thread::id{};
+            } catch (const SlokedError &err) {
+                this->holder = std::thread::id{};
+                throw;
+            }
         }
 
         void Lock(std::function<void(const T &)> callback) const {
             std::unique_lock<std::mutex> lock(this->mtx);
-            callback(this->data);
+            this->holder = std::this_thread::get_id();
+            try {
+                callback(this->data);
+                this->holder = std::thread::id{};
+            } catch (const SlokedError &err) {
+                this->holder = std::thread::id{};
+                throw;
+            }
+        }
+
+        bool IsHolder() const {
+            return this->holder.load() == std::this_thread::get_id();
         }
 
      private:
         T data;
         mutable std::mutex mtx;
+        mutable std::atomic<std::thread::id> holder;
     };
 }
 

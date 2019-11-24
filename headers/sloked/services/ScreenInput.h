@@ -45,13 +45,14 @@ namespace sloked {
     class SlokedScreenInputNotificationClient {
      public:
         using Callback = std::function<void(const SlokedKeyboardInput &)>;
-        SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe>, const Encoding &);
+        SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe>, const Encoding &, std::function<bool()> = nullptr);
         void Listen(const std::string &, bool, const std::vector<std::pair<SlokedControlKey, bool>> &, Callback);
         void Close();
 
      private:
         std::unique_ptr<KgrPipe> pipe;
         const Encoding &encoding;
+        std::function<bool()> holdsLock;
     };
 
     class SlokedScreenInputForwardingService : public KgrService {

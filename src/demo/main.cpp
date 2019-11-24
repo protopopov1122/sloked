@@ -199,6 +199,9 @@ int main(int argc, const char **argv) {
 
     TerminalComponentHandle screen(console, terminalEncoding, charWidth);
     SlokedMonitor<SlokedScreenComponent &> screenHandle(screen);
+    auto isScreenLocked = [&screenHandle] {
+        return screenHandle.IsHolder();
+    };
 
     logger.Debug() << "Screen initialized";
 
@@ -214,7 +217,7 @@ int main(int argc, const char **argv) {
     logger.Debug() << "Services bound";
 
 
-    SlokedScreenClient screenClient(slaveServer.Connect("screen::manager"));
+    SlokedScreenClient screenClient(slaveServer.Connect("screen::manager"), isScreenLocked);
     SlokedDocumentSetClient documentClient(slaveServer.Connect("document::manager"));
     documentClient.Open(INPUT_PATH, cli["encoding"].As<std::string>(), cli["newline"].As<std::string>());
 
@@ -228,7 +231,7 @@ int main(int argc, const char **argv) {
     screenClient.Handle.NewTextEditor(tab1.value(), documentClient.GetId().value());
 
 
-    SlokedTextPaneClient paneClient(slaveServer.Connect("screen::component::text.pane"));
+    SlokedTextPaneClient paneClient(slaveServer.Connect("screen::component::text.pane"), isScreenLocked);
     paneClient.Connect("/0/1", false, {});
     auto &render = paneClient.GetRender();
 
@@ -251,7 +254,7 @@ int main(int argc, const char **argv) {
         render.Flush();
     };
     renderStatus();
-    SlokedScreenInputNotificationClient screenInput(slaveServer.Connect("screen::component::input.notify"), terminalEncoding);
+    SlokedScreenInputNotificationClient screenInput(slaveServer.Connect("screen::component::input.notify"), terminalEncoding, isScreenLocked);
     SlokedScreenInputForwardingClient inputForward(slaveServer.Connect("screen::component::input.forward"), terminalEncoding);
     screenInput.Listen("/", true, {
         { SlokedControlKey::Escape, false }

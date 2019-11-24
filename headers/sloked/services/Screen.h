@@ -51,7 +51,7 @@ namespace sloked {
      public:
         class HandleClient {
          public:
-            HandleClient(SlokedServiceClient &);
+            HandleClient(SlokedServiceClient &, std::function<void()>);
             bool NewMultiplexer(const std::string &) const;
             bool NewSplitter(const std::string &, Splitter::Direction) const;
             bool NewTabber(const std::string &) const;
@@ -59,11 +59,12 @@ namespace sloked {
 
          private:
             SlokedServiceClient &client;
+            std::function<void()> preventDeadlock;
         };
 
         class MultiplexerClient {
          public:
-            MultiplexerClient(SlokedServiceClient &);
+            MultiplexerClient(SlokedServiceClient &, std::function<void()>);
             std::optional<std::string> NewWindow(const std::string &, const TextPosition &, const TextPosition &) const;
             std::size_t GetWindowCount(const std::string &) const;
             std::optional<std::string> GetFocus(const std::string &) const;
@@ -75,11 +76,12 @@ namespace sloked {
 
          private:
             SlokedServiceClient &client;
+            std::function<void()> preventDeadlock;
         };
 
         class SplitterClient {
          public:
-            SplitterClient(SlokedServiceClient &);
+            SplitterClient(SlokedServiceClient &, std::function<void()>);
             std::optional<std::string> NewWindow(const std::string &, const Splitter::Constraints &) const;
             std::optional<std::string> NewWindow(const std::string &, SlokedComponentWindow::Id, const Splitter::Constraints &) const;
             std::size_t GetWindowCount(const std::string &) const;
@@ -92,11 +94,12 @@ namespace sloked {
 
          private:
             SlokedServiceClient &client;
+            std::function<void()> preventDeadlock;
         };
 
         class TabberClient {
          public:
-            TabberClient(SlokedServiceClient &);
+            TabberClient(SlokedServiceClient &,std::function<void()>);
             std::optional<std::string> NewWindow(const std::string &) const;
             std::optional<std::string> NewWindow(const std::string &, SlokedComponentWindow::Id) const;
             std::size_t GetWindowCount(const std::string &) const;
@@ -108,12 +111,15 @@ namespace sloked {
 
          private:
             SlokedServiceClient &client;
+            std::function<void()> preventDeadlock;
         };
 
-        SlokedScreenClient(std::unique_ptr<KgrPipe>);
+        SlokedScreenClient(std::unique_ptr<KgrPipe>, std::function<bool()> = nullptr);
 
      private:
+        void PreventDeadlock();
         SlokedServiceClient client;
+        std::function<bool()> holdsLock;
 
      public:
         const HandleClient Handle;

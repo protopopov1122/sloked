@@ -140,10 +140,13 @@ namespace sloked {
         return true;
     }
 
-    SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe> pipe, const Encoding &encoding)
-        : pipe(std::move(pipe)), encoding(encoding) {}
+    SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe> pipe, const Encoding &encoding, std::function<bool()> holdsLock)
+        : pipe(std::move(pipe)), encoding(encoding), holdsLock(std::move(holdsLock)) {}
 
     void SlokedScreenInputNotificationClient::Listen(const std::string &path, bool text, const std::vector<std::pair<SlokedControlKey, bool>> &keys, Callback callback) {
+        if (this->holdsLock && this->holdsLock()) {
+            throw SlokedError("ScreenInputNotificationService: Deadlock prevented");
+        }
         KgrDictionary params {
             { "path", path },
             { "text", text }
