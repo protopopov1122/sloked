@@ -65,6 +65,40 @@ namespace sloked {
             }
         }
 
+        bool TryLock(std::function<void(T &)> callback) {
+            std::unique_lock<std::mutex> lock(this->mtx, std::defer_lock);
+            if (lock.try_lock()) {
+                this->holder = std::this_thread::get_id();
+                try {
+                    callback(this->data);
+                    this->holder = std::thread::id{};
+                } catch (const SlokedError &err) {
+                    this->holder = std::thread::id{};
+                    throw;
+                }
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        bool TryLock(std::function<void(const T &)> callback) const {
+            std::unique_lock<std::mutex> lock(this->mtx, std::defer_lock);
+            if (lock.try_lock()) {
+                this->holder = std::this_thread::get_id();
+                try {
+                    callback(this->data);
+                    this->holder = std::thread::id{};
+                } catch (const SlokedError &err) {
+                    this->holder = std::thread::id{};
+                    throw;
+                }
+                return true;
+            } else {
+                return false;
+            }
+        }
+
         bool IsHolder() const {
             return this->holder.load() == std::this_thread::get_id();
         }

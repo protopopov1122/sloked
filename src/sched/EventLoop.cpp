@@ -39,6 +39,21 @@ namespace sloked {
         }
     }
 
+    SlokedImmediateAsyncTask::SlokedImmediateAsyncTask(Callback cb)
+        : callback(std::move(callback)) {}
+
+    void SlokedImmediateAsyncTask::Wait(std::function<void()> cb) {
+        cb();
+    }
+
+    bool SlokedImmediateAsyncTask::Run() {
+        if (this->callback) {
+            return this->callback();
+        } else {
+            return false;
+        }
+    }
+
     SlokedDefaultEventLoop::SlokedDefaultEventLoop()
         : nextId{0} {}
 
@@ -46,7 +61,9 @@ namespace sloked {
         std::unique_lock lock(this->mtx);
         int64_t taskId = this->nextId++;
         this->deferred.emplace(taskId, std::move(task));
-        this->deferred.at(taskId)->Wait([this, taskId] {
+        auto &taskRef = *this->deferred.at(taskId);
+        lock.unlock();
+        taskRef.Wait([this, taskId] {
             std::unique_lock lock(this->mtx);
             auto task = std::move(this->deferred[taskId]);
             this->deferred.erase(taskId);

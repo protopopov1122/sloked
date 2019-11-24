@@ -50,6 +50,17 @@ namespace sloked {
         std::function<bool()> execute;
     };
 
+    class SlokedImmediateAsyncTask : public SlokedAsyncTask {
+        using Callback = std::function<bool()>;
+     public:
+        SlokedImmediateAsyncTask(Callback);
+        void Wait(std::function<void()>) final;
+        bool Run() final;
+
+     private:
+        Callback callback;
+    };
+
     class SlokedEventLoop {
      public:
         virtual ~SlokedEventLoop() = default;

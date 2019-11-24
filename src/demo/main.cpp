@@ -258,7 +258,7 @@ int main(int argc, const char **argv) {
     };
     renderStatus();
     SlokedScreenInputNotificationClient screenInput(slaveServer.Connect("screen::component::input.notify"), terminalEncoding, isScreenLocked);
-    SlokedScreenInputForwardingClient inputForward(slaveServer.Connect("screen::component::input.forward"), terminalEncoding);
+    SlokedScreenInputForwardingClient inputForward(slaveServer.Connect("screen::component::input.forward"), terminalEncoding, isScreenLocked);
     screenInput.Listen("/", true, {
         { SlokedControlKey::Escape, false }
     }, [&](auto &evt) {

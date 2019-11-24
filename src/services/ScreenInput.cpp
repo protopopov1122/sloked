@@ -187,9 +187,18 @@ namespace sloked {
         void Send(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path(params.AsDictionary()["path"].AsString());
             auto event = KgrToEvent(this->encoding, params.AsDictionary()["event"]);
-            this->root.Lock([&](auto &screen) {
+            this->Process(path, event);
+        }
+
+        void Process(const SlokedPath &path, const SlokedKeyboardInput &event) {
+            if (!this->root.TryLock([&](auto &screen) {
                 SlokedComponentTree::Traverse(screen, path).ProcessInput(event);
-            });
+            })) {
+                this->Defer(std::make_unique<SlokedImmediateAsyncTask>([this, path, event] {
+                    this->Process(path, event);
+                    return false;
+                }));
+            }
         }
 
         SlokedMonitor<SlokedScreenComponent &> &root;
@@ -205,10 +214,13 @@ namespace sloked {
         return true;
     }
 
-    SlokedScreenInputForwardingClient::SlokedScreenInputForwardingClient(std::unique_ptr<KgrPipe> pipe, const Encoding &encoding)
-        : client(std::move(pipe)), encoding(encoding) {}
+    SlokedScreenInputForwardingClient::SlokedScreenInputForwardingClient(std::unique_ptr<KgrPipe> pipe, const Encoding &encoding, std::function<bool()> holdsLock)
+        : client(std::move(pipe)), encoding(encoding), holdsLock(std::move(holdsLock)) {}
 
     void SlokedScreenInputForwardingClient::Send(const std::string &path, const SlokedKeyboardInput &event) {
+        if (this->holdsLock && this->holdsLock()) {
+            throw SlokedError("ScreenInputNotificationService: Deadlock prevented");
+        }
         this->client.Invoke("send", KgrDictionary {
             { "path", path },
             { "event", EventToKgr(this->encoding, event) }

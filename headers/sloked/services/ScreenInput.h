@@ -68,12 +68,13 @@ namespace sloked {
     
     class SlokedScreenInputForwardingClient {
      public:
-        SlokedScreenInputForwardingClient(std::unique_ptr<KgrPipe>, const Encoding &);
+        SlokedScreenInputForwardingClient(std::unique_ptr<KgrPipe>, const Encoding &, std::function<bool()> = nullptr);
         void Send(const std::string &, const SlokedKeyboardInput &);
 
      private:
         SlokedServiceClient client;
         const Encoding &encoding;
+        std::function<bool()> holdsLock;
     };
 }
 
