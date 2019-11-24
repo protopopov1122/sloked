@@ -58,6 +58,7 @@
 #include "sloked/sched/Scheduler.h"
 #include "sloked/core/awaitable/Poll.h"
 #include "sloked/kgr/net/Config.h"
+#include "sloked/third-party/script/Lua.h"
 #include <chrono>
 
 using namespace sloked;
@@ -133,7 +134,8 @@ static const KgrDictionary DefaultConfiguration {
         "network", KgrDictionary {
             { "port", 1234 },
         }
-    }
+    },
+    { "script", "" }
 };
 
 int main(int argc, const char **argv) {
@@ -143,6 +145,7 @@ int main(int argc, const char **argv) {
     cli.Define("--newline", mainConfig.Find("/newline").AsString());
     cli.Define("-o,--output", cli.Option<std::string>());
     cli.Define("--net-port", mainConfig.Find("/network/port").AsInt());
+    cli.Define("--script", mainConfig.Find("/script").AsString());
     cli.Parse(argc, argv);
     if (cli.Size() == 0) {
         std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
@@ -269,6 +272,13 @@ int main(int argc, const char **argv) {
             }
         });
     });
+
+    SlokedLuaEngine luaEngine;
+    luaEngine.BindServer("main", slaveServer);
+    if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {
+        luaEngine.Start(cli["script"].As<std::string>());
+    }
+
     while (work.load()) {
         if (renderFlag.exchange(false)) {
             screenHandle.Lock([&](auto &screen) {
@@ -293,6 +303,7 @@ int main(int argc, const char **argv) {
 
     logger.Debug() << "Stopping servers";
 
+    luaEngine.Stop();
     slaveServer.Stop();
     masterServer.Stop();
     socketPoller.Stop();
