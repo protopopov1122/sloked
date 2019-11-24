@@ -208,6 +208,7 @@ int main(int argc, const char **argv) {
     server.Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(documents, ctxManager));
     server.Register("screen::manager", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, slaveServer.GetConnector("document::cursor"), slaveServer.GetConnector("document::notify"), ctxManager));
     server.Register("screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(screenHandle, terminalEncoding, ctxManager));
+    server.Register("screen::component::input.forward", std::make_unique<SlokedScreenInputForwardingService>(screenHandle, terminalEncoding, ctxManager));
     server.Register("screen::component::text.pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxManager));
 
     logger.Debug() << "Services bound";
@@ -250,14 +251,19 @@ int main(int argc, const char **argv) {
         render.Flush();
     };
     renderStatus();
-    SlokedScreenInputNotificationClient screenInput(slaveServer.Connect("screen::component::input.notify"));
-    screenInput.Listen("/", false, {
+    SlokedScreenInputNotificationClient screenInput(slaveServer.Connect("screen::component::input.notify"), terminalEncoding);
+    SlokedScreenInputForwardingClient inputForward(slaveServer.Connect("screen::component::input.forward"), terminalEncoding);
+    screenInput.Listen("/", true, {
         { SlokedControlKey::Escape, false }
     }, [&](auto &evt) {
-        sched.Defer([&] {
-            logger.Debug() << "Saving document";
-            documentClient.Save(OUTPUT_PATH);
-            work = false;
+        sched.Defer([&, evt] {
+            if (evt.value.index() == 0) {
+                inputForward.Send("/0", evt);
+            } else {
+                logger.Debug() << "Saving document";
+                documentClient.Save(OUTPUT_PATH);
+                work = false;
+            }
         });
     });
     while (work.load()) {

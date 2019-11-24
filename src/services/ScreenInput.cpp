@@ -26,12 +26,39 @@
 
 namespace sloked {
 
-    class SlokedScreenInputContext : public KgrLocalContext {
+    static KgrValue EventToKgr(const Encoding &encoding, const SlokedKeyboardInput &evt) {
+        EncodingConverter conv(encoding, SlokedLocale::SystemEncoding());
+        if (evt.value.index() == 0) {
+            return KgrDictionary {
+                { "alt", evt.alt },
+                { "text", conv.Convert(std::get<0>(evt.value)) }
+            };
+        } else {
+            return KgrDictionary {
+                { "alt", evt.alt },
+                { "key", static_cast<int64_t>(std::get<1>(evt.value)) }
+            };
+        }
+    }
+
+    static SlokedKeyboardInput KgrToEvent(const Encoding &encoding, const KgrValue &msg) {
+        EncodingConverter conv(SlokedLocale::SystemEncoding(), encoding);
+        SlokedKeyboardInput event;
+        event.alt = msg.AsDictionary()["alt"].AsBoolean();
+        if (msg.AsDictionary().Has("text")) {
+            event.value = conv.Convert(msg.AsDictionary()["text"].AsString());
+        } else if (msg.AsDictionary().Has("key")) {
+            event.value = static_cast<SlokedControlKey>(msg.AsDictionary()["key"].AsInt());
+        }
+        return event;
+    }
+
+    class SlokedScreenInputNotifierContext : public KgrLocalContext {
      public:
-        SlokedScreenInputContext(std::unique_ptr<KgrPipe> pipe, SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding)
+        SlokedScreenInputNotifierContext(std::unique_ptr<KgrPipe> pipe, SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding)
             : KgrLocalContext(std::move(pipe)), root(root), encoding(encoding) {}
 
-        virtual ~SlokedScreenInputContext() {
+        virtual ~SlokedScreenInputNotifierContext() {
             if (this->listener.has_value()) {
                 root.Lock([&](auto &component) {
                     SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
@@ -93,18 +120,7 @@ namespace sloked {
         }
 
         void SendInput(const SlokedKeyboardInput &evt) {
-            EncodingConverter conv(this->encoding, SlokedLocale::SystemEncoding());
-            if (evt.value.index() == 0) {
-                this->pipe->Write(KgrDictionary {
-                    { "alt", evt.alt },
-                    { "text", conv.Convert(std::get<0>(evt.value)) }
-                });
-            } else {
-                this->pipe->Write(KgrDictionary {
-                    { "alt", evt.alt },
-                    { "key", static_cast<int64_t>(std::get<1>(evt.value)) }
-                });
-            }
+            this->pipe->Write(EventToKgr(this->encoding, evt));
         }
 
         SlokedMonitor<SlokedScreenComponent &> &root;
@@ -119,13 +135,13 @@ namespace sloked {
         : root(root), encoding(encoding), contextManager(contextManager) {}
 
     bool SlokedScreenInputNotificationService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedScreenInputContext>(std::move(pipe), this->root, this->encoding);
+        auto ctx = std::make_unique<SlokedScreenInputNotifierContext>(std::move(pipe), this->root, this->encoding);
         this->contextManager.Attach(std::move(ctx));
         return true;
     }
 
-    SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe> pipe)
-        : pipe(std::move(pipe)) {}
+    SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe> pipe, const Encoding &encoding)
+        : pipe(std::move(pipe)), encoding(encoding) {}
 
     void SlokedScreenInputNotificationClient::Listen(const std::string &path, bool text, const std::vector<std::pair<SlokedControlKey, bool>> &keys, Callback callback) {
         KgrDictionary params {
@@ -146,14 +162,7 @@ namespace sloked {
             while (!this->pipe->Empty()) {
                 auto msg = this->pipe->Read();
                 if (callback) {
-                    SlokedKeyboardInput event;
-                    event.alt = msg.AsDictionary()["alt"].AsBoolean();
-                    if (msg.AsDictionary().Has("text")) {
-                        event.value = msg.AsDictionary()["text"].AsString();
-                    } else if (msg.AsDictionary().Has("key")) {
-                        event.value = static_cast<SlokedControlKey>(msg.AsDictionary()["key"].AsInt());
-                    }
-                    callback(event);
+                    callback(KgrToEvent(this->encoding, msg));
                 }
             }
         });
@@ -162,5 +171,44 @@ namespace sloked {
     void SlokedScreenInputNotificationClient::Close() {
         this->pipe->Write({});
         this->pipe = nullptr;
+    }
+
+    class SlokedScreenInputForwardingContext : public SlokedServiceContext {
+     public:
+        SlokedScreenInputForwardingContext(std::unique_ptr<KgrPipe> pipe, SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding)
+            : SlokedServiceContext(std::move(pipe)), root(root), encoding(encoding) {
+            this->BindMethod("send", &SlokedScreenInputForwardingContext::Send);
+        }
+
+     private:
+        void Send(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path(params.AsDictionary()["path"].AsString());
+            auto event = KgrToEvent(this->encoding, params.AsDictionary()["event"]);
+            this->root.Lock([&](auto &screen) {
+                SlokedComponentTree::Traverse(screen, path).ProcessInput(event);
+            });
+        }
+
+        SlokedMonitor<SlokedScreenComponent &> &root;
+        const Encoding &encoding;
+    };
+
+    SlokedScreenInputForwardingService::SlokedScreenInputForwardingService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
+        : root(root), encoding(encoding), contextManager(contextManager) {}
+
+    bool SlokedScreenInputForwardingService::Attach(std::unique_ptr<KgrPipe> pipe) {
+        auto ctx = std::make_unique<SlokedScreenInputForwardingContext>(std::move(pipe), this->root, this->encoding);
+        this->contextManager.Attach(std::move(ctx));
+        return true;
+    }
+
+    SlokedScreenInputForwardingClient::SlokedScreenInputForwardingClient(std::unique_ptr<KgrPipe> pipe, const Encoding &encoding)
+        : client(std::move(pipe)), encoding(encoding) {}
+
+    void SlokedScreenInputForwardingClient::Send(const std::string &path, const SlokedKeyboardInput &event) {
+        this->client.Invoke("send", KgrDictionary {
+            { "path", path },
+            { "event", EventToKgr(this->encoding, event) }
+        });
     }
 }
