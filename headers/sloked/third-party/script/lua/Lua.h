@@ -24,6 +24,7 @@
 
 #include "sloked/script/ScriptEngine.h"
 #include "sloked/core/Semaphore.h"
+#include "sloked/sched/EventLoop.h"
 #include <string>
 #include <atomic>
 #include <thread>
@@ -33,19 +34,6 @@
 
 namespace sloked {
 
-    class SlokedLuaEngine;
-
-    class LuaValueHandle {
-     public:
-        LuaValueHandle(SlokedLuaEngine &);
-        ~LuaValueHandle();
-        void Load();
-
-     private:
-        SlokedLuaEngine &engine;
-        int ref;
-    };
-
     class SlokedLuaEngine : public SlokedScriptEngine {
      public:
         SlokedLuaEngine();
@@ -53,25 +41,17 @@ namespace sloked {
         void Start(const std::string &) final;
         void Stop() final;
         void BindServer(const std::string &, KgrNamedServer &) final;
-        void Defer(std::shared_ptr<LuaValueHandle>);
-
-        friend class LuaValueHandle;
     
      private:
         void Run(const std::string &);
         void InitializeGlobals();
-        int SaveValue();
-        void RestoreValue(int);
-        void DropValue(int);
 
         lua_State *state;
         std::atomic<bool> work;
         std::thread workerThread;
         std::map<std::string, std::reference_wrapper<KgrNamedServer>> servers;
         SlokedSemaphore activity;
-        std::mutex mtx;
-        std::vector<int> refToRemove;
-        std::vector<std::shared_ptr<LuaValueHandle>> callbacks;
+        SlokedDefaultEventLoop eventLoop;
     };
 }
 

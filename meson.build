@@ -97,7 +97,10 @@ sloked_src = [
   'src/text/search/Match.cpp',
   'src/text/search/Replace.cpp',
   'src/third-party/crypto/Botan.cpp',
-  'src/third-party/script/Lua.cpp'
+  'src/third-party/script/lua/Common.cpp',
+  'src/third-party/script/lua/Lua.cpp',
+  'src/third-party/script/lua/Pipe.cpp',
+  'src/third-party/script/lua/Server.cpp'
 ]
 
 cpp = meson.get_compiler('cpp')

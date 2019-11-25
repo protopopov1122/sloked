@@ -148,6 +148,7 @@ namespace sloked {
         olock.unlock();
         if (this->output->callback) {
             this->output->callback();
+            this->output = nullptr;
         }
     }
 

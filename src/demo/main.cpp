@@ -58,7 +58,7 @@
 #include "sloked/sched/Scheduler.h"
 #include "sloked/core/awaitable/Poll.h"
 #include "sloked/kgr/net/Config.h"
-#include "sloked/third-party/script/Lua.h"
+#include "sloked/third-party/script/lua/Lua.h"
 #include <chrono>
 
 using namespace sloked;
