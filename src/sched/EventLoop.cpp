@@ -40,7 +40,7 @@ namespace sloked {
     }
 
     SlokedImmediateAsyncTask::SlokedImmediateAsyncTask(Callback cb)
-        : callback(std::move(callback)) {}
+        : callback(std::move(cb)) {}
 
     void SlokedImmediateAsyncTask::Wait(std::function<void()> cb) {
         cb();
@@ -81,12 +81,13 @@ namespace sloked {
 
     void SlokedDefaultEventLoop::Run() {
         std::unique_lock lock(this->mtx);
-        while (!this->pending.empty()) {
-            auto task = std::move(this->pending.front());
-            this->pending.pop();
-            lock.unlock();
+        auto pending = std::move(this->pending);
+        this->pending = {};
+        lock.unlock();
+        while (!pending.empty()) {
+            auto task = std::move(pending.front());
+            pending.pop();
             bool result = task->Run();
-            lock.lock();
             if (result) {
                 this->Attach(std::move(task));
             }
