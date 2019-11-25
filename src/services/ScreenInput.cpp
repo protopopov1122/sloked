@@ -22,6 +22,7 @@
 #include "sloked/services/ScreenInput.h"
 #include "sloked/screen/components/ComponentTree.h"
 #include "sloked/core/Locale.h"
+#include "sloked/sched/EventLoop.h"
 #include <set>
 
 namespace sloked {
@@ -60,11 +61,19 @@ namespace sloked {
 
         virtual ~SlokedScreenInputNotifierContext() {
             if (this->listener.has_value()) {
-                root.Lock([&](auto &component) {
+                RootLock([&](auto &component) {
                     SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
                 });
             }
         }
+
+        State GetState() const final {
+            auto state = this->KgrLocalContext::GetState();
+            if (state == State::Idle && this->eventLoop.HasPending()) {
+                state = State::Pending;
+            }
+            return state;
+        }        
 
         void Run() final {
             while (!this->pipe->Empty()) {
@@ -75,14 +84,26 @@ namespace sloked {
                     this->Connect(msg);
                 }
             }
+            if (this->eventLoop.HasPending()) {
+                this->eventLoop.Run();
+            }
         }    
     
      private:
+        void RootLock(std::function<void(SlokedScreenComponent &)> callback) {
+            if (!this->root.TryLock(callback)) {
+                this->eventLoop.Attach(std::make_unique<SlokedImmediateAsyncTask>([this, callback = std::move(callback)] {
+                    this->RootLock(callback);
+                    return false;
+                }));
+            }
+        }
+        
         void Connect(const KgrValue &params) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
             this->subscribeOnText = false;
             this->subscribes.clear();
-            root.Lock([&](auto &component) {
+            RootLock([&](auto &component) {
                 if (this->listener.has_value()) {
                     SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
                 }
@@ -103,19 +124,19 @@ namespace sloked {
                     auto alt = key.AsDictionary()["alt"].AsBoolean();
                     this->subscribes.emplace(std::make_pair(code, alt));
                 }
+                this->pipe->Write({});
             });
-            this->pipe->Write({});
         }
 
         void Close() {
             this->subscribeOnText = false;
             this->subscribes.clear();
             if (this->listener.has_value()) {
-                root.Lock([&](auto &component) {
+                RootLock([&](auto &component) {
                     SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
+                    this->listener.reset();
+                    this->path.reset();
                 });
-                this->listener.reset();
-                this->path.reset();
             }
         }
 
@@ -129,6 +150,7 @@ namespace sloked {
         std::optional<SlokedComponentListener> listener;
         bool subscribeOnText;
         std::set<std::pair<SlokedControlKey, bool>> subscribes;
+        SlokedDefaultEventLoop eventLoop;
     };
 
     SlokedScreenInputNotificationService::SlokedScreenInputNotificationService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)

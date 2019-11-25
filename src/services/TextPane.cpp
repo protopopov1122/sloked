@@ -204,17 +204,26 @@ namespace sloked {
         virtual ~SlokedTextPaneContext() {
             this->frame.Reset();
             if (this->path.has_value()) {
-                root.Lock([&](auto &component) {
+                RootLock([&](auto &component) {
                     SlokedComponentTree::Traverse(component, this->path.value()).AsHandle().Close();
                 });
             }
         }
     
      private:
+        void RootLock(std::function<void(SlokedScreenComponent &)> callback) {
+            if (!this->root.TryLock(callback)) {
+                this->Defer(std::make_unique<SlokedImmediateAsyncTask>([this, callback = std::move(callback)] {
+                    this->RootLock(callback);
+                    return false;
+                }));
+            }
+        }
+        
         void Connect(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
             this->frame.Unsubscribe();
-            root.Lock([&](auto &component) {
+            RootLock([&](auto &component) {
                 try {
                     if (this->path.has_value()) {
                         SlokedComponentTree::Traverse(component, this->path.value()).AsHandle().Close();
@@ -238,7 +247,7 @@ namespace sloked {
 
         void GetWidth(const std::string &method, const KgrValue &params, Response &rsp) {
             if (this->path.has_value()) {
-                root.Lock([&](auto &component) {
+                RootLock([&](auto &component) {
                     auto &cmp = SlokedComponentTree::Traverse(component, this->path.value());
                     rsp.Result(static_cast<int64_t>(cmp.GetDimensions().column));
                 });
@@ -247,7 +256,7 @@ namespace sloked {
 
         void GetHeight(const std::string &method, const KgrValue &params, Response &rsp) {
             if (this->path.has_value()) {
-                root.Lock([&](auto &component) {
+                RootLock([&](auto &component) {
                     auto &cmp = SlokedComponentTree::Traverse(component, this->path.value());
                     rsp.Result(static_cast<int64_t>(cmp.GetDimensions().line));
                 });
@@ -261,7 +270,7 @@ namespace sloked {
         void Close(const std::string &method, const KgrValue &params, Response &rsp) {
             this->frame.Reset();
             if (this->path.has_value()) {
-                root.Lock([&](auto &component) {
+                RootLock([&](auto &component) {
                     SlokedComponentTree::Traverse(component, this->path.value()).AsHandle().Close();
                 });
             }
