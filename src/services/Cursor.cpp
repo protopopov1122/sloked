@@ -152,7 +152,7 @@ namespace sloked {
                     { "column", static_cast<int64_t>(this->document->cursor.GetColumn()) }
                 }));
 
-                this->Defer(std::make_unique<SlokedDynamicAsyncTask>([this, renderClient = this->renderClient, response = std::move(rsp), renderResponse](Callback cb) mutable {
+                this->Defer(std::make_unique<SlokedDynamicDeferredTask>([this, renderClient = this->renderClient, response = std::move(rsp), renderResponse](Callback cb) mutable {
                     renderResponse->Notify(cb);
                     return [this, renderClient, response = std::move(response), renderResponse]() mutable {
                         auto res = renderResponse->GetOptional();
@@ -208,7 +208,7 @@ namespace sloked {
         return true;
     }
 
-    class SlokedCursorConnectionTask : public SlokedAsyncTask {
+    class SlokedCursorConnectionTask : public SlokedDeferredTask {
      public:
         SlokedCursorConnectionTask(SlokedServiceClient::ResponseHandle rsp, std::function<void(bool)> callback)
             : waiter(std::move(rsp)), callback(std::move(callback)) {
@@ -230,11 +230,10 @@ namespace sloked {
             }
         }
 
-        bool Run() final {
+        void Run() final {
             if (this->result.has_value()) {
                 this->callback(this->result.value());
             }
-            return false;
         }
 
      private:
@@ -248,7 +247,7 @@ namespace sloked {
     SlokedCursorClient::SlokedCursorClient(std::unique_ptr<KgrPipe> pipe)
         : client(std::move(pipe)) {}
 
-    std::unique_ptr<SlokedAsyncTask> SlokedCursorClient::Connect(SlokedEditorDocumentSet::DocumentId docId, std::function<void(bool)> callback) {
+    std::unique_ptr<SlokedDeferredTask> SlokedCursorClient::Connect(SlokedEditorDocumentSet::DocumentId docId, std::function<void(bool)> callback) {
         return std::make_unique<SlokedCursorConnectionTask>(this->client.Invoke("connect", static_cast<int64_t>(docId)), std::move(callback));
     }
 

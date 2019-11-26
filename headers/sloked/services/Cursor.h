@@ -49,7 +49,7 @@ namespace sloked {
     class SlokedCursorClient {
      public:
         SlokedCursorClient(std::unique_ptr<KgrPipe>);
-        std::unique_ptr<SlokedAsyncTask> Connect(SlokedEditorDocumentSet::DocumentId, std::function<void(bool)>);
+        std::unique_ptr<SlokedDeferredTask> Connect(SlokedEditorDocumentSet::DocumentId, std::function<void(bool)>);
         void Insert(const std::string &);
         void MoveUp();
         void MoveDown();

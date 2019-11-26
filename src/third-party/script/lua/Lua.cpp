@@ -31,7 +31,7 @@ namespace sloked {
 
     SlokedLuaEngine::SlokedLuaEngine()
         : state{nullptr}, work{false} {
-        this->eventLoop.SetListener([this] {
+        this->eventLoop.Notify([this] {
             this->activity.Notify();
         });
     }

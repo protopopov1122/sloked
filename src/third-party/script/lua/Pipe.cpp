@@ -348,10 +348,10 @@ namespace sloked {
         }
 
         ~LuaValueHandle() {
-            this->eventLoop.Attach(std::make_unique<SlokedImmediateAsyncTask>([state = this->state, ref = this->ref] {
+            this->eventLoop.Attach([state = this->state, ref = this->ref] {
                 luaL_unref(state, LUA_REGISTRYINDEX, ref);
                 return false;
-            }));
+            });
         }
 
         void Load() {
@@ -376,13 +376,13 @@ namespace sloked {
                 lua_pushvalue(state, 2);    
                 auto handle = std::make_shared<LuaValueHandle>(state, eventLoop);
                 pipe->pipe->SetMessageListener([&eventLoop, state, handle = std::move(handle)]() mutable {
-                    eventLoop.Attach(std::make_unique<SlokedImmediateAsyncTask>([state, handle] {
+                    eventLoop.Attach([state, handle] {
                         handle->Load();
                         if (lua_pcall(state, 0, 0, 0) != 0) {
                             throw SlokedError(lua_tostring(state, -1));
                         }
                         return false;
-                    }));
+                    });
                 });
             } else {
                 pipe->pipe->SetMessageListener(nullptr);

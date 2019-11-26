@@ -92,10 +92,9 @@ namespace sloked {
      private:
         void RootLock(std::function<void(SlokedScreenComponent &)> callback) {
             if (!this->root.TryLock(callback)) {
-                this->eventLoop.Attach(std::make_unique<SlokedImmediateAsyncTask>([this, callback = std::move(callback)] {
+                this->eventLoop.Attach([this, callback = std::move(callback)] {
                     this->RootLock(callback);
-                    return false;
-                }));
+                });
             }
         }
         
@@ -216,10 +215,10 @@ namespace sloked {
             if (!this->root.TryLock([&](auto &screen) {
                 SlokedComponentTree::Traverse(screen, path).ProcessInput(event);
             })) {
-                this->Defer(std::make_unique<SlokedImmediateAsyncTask>([this, path, event] {
+                this->Defer([this, path, event] {
                     this->Process(path, event);
                     return false;
-                }));
+                });
             }
         }
 

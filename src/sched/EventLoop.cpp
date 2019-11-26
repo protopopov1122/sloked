@@ -24,40 +24,38 @@
 
 namespace sloked {
 
-    SlokedDynamicAsyncTask::SlokedDynamicAsyncTask(Callback callback)
+    SlokedDynamicDeferredTask::SlokedDynamicDeferredTask(Callback callback)
         : callback(std::move(callback)), execute(nullptr) {}
 
-    void SlokedDynamicAsyncTask::Wait(std::function<void()> notify) {
-        this->execute = this->callback(notify);
-    }
-
-    bool SlokedDynamicAsyncTask::Run() {
-        if (this->execute) {
-            return this->execute();
+    void SlokedDynamicDeferredTask::Wait(std::function<void()> notify) {
+        if (this->callback) {
+            this->execute = this->callback(notify);
+            this->callback = nullptr;
         } else {
-            throw SlokedError("DynamicAsyncTask: Not awaited before execution");
+            throw SlokedError("DynamicDeferredTask: Already awaited");
         }
     }
 
-    SlokedImmediateAsyncTask::SlokedImmediateAsyncTask(Callback cb)
-        : callback(std::move(cb)) {}
-
-    void SlokedImmediateAsyncTask::Wait(std::function<void()> cb) {
-        cb();
-    }
-
-    bool SlokedImmediateAsyncTask::Run() {
-        if (this->callback) {
-            return this->callback();
+    void SlokedDynamicDeferredTask::Run() {
+        if (this->execute) {
+            this->execute();
         } else {
-            return false;
+            throw SlokedError("DynamicDeferredTask: Not awaited before execution");
         }
     }
 
     SlokedDefaultEventLoop::SlokedDefaultEventLoop()
-        : nextId{0} {}
+        : nextId{0}, notification(nullptr) {}
 
-    void SlokedDefaultEventLoop::Attach(std::unique_ptr<SlokedAsyncTask> task) {
+    void SlokedDefaultEventLoop::Attach(std::function<void()> task) {
+        std::unique_lock lock(this->mtx);
+        this->pending.push_back(std::move(task));
+        if (this->notification) {
+            this->notification();
+        }
+    }
+
+    void SlokedDefaultEventLoop::Attach(std::unique_ptr<SlokedDeferredTask> task) {
         std::unique_lock lock(this->mtx);
         int64_t taskId = this->nextId++;
         this->deferred.emplace(taskId, std::move(task));
@@ -65,11 +63,13 @@ namespace sloked {
         lock.unlock();
         taskRef.Wait([this, taskId] {
             std::unique_lock lock(this->mtx);
-            auto task = std::move(this->deferred[taskId]);
+            std::shared_ptr<SlokedDeferredTask> task = std::move(this->deferred[taskId]);
             this->deferred.erase(taskId);
-            this->pending.push(std::move(task));
-            if (this->callback) {
-                this->callback();
+            this->pending.push_back([task = std::move(task)] {
+                task->Run();
+            });
+            if (this->notification) {
+                this->notification();
             }
         });
     }
@@ -82,20 +82,15 @@ namespace sloked {
     void SlokedDefaultEventLoop::Run() {
         std::unique_lock lock(this->mtx);
         auto pending = std::move(this->pending);
-        this->pending = {};
+        this->pending.clear();
         lock.unlock();
-        while (!pending.empty()) {
-            auto task = std::move(pending.front());
-            pending.pop();
-            bool result = task->Run();
-            if (result) {
-                this->Attach(std::move(task));
-            }
+        for (const auto &task : pending) {
+            task();
         }
     }
 
-    void SlokedDefaultEventLoop::SetListener(std::function<void()> callback) {
+    void SlokedDefaultEventLoop::Notify(std::function<void()> callback) {
         std::unique_lock lock(this->mtx);
-        this->callback = std::move(callback);
+        this->notification = std::move(callback);
     }
 }

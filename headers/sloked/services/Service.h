@@ -67,7 +67,11 @@ namespace sloked {
 	 	using Callback = std::function<void()>;
 
 		void BindMethod(const std::string &, MethodHandler);
-		void Defer(std::unique_ptr<SlokedAsyncTask>);
+
+		template <typename T>
+		void Defer(T &&task) {
+			this->eventLoop.Attach(std::forward<T>(task));
+		}
 
 		template <typename T>
 		void BindMethod(const std::string &method, void (T::*impl)(const std::string &, const KgrValue &, Response &)) {

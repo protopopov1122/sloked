@@ -66,10 +66,9 @@ namespace sloked {
      private:
         void RootLock(std::function<void(SlokedScreenComponent &)> callback) {
             if (!this->root.TryLock(callback)) {
-                this->Defer(std::make_unique<SlokedImmediateAsyncTask>([this, callback = std::move(callback)] {
+                this->Defer([this, callback = std::move(callback)] {
                     this->RootLock(callback);
-                    return false;
-                }));
+                });
             }
         }
 

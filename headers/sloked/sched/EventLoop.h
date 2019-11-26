@@ -22,68 +22,59 @@
 #ifndef SLOKED_SCHED_EVENTLOOP_H_
 #define SLOKED_SCHED_EVENTLOOP_H_
 
-#include "sloked/Base.h"
+#include "sloked/core/Error.h"
 #include <functional>
-#include <queue>
+#include <vector>
 #include <memory>
 #include <map>
 #include <mutex>
 
 namespace sloked {
 
-    class SlokedAsyncTask {
+    class SlokedDeferredTask {
      public:
-        virtual ~SlokedAsyncTask() = default;
+        virtual ~SlokedDeferredTask() = default;
         virtual void Wait(std::function<void()>) = 0;
-        virtual bool Run() = 0;
+        virtual void Run() = 0;
     };
 
-    class SlokedDynamicAsyncTask : public SlokedAsyncTask {
-        using Callback = std::function<std::function<bool()>(std::function<void()>)>;
+
+    class SlokedDynamicDeferredTask : public SlokedDeferredTask {
+        using Callback = std::function<std::function<void()>(std::function<void()>)>;
      public:
-        SlokedDynamicAsyncTask(Callback);
+        SlokedDynamicDeferredTask(Callback);
         void Wait(std::function<void()>) final;
-        bool Run() final;
+        void Run() final;
 
      private:
         Callback callback;
-        std::function<bool()> execute;
-    };
-
-    class SlokedImmediateAsyncTask : public SlokedAsyncTask {
-        using Callback = std::function<bool()>;
-     public:
-        SlokedImmediateAsyncTask(Callback);
-        void Wait(std::function<void()>) final;
-        bool Run() final;
-
-     private:
-        Callback callback;
+        std::function<void()> execute;
     };
 
     class SlokedEventLoop {
      public:
         virtual ~SlokedEventLoop() = default;
-        virtual void Attach(std::unique_ptr<SlokedAsyncTask>) = 0;
+        virtual void Attach(std::function<void()>) = 0;
+        virtual void Attach(std::unique_ptr<SlokedDeferredTask>) = 0;
         virtual bool HasPending() const = 0;
-        virtual void Run() = 0;
-        virtual void SetListener(std::function<void()>) = 0;
+        virtual void Notify(std::function<void()>) = 0;
     };
 
     class SlokedDefaultEventLoop : public SlokedEventLoop {
      public:
         SlokedDefaultEventLoop();
-        void Attach(std::unique_ptr<SlokedAsyncTask>) final;
+        void Attach(std::function<void()>) final;
+        void Attach(std::unique_ptr<SlokedDeferredTask>) final;
         bool HasPending() const final;
-        void Run() final;
-        void SetListener(std::function<void()>) final;
+        void Notify(std::function<void()>) final;
+        void Run();
     
      private:
-        mutable std::recursive_mutex mtx;
-        std::queue<std::unique_ptr<SlokedAsyncTask>> pending;
+        mutable std::mutex mtx;
+        std::vector<std::function<void()>> pending;
         int64_t nextId;
-        std::map<int64_t, std::unique_ptr<SlokedAsyncTask>> deferred;
-        std::function<void()> callback;
+        std::map<int64_t, std::unique_ptr<SlokedDeferredTask>> deferred;
+        std::function<void()> notification;
     };
 }
 

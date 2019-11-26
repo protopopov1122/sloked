@@ -129,7 +129,7 @@ namespace sloked {
 
     void SlokedServiceContext::SetActivationListener(std::function<void()> callback) {
         this->KgrLocalContext::SetActivationListener(callback);
-        this->eventLoop.SetListener(callback);
+        this->eventLoop.Notify(callback);
     }
 
     KgrServiceContext::State SlokedServiceContext::GetState() const {
@@ -142,10 +142,6 @@ namespace sloked {
 
     void SlokedServiceContext::BindMethod(const std::string &method, MethodHandler handler) {
         this->methods.emplace(method, std::move(handler));
-    }
-
-    void SlokedServiceContext::Defer(std::unique_ptr<SlokedAsyncTask> task) {
-        this->eventLoop.Attach(std::move(task));
     }
 
     void SlokedServiceContext::InvokeMethod(const std::string &method, const KgrValue &, Response &) {
