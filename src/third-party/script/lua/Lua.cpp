@@ -67,7 +67,7 @@ namespace sloked {
         this->state = luaL_newstate();
         this->InitializeGlobals();
         if (luaL_dofile(this->state, script.c_str())) {
-            logger.To(SlokedLogLevel::Error) << lua_tostring(state, -1);
+            logger.To(SlokedLogLevel::Error) << luaL_tolstring(state, -1, nullptr);
         } else {
             try {
                 while (this->work.load()) {

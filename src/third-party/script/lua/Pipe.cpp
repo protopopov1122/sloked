@@ -33,6 +33,7 @@ namespace sloked {
 
     static int SlokedPipe_GC(lua_State *state) {
         SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
+        pipe->pipe->Close();
         pipe->~SlokedPipeHandle();
         return 0;
     }
@@ -379,7 +380,8 @@ namespace sloked {
                     eventLoop.Attach([state, handle] {
                         handle->Load();
                         if (lua_pcall(state, 0, 0, 0) != 0) {
-                            throw SlokedError(lua_tostring(state, -1));
+                            const char *msg = luaL_tolstring(state, -1, nullptr);
+                            throw SlokedError(msg != nullptr ? msg : "");
                         }
                         return false;
                     });
