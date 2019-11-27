@@ -29,8 +29,8 @@
 namespace sloked {
     static SlokedLogger logger(SlokedLoggerTag);
 
-    SlokedLuaEngine::SlokedLuaEngine()
-        : state{nullptr}, work{false} {
+    SlokedLuaEngine::SlokedLuaEngine(const std::string &path)
+        : state{nullptr}, work{false}, path{path} {
         this->eventLoop.Notify([this] {
             this->activity.Notify();
         });
@@ -66,6 +66,7 @@ namespace sloked {
     void SlokedLuaEngine::Run(const std::string &script) {
         this->state = luaL_newstate();
         this->InitializeGlobals();
+        this->InitializePath();
         if (luaL_dofile(this->state, script.c_str())) {
             logger.To(SlokedLogLevel::Error) << luaL_tolstring(state, -1, nullptr);
         } else {
@@ -82,6 +83,18 @@ namespace sloked {
         }
         lua_close(this->state);
         this->state = nullptr;
+    }
+
+    void SlokedLuaEngine::InitializePath() {
+        if (!this->path.empty()) {
+            lua_getglobal(state, "package");
+            lua_getfield(state, -1, "path");
+            lua_pushstring(state, ";");
+            lua_pushstring(state, this->path.c_str());
+            lua_concat(state, 3);
+            lua_setfield(state, -2, "path");
+            lua_pop(state, 1);
+        }
     }
 
     void SlokedLuaEngine::InitializeGlobals() {

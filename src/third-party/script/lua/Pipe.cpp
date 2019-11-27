@@ -161,7 +161,7 @@ namespace sloked {
     static int SlokedPipe_ReadOptional(lua_State *state) {
         int top = lua_gettop(state);
         if (top != 1) {
-            return luaL_error(state, "sloked.pipe.readOptional: Expected 1 argument");
+            return luaL_error(state, "sloked.pipe.tryRead: Expected 1 argument");
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
@@ -326,7 +326,7 @@ namespace sloked {
     static int SlokedPipe_WriteNX(lua_State *state) {
         int top = lua_gettop(state);
         if (top != 2) {
-            return luaL_error(state, "sloked.pipe.writeNX: Expected 2 arguments");
+            return luaL_error(state, "sloked.pipe.tryWrite: Expected 2 arguments");
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
@@ -414,7 +414,7 @@ namespace sloked {
             lua_pushcfunction(state, SlokedPipe_Read);
             lua_setfield(state, -2, "read");
             lua_pushcfunction(state, SlokedPipe_ReadOptional);
-            lua_setfield(state, -2, "readOptional");
+            lua_setfield(state, -2, "tryRead");
             lua_pushcfunction(state, SlokedPipe_ReadWait);
             lua_setfield(state, -2, "readWait");
             lua_pushcfunction(state, SlokedPipe_Wait);
@@ -426,7 +426,7 @@ namespace sloked {
             lua_pushcfunction(state, SlokedPipe_Write);
             lua_setfield(state, -2, "write");
             lua_pushcfunction(state, SlokedPipe_WriteNX);
-            lua_setfield(state, -2, "writeNX");
+            lua_setfield(state, -2, "tryWrite");
             lua_pushlightuserdata(state, std::addressof(eventLoop));
             lua_pushcclosure(state, SlokedPipe_Listen, 1);
             lua_setfield(state, -2, "listen");

@@ -135,7 +135,12 @@ static const KgrDictionary DefaultConfiguration {
             { "port", 1234 },
         }
     },
-    { "script", "" }
+    {
+        "script", KgrDictionary {
+            { "init", "" },
+            { "path", "" }
+        }
+    }
 };
 
 int main(int argc, const char **argv) {
@@ -145,7 +150,8 @@ int main(int argc, const char **argv) {
     cli.Define("--newline", mainConfig.Find("/newline").AsString());
     cli.Define("-o,--output", cli.Option<std::string>());
     cli.Define("--net-port", mainConfig.Find("/network/port").AsInt());
-    cli.Define("--script", mainConfig.Find("/script").AsString());
+    cli.Define("--script", mainConfig.Find("/script/init").AsString());
+    cli.Define("--script-path", mainConfig.Find("/script/path").AsString());
     cli.Parse(argc, argv);
     if (cli.Size() == 0) {
         std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
@@ -273,11 +279,10 @@ int main(int argc, const char **argv) {
         });
     });
 
-    SlokedLuaEngine luaEngine;
+    SlokedLuaEngine luaEngine(cli["script-path"].As<std::string>());
     luaEngine.BindServer("main", slaveServer);
     if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {
         luaEngine.Start(cli["script"].As<std::string>());
-        // std::this_thread::sleep_for(10000s);
     }
 
     while (work.load()) {
