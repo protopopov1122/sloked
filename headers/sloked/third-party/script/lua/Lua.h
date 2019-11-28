@@ -25,6 +25,7 @@
 #include "sloked/script/ScriptEngine.h"
 #include "sloked/core/Semaphore.h"
 #include "sloked/sched/EventLoop.h"
+#include "sloked/sched/Scheduler.h"
 #include <string>
 #include <atomic>
 #include <thread>
@@ -53,6 +54,7 @@ namespace sloked {
         std::map<std::string, std::reference_wrapper<KgrNamedServer>> servers;
         SlokedSemaphore activity;
         SlokedDefaultEventLoop eventLoop;
+        SlokedDefaultSchedulerThread sched;
         std::string path;
     };
 }

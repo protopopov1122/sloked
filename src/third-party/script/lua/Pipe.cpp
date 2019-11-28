@@ -340,30 +340,6 @@ namespace sloked {
             return luaL_error(state, err.what());
         }
     }
-    
-    class LuaValueHandle {
-     public:
-        LuaValueHandle(lua_State *state, SlokedEventLoop &eventLoop)
-            : state(state), eventLoop(eventLoop) {
-            this->ref = luaL_ref(this->state, LUA_REGISTRYINDEX);
-        }
-
-        ~LuaValueHandle() {
-            this->eventLoop.Attach([state = this->state, ref = this->ref] {
-                luaL_unref(state, LUA_REGISTRYINDEX, ref);
-                return false;
-            });
-        }
-
-        void Load() {
-            lua_geti(state, LUA_REGISTRYINDEX, this->ref);
-        }
-
-     private:
-        lua_State *state;
-        int ref;
-        SlokedEventLoop &eventLoop;
-    };
 
     static int SlokedPipe_Listen(lua_State *state) {
         int top = lua_gettop(state);

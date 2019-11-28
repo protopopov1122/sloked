@@ -22,9 +22,11 @@
 #include "sloked/third-party/script/lua/Lua.h"
 #include "sloked/third-party/script/lua/Common.h"
 #include "sloked/third-party/script/lua/Pipe.h"
+#include "sloked/third-party/script/lua/Sched.h"
 #include "sloked/third-party/script/lua/Server.h"
 #include "sloked/core/Error.h"
 #include "sloked/core/Logger.h"
+#include <iostream>
 
 namespace sloked {
     static SlokedLogger logger(SlokedLoggerTag);
@@ -64,6 +66,7 @@ namespace sloked {
     }
 
     void SlokedLuaEngine::Run(const std::string &script) {
+        this->sched.Start();
         this->state = luaL_newstate();
         this->InitializeGlobals();
         this->InitializePath();
@@ -81,6 +84,7 @@ namespace sloked {
                 logger.To(SlokedLogLevel::Error) << err.what();
             }
         }
+        this->sched.Stop();
         lua_close(this->state);
         this->state = nullptr;
     }
@@ -106,6 +110,8 @@ namespace sloked {
             lua_setfield(state, -2, kv.first.c_str());
         }
         lua_setfield(this->state, -2, "servers");
+        SlokedSchedToLua(this->sched, this->eventLoop, this->state);
+        lua_setfield(this->state, -2, "sched");
         lua_setglobal(this->state, "sloked");
     }
 }

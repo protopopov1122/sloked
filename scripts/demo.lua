@@ -1,5 +1,6 @@
 local Connection = require 'connection'
 
+-- sloked.sched:defer()
 Connection:new(sloked.servers.main:connect('document::cursor'), function(conn)
     local cursor = conn
     if conn:receive({
@@ -13,14 +14,15 @@ Connection:new(sloked.servers.main:connect('document::cursor'), function(conn)
             while i < 5 do
                 conn:receive()
                 i = i + 1
-                cursor:write({
-                    id=1,
-                    method='insert',
-                    params='Hello, world!'
-                })
+                sloked.sched:setTimeout(function()
+                    cursor:write({
+                        id=1,
+                        method='insert',
+                        params='Hello, world!'
+                    })
+                end, 1000)
                 conn:skip(1)
             end
         end)
     end
 end)
-

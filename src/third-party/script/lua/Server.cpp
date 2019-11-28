@@ -33,7 +33,7 @@ namespace sloked {
         }
         try {
             SlokedEventLoop &eventLoop = *reinterpret_cast<SlokedEventLoop *>(lua_touserdata(state, lua_upvalueindex(1)));
-            KgrNamedServer &srv = *reinterpret_cast<KgrNamedServer *>(lua_touserdata(state, 1));
+            KgrNamedServer &srv = **reinterpret_cast<KgrNamedServer **>(lua_touserdata(state, 1));
             std::string serviceName{lua_tostring(state, 2)};
             if (srv.Registered(serviceName)) {
                 return KgrPipeToLua(eventLoop, state, srv.Connect(serviceName));
@@ -47,7 +47,8 @@ namespace sloked {
     }
 
     int SlokedServerToLua(SlokedEventLoop &eventLoop, lua_State *state, KgrNamedServer &srv) {
-        lua_pushlightuserdata(state, std::addressof(srv));
+        KgrNamedServer **srvPtr = reinterpret_cast<KgrNamedServer **>(lua_newuserdata(state, sizeof(KgrNamedServer *)));
+        *srvPtr = std::addressof(srv);
         if (luaL_newmetatable(state, "sloked.server")) {
             lua_newtable(state);
             lua_pushlightuserdata(state, std::addressof(eventLoop));

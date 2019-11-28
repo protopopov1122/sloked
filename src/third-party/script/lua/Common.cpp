@@ -29,4 +29,20 @@ namespace sloked {
             lua_pop(state, newTop - top);
         }
     }
+
+    LuaValueHandle::LuaValueHandle(lua_State *state, SlokedEventLoop &eventLoop)
+        : state(state), eventLoop(eventLoop) {
+        this->ref = luaL_ref(this->state, LUA_REGISTRYINDEX);
+    }
+
+    LuaValueHandle::~LuaValueHandle() {
+        this->eventLoop.Attach([state = this->state, ref = this->ref] {
+            luaL_unref(state, LUA_REGISTRYINDEX, ref);
+            return false;
+        });
+    }
+
+    void LuaValueHandle::Load() {
+        lua_geti(state, LUA_REGISTRYINDEX, this->ref);
+    }
 }

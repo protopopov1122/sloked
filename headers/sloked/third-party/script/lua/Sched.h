@@ -19,27 +19,16 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_THIRD_PARTY_LUA_COMMON_H_
-#define SLOKED_THIRD_PARTY_LUA_COMMON_H_
+#ifndef SLOKED_THIRD_PARTY_SCRIPT_LUA_SCHED_H_
+#define SLOKED_THIRD_PARTY_SCRIPT_LUA_SCHED_H_
 
+#include "sloked/sched/Scheduler.h"
 #include "sloked/sched/EventLoop.h"
 #include <lua.hpp>
 
 namespace sloked {
 
-    void DropLuaStack(lua_State *, int);
-    
-    class LuaValueHandle {
-     public:
-        LuaValueHandle(lua_State *, SlokedEventLoop &);
-        ~LuaValueHandle();
-        void Load();
-
-     private:
-        lua_State *state;
-        int ref;
-        SlokedEventLoop &eventLoop;
-    };
+    int SlokedSchedToLua(SlokedSchedulerThread &, SlokedEventLoop &, lua_State *);
 }
 
 #endif
