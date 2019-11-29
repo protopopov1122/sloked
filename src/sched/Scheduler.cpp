@@ -150,4 +150,54 @@ namespace sloked {
             }
         }
     }
+
+    SlokedScheduledTaskPool::SlokedScheduledTaskPool(SlokedSchedulerThread &sched)
+        : sched(sched) {}
+
+    SlokedScheduledTaskPool::~SlokedScheduledTaskPool() {
+        this->DropAll();
+    }
+
+    std::shared_ptr<SlokedSchedulerThread::TimerTask> SlokedScheduledTaskPool::At(TimePoint tp, Callback callback) {
+        auto task = this->sched.At(tp, std::move(callback));
+        std::unique_lock lock(this->mtx);
+        this->tasks.push_back(task);
+        return task;
+    }
+
+    std::shared_ptr<SlokedSchedulerThread::TimerTask> SlokedScheduledTaskPool::Sleep(TimeDiff td, Callback callback) {
+        auto task = this->sched.Sleep(td, std::move(callback));
+        std::unique_lock lock(this->mtx);
+        this->tasks.push_back(task);
+        return task;
+    }
+
+    std::shared_ptr<SlokedSchedulerThread::TimerTask> SlokedScheduledTaskPool::Interval(TimeDiff td, Callback callback) {
+        auto task = this->sched.Interval(td, std::move(callback));
+        std::unique_lock lock(this->mtx);
+        this->tasks.push_back(task);
+        return task;
+    }
+
+    void SlokedScheduledTaskPool::Defer(std::function<void()> callback) {
+        this->sched.Defer(std::move(callback));
+    }
+
+    void SlokedScheduledTaskPool::CollectGarbage() {
+        std::unique_lock lock(this->mtx);
+        for (auto it = this->tasks.begin(); it != this->tasks.end();) {
+            auto current = it++;
+            if (!(*current)->Pending()) {
+                this->tasks.erase(current);
+            }
+        }
+    }
+
+    void SlokedScheduledTaskPool::DropAll() {
+        std::unique_lock lock(this->mtx);
+        for (const auto &it : this->tasks) {
+            it->Cancel();
+        }
+        this->tasks.clear();
+    }
 }

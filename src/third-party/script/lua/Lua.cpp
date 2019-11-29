@@ -31,8 +31,8 @@
 namespace sloked {
     static SlokedLogger logger(SlokedLoggerTag);
 
-    SlokedLuaEngine::SlokedLuaEngine(const std::string &path)
-        : state{nullptr}, work{false}, path{path} {
+    SlokedLuaEngine::SlokedLuaEngine(SlokedSchedulerThread &sched, const std::string &path)
+        : state{nullptr}, work{false}, sched(sched), path{path} {
         this->eventLoop.Notify([this] {
             this->activity.Notify();
         });
@@ -66,7 +66,6 @@ namespace sloked {
     }
 
     void SlokedLuaEngine::Run(const std::string &script) {
-        this->sched.Start();
         this->state = luaL_newstate();
         this->InitializeGlobals();
         this->InitializePath();
@@ -77,14 +76,15 @@ namespace sloked {
                 while (this->work.load()) {
                     this->activity.WaitAll();
                     if (this->work.load() && this->eventLoop.HasPending()) {
-                            this->eventLoop.Run();
+                        this->eventLoop.Run();
                     }
+                    this->sched.CollectGarbage();
                 }
             } catch (const SlokedError &err) {
                 logger.To(SlokedLogLevel::Error) << err.what();
             }
         }
-        this->sched.Stop();
+        this->sched.DropAll();
         lua_close(this->state);
         this->state = nullptr;
     }

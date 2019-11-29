@@ -33,6 +33,7 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <list>
 
 namespace sloked {
 
@@ -104,6 +105,23 @@ namespace sloked {
         SlokedCounter<std::size_t> timer_thread;
         std::mutex mtx;
         std::condition_variable cv;
+    };
+
+    class SlokedScheduledTaskPool : public SlokedSchedulerThread {
+     public:
+        SlokedScheduledTaskPool(SlokedSchedulerThread &);
+        ~SlokedScheduledTaskPool();
+        std::shared_ptr<SlokedSchedulerThread::TimerTask> At(TimePoint, Callback) final;
+        std::shared_ptr<SlokedSchedulerThread::TimerTask> Sleep(TimeDiff, Callback) final;
+        std::shared_ptr<SlokedSchedulerThread::TimerTask> Interval(TimeDiff, Callback) final;
+        void Defer(std::function<void()>) final;
+        void CollectGarbage();
+        void DropAll();
+
+     private:
+        SlokedSchedulerThread &sched;
+        std::mutex mtx;
+        std::list<std::shared_ptr<SlokedSchedulerThread::TimerTask>> tasks;
     };
 }
 

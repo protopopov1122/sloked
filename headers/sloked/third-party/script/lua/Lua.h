@@ -37,7 +37,7 @@ namespace sloked {
 
     class SlokedLuaEngine : public SlokedScriptEngine {
      public:
-        SlokedLuaEngine(const std::string & = "");
+        SlokedLuaEngine(SlokedSchedulerThread &, const std::string & = "");
         ~SlokedLuaEngine();
         void Start(const std::string &) final;
         void Stop() final;
@@ -54,7 +54,7 @@ namespace sloked {
         std::map<std::string, std::reference_wrapper<KgrNamedServer>> servers;
         SlokedSemaphore activity;
         SlokedDefaultEventLoop eventLoop;
-        SlokedDefaultSchedulerThread sched;
+        SlokedScheduledTaskPool sched;
         std::string path;
     };
 }

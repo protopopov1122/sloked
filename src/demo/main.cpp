@@ -279,7 +279,7 @@ int main(int argc, const char **argv) {
         });
     });
 
-    SlokedLuaEngine luaEngine(cli["script-path"].As<std::string>());
+    SlokedLuaEngine luaEngine(sched, cli["script-path"].As<std::string>());
     luaEngine.BindServer("main", slaveServer);
     if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {
         luaEngine.Start(cli["script"].As<std::string>());
