@@ -90,10 +90,14 @@ namespace sloked {
         try {
             SchedHandle *sched = reinterpret_cast<SchedHandle *>(lua_touserdata(state, 1));
             if (lua_isfunction(state, 2)) {
-                lua_pushvalue(state, 2);    
-                auto functionHandle = std::make_shared<LuaValueHandle>(state, sched->eventLoop);
+                lua_geti(state, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
+                auto mainThread = lua_tothread(state, -1);
+                lua_pop(state, 1);
+                lua_pushvalue(state, 2);
+                lua_xmove(state, mainThread, 1);
                 SlokedEventLoop &eventLoop = sched->eventLoop;
-                sched->sched.Defer([state, &eventLoop, functionHandle = std::move(functionHandle)] {
+                auto handle = std::make_shared<LuaValueHandle>(mainThread, eventLoop);
+                sched->sched.Defer([state = mainThread, &eventLoop, functionHandle = std::move(handle)] {
                     eventLoop.Attach([state, functionHandle] {
                         functionHandle->Load();
                         if (lua_pcall(state, 0, 0, 0) != 0) {
@@ -120,11 +124,15 @@ namespace sloked {
         try {
             SchedHandle *sched = reinterpret_cast<SchedHandle *>(lua_touserdata(state, 1));
             if (lua_isfunction(state, 2) && lua_isinteger(state, 3)) {
-                lua_pushvalue(state, 2);    
-                auto functionHandle = std::make_shared<LuaValueHandle>(state, sched->eventLoop);
-                int millis = lua_tointeger(state, 3);
+                lua_geti(state, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
+                auto mainThread = lua_tothread(state, -1);
+                lua_pop(state, 1);
+                lua_pushvalue(state, 2);
+                lua_xmove(state, mainThread, 1);
                 SlokedEventLoop &eventLoop = sched->eventLoop;
-                auto task = sched->sched.Sleep(std::chrono::milliseconds(millis), [state, &eventLoop, functionHandle = std::move(functionHandle)] {
+                auto handle = std::make_shared<LuaValueHandle>(mainThread, eventLoop);
+                int millis = lua_tointeger(state, 3);
+                auto task = sched->sched.Sleep(std::chrono::milliseconds(millis), [state = mainThread, &eventLoop, functionHandle = std::move(handle)] {
                     eventLoop.Attach([state, functionHandle] {
                         functionHandle->Load();
                         if (lua_pcall(state, 0, 0, 0) != 0) {
@@ -151,11 +159,15 @@ namespace sloked {
         try {
             SchedHandle *sched = reinterpret_cast<SchedHandle *>(lua_touserdata(state, 1));
             if (lua_isfunction(state, 2) && lua_isinteger(state, 3)) {
-                lua_pushvalue(state, 2);    
-                auto functionHandle = std::make_shared<LuaValueHandle>(state, sched->eventLoop);
-                int millis = lua_tointeger(state, 3);
+                lua_geti(state, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
+                auto mainThread = lua_tothread(state, -1);
+                lua_pop(state, 1);
+                lua_pushvalue(state, 2);
+                lua_xmove(state, mainThread, 1);
                 SlokedEventLoop &eventLoop = sched->eventLoop;
-                auto task = sched->sched.Interval(std::chrono::milliseconds(millis), [state, &eventLoop, functionHandle = std::move(functionHandle)] {
+                auto handle = std::make_shared<LuaValueHandle>(mainThread, eventLoop);
+                int millis = lua_tointeger(state, 3);
+                auto task = sched->sched.Interval(std::chrono::milliseconds(millis), [state = mainThread, &eventLoop, functionHandle = std::move(handle)] {
                     eventLoop.Attach([state, functionHandle] {
                         functionHandle->Load();
                         if (lua_pcall(state, 0, 0, 0) != 0) {

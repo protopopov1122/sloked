@@ -22,6 +22,7 @@
 #include "sloked/third-party/script/lua/Pipe.h"
 #include "sloked/third-party/script/lua/Common.h"
 #include "sloked/core/Error.h"
+#include <iostream>
 
 namespace sloked {
 
@@ -350,16 +351,19 @@ namespace sloked {
             SlokedEventLoop &eventLoop = *reinterpret_cast<SlokedEventLoop *>(lua_touserdata(state, lua_upvalueindex(1)));
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
             if (lua_isfunction(state, 2)) {
-                lua_pushvalue(state, 2);    
-                auto handle = std::make_shared<LuaValueHandle>(state, eventLoop);
-                pipe->pipe->SetMessageListener([&eventLoop, state, handle = std::move(handle)]() mutable {
+                lua_geti(state, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
+                auto mainThread = lua_tothread(state, -1);
+                lua_pop(state, 1);
+                lua_pushvalue(state, 2);
+                lua_xmove(state, mainThread, 1);
+                auto handle = std::make_shared<LuaValueHandle>(mainThread, eventLoop);
+                pipe->pipe->SetMessageListener([&eventLoop, state = mainThread, handle = std::move(handle)]() mutable {
                     eventLoop.Attach([state, handle] {
                         handle->Load();
                         if (lua_pcall(state, 0, 0, 0) != 0) {
                             const char *msg = luaL_tolstring(state, -1, nullptr);
                             throw SlokedError(msg != nullptr ? msg : "");
                         }
-                        return false;
                     });
                 });
             } else {
