@@ -85,6 +85,13 @@ function Promise:onReject(callback)
 end
 
 function Promise:_fulfill(value)
+    if Promise:is(value) then
+        return value:next(function(result)
+            return self:_fulfill(result)
+        end, function(result)
+            return self._reject(result)
+        end)
+    end
     if self.state == Pending then
         self.value = value
         self.state = Fulfilled
@@ -99,6 +106,13 @@ function Promise:_fulfill(value)
 end
 
 function Promise:_reject(value)
+    if Promise:is(value) then
+        return value:next(function(result)
+            self:_fulfill(result)
+        end, function(result)
+            self._reject(result)
+        end)
+    end
     if self.state == Pending then
         self.value = value
         self.state = Rejected

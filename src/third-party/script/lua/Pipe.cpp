@@ -33,21 +33,27 @@ namespace sloked {
     };
 
     static int SlokedPipe_GC(lua_State *state) {
-        SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-        pipe->pipe->Close();
-        pipe->~SlokedPipeHandle();
+        SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+        if (pipe != nullptr) {
+            pipe->pipe->Close();
+            pipe->~SlokedPipeHandle();
+        }
         return 0;
     }
 
     static int SlokedPipe_IsOpen(lua_State *state) {
         int top = lua_gettop(state);
         if (top != 1) {
-            return luaL_error(state, "sloked.pipe,isOpen: Expected 1 argument");
+            return luaL_error(state, "sloked.pipe.isOpen: Expected 1 argument");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            lua_pushboolean(state, pipe->pipe->GetStatus() == KgrPipe::Status::Open);
-            return 1;
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                lua_pushboolean(state, pipe->pipe->GetStatus() == KgrPipe::Status::Open);
+                return 1;
+            } else {
+                return luaL_error(state, "sloked.pipe.isOpen: Expected pipe");
+            }
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -60,9 +66,13 @@ namespace sloked {
             return luaL_error(state, "sloked.pipe.empty: Expected 1 argument");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            lua_pushboolean(state, pipe->pipe->Empty());
-            return 1;
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                lua_pushboolean(state, pipe->pipe->Empty());
+                return 1;
+            } else {
+                return luaL_error(state, "sloked.pipe.empty: Expected pipe");
+            }
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -75,9 +85,13 @@ namespace sloked {
             return luaL_error(state, "sloked.pipe.count: Expected 1 argument");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            lua_pushinteger(state, pipe->pipe->Count());
-            return 1;
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                lua_pushinteger(state, pipe->pipe->Count());
+                return 1;
+            } else {
+                return luaL_error(state, "sloked.pipe.count: Expected pipe");
+            }
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -90,9 +104,13 @@ namespace sloked {
             return luaL_error(state, "sloked.pipe.close: Expected 1 argument");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            pipe->pipe->Close();
-            return 0;
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                pipe->pipe->Close();
+                return 0;
+            } else {
+                return luaL_error(state, "sloked.pipe.close: Expected pipe");
+            }
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -149,10 +167,14 @@ namespace sloked {
             return luaL_error(state, "sloked.pipe.read: Expected 1 argument");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            auto msg = pipe->pipe->Read();
-            KgrValueToLua(state, msg);
-            return 1;
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                auto msg = pipe->pipe->Read();
+                KgrValueToLua(state, msg);
+                return 1;
+            } else {
+                return luaL_error(state, "sloked.pipe.read: Expected pipe");
+            }
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -165,13 +187,17 @@ namespace sloked {
             return luaL_error(state, "sloked.pipe.tryRead: Expected 1 argument");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            auto msg = pipe->pipe->ReadOptional();
-            if (msg.has_value()) {
-                KgrValueToLua(state, msg.value());
-                return 1;
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                auto msg = pipe->pipe->ReadOptional();
+                if (msg.has_value()) {
+                    KgrValueToLua(state, msg.value());
+                    return 1;
+                } else {
+                    return 0;
+                }
             } else {
-                return 0;
+                return luaL_error(state, "sloked.pipe.tryRead: Expected pipe");   
             }
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
@@ -185,10 +211,14 @@ namespace sloked {
             return luaL_error(state, "sloked.pipe.readWait: Expected 1 argument");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            auto msg = pipe->pipe->ReadWait();
-            KgrValueToLua(state, msg);
-            return 1;
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                auto msg = pipe->pipe->ReadWait();
+                KgrValueToLua(state, msg);
+                return 1;
+            } else {
+                return luaL_error(state, "sloked.pipe.readWait: Expected pipe");   
+            }
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -259,13 +289,17 @@ namespace sloked {
             return luaL_error(state, "sloked.pipe.wait: Expected 1 or 2 arguments");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            int count = 1;
-            if (lua_isinteger(state, 2)) {
-                count = lua_tointeger(state, 2);
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                int count = 1;
+                if (lua_isinteger(state, 2)) {
+                    count = lua_tointeger(state, 2);
+                }
+                lua_pushboolean(state, pipe->pipe->Wait(count));
+                return 1;
+            } else {
+                return luaL_error(state, "sloked.pipe.wait: Expected pipe");
             }
-            lua_pushboolean(state, pipe->pipe->Wait(count));
-            return 1;
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -278,13 +312,17 @@ namespace sloked {
             return luaL_error(state, "sloked.pipe.drop: Expected 1 or 2 arguments");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            int count = 1;
-            if (lua_isinteger(state, 2)) {
-                count = lua_tointeger(state, 2);
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                int count = 1;
+                if (lua_isinteger(state, 2)) {
+                    count = lua_tointeger(state, 2);
+                }
+                pipe->pipe->Drop(count);
+                return 0;
+            } else {
+                return luaL_error(state, "sloked.pipe.drop: Expected pipe");
             }
-            pipe->pipe->Drop(count);
-            return 0;
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -297,9 +335,13 @@ namespace sloked {
             return luaL_error(state, "sloked.pipe.dropAll: Expected 1 argument");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            pipe->pipe->DropAll();
-            return 0;
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                pipe->pipe->DropAll();
+                return 0;
+            } else {
+                return luaL_error(state, "sloked.pipe.dropAll: Expected pipe");
+            }
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -312,12 +354,16 @@ namespace sloked {
             return luaL_error(state, "sloked.pipe.write: Expected 2 arguments");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            lua_pushvalue(state, 2);    
-            auto msg = LuaToKgrValue(state);
-            lua_pop(state, 1);
-            pipe->pipe->Write(std::move(msg));
-            return 0;
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                lua_pushvalue(state, 2);
+                auto msg = LuaToKgrValue(state);
+                lua_pop(state, 1);
+                pipe->pipe->Write(std::move(msg));
+                return 0;
+            } else {
+                return luaL_error(state, "sloked.pipe.write: Expected pipe");
+            }
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -330,12 +376,16 @@ namespace sloked {
             return luaL_error(state, "sloked.pipe.tryWrite: Expected 2 arguments");
         }
         try {
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            lua_pushvalue(state, 2);    
-            auto msg = LuaToKgrValue(state);
-            lua_pop(state, 1);
-            lua_pushboolean(state, pipe->pipe->WriteNX(std::move(msg)));
-            return 1;
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                lua_pushvalue(state, 2);
+                auto msg = LuaToKgrValue(state);
+                lua_pop(state, 1);
+                lua_pushboolean(state, pipe->pipe->WriteNX(std::move(msg)));
+                return 1;
+            } else {
+                return luaL_error(state, "sloked.pipe.tryWrite: Expected pipe");
+            }
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -349,27 +399,21 @@ namespace sloked {
         }
         try {
             SlokedEventLoop &eventLoop = *reinterpret_cast<SlokedEventLoop *>(lua_touserdata(state, lua_upvalueindex(1)));
-            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(lua_touserdata(state, 1));
-            if (lua_isfunction(state, 2)) {
-                lua_geti(state, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
-                auto mainThread = lua_tothread(state, -1);
-                lua_pop(state, 1);
-                lua_pushvalue(state, 2);
-                lua_xmove(state, mainThread, 1);
-                auto handle = std::make_shared<LuaValueHandle>(mainThread, eventLoop);
-                pipe->pipe->SetMessageListener([&eventLoop, state = mainThread, handle = std::move(handle)]() mutable {
-                    eventLoop.Attach([state, handle] {
-                        handle->Load();
-                        if (lua_pcall(state, 0, 0, 0) != 0) {
-                            const char *msg = luaL_tolstring(state, -1, nullptr);
-                            throw SlokedError(msg != nullptr ? msg : "");
-                        }
+            SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
+            if (pipe != nullptr) {
+                if (lua_isfunction(state, 2)) {
+                    lua_pushvalue(state, 2);
+                    auto callback = LuaCallback(state, eventLoop);
+                    pipe->pipe->SetMessageListener([&eventLoop, callback = std::move(callback)] {
+                        eventLoop.Attach(callback);
                     });
-                });
+                } else {
+                    pipe->pipe->SetMessageListener(nullptr);
+                }
+                return 0;
             } else {
-                pipe->pipe->SetMessageListener(nullptr);
+                return luaL_error(state, "sloked.pipe.listen: Expected pipe");
             }
-            return 0;
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());

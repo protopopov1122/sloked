@@ -32,23 +32,29 @@ namespace sloked {
     };
 
     static int SlokedSchedTask_GC(lua_State *state) {
-        SchedTaskHandle *taskHandle = reinterpret_cast<SchedTaskHandle *>(lua_touserdata(state, 1));
-        taskHandle->~SchedTaskHandle();
+        SchedTaskHandle *taskHandle = reinterpret_cast<SchedTaskHandle *>(luaL_checkudata(state, 1, "sloked.sched"));
+        if (taskHandle != nullptr) {
+            taskHandle->~SchedTaskHandle();
+        }
         return 0;
     }
 
     static int SlokedSchedTask_Call(lua_State *state) {
         int top = lua_gettop(state);
         if (top != 1) {
-            return luaL_error(state, "sloked.sched.defer: Expected 0 arguments");
+            return luaL_error(state, "sloked.sched.task(): Expected 0 arguments");
         }
         try {
-            SchedTaskHandle *taskHandle = reinterpret_cast<SchedTaskHandle *>(lua_touserdata(state, 1));
-            if (taskHandle->task) {
-                taskHandle->task->Cancel();
-                taskHandle->task = nullptr;
+            SchedTaskHandle *taskHandle = reinterpret_cast<SchedTaskHandle *>(luaL_checkudata(state, 1, "sloked.sched"));
+            if (taskHandle != nullptr) {
+                if (taskHandle->task) {
+                    taskHandle->task->Cancel();
+                    taskHandle->task = nullptr;
+                }
+                return 0;
+            } else {
+                return luaL_error(state, "sloked.sched.task(): Expected sloked.sched");
             }
-            return 0;
         } catch (const SlokedError &err) {
             DropLuaStack(state, top);
             return luaL_error(state, err.what());
@@ -77,8 +83,10 @@ namespace sloked {
     };
 
     static int SlokedSched_GC(lua_State *state) {
-        SchedHandle *schedHandle = reinterpret_cast<SchedHandle *>(lua_touserdata(state, 1));
-        schedHandle->~SchedHandle();
+        SchedHandle *schedHandle = reinterpret_cast<SchedHandle *>(luaL_checkudata(state, 1, "sloked.sched"));
+        if (schedHandle != nullptr) {
+            schedHandle->~SchedHandle();
+        }
         return 0;
     }
 
@@ -88,23 +96,16 @@ namespace sloked {
             return luaL_error(state, "sloked.sched.defer: Expected 2 arguments");
         }
         try {
-            SchedHandle *sched = reinterpret_cast<SchedHandle *>(lua_touserdata(state, 1));
+            SchedHandle *sched = reinterpret_cast<SchedHandle *>(luaL_checkudata(state, 1, "sloked.sched"));
+            if (sched == nullptr) {
+                return luaL_error(state, "sloked.sched.defer: Expected sloked.sched");
+            }
             if (lua_isfunction(state, 2)) {
-                lua_geti(state, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
-                auto mainThread = lua_tothread(state, -1);
-                lua_pop(state, 1);
-                lua_pushvalue(state, 2);
-                lua_xmove(state, mainThread, 1);
                 SlokedEventLoop &eventLoop = sched->eventLoop;
-                auto handle = std::make_shared<LuaValueHandle>(mainThread, eventLoop);
-                sched->sched.Defer([state = mainThread, &eventLoop, functionHandle = std::move(handle)] {
-                    eventLoop.Attach([state, functionHandle] {
-                        functionHandle->Load();
-                        if (lua_pcall(state, 0, 0, 0) != 0) {
-                            const char *msg = luaL_tolstring(state, -1, nullptr);
-                            throw SlokedError(msg != nullptr ? msg : "");
-                        }
-                    });
+                lua_pushvalue(state, 2);
+                auto callback = LuaCallback(state, eventLoop);
+                sched->sched.Defer([&eventLoop, callback = std::move(callback)] {
+                    eventLoop.Attach(callback);
                 });
                 return 0;
             } else {
@@ -122,24 +123,17 @@ namespace sloked {
             return luaL_error(state, "sloked.sched.setTimeout: Expected 3 arguments");
         }
         try {
-            SchedHandle *sched = reinterpret_cast<SchedHandle *>(lua_touserdata(state, 1));
+            SchedHandle *sched = reinterpret_cast<SchedHandle *>(luaL_checkudata(state, 1, "sloked.sched"));
+            if (sched == nullptr) {
+                return luaL_error(state, "sloked.sched.defer: Expected sloked.sched");
+            }
             if (lua_isfunction(state, 2) && lua_isinteger(state, 3)) {
-                lua_geti(state, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
-                auto mainThread = lua_tothread(state, -1);
-                lua_pop(state, 1);
-                lua_pushvalue(state, 2);
-                lua_xmove(state, mainThread, 1);
                 SlokedEventLoop &eventLoop = sched->eventLoop;
-                auto handle = std::make_shared<LuaValueHandle>(mainThread, eventLoop);
+                lua_pushvalue(state, 2);
+                auto callback = LuaCallback(state, eventLoop);
                 int millis = lua_tointeger(state, 3);
-                auto task = sched->sched.Sleep(std::chrono::milliseconds(millis), [state = mainThread, &eventLoop, functionHandle = std::move(handle)] {
-                    eventLoop.Attach([state, functionHandle] {
-                        functionHandle->Load();
-                        if (lua_pcall(state, 0, 0, 0) != 0) {
-                            const char *msg = luaL_tolstring(state, -1, nullptr);
-                            throw SlokedError(msg != nullptr ? msg : "");
-                        }
-                    });
+                auto task = sched->sched.Sleep(std::chrono::milliseconds(millis), [&eventLoop, callback = std::move(callback)] {
+                    eventLoop.Attach(callback);
                 });
                 return SlokedSchedTaskToLua(state, std::move(task));
             } else {
@@ -157,24 +151,17 @@ namespace sloked {
             return luaL_error(state, "sloked.sched.setInterval: Expected 3 arguments");
         }
         try {
-            SchedHandle *sched = reinterpret_cast<SchedHandle *>(lua_touserdata(state, 1));
+            SchedHandle *sched = reinterpret_cast<SchedHandle *>(luaL_checkudata(state, 1, "sloked.sched"));
+            if (sched == nullptr) {
+                return luaL_error(state, "sloked.sched.defer: Expected sloked.sched");
+            }
             if (lua_isfunction(state, 2) && lua_isinteger(state, 3)) {
-                lua_geti(state, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
-                auto mainThread = lua_tothread(state, -1);
-                lua_pop(state, 1);
-                lua_pushvalue(state, 2);
-                lua_xmove(state, mainThread, 1);
                 SlokedEventLoop &eventLoop = sched->eventLoop;
-                auto handle = std::make_shared<LuaValueHandle>(mainThread, eventLoop);
+                lua_pushvalue(state, 2);
+                auto callback = LuaCallback(state, eventLoop);
                 int millis = lua_tointeger(state, 3);
-                auto task = sched->sched.Interval(std::chrono::milliseconds(millis), [state = mainThread, &eventLoop, functionHandle = std::move(handle)] {
-                    eventLoop.Attach([state, functionHandle] {
-                        functionHandle->Load();
-                        if (lua_pcall(state, 0, 0, 0) != 0) {
-                            const char *msg = luaL_tolstring(state, -1, nullptr);
-                            throw SlokedError(msg != nullptr ? msg : "");
-                        }
-                    });
+                auto task = sched->sched.Interval(std::chrono::milliseconds(millis), [&eventLoop, callback = std::move(callback)] {
+                    eventLoop.Attach(callback);
                 });
                 return SlokedSchedTaskToLua(state, std::move(task));
             } else {

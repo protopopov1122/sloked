@@ -40,6 +40,8 @@ namespace sloked {
         int ref;
         SlokedEventLoop &eventLoop;
     };
+
+    std::function<void()> LuaCallback(lua_State *, SlokedEventLoop &);
 }
 
 #endif

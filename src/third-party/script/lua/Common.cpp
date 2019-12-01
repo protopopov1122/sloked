@@ -45,4 +45,19 @@ namespace sloked {
     void LuaValueHandle::Load() {
         lua_geti(state, LUA_REGISTRYINDEX, this->ref);
     }
+
+    std::function<void()> LuaCallback(lua_State *state, SlokedEventLoop &eventLoop) {
+        lua_geti(state, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
+        auto mainThread = lua_tothread(state, -1);
+        lua_pop(state, 1);
+        lua_xmove(state, mainThread, 1);
+        auto handle = std::make_shared<LuaValueHandle>(mainThread, eventLoop);
+        return [state = mainThread, &eventLoop, functionHandle = std::move(handle)] {
+            functionHandle->Load();
+            if (lua_pcall(state, 0, 0, 0) != 0) {
+                const char *msg = luaL_tolstring(state, -1, nullptr);
+                throw SlokedError(msg != nullptr ? msg : "");
+            }
+        };
+    }
 }

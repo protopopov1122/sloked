@@ -1,8 +1,10 @@
-local pipe = require 'pipe'
-local promise = require 'promise'
-local async = require 'async'
+local pipe = require 'slokedlib/pipe'
+local promise = require 'slokedlib/promise'
+local async = require 'slokedlib/async'
+local sched = require 'slokedlib/sched'
 
 async(function(await)
+    local await_unwrap = async.unwrap(await)
     local cursor = pipe:promisify(sloked.servers.main:connect('document::cursor'))
     await(cursor:write({
         id=0,
@@ -14,11 +16,9 @@ async(function(await)
         local notifier = pipe:promisify(sloked.servers.main:connect('document::notify'))
         await(notifier:write(1))
         while true do
-            await(async(function(await)
-                await(notifier:drop(1))
-                await(promise:new(function(resolve, reject)
-                    sloked.sched:setTimeout(resolve, 500)
-                end))
+            await(notifier:drop(1))
+            await_unwrap(async(function(await)
+                await(sched.sleep(500))
                 await(cursor:write({
                     id=1,
                     method='insert',

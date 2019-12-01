@@ -1,4 +1,4 @@
-local Promise = require 'promise'
+local promise = require 'slokedlib/promise'
 
 local Pipe = {}
 Pipe.__index = Pipe
@@ -54,7 +54,7 @@ end
 
 function Pipe:read(callback)
     if not self:empty() then
-        applyCallback(callback, self.pipe, self.pipe.readWait)
+        applyCallback(callback, self.pipe, self.pipe.read)
     else
         self.listeners[#self.listeners + 1] = function()
             applyCallback(callback, self.pipe, self.pipe.read)
@@ -111,27 +111,27 @@ function PromisifiedPipe:empty()
 end
 
 function PromisifiedPipe:close()
-    return Promise:promisify(self.pipe, self.pipe.close)
+    return promise:promisify(self.pipe, self.pipe.close)
 end
 
 function PromisifiedPipe:read()
-    return Promise:promisify(self.pipe, self.pipe.read)
+    return promise:promisify(self.pipe, self.pipe.read)
 end
 
 function PromisifiedPipe:wait(count)
-    return Promise:promisify(self.pipe, self.pipe.wait, count)
+    return promise:promisify(self.pipe, self.pipe.wait, count)
 end
 
 function PromisifiedPipe:drop(count)
-    return Promise:promisify(self.pipe, self.pipe.drop, count)
+    return promise:promisify(self.pipe, self.pipe.drop, count)
 end
 
 function PromisifiedPipe:dropAll()
-    return Promise:promisify(self.pipe, self.pipe.dropAll)
+    return promise:promisify(self.pipe, self.pipe.dropAll)
 end
 
 function PromisifiedPipe:write(value)
-    return Promise:promisify(self.pipe, self.pipe.write, value)
+    return promise:promisify(self.pipe, self.pipe.write, value)
 end
 
 return Pipe
