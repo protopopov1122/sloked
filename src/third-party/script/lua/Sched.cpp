@@ -32,7 +32,7 @@ namespace sloked {
     };
 
     static int SlokedSchedTask_GC(lua_State *state) {
-        SchedTaskHandle *taskHandle = reinterpret_cast<SchedTaskHandle *>(luaL_checkudata(state, 1, "sloked.sched"));
+        SchedTaskHandle *taskHandle = reinterpret_cast<SchedTaskHandle *>(luaL_checkudata(state, 1, "sloked.sched.task"));
         if (taskHandle != nullptr) {
             taskHandle->~SchedTaskHandle();
         }
@@ -45,7 +45,7 @@ namespace sloked {
             return luaL_error(state, "sloked.sched.task(): Expected 0 arguments");
         }
         try {
-            SchedTaskHandle *taskHandle = reinterpret_cast<SchedTaskHandle *>(luaL_checkudata(state, 1, "sloked.sched"));
+            SchedTaskHandle *taskHandle = reinterpret_cast<SchedTaskHandle *>(luaL_checkudata(state, 1, "sloked.sched.task"));
             if (taskHandle != nullptr) {
                 if (taskHandle->task) {
                     taskHandle->task->Cancel();

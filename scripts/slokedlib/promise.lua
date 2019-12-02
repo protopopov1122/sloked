@@ -15,9 +15,9 @@ function Promise:new(process)
     }
     setmetatable(promise, self)
     local status, err = pcall(process, function(result)
-        promise:_fulfill(result)
+        return promise:_fulfill(result)
     end, function(err)
-        promise:_reject(err)
+        return promise:_reject(err)
     end)
     if not status then
         promise:_reject(err)
@@ -100,8 +100,9 @@ function Promise:_fulfill(value)
         for key, callback in pairs(on_fulfill) do
             callback(self.value)
         end
+        return true
     else
-        error("Non-pending promise can't be fulfilled")
+        return false
     end
 end
 
@@ -121,8 +122,9 @@ function Promise:_reject(value)
         for key, callback in pairs(on_reject) do
             callback(self.value)
         end
+        return true
     else
-        error("Non-pending promise can't be rejected")
+        return false
     end
 end
 
@@ -187,6 +189,30 @@ function Promise:unwrapError()
             error(err, 0)
         end)
     end)
+end
+
+function Promise:race(...)
+    local promises = {...}
+    return Promise:new(function(resolve, reject)
+        for key, promise in pairs(promises) do
+            promise:next(resolve, reject)
+        end
+    end)
+end
+
+function Promise:all(...)
+    local result = Promise:resolve({})
+    for key, promise in pairs({...}) do
+        result = result:next(function(all)
+            print(all)
+            return promise:next(function(res)
+                local sum = {table.unpack(all)}
+                sum[#sum + 1] = res
+                return sum
+            end)
+        end)
+    end
+    return result
 end
 
 return Promise
