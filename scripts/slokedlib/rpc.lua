@@ -18,10 +18,6 @@ function RpcResponse:new(client, id)
     return obj
 end
 
-function RpcResponse:__gc()
-    self:close()
-end
-
 function RpcResponse:close()
     if self.id ~= nil then
         table.remove(self.client.responses, self.id)
@@ -29,26 +25,15 @@ function RpcResponse:close()
     end
 end
 
-function RpcResponse:receive()
+function RpcResponse:__call()
     return async(function(await)
         local await_unwrap = async.unwrap(await)
         while #self.queue == 0 do
-            await_unwrap(self.client.mtx:lock())
-            if #self.queue == 0 then
-                await(self.client:receive())
-            end
-            self.client.mtx:unlock()
+            await(self.client:_receive(function()
+                return #self.queue == 0
+            end))
         end
         return table.remove(self.queue, 1)
-    end)
-end
-
-function RpcResponse:read()
-    return async(function(await)
-        local await_unwrap = async.unwrap(await)
-        local result = await_unwrap(self:receive())
-        self:close()
-        return result
     end)
 end
 
@@ -66,7 +51,7 @@ function RpcClient:new(p)
     return obj
 end
 
-function RpcClient:__call(method, params, detach)
+function RpcClient:invoke(method, params, detach)
     if type(detach) ~= 'boolean' then
         detach = false
     end
@@ -86,16 +71,34 @@ function RpcClient:__call(method, params, detach)
     end
 end
 
-function RpcClient:receive()
+function RpcClient:__call(method, params)
+    return async(function(await)
+        local await_unwrap = async.unwrap(await)
+        local req = await_unwrap(self:invoke(method, params))
+        local res = await_unwrap(req())
+        req:close()
+        return res
+    end)
+end
+
+function RpcClient:send(method, params)
+    return self:invoke(method, params, true)
+end
+
+function RpcClient:_receive(continue_callback)
     return async(function(await)
         local await_unwrap = async.unwrap(await)
         repeat
-            local msg = await_unwrap(self.pipe:read())
-            if msg ~= nil and self.responses[msg.id] then
-                local queue = self.responses[msg.id].queue
-                queue[#queue + 1] = msg
+            await_unwrap(self.mtx:lock())
+            if continue_callback() then
+                local msg = await_unwrap(self.pipe:read())
+                if msg ~= nil and self.responses[msg.id] then
+                    local queue = self.responses[msg.id].queue
+                    queue[#queue + 1] = msg
+                end
             end
-        until self.pipe:empty()
+            self.mtx:unlock()
+        until self.pipe:empty() or not continue_callback()
     end)
 end
 
