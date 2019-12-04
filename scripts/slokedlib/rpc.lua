@@ -20,7 +20,7 @@ end
 
 function RpcResponse:close()
     if self.id ~= nil then
-        table.remove(self.client.responses, self.id)
+        self.client.responses[self.id] = nil
         self.id = nil
     end
 end
@@ -43,7 +43,7 @@ RpcClient.__index = RpcClient
 function RpcClient:new(p)
     local obj = {
         pipe=pipe:promisify(p),
-        nextId=0,
+        nextId=1,
         responses={},
         mtx=mutex:new()
     }

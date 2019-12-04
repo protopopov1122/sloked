@@ -111,7 +111,8 @@ namespace sloked {
                 auto msg = this->pipe->Read();
                 const auto &id = msg.AsDictionary()["id"];
                 const std::string &method = msg.AsDictionary()["method"].AsString();
-                const auto &params = msg.AsDictionary()["params"];
+                KgrValue None{};
+                const auto &params = msg.AsDictionary().Has("params") ? msg.AsDictionary()["params"] : None;
                 response = std::make_unique<Response>(*this, id);
                 if (this->methods.count(method) != 0) {
                     this->methods.at(method)(method, params, *response);

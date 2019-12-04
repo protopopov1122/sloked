@@ -43,6 +43,7 @@
 #include "sloked/services/DocumentSet.h"
 #include "sloked/services/Screen.h"
 #include "sloked/services/ScreenInput.h"
+#include "sloked/services/Search.h"
 #include "sloked/services/TextPane.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/screen/components/ComponentTree.h"
@@ -218,6 +219,7 @@ int main(int argc, const char **argv) {
     server.Register("document::cursor", std::make_unique<SlokedCursorService>(documents, server.GetConnector("document::render"), ctxManager));
     server.Register("document::manager", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
     server.Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(documents, ctxManager));
+    server.Register("document::search", std::make_unique<SlokedSearchService>(documents, ctxManager));
     server.Register("screen::manager", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, slaveServer.GetConnector("document::cursor"), slaveServer.GetConnector("document::notify"), ctxManager));
     server.Register("screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(screenHandle, terminalEncoding, ctxManager));
     server.Register("screen::component::input.forward", std::make_unique<SlokedScreenInputForwardingService>(screenHandle, terminalEncoding, ctxManager));
@@ -283,6 +285,7 @@ int main(int argc, const char **argv) {
     luaEngine.BindServer("main", slaveServer);
     if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {
         luaEngine.Start(cli["script"].As<std::string>());
+        // std::this_thread::sleep_for(10000s);
     }
 
     while (work.load()) {

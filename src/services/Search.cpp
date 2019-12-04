@@ -1,0 +1,127 @@
+/*
+  SPDX-License-Identifier: LGPL-3.0
+
+  Copyright (c) 2019 Jevgenijs Protopopovs
+
+  This file is part of Sloked project.
+
+  Sloked is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License version 3 as published by
+  the Free Software Foundation.
+
+
+  Sloked is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+  along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include "sloked/services/Search.h"
+#include "sloked/text/search/Match.h"
+
+namespace sloked {
+
+    class SlokedSearchContext : public SlokedServiceContext {
+     public:
+        SlokedSearchContext(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet &documents)
+            : SlokedServiceContext(std::move(pipe)), documents(documents) {
+            this->BindMethod("connect", &SlokedSearchContext::Connect);
+            this->BindMethod("matcher", &SlokedSearchContext::Matcher);
+            this->BindMethod("match", &SlokedSearchContext::Match);
+            this->BindMethod("rewind", &SlokedSearchContext::Rewind);
+            this->BindMethod("get", &SlokedSearchContext::GetResults);
+        }
+
+     private:
+        void Connect(const std::string &method, const KgrValue &params, Response &rsp) {
+            auto docId = static_cast<SlokedEditorDocumentSet::DocumentId>(params.AsInt());
+            auto doc = this->documents.OpenDocument(docId);
+            if (doc.has_value()) {
+                this->document = std::move(doc.value());
+                rsp.Result(true);
+            } else {
+                rsp.Result(false);
+            }
+        }
+
+        void Matcher(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->document.has_value()) {
+                auto &doc = this->document.value().GetObject();
+                const std::string &type = params.AsString();
+                if (type == "plain") {
+                    this->matcher = std::make_unique<SlokedTextPlainMatcher>(doc.GetText(), doc.GetEncoding());
+                    rsp.Result(true);
+                } else if (type == "regex") {
+                    this->matcher = std::make_unique<SlokedTextRegexMatcher>(doc.GetText(), doc.GetEncoding());
+                    rsp.Result(true);
+                } else {
+                    rsp.Result(false);
+                }
+            } else {
+                rsp.Result(false);
+            }
+        }
+
+        void Match(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->matcher != nullptr) {
+                const std::string &query = params.AsDictionary()["query"].AsString();
+                SlokedTextMatcherBase::Flags flags = params.AsDictionary()["flags"].AsInt();
+                this->matcher->Match(query, flags);
+                rsp.Result(true);
+            } else {
+                rsp.Result(false);
+            }
+        }
+
+        void Rewind(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->matcher != nullptr) {
+                TextPosition pos {
+                    static_cast<TextPosition::Line>(params.AsDictionary()["line"].AsInt()),
+                    static_cast<TextPosition::Column>(params.AsDictionary()["column"].AsInt())
+                };
+                this->matcher->Rewind(pos);
+                rsp.Result(true);
+            } else {
+                rsp.Result(false);
+            }
+        }
+
+        void GetResults(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->matcher != nullptr) {
+                auto res = this->matcher->GetResults();
+                KgrArray result;
+                for (const auto &entry : res) {
+                    result.Append(KgrDictionary {
+                        {
+                            "start", KgrDictionary {
+                                { "line", static_cast<int64_t>(entry.start.line) },
+                                { "column", static_cast<int64_t>(entry.start.column) }
+                            }
+                        },
+                        { "length", static_cast<int64_t>(entry.length) },
+                        { "content", entry.content }
+                    });
+                }
+                rsp.Result(std::move(result));
+            } else {
+                rsp.Result({});
+            }
+        }
+
+        SlokedEditorDocumentSet &documents;
+        std::optional<SlokedEditorDocumentSet::Document> document;
+        std::unique_ptr<SlokedTextMatcher> matcher;
+    };
+
+    SlokedSearchService::SlokedSearchService(SlokedEditorDocumentSet &documents, KgrContextManager<KgrLocalContext> &contextManager)
+        : documents(documents), contextManager(contextManager) {}
+
+    bool SlokedSearchService::Attach(std::unique_ptr<KgrPipe> pipe) {
+        auto ctx = std::make_unique<SlokedSearchContext>(std::move(pipe), this->documents);
+        this->contextManager.Attach(std::move(ctx));
+        return true;
+    }
+}
