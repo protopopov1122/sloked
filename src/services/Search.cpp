@@ -21,6 +21,7 @@
 
 #include "sloked/services/Search.h"
 #include "sloked/text/search/Match.h"
+#include "sloked/text/search/Replace.h"
 
 namespace sloked {
 
@@ -33,6 +34,8 @@ namespace sloked {
             this->BindMethod("match", &SlokedSearchContext::Match);
             this->BindMethod("rewind", &SlokedSearchContext::Rewind);
             this->BindMethod("get", &SlokedSearchContext::GetResults);
+            this->BindMethod("replace", &SlokedSearchContext::Replace);
+            this->BindMethod("replaceAll", &SlokedSearchContext::ReplaceAll);
         }
 
      private:
@@ -53,9 +56,11 @@ namespace sloked {
                 const std::string &type = params.AsString();
                 if (type == "plain") {
                     this->matcher = std::make_unique<SlokedTextPlainMatcher>(doc.GetText(), doc.GetEncoding());
+                    this->replacer = std::make_unique<SlokedTextReplacer>(doc.GetText(), doc.NewStream(), doc.GetEncoding());
                     rsp.Result(true);
                 } else if (type == "regex") {
                     this->matcher = std::make_unique<SlokedTextRegexMatcher>(doc.GetText(), doc.GetEncoding());
+                    this->replacer = std::make_unique<SlokedTextReplacer>(doc.GetText(), doc.NewStream(), doc.GetEncoding());
                     rsp.Result(true);
                 } else {
                     rsp.Result(false);
@@ -91,7 +96,7 @@ namespace sloked {
 
         void GetResults(const std::string &method, const KgrValue &params, Response &rsp) {
             if (this->matcher != nullptr) {
-                auto res = this->matcher->GetResults();
+                const auto &res = this->matcher->GetResults();
                 KgrArray result;
                 for (const auto &entry : res) {
                     result.Append(KgrDictionary {
@@ -111,9 +116,39 @@ namespace sloked {
             }
         }
 
+        void Replace(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->matcher != nullptr) {
+                const auto &res = this->matcher->GetResults();
+                std::size_t idx = params.AsDictionary()["occurence"].AsInt();
+                const std::string &by = params.AsDictionary()["by"].AsString();
+                if (idx < res.size()) {
+                    this->replacer->Replace(res.at(idx), by);
+                    this->matcher->Rewind(res.at(idx).start);
+                    rsp.Result(true);
+                } else {
+                    rsp.Result(false);
+                }
+            } else {
+                rsp.Result(false);
+            }
+        }
+
+        void ReplaceAll(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->matcher != nullptr) {
+                const auto &res = this->matcher->GetResults();
+                const std::string &by = params.AsString();
+                this->replacer->Replace(res.rbegin(), res.rend(), by);
+                this->matcher->Rewind(TextPosition{0, 0});
+                rsp.Result(true);
+            } else {
+                rsp.Result(false);
+            }
+        }
+
         SlokedEditorDocumentSet &documents;
         std::optional<SlokedEditorDocumentSet::Document> document;
         std::unique_ptr<SlokedTextMatcher> matcher;
+        std::unique_ptr<SlokedTextReplacer> replacer;
     };
 
     SlokedSearchService::SlokedSearchService(SlokedEditorDocumentSet &documents, KgrContextManager<KgrLocalContext> &contextManager)

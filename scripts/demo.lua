@@ -11,10 +11,10 @@ async(function(await)
     await_unwrap(search:send('connect', 1))
     await_unwrap(search:send('matcher', 'plain'))
     await_unwrap(search:send('match', {
-        query='directory',
+        query='/',
         flags=0
     }))
-    local results = await_unwrap(search('get', nil))
+    await_unwrap(search:send('replaceAll', '|'))
 
     if await_unwrap(cursor('connect', 1)) then
         local notifier = pipe:promisify(sloked.servers.main:connect('document::notify'))

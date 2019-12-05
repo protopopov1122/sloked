@@ -23,28 +23,36 @@
 #define SLOKED_TEXT_SEARCH_REPLACE_H_
 
 #include "sloked/core/Encoding.h"
-#include "sloked/text/TextBlock.h"
+#include "sloked/text/cursor/TransactionStream.h"
+#include "sloked/text/cursor/TransactionCursor.h"
+#include "sloked/text/cursor/TransactionBatch.h"
+#include "sloked/text/cursor/Cursor.h"
 #include "sloked/text/search/Entry.h"
 
 namespace sloked {
 
     class SlokedTextReplacer {
      public:
-        SlokedTextReplacer(TextBlock &, const Encoding &);
+        SlokedTextReplacer(TextBlock &, std::unique_ptr<SlokedTransactionStream>, const Encoding &);
 
         void Replace(const SlokedSearchEntry &, std::string_view, bool = true);
 
         template <typename T>
         void Replace(const T &begin, const T &end, std::string_view value, bool replace_groups = true) {
+            TransactionBatch batch(*this->transactions, this->encoding);
+            TransactionCursor cursor(this->text, this->encoding, batch);
             for (auto it = begin; it != end; ++it) {
-                this->Replace(*it, value, replace_groups);
+                this->ReplaceImpl(cursor, *it, value, replace_groups);
             }
+            batch.Finish();
         }
 
      private:
+        void ReplaceImpl(SlokedCursor &, const SlokedSearchEntry &, std::string_view, bool);
         std::string Prepare(const SlokedSearchEntry &, std::string_view);
 
         TextBlock &text;
+        std::unique_ptr<SlokedTransactionStream> transactions;
         const Encoding &encoding;
     };
 }

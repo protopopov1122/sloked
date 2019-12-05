@@ -56,7 +56,8 @@ namespace sloked {
 
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::SetFocus() {
         if (this->IsOpened()) {
-            this->root.focus.erase(std::remove(this->root.focus.begin(), this->root.focus.end(), this->id));
+            this->root.focus.erase(std::remove(this->root.focus.begin(), this->root.focus.end(), this->id),
+                this->root.focus.end());
             this->root.focus.push_back(this->id);
             if (this->root.updateListener) {
                 this->root.updateListener();
@@ -90,7 +91,8 @@ namespace sloked {
 
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Close() {
         if (this->IsOpened()) {
-            this->root.focus.erase(std::remove(this->root.focus.begin(), this->root.focus.end(), this->id));
+            this->root.focus.erase(std::remove(this->root.focus.begin(), this->root.focus.end(), this->id),
+                this->root.focus.end());
             this->component.reset();
             this->window.reset();
             this->root.windows.erase(this->id);

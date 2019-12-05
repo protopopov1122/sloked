@@ -25,24 +25,14 @@
 
 namespace sloked {
 
-    SlokedTextReplacer::SlokedTextReplacer(TextBlock &text, const Encoding &encoding)
-        : text(text), encoding(encoding) {}
+    SlokedTextReplacer::SlokedTextReplacer(TextBlock &text, std::unique_ptr<SlokedTransactionStream> transactions, const Encoding &encoding)
+        : text(text), transactions(std::move(transactions)), encoding(encoding) {}
 
     void SlokedTextReplacer::Replace(const SlokedSearchEntry &entry, std::string_view value, bool replace_groups) {
-        std::string currentLine{this->text.GetLine(entry.start.line)};
-        auto start = this->encoding.GetCodepoint(currentLine, entry.start.column);
-        auto end = this->encoding.GetCodepoint(currentLine, entry.start.column + entry.length);
-        if (start.second == 0) {
-            return;
-        }
-        std::size_t length = end.first - start.first;
-        if (end.second == 0) {
-            length = this->encoding.CodepointCount(currentLine);
-        }
-        currentLine.replace(start.first, length, replace_groups
-            ? this->Prepare(entry, value)
-            : value);
-        this->text.SetLine(entry.start.line, currentLine);
+        TransactionBatch batch(*this->transactions, this->encoding);
+        TransactionCursor cursor(this->text, this->encoding, batch);
+        this->ReplaceImpl(cursor, entry, value, replace_groups);
+        batch.Finish();
     }
 
     std::string SlokedTextReplacer::Prepare(const SlokedSearchEntry &entry, std::string_view value) {
@@ -63,5 +53,14 @@ namespace sloked {
             match = {};
         }
         return str;
+    }
+
+    void SlokedTextReplacer::ReplaceImpl(SlokedCursor &cursor, const SlokedSearchEntry &entry, std::string_view value, bool replace_groups) {
+        cursor.ClearRegion(entry.start, TextPosition {
+            entry.start.line,
+            entry.start.column + entry.length
+        });
+        cursor.SetPosition(entry.start.line, entry.start.column);
+        cursor.Insert(value);
     }
 }

@@ -145,7 +145,8 @@ namespace sloked {
                 const auto &service = params.AsString();
                 if (this->server.Registered(service)) {
                     this->server.Deregister(service);
-                    this->remoteServices.erase(std::remove(this->remoteServices.begin(), this->remoteServices.end(), service));
+                    this->remoteServices.erase(std::remove(this->remoteServices.begin(), this->remoteServices.end(), service),
+                        this->remoteServices.end());
                     rsp.Result(true);
                 } else {
                     rsp.Result(false);
