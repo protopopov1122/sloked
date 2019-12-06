@@ -41,6 +41,7 @@
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentNotify.h"
 #include "sloked/services/DocumentSet.h"
+#include "sloked/services/Namespace.h"
 #include "sloked/services/Screen.h"
 #include "sloked/services/ScreenInput.h"
 #include "sloked/services/Search.h"
@@ -224,6 +225,7 @@ int main(int argc, const char **argv) {
     server.Register("screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(screenHandle, terminalEncoding, ctxManager));
     server.Register("screen::component::input.forward", std::make_unique<SlokedScreenInputForwardingService>(screenHandle, terminalEncoding, ctxManager));
     server.Register("screen::component::text.pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxManager));
+    server.Register("namespace::root", std::make_unique<SlokedNamespaceService>(root, ctxManager));
 
     logger.Debug() << "Services bound";
 

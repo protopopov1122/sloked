@@ -76,6 +76,7 @@ sloked_src = [
   'src/services/Cursor.cpp',
   'src/services/DocumentNotify.cpp',
   'src/services/DocumentSet.cpp',
+  'src/services/Namespace.cpp',
   'src/services/Screen.cpp',
   'src/services/Search.cpp',
   'src/services/Service.cpp',

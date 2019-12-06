@@ -8,6 +8,7 @@ async(function(await)
     local await_unwrap = async.unwrap(await)
     local cursor = rpc:new(sloked.servers.main:connect('document::cursor'))
     local search = rpc:new(sloked.servers.main:connect('document::search'))
+    local root = rpc:new(sloked.servers.main:connect('namespace::root'))
     await_unwrap(search:send('connect', 1))
     await_unwrap(search:send('matcher', 'plain'))
     await_unwrap(search:send('match', {
@@ -18,6 +19,7 @@ async(function(await)
         occurence=0,
         by='|'
     }))
+    await_unwrap(root('type', '/home/eugene/Projects/sloked/src1'))
 
     if await_unwrap(cursor('connect', 1)) then
         local notifier = pipe:promisify(sloked.servers.main:connect('document::notify'))
