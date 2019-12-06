@@ -39,6 +39,7 @@ namespace sloked {
          virtual const std::vector<Result> &GetResults() const = 0;
          virtual void Match(const std::string &, Flags = None) = 0;
          virtual void Rewind(const TextPosition &) = 0;
+         virtual void Reset() = 0;
 
          static constexpr Flags None = 0;
          static constexpr Flags CaseInsensitive = 1;
@@ -46,9 +47,9 @@ namespace sloked {
 
     class SlokedTextMatcherBase : public SlokedTextMatcher {
      public:
-
         const std::vector<Result> &GetResults() const override;
         void Rewind(const TextPosition &) override;
+        void Reset() override;
 
      protected:
         SlokedTextMatcherBase(const TextBlockView &, const Encoding &);

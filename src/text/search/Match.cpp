@@ -41,6 +41,12 @@ namespace sloked {
         this->Search();
     }
 
+    void SlokedTextMatcherBase::Reset() {
+        this->occurences.clear();
+        this->current_line = 0;
+        this->Search();
+    }
+
     SlokedTextRegexMatcher::SlokedTextRegexMatcher(const TextBlockView &text, const Encoding &encoding, bool enable_groups)
         : SlokedTextMatcherBase(text, encoding), enable_groups(enable_groups) {}
 

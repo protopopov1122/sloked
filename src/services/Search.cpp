@@ -138,7 +138,7 @@ namespace sloked {
                 const auto &res = this->matcher->GetResults();
                 const std::string &by = params.AsString();
                 this->replacer->Replace(res.rbegin(), res.rend(), by);
-                this->matcher->Rewind(TextPosition{0, 0});
+                this->matcher->Reset();
                 rsp.Result(true);
             } else {
                 rsp.Result(false);

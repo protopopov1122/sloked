@@ -14,7 +14,10 @@ async(function(await)
         query='/',
         flags=0
     }))
-    await_unwrap(search:send('replaceAll', '|'))
+    await_unwrap(search:send('replace', {
+        occurence=0,
+        by='|'
+    }))
 
     if await_unwrap(cursor('connect', 1)) then
         local notifier = pipe:promisify(sloked.servers.main:connect('document::notify'))
