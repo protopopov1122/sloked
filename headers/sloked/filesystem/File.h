@@ -46,7 +46,7 @@ namespace sloked {
         virtual bool IsDirectory() const = 0;
         virtual const std::string &GetPath() const = 0;
         virtual std::string GetName() const = 0;
-        virtual std::string GetParent() const = 0;
+        virtual std::string Parent() const = 0;
         virtual bool Exists() const = 0;
         virtual void Delete() const = 0;
         virtual void Rename(const std::string &) const = 0;

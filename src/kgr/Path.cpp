@@ -31,14 +31,14 @@ namespace sloked {
         if (front == "..") {
             return {};
         }
-        if (front.empty() || front == ".") {
+        if (front == ".") {
             if (path.Components().size() > 1) {
                 front = path.Components()[1];
             } else {
                 return root;
             }
         }
-        auto tail = path.Shift(1);
+        auto tail = path.Tail(1);
         switch (root.GetType()) {
             case KgrValueType::Array: {
                 std::size_t idx;

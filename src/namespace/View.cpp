@@ -27,7 +27,7 @@ namespace sloked {
     SlokedNamespaceView::SlokedNamespaceView(SlokedNamespace &base, const SlokedPath &path)
         : base(base), root(path) {
         if (!root.IsAbsolute()) {
-            root = root.RelativeTo(SlokedPath::Root);
+            root = root.RelativeTo(root.Root());
         }
     }
 
@@ -48,9 +48,9 @@ namespace sloked {
     }
 
     SlokedPath SlokedNamespaceView::MakePath(const SlokedPath &path) const {
-        SlokedPath realPath = path.IsAbsolute() ? path.RelativeTo(SlokedPath::Root) : path;
+        SlokedPath realPath = path.IsAbsolute() ? path.RelativeTo(path.Root()) : path;
         SlokedPath result = realPath.RelativeTo(this->root);
-        if (this->root.IsChildOrSelf(result)) {
+        if (this->root.IsParent(result)) {
             return result;
         } else {
             throw SlokedError(std::string{"Path out of namespace scope: "} + path.ToString());

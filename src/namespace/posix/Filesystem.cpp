@@ -33,13 +33,13 @@ namespace sloked {
     }
 
     std::unique_ptr<SlokedFile> SlokedPosixFilesystemAdapter::NewFile(const SlokedPath &path) const {
-        SlokedPath realPath = SlokedPath::Root;
+        SlokedPath realPath = path.Root();
         if (path.IsAbsolute()) {
-            realPath = this->GetRoot().RelativeTo(path.RelativeTo(SlokedPath::Root));
+            realPath = this->GetRoot().RelativeTo(path.RelativeTo(path.Root()));
         } else {
             realPath = this->GetRoot().RelativeTo(path);
         }
-        if (!this->GetRoot().IsChildOrSelf(realPath)) {
+        if (!this->GetRoot().IsParent(realPath)) {
             throw SlokedError(std::string{"Path out of root scope: "} + path.ToString());
         } else {
             return std::make_unique<SlokedPosixFile>(realPath.ToString());

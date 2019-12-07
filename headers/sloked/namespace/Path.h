@@ -25,43 +25,75 @@
 #include "sloked/Base.h"
 #include <string>
 #include <vector>
-#include <functional>
 
 namespace sloked {
 
     class SlokedPath {
      public:
-        using Visitor = std::function<void(const std::string &)>;
+        class Preset {
+         public:
+            Preset(char, const std::string & = ".", const std::string & = "..");
+            char GetSeparator() const;
+            const std::string &GetCurrentDir() const;
+            const std::string &GetParentDir() const;
 
-        SlokedPath(std::string_view);
-        SlokedPath(const char *);
+            bool operator==(const Preset &) const;
+            bool operator!=(const Preset &) const;
+
+         private:
+            char separator;
+            std::string currentDir;
+            std::string parentDir;
+        };
+
+        class String {
+         public:
+            String(std::string_view);
+            String(const std::string &);
+            String(const char *);
+
+            operator std::string_view() const;
+
+         private:
+            std::string_view value;
+        };
+
+        SlokedPath(String, String, Preset = '/');
+        SlokedPath(String, Preset = '/');
         SlokedPath(const SlokedPath &) = default;
         SlokedPath(SlokedPath &&) = default;
 
         SlokedPath &operator=(const SlokedPath &) = default;
         SlokedPath &operator=(SlokedPath &&) = default;
 
-        bool IsAbsolute() const;
-        const std::string &ToString() const;
-        SlokedPath RelativeTo(const SlokedPath &) const;
-        void Iterate(Visitor) const;
+        const Preset &GetPreset() const;
+        const std::string &GetPrefix() const;
         const std::vector<std::string> &Components() const;
-        SlokedPath GetParent() const;
-        SlokedPath GetChild(std::string_view) const;
-        bool IsChildOrSelf(const SlokedPath &) const;
-        SlokedPath Shift(std::size_t = 1) const;
+        const std::string &ToString() const;
+        
+        bool IsAbsolute() const;
+        bool IsParent(const SlokedPath &) const;
+        
+        SlokedPath RelativeTo(const SlokedPath &) const;
+        SlokedPath Parent() const;
+        SlokedPath Child(String) const;
+        SlokedPath Tail(std::size_t = 1) const;
+        SlokedPath Migrate(String, const Preset &) const;
+        SlokedPath Migrate(const Preset &) const;
+        SlokedPath Migrate(String) const;
+        SlokedPath Root() const;
 
+        operator const std::string &() const;
+        SlokedPath operator[](String) const;
         bool operator==(const SlokedPath &) const;
 
-        static constexpr auto Separator = '/';
-        static constexpr auto CurrentDir = ".";
-        static constexpr auto ParentDir = "..";
-        static const SlokedPath Root;
-
      private:
-        SlokedPath() = default;
+        SlokedPath(const Preset &);
         SlokedPath &Normalize();
 
+        Preset preset;
+        bool absolute;
+        std::string prefix;
         std::vector<std::string> path;
         std::string literal;
     };

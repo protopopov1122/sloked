@@ -142,10 +142,10 @@ namespace sloked {
             };
             RootLock([&](auto &screen) {
                 try {
-                    auto &multiplexer = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsMultiplexer();
+                    auto &multiplexer = SlokedComponentTree::Traverse(screen, path.Child("self")).AsMultiplexer();
                     auto win = multiplexer.NewWindow(pos, dim);
                     if (win) {
-                        rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
+                        rsp.Result(path.Child(std::to_string(win->GetId())).ToString());
                     } else {
                         rsp.Result({});
                     }
@@ -159,12 +159,12 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             RootLock([&](auto &screen) {
                 try {
-                    auto &multiplexer = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsMultiplexer();
+                    auto &multiplexer = SlokedComponentTree::Traverse(screen, path.Child("self")).AsMultiplexer();
                     KgrDictionary response {
                         { "windowCount", static_cast<int64_t>(multiplexer.GetWindowCount()) }
                     };
                     if (multiplexer.GetFocus()) {
-                        response.Put("focus", path.GetChild(std::to_string(multiplexer.GetFocus()->GetId())).ToString());
+                        response.Put("focus", path.Child(std::to_string(multiplexer.GetFocus()->GetId())).ToString());
                     }
                     rsp.Result(std::move(response));
                 } catch (const SlokedError &err) {
@@ -175,7 +175,7 @@ namespace sloked {
 
         void MultiplexerWindowHasFocus(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            SlokedPath multiplexerPath = path.GetParent().GetChild("self");
+            SlokedPath multiplexerPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             RootLock([&](auto &screen) {
                 try {
@@ -194,7 +194,7 @@ namespace sloked {
 
         void MultiplexerSetFocus(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            SlokedPath multiplexerPath = path.GetParent().GetChild("self");
+            SlokedPath multiplexerPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             RootLock([&](auto &screen) {
                 try {
@@ -214,7 +214,7 @@ namespace sloked {
 
         void MultiplexerClose(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            SlokedPath multiplexerPath = path.GetParent().GetChild("self");
+            SlokedPath multiplexerPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             RootLock([&](auto &screen) {
                 try {
@@ -234,7 +234,7 @@ namespace sloked {
 
         void MultiplexerMoveWindow(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
-            SlokedPath multiplexerPath = path.GetParent().GetChild("self");
+            SlokedPath multiplexerPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             TextPosition pos {
                 static_cast<TextPosition::Line>(params.AsDictionary()["pos"].AsDictionary()["line"].AsInt()),
@@ -258,7 +258,7 @@ namespace sloked {
 
         void MultiplexerResizeWindow(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
-            SlokedPath multiplexerPath = path.GetParent().GetChild("self");
+            SlokedPath multiplexerPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             TextPosition pos {
                 static_cast<TextPosition::Line>(params.AsDictionary()["size"].AsDictionary()["line"].AsInt()),
@@ -287,10 +287,10 @@ namespace sloked {
                 params.AsDictionary()["constraints"].AsDictionary()["max"].AsInt());
             RootLock([&](auto &screen) {
                 try {
-                    auto &splitter = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsSplitter();
+                    auto &splitter = SlokedComponentTree::Traverse(screen, path.Child("self")).AsSplitter();
                     auto win = splitter.NewWindow(constraints);
                     if (win) {
-                        rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
+                        rsp.Result(path.Child(std::to_string(win->GetId())).ToString());
                     } else {
                         rsp.Result({});
                     }
@@ -302,7 +302,7 @@ namespace sloked {
 
         void SplitterInsertWindow(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
-            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            SlokedPath splitterPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             Splitter::Constraints constraints(params.AsDictionary()["constraints"].AsDictionary()["dim"].AsNumber(),
                 params.AsDictionary()["constraints"].AsDictionary()["min"].AsInt(),
@@ -312,7 +312,7 @@ namespace sloked {
                     auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
                     auto win = splitter.NewWindow(winId, constraints);
                     if (win) {
-                        rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
+                        rsp.Result(path.Child(std::to_string(win->GetId())).ToString());
                     } else {
                         rsp.Result({});
                     }
@@ -326,12 +326,12 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             RootLock([&](auto &screen) {
                 try {
-                    auto &splitter = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsSplitter();
+                    auto &splitter = SlokedComponentTree::Traverse(screen, path.Child("self")).AsSplitter();
                     KgrDictionary response {
                         { "windowCount", static_cast<int64_t>(splitter.GetWindowCount()) }
                     };
                     if (splitter.GetFocus()) {
-                        response.Put("focus", path.GetChild(std::to_string(splitter.GetFocus()->GetId())).ToString());
+                        response.Put("focus", path.Child(std::to_string(splitter.GetFocus()->GetId())).ToString());
                     }
                     rsp.Result(std::move(response));
                 } catch (const SlokedError &err) {
@@ -342,7 +342,7 @@ namespace sloked {
 
         void SplitterWindowHasFocus(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            SlokedPath splitterPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             RootLock([&](auto &screen) {
                 try {
@@ -361,7 +361,7 @@ namespace sloked {
 
         void SplitterSetFocus(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            SlokedPath splitterPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             RootLock([&](auto &screen) {
                 try {
@@ -381,7 +381,7 @@ namespace sloked {
 
         void SplitterClose(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            SlokedPath splitterPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             RootLock([&](auto &screen) {
                 try {
@@ -401,7 +401,7 @@ namespace sloked {
 
         void SplitterUpdateWindowConstraints(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
-            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            SlokedPath splitterPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             Splitter::Constraints constraints(params.AsDictionary()["constraints"].AsDictionary()["dim"].AsNumber(),
                 params.AsDictionary()["constraints"].AsDictionary()["min"].AsInt(),
@@ -424,7 +424,7 @@ namespace sloked {
 
         void SplitterMoveWindow(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
-            SlokedPath splitterPath = path.GetParent().GetChild("self");
+            SlokedPath splitterPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             auto newWinId = static_cast<SlokedComponentWindow::Id>(params.AsDictionary()["position"].AsInt());
             RootLock([&](auto &screen) {
@@ -433,7 +433,7 @@ namespace sloked {
                     auto win = splitter.GetWindow(winId);
                     if (win) {
                         win->Move(newWinId);
-                        rsp.Result(splitterPath.GetChild(std::to_string(newWinId)).ToString());
+                        rsp.Result(splitterPath.Child(std::to_string(newWinId)).ToString());
                     } else {
                         rsp.Result({});
                     }
@@ -447,9 +447,9 @@ namespace sloked {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
             RootLock([&](auto &screen) {
                 try {
-                    auto &tabber = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsTabber();
+                    auto &tabber = SlokedComponentTree::Traverse(screen, path.Child("self")).AsTabber();
                     auto win = tabber.NewWindow();
-                    rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
+                    rsp.Result(path.Child(std::to_string(win->GetId())).ToString());
                 } catch (const SlokedError &err) {
                     rsp.Result({});
                 }
@@ -458,14 +458,14 @@ namespace sloked {
 
         void TabberInsertWindow(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
-            SlokedPath tabberPath = path.GetParent().GetChild("self");
+            SlokedPath tabberPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             RootLock([&](auto &screen) {
                 try {
                     auto &tabber = SlokedComponentTree::Traverse(screen, tabberPath).AsTabber();
                     auto win = tabber.NewWindow(winId);
                     if (win) {
-                        rsp.Result(path.GetChild(std::to_string(win->GetId())).ToString());
+                        rsp.Result(path.Child(std::to_string(win->GetId())).ToString());
                     } else {
                         rsp.Result({});
                     }
@@ -479,12 +479,12 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             RootLock([&](auto &screen) {
                 try {
-                    auto &tabber = SlokedComponentTree::Traverse(screen, path.GetChild("self")).AsTabber();
+                    auto &tabber = SlokedComponentTree::Traverse(screen, path.Child("self")).AsTabber();
                     KgrDictionary response {
                         { "windowCount", static_cast<int64_t>(tabber.GetWindowCount()) }
                     };
                     if (tabber.GetFocus()) {
-                        response.Put("focus", path.GetChild(std::to_string(tabber.GetFocus()->GetId())).ToString());
+                        response.Put("focus", path.Child(std::to_string(tabber.GetFocus()->GetId())).ToString());
                     }
                     rsp.Result(std::move(response));
                 } catch (const SlokedError &err) {
@@ -495,7 +495,7 @@ namespace sloked {
 
         void TabberWindowHasFocus(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            SlokedPath tabberPath = path.GetParent().GetChild("self");
+            SlokedPath tabberPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             RootLock([&](auto &screen) {
                 try {
@@ -514,7 +514,7 @@ namespace sloked {
 
         void TabberSetFocus(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            SlokedPath tabberPath = path.GetParent().GetChild("self");
+            SlokedPath tabberPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             RootLock([&](auto &screen) {
                 try {
@@ -534,7 +534,7 @@ namespace sloked {
 
         void TabberClose(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            SlokedPath tabberPath = path.GetParent().GetChild("self");
+            SlokedPath tabberPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             RootLock([&](auto &screen) {
                 try {
@@ -554,7 +554,7 @@ namespace sloked {
 
         void TabberMoveWindow(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
-            SlokedPath tabberPath = path.GetParent().GetChild("self");
+            SlokedPath tabberPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             auto newWinId = static_cast<SlokedComponentWindow::Id>(params.AsDictionary()["position"].AsInt());
             RootLock([&](auto &screen) {
@@ -563,7 +563,7 @@ namespace sloked {
                     auto win = tabber.GetWindow(winId);
                     if (win) {
                         win->Move(newWinId);
-                        rsp.Result(tabberPath.GetChild(std::to_string(newWinId)).ToString());
+                        rsp.Result(tabberPath.Child(std::to_string(newWinId)).ToString());
                     } else {
                         rsp.Result({});
                     }
@@ -770,7 +770,7 @@ namespace sloked {
     std::optional<std::string> SlokedScreenClient::SplitterClient::NewWindow(const std::string &path, SlokedComponentWindow::Id winId, const Splitter::Constraints &constraints) const {
         this->preventDeadlock();
         auto rsp = client.Invoke("splitter.insertWindow", KgrDictionary {
-            { "path", SlokedPath(path).GetChild(std::to_string(winId)).ToString() },
+            { "path", SlokedPath(path).Child(std::to_string(winId)).ToString() },
             {
                 "constraints", KgrDictionary {
                     { "dim", constraints.GetDimensions() },
@@ -883,7 +883,7 @@ namespace sloked {
     std::optional<std::string> SlokedScreenClient::TabberClient::NewWindow(const std::string &path, SlokedComponentWindow::Id winId) const {
         this->preventDeadlock();
         auto rsp = client.Invoke("tabber.insertWindow", KgrDictionary {
-            { "path", SlokedPath(path).GetChild(std::to_string(winId)).ToString() }
+            { "path", SlokedPath(path).Child(std::to_string(winId)).ToString() }
         });
         auto res = rsp.Get();
         if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {

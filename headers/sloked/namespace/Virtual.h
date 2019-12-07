@@ -29,7 +29,7 @@ namespace sloked {
 
     class SlokedVirtualNamespace : public SlokedNamespace {
      public:
-        SlokedVirtualNamespace(std::unique_ptr<SlokedNamespace>);
+        SlokedVirtualNamespace(std::unique_ptr<SlokedNamespace>, const SlokedPath & = SlokedPath("/"));
 
         void Mount(const SlokedPath &, std::unique_ptr<SlokedNamespace>);
         void Umount(const SlokedPath &);

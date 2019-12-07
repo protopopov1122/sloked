@@ -109,7 +109,7 @@ namespace sloked {
         return stat(this->path.c_str(), &stats) == 0;
     }
 
-    std::string SlokedPosixFile::GetParent() const {
+    std::string SlokedPosixFile::Parent() const {
         std::unique_ptr<char[]> buffer(new char[this->path.size() + 1]);
         strcpy(buffer.get(), this->path.c_str());
         return std::string{dirname(buffer.get())};

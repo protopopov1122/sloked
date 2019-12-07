@@ -30,7 +30,7 @@ namespace sloked {
     SlokedScreenComponent &SlokedComponentTree::Traverse(SlokedScreenComponent &root, const SlokedPath &path) {
         if (!path.Components().empty()) {
             std::string front = path.Components().front();
-            if (front.empty() || front == "." ) {
+            if (front == "." ) {
                 if (path.Components().size() > 1) {
                     front = path.Components()[1];
                 } else {
@@ -42,7 +42,7 @@ namespace sloked {
             if (root.GetType() == SlokedScreenComponent::Type::Handle) {
                 return SlokedComponentTree::Traverse(root.AsHandle().GetComponent(), path);
             }
-            SlokedPath tail = path.Shift(1);
+            SlokedPath tail = path.Tail(1);
             if (front == "self") {
                 return SlokedComponentTree::Traverse(root, tail);
             }
