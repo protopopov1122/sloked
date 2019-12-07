@@ -27,6 +27,15 @@ namespace sloked {
     SlokedCryptoSocket::SlokedCryptoSocket(std::unique_ptr<SlokedSocket> socket, std::unique_ptr<SlokedCrypto::Cipher> cipher)
         : socket(std::move(socket)), cipher(std::move(cipher)) {}
 
+    SlokedCryptoSocket::SlokedCryptoSocket(SlokedCryptoSocket &&socket)
+        : socket(std::move(socket.socket)), cipher(std::move(socket.cipher)) {}
+        
+    SlokedCryptoSocket &SlokedCryptoSocket::operator=(SlokedCryptoSocket &&socket) {
+        this->socket = std::move(socket.socket);
+        this->cipher = std::move(socket.cipher);
+        return *this;
+    }
+
     bool SlokedCryptoSocket::Valid() {
         return this->socket != nullptr && this->socket->Valid();
     }
@@ -154,6 +163,9 @@ namespace sloked {
     SlokedCryptoServerSocket::SlokedCryptoServerSocket(std::unique_ptr<SlokedServerSocket> serverSocket, SlokedCrypto &crypto, SlokedCrypto::Key &key)
         : serverSocket(std::move(serverSocket)), crypto(crypto), key(key) {}
 
+    SlokedCryptoServerSocket::SlokedCryptoServerSocket(SlokedCryptoServerSocket &&serverSocket)
+        : serverSocket(std::move(serverSocket.serverSocket)), crypto(serverSocket.crypto), key(serverSocket.key) {}
+
     bool SlokedCryptoServerSocket::Valid() {
         return this->serverSocket != nullptr && this->serverSocket->Valid();
     }
@@ -192,6 +204,9 @@ namespace sloked {
 
     SlokedCryptoSocketFactory::SlokedCryptoSocketFactory(SlokedSocketFactory &socketFactory, SlokedCrypto &crypto, SlokedCrypto::Key &key)
         : socketFactory(socketFactory), crypto(crypto), key(key) {}
+
+    SlokedCryptoSocketFactory::SlokedCryptoSocketFactory(SlokedCryptoSocketFactory &&socketFactory)
+        : socketFactory(socketFactory.socketFactory), crypto(socketFactory.crypto), key(socketFactory.key) {}
 
     std::unique_ptr<SlokedSocket> SlokedCryptoSocketFactory::Connect(const std::string &host, uint16_t port) {
         auto rawSocket = this->socketFactory.Connect(host, port);

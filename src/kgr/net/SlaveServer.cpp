@@ -91,7 +91,7 @@ namespace sloked {
             this->pipes.emplace(remotePipe, std::move(pipe));
         });
 
-        this->net.BindMethod("ping", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+        this->net.BindMethod("ping", [](const std::string &method, const KgrValue &params, auto &rsp) {
             rsp.Result("pong");
         });
     }

@@ -31,9 +31,9 @@ namespace sloked {
      public:
         SlokedCryptoSocket(std::unique_ptr<SlokedSocket>, std::unique_ptr<SlokedCrypto::Cipher>);
         SlokedCryptoSocket(const SlokedCryptoSocket &) = delete;
-        SlokedCryptoSocket(SlokedCryptoSocket &&) = default;
+        SlokedCryptoSocket(SlokedCryptoSocket &&);
         SlokedCryptoSocket &operator=(const SlokedCryptoSocket &) = delete;
-        SlokedCryptoSocket &operator=(SlokedCryptoSocket &&) = default;
+        SlokedCryptoSocket &operator=(SlokedCryptoSocket &&);
 
         bool Valid() final;
         void Close() final;
@@ -59,9 +59,9 @@ namespace sloked {
      public:
         SlokedCryptoServerSocket(std::unique_ptr<SlokedServerSocket>, SlokedCrypto &, SlokedCrypto::Key &);
         SlokedCryptoServerSocket(const SlokedCryptoServerSocket &) = delete;
-        SlokedCryptoServerSocket(SlokedCryptoServerSocket &&) = default;
+        SlokedCryptoServerSocket(SlokedCryptoServerSocket &&);
         SlokedCryptoServerSocket &operator=(const SlokedCryptoServerSocket &) = delete;
-        SlokedCryptoServerSocket &operator=(SlokedCryptoServerSocket &&) = default;
+        SlokedCryptoServerSocket &operator=(SlokedCryptoServerSocket &&) = delete;
 
         bool Valid() final;
         void Start() final;
@@ -79,10 +79,10 @@ namespace sloked {
      public:
         SlokedCryptoSocketFactory(SlokedSocketFactory &, SlokedCrypto &, SlokedCrypto::Key &);
         SlokedCryptoSocketFactory(const SlokedCryptoSocketFactory &) = delete;
-        SlokedCryptoSocketFactory(SlokedCryptoSocketFactory &&) = default;
+        SlokedCryptoSocketFactory(SlokedCryptoSocketFactory &&);
 
         SlokedCryptoSocketFactory &operator=(const SlokedCryptoSocketFactory &) = delete;
-        SlokedCryptoSocketFactory &operator=(SlokedCryptoSocketFactory &&) = default;
+        SlokedCryptoSocketFactory &operator=(SlokedCryptoSocketFactory &&) = delete;
 
         std::unique_ptr<SlokedSocket> Connect(const std::string &, uint16_t) final;
         std::unique_ptr<SlokedServerSocket> Bind(const std::string &, uint16_t) final;

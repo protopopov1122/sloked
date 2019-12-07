@@ -38,7 +38,7 @@ namespace sloked {
     class KgrMasterNetServerContext : public SlokedIOPoller::Awaitable {
      public:
         KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, SlokedCounter<std::size_t>::Handle counter, KgrNamedServer &server)
-            : net(std::move(socket)), work(work), server(server), nextPipeId(0), counterHandle(std::move(counterHandle)), pinged{false} {
+            : net(std::move(socket)), work(work), server(server), nextPipeId(0), counterHandle(std::move(counter)), pinged{false} {
 
             this->lastActivity = std::chrono::system_clock::now();
 
@@ -153,7 +153,7 @@ namespace sloked {
                 }
             });
 
-            this->net.BindMethod("ping", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+            this->net.BindMethod("ping", [](const std::string &method, const KgrValue &params, auto &rsp) {
                 rsp.Result("pong");
             });
         }
