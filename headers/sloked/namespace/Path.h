@@ -32,8 +32,8 @@ namespace sloked {
      public:
         class Preset {
          public:
-            Preset(char, const std::string & = ".", const std::string & = "..");
-            char GetSeparator() const;
+            explicit Preset(const std::string &, const std::string & = ".", const std::string & = "..");
+            const std::string &GetSeparators() const;
             const std::string &GetCurrentDir() const;
             const std::string &GetParentDir() const;
 
@@ -41,7 +41,7 @@ namespace sloked {
             bool operator!=(const Preset &) const;
 
          private:
-            char separator;
+            std::string separators;
             std::string currentDir;
             std::string parentDir;
         };
@@ -58,8 +58,8 @@ namespace sloked {
             std::string_view value;
         };
 
-        SlokedPath(String, String, Preset = '/');
-        SlokedPath(String, Preset = '/');
+        SlokedPath(String, String, Preset = Preset{std::string{"/"}});
+        SlokedPath(String, Preset = Preset{std::string{"/"}});
         SlokedPath(const SlokedPath &) = default;
         SlokedPath(SlokedPath &&) = default;
 
