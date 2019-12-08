@@ -31,6 +31,8 @@
 #include "sloked/screen/widgets/TextEditor.h"
 #include "sloked/namespace/Filesystem.h"
 #include "sloked/namespace/Virtual.h"
+#include "sloked/namespace/Resolve.h"
+#include "sloked/namespace/posix/Environment.h"
 #include "sloked/namespace/posix/Filesystem.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/kgr/local/Pipe.h"
@@ -189,9 +191,9 @@ int main(int argc, const char **argv) {
 
     logger.Debug() << "Network servers started";
 
-    char INPUT_PATH[1024], OUTPUT_PATH[1024];
-    realpath(std::string{cli.At(0)}.data(), INPUT_PATH);
-    realpath(cli["output"].As<std::string>().data(), OUTPUT_PATH);
+    SlokedPathResolver resolver(SlokedPosixNamespaceEnvironment::WorkDir(), SlokedPosixNamespaceEnvironment::HomeDir());
+    SlokedPath inputPath = resolver.Resolve(SlokedPath{cli.At(0)});
+    SlokedPath outputPath = resolver.Resolve(SlokedPath{cli["output"].As<std::string>()});
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     SlokedEditorDocumentSet documents(root);
 
@@ -232,7 +234,7 @@ int main(int argc, const char **argv) {
 
     SlokedScreenClient screenClient(slaveServer.Connect("screen::manager"), isScreenLocked);
     SlokedDocumentSetClient documentClient(slaveServer.Connect("document::manager"));
-    documentClient.Open(INPUT_PATH, cli["encoding"].As<std::string>(), cli["newline"].As<std::string>());
+    documentClient.Open(inputPath.ToString(), cli["encoding"].As<std::string>(), cli["newline"].As<std::string>());
 
     screenClient.Handle.NewMultiplexer("/");
     auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
@@ -277,7 +279,7 @@ int main(int argc, const char **argv) {
                 inputForward.Send("/0", evt);
             } else {
                 logger.Debug() << "Saving document";
-                documentClient.Save(OUTPUT_PATH);
+                documentClient.Save(outputPath.ToString());
                 work = false;
             }
         });

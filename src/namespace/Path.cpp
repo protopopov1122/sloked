@@ -26,8 +26,8 @@
 
 namespace sloked {
 
-    SlokedPath::Preset::Preset(const std::string &separators, const std::string &currentDir, const std::string &parentDir)
-        : separators(separators), currentDir(currentDir), parentDir(parentDir) {}
+    SlokedPath::Preset::Preset(const std::string &separators, const std::string &currentDir, const std::string &parentDir, const std::string &homeDir)
+        : separators(separators), currentDir(currentDir), parentDir(parentDir), homeDir(homeDir) {}
 
     const std::string &SlokedPath::Preset::GetSeparators() const {
         return this->separators;
@@ -41,10 +41,15 @@ namespace sloked {
         return this->parentDir;
     }
 
+    const std::string &SlokedPath::Preset::GetHomeDir() const {
+        return this->homeDir;
+    }
+
     bool SlokedPath::Preset::operator==(const Preset &other) const {
         return this->separators == other.separators &&
             this->currentDir == other.currentDir &&
-            this->parentDir == other.parentDir;
+            this->parentDir == other.parentDir &&
+            this->homeDir == other.homeDir;
     }
 
     bool SlokedPath::Preset::operator!=(const Preset &other) const {
@@ -82,6 +87,11 @@ namespace sloked {
         }
         if (start < path.size()) {
             this->path.push_back(std::string{path.substr(start, path.size() - start)});
+        }
+        if (!this->path.empty() &&
+            this->path.front() == this->preset.GetHomeDir() &&
+            !this->preset.GetHomeDir().empty()) {
+            this->absolute = true;
         }
         this->Normalize();
     }
@@ -208,10 +218,12 @@ namespace sloked {
         path.prefix = prefix;
         path.absolute = this->absolute;
         for (const auto &component : this->path) {
-            if (component == this->preset.GetCurrentDir()) {
+            if (component == this->preset.GetCurrentDir() && !this->preset.GetCurrentDir().empty()) {
                 path.path.push_back(next.GetCurrentDir());
-            } else if (component == this->preset.GetParentDir()) {
+            } else if (component == this->preset.GetParentDir() && !this->preset.GetParentDir().empty()) {
                 path.path.push_back(next.GetParentDir());
+            } else if (component == this->preset.GetHomeDir() && !this->preset.GetHomeDir().empty()) {
+                path.path.push_back(next.GetHomeDir());
             } else {
                 path.path.push_back(component);
             }
@@ -258,7 +270,7 @@ namespace sloked {
     SlokedPath &SlokedPath::Normalize() {
         // Remove '.'s and ''s
         for (std::size_t i = this->absolute ? 0 : 1; i < this->path.size(); i++) {
-            if (this->path[i] == this->preset.GetCurrentDir()) {
+            if (this->path[i] == this->preset.GetCurrentDir() && !this->preset.GetCurrentDir().empty()) {
                 this->path.erase(this->path.begin() + i);
                 i--;
             }
@@ -266,10 +278,10 @@ namespace sloked {
 
         // Remove '..'s
         for (std::size_t i = 1; i < this->path.size(); i++) {
-            if (this->path[i] != this->preset.GetParentDir()) {
+            if (this->path[i] != this->preset.GetParentDir() || this->preset.GetParentDir().empty()) {
                 continue;
             }
-            if (this->path[i - 1] == this->preset.GetCurrentDir()) {
+            if (this->path[i - 1] == this->preset.GetCurrentDir() && !this->preset.GetCurrentDir().empty()) {
                 this->path.erase(this->path.begin() + (i - 1));
                 i--;
             } else if (this->path[i - 1] != this->preset.GetParentDir()) {
@@ -280,7 +292,10 @@ namespace sloked {
         }
 
         // Update literal path
-        if (this->IsAbsolute()) {
+        if (this->IsAbsolute() &&
+            (this->path.empty() ||
+            this->path.front() != this->preset.GetHomeDir() ||
+            this->preset.GetHomeDir().empty())) {
             this->literal = this->prefix;
             this->literal.push_back(this->preset.GetSeparators().at(0));
         } else {

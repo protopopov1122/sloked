@@ -32,10 +32,11 @@ namespace sloked {
      public:
         class Preset {
          public:
-            explicit Preset(const std::string &, const std::string & = ".", const std::string & = "..");
+            explicit Preset(const std::string &, const std::string & = ".", const std::string & = "..", const std::string & = "~");
             const std::string &GetSeparators() const;
             const std::string &GetCurrentDir() const;
             const std::string &GetParentDir() const;
+            const std::string &GetHomeDir() const;
 
             bool operator==(const Preset &) const;
             bool operator!=(const Preset &) const;
@@ -44,6 +45,7 @@ namespace sloked {
             std::string separators;
             std::string currentDir;
             std::string parentDir;
+            std::string homeDir;
         };
 
         class String {
