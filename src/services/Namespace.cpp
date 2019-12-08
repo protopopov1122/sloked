@@ -31,6 +31,11 @@ namespace sloked {
             this->BindMethod("list", &SlokedNamespaceServiceContext::List);
             this->BindMethod("walk", &SlokedNamespaceServiceContext::Walk);
             this->BindMethod("type", &SlokedNamespaceServiceContext::GetType);
+            this->BindMethod("makeDir", &SlokedNamespaceServiceContext::MakeDir);
+            this->BindMethod("makeFile", &SlokedNamespaceServiceContext::MakeFile);
+            this->BindMethod("delete", &SlokedNamespaceServiceContext::Delete);
+            this->BindMethod("rename", &SlokedNamespaceServiceContext::Rename);
+            this->BindMethod("permissions", &SlokedNamespaceServiceContext::Permissions);
         }
 
      private:
@@ -96,6 +101,68 @@ namespace sloked {
                     break;
             } else {
                 rsp.Result("none");
+            }
+        }
+
+        void MakeDir(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            auto handle = this->root.GetHandle(path);
+            if (!handle->Exists()) {
+                handle->MakeDir();
+                rsp.Result(true);
+            } else {
+                rsp.Result(false);
+            }
+        }
+
+        void MakeFile(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            auto handle = this->root.GetHandle(path);
+            if (!handle->Exists()) {
+                handle->MakeFile();
+                rsp.Result(true);
+            } else {
+                rsp.Result(false);
+            }
+        }
+
+        void Delete(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            auto handle = this->root.GetHandle(path);
+            if (handle->Exists()) {
+                handle->Delete();
+                rsp.Result(true);
+            } else {
+                rsp.Result(false);
+            }
+        }
+
+        void Rename(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath from{params.AsDictionary()["from"].AsString()};
+            SlokedPath to{params.AsDictionary()["to"].AsString()};
+            auto handle = this->root.GetHandle(from);
+            if (handle->Exists()) {
+                handle->Rename(to);
+                rsp.Result(true);
+            } else {
+                rsp.Result(false);
+            }
+        }
+
+        void Permissions(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            auto handle = this->root.GetHandle(path);
+            if (handle->Exists()) {
+                KgrArray perms;
+                if (handle->HasPermission(SlokedNamespacePermission::Read)) {
+                    perms.Append("read");
+                }
+                if (handle->HasPermission(SlokedNamespacePermission::Write)) {
+                    perms.Append("write");
+                }
+                rsp.Result(std::move(perms));
+            } else {
+                rsp.Result({});
             }
         }
 

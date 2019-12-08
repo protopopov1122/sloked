@@ -19,7 +19,6 @@ async(function(await)
         occurence=0,
         by='|'
     }))
-    await_unwrap(root('type', '/home/eugene/Projects/sloked/src1'))
 
     if await_unwrap(cursor('connect', 1)) then
         local notifier = pipe:promisify(sloked.servers.main:connect('document::notify'))
