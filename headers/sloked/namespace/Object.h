@@ -66,6 +66,7 @@ namespace sloked {
     class SlokedNamespaceObjectHandle : public SlokedPermissionAuthority<SlokedNamespacePermission> {
      public:
         virtual ~SlokedNamespaceObjectHandle() = default;
+        virtual std::optional<std::string> ToURI() const = 0;
         virtual bool Exists() const = 0;
         virtual void MakeDir() = 0;
         virtual void MakeFile() = 0;

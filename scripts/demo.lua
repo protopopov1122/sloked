@@ -19,6 +19,7 @@ async(function(await)
         occurence=0,
         by='|'
     }))
+    await_unwrap(root('uri', '/bin/bash'))
 
     if await_unwrap(cursor('connect', 1)) then
         local notifier = pipe:promisify(sloked.servers.main:connect('document::notify'))

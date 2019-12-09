@@ -43,6 +43,7 @@ namespace sloked {
     public:
       SlokedFilesystemObjectHandle(SlokedFilesystemAdapter &, const SlokedPath &);
       bool HasPermission(SlokedNamespacePermission) const override;
+      std::optional<std::string> ToURI() const override;
       bool Exists() const override;
       void MakeDir() override;
       void MakeFile() override;
@@ -116,6 +117,10 @@ namespace sloked {
                 return file->HasPermission(SlokedFilesystemPermission::Write);
         }
         return false;
+    }
+
+    std::optional<std::string> SlokedFilesystemObjectHandle::ToURI() const {
+        return this->filesystem.ToURI(this->path);
     }
 
     bool SlokedFilesystemObjectHandle::Exists() const {

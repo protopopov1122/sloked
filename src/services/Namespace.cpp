@@ -36,6 +36,7 @@ namespace sloked {
             this->BindMethod("delete", &SlokedNamespaceServiceContext::Delete);
             this->BindMethod("rename", &SlokedNamespaceServiceContext::Rename);
             this->BindMethod("permissions", &SlokedNamespaceServiceContext::Permissions);
+            this->BindMethod("uri", &SlokedNamespaceServiceContext::URI);
         }
 
      private:
@@ -161,6 +162,21 @@ namespace sloked {
                     perms.Append("write");
                 }
                 rsp.Result(std::move(perms));
+            } else {
+                rsp.Result({});
+            }
+        }
+
+        void URI(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            auto handle = this->root.GetHandle(path);
+            if (handle->Exists()) {
+                auto uri = handle->ToURI();
+                if (uri.has_value()) {
+                    rsp.Result(uri.value());
+                } else {
+                    rsp.Result({});
+                }
             } else {
                 rsp.Result({});
             }

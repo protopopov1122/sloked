@@ -30,6 +30,8 @@ namespace sloked {
         using Entry = SlokedVirtualNamespace::Entry;
         SlokedVirtualObjectHandle(SlokedVirtualNamespace &, const SlokedPath &);
         bool HasPermission(SlokedNamespacePermission) const override;
+        
+        std::optional<std::string> ToURI() const override;
         bool Exists() const override;
         void MakeDir() override;
         void MakeFile() override;
@@ -49,6 +51,13 @@ namespace sloked {
         const Entry &entry = this->ns.find(realPath);
         SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
         return entry.ns->GetHandle(nsPath)->HasPermission(perm);
+    }
+
+    std::optional<std::string> SlokedVirtualObjectHandle::ToURI() const {
+        SlokedPath realPath = this->path.IsAbsolute() ? this->path : this->path.RelativeTo(this->path.Root());
+        const Entry &entry = this->ns.find(realPath);
+        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
+        return entry.ns->GetHandle(nsPath)->ToURI();
     }
 
     bool SlokedVirtualObjectHandle::Exists() const {
