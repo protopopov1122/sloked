@@ -142,8 +142,12 @@ namespace sloked {
                     static_cast<TextPosition::Column>(params.AsDictionary()["width"].AsInt())
                 };
                 if (this->renderClient == nullptr) {
+                    const std::string &tagger = params.AsDictionary()["tagger"].AsString();
                     this->renderClient = std::make_shared<SlokedServiceClient>(this->renderConnector());
-                    renderClient->Invoke("attach", static_cast<int64_t>(this->document->documentId));
+                    renderClient->Invoke("attach", KgrDictionary {
+                        { "document", static_cast<int64_t>(this->document->documentId) },
+                        { "tagger", tagger }
+                    });
                 }
                 auto renderResponse = std::make_shared<SlokedServiceClient::ResponseHandle>(this->renderClient->Invoke("render", KgrDictionary {
                     { "height", static_cast<int64_t>(dim.line) },
@@ -305,10 +309,11 @@ namespace sloked {
         }
     }
 
-    std::optional<std::pair<KgrValue, TextPosition>> SlokedCursorClient::Render(const TextPosition &dim) {
+    std::optional<std::pair<KgrValue, TextPosition>> SlokedCursorClient::Render(const TextPosition &dim, const std::string &tagger) {
         auto rsp = this->client.Invoke("render", KgrDictionary {
             { "height", static_cast<int64_t>(dim.line) },
-            { "width", static_cast<int64_t>(dim.column) }
+            { "width", static_cast<int64_t>(dim.column) },
+            { "tagger", tagger }
         });
         auto clientRes = rsp.Get();
         if (clientRes.HasResult()) {

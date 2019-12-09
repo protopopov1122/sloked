@@ -115,6 +115,7 @@ namespace sloked {
         void HandleNewTextEditor(const std::string &method, const KgrValue &params, Response &rsp) {
             const auto &path = params.AsDictionary()["path"].AsString();
             auto documentId = static_cast<SlokedEditorDocumentSet::DocumentId>(params.AsDictionary()["document"].AsInt());
+            const std::string &tagger = params.AsDictionary()["tagger"].AsString();
             RootLock([&](auto &screen) {
                 try {
                     auto &handle = SlokedComponentTree::Traverse(screen, SlokedPath{path}).AsHandle();
@@ -123,7 +124,7 @@ namespace sloked {
                             rsp.Result(res);
                         }));
                     };
-                    handle.NewTextPane(std::make_unique<SlokedTextEditor>(this->encoding, this->cursorService(), std::move(initCursor), this->notifyService(), documentId));
+                    handle.NewTextPane(std::make_unique<SlokedTextEditor>(this->encoding, this->cursorService(), std::move(initCursor), this->notifyService(), documentId, tagger));
                 } catch (const SlokedError &err) {
                     rsp.Result(false);
                 }
@@ -629,11 +630,12 @@ namespace sloked {
         return res.HasResult() && res.GetResult().AsBoolean();
     }
     
-    bool SlokedScreenClient::HandleClient::NewTextEditor(const std::string &path, SlokedEditorDocumentSet::DocumentId document) const {
+    bool SlokedScreenClient::HandleClient::NewTextEditor(const std::string &path, SlokedEditorDocumentSet::DocumentId document, const std::string &tagger) const {
         this->preventDeadlock();
         auto rsp = client.Invoke("handle.newTextEditor", KgrDictionary {
             { "path", path },
-            { "document", static_cast<int64_t>(document) }
+            { "document", static_cast<int64_t>(document) },
+            { "tagger", tagger }
         });
         auto res = rsp.Get();
         return res.HasResult() && res.GetResult().AsBoolean();

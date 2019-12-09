@@ -20,8 +20,15 @@
 */
 
 #include "sloked/core/Position.h"
+#include <limits>
 
 namespace sloked {
+
+    const TextPosition TextPosition::Min{0, 0};
+    const TextPosition TextPosition::Max {
+        std::numeric_limits<TextPosition::Line>::max(),
+        std::numeric_limits<TextPosition::Column>::max()
+    };
 
     bool TextPosition::operator<(const TextPosition &other) const {
         return this->line < other.line ||

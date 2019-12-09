@@ -55,7 +55,7 @@ namespace sloked {
             bool NewMultiplexer(const std::string &) const;
             bool NewSplitter(const std::string &, Splitter::Direction) const;
             bool NewTabber(const std::string &) const;
-            bool NewTextEditor(const std::string &, SlokedEditorDocumentSet::DocumentId) const;
+            bool NewTextEditor(const std::string &, SlokedEditorDocumentSet::DocumentId, const std::string & = "") const;
 
          private:
             SlokedServiceClient &client;

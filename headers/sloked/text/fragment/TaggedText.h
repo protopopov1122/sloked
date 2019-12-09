@@ -25,7 +25,7 @@
 #include "sloked/core/Encoding.h"
 #include "sloked/text/TextBlock.h"
 #include "sloked/text/fragment/FragmentMap.h"
-#include <iostream>
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
@@ -43,6 +43,37 @@ namespace sloked {
      public:
         virtual ~SlokedTextTaggerFactory() = default;
         virtual std::unique_ptr<SlokedTextTagger<T>> Create(const TextBlockView &, const Encoding &, const SlokedCharWidth &) const = 0;
+    };
+
+    template <typename T>
+    class SlokedTextTaggerRegistry {
+     public:
+        bool Has(const std::string &id) const {
+            return this->factories.count(id) != 0;
+        }
+
+        std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &id, const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth) const {
+            if (this->Has(id)) {
+                return this->factories.at(id)->Create(text, encoding, charWidth);
+            } else {
+                throw SlokedError("TextTaggerRegistry: Unknown tagger \'" + id + "\'");
+            }
+        }
+
+        std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &id, const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth) const {
+            if (this->Has(id)) {
+                return this->factories.at(id)->Create(text, encoding, charWidth);
+            } else {
+                return nullptr;
+            }
+        }
+
+        void Bind(const std::string &id, std::unique_ptr<SlokedTextTaggerFactory<T>> factory) {
+            this->factories.emplace(id, std::move(factory));
+        }
+
+     private:
+        std::map<std::string, std::unique_ptr<SlokedTextTaggerFactory<T>>> factories;
     };
 
     template <typename T>
@@ -70,18 +101,24 @@ namespace sloked {
 
         void Rewind(const TextPosition &pos) override {
             this->fragments.Remove(pos);
-            this->tagger->Rewind(pos);
+            if (this->tagger) {
+                this->tagger->Rewind(pos);
+            }
             this->current = std::min(this->current, pos);
         }
     
      private:
         void NextFragment() {
-            auto fragment = this->tagger->Next();
-            if (fragment.has_value()) {
-                this->current = fragment.value().GetEnd();
-                this->fragments.Insert(std::move(fragment.value()));
+            if (this->tagger) {
+                auto fragment = this->tagger->Next();
+                if (fragment.has_value()) {
+                    this->current = fragment.value().GetEnd();
+                    this->fragments.Insert(std::move(fragment.value()));
+                } else {
+                    this->current = this->tagger->GetPosition();
+                }
             } else {
-                this->current = this->tagger->GetPosition();
+                this->current = TextPosition::Max;
             }
         }
 

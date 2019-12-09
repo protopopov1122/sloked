@@ -203,7 +203,8 @@ int main(int argc, const char **argv) {
     const Encoding &terminalEncoding = Encoding::Get("system");
 
     SlokedCharWidth charWidth;
-    TestFragmentFactory fragmentFactory;
+    SlokedTextTaggerRegistry<int> taggers;
+    taggers.Bind("default", std::make_unique<TestFragmentFactory>());
 
     logger.Debug() << "Misc. initialization";
 
@@ -218,7 +219,7 @@ int main(int argc, const char **argv) {
 
     logger.Debug() << "Screen initialized";
 
-    server.Register("document::render", std::make_unique<SlokedTextRenderService>(documents, charWidth, fragmentFactory, ctxManager));
+    server.Register("document::render", std::make_unique<SlokedTextRenderService>(documents, charWidth, taggers, ctxManager));
     server.Register("document::cursor", std::make_unique<SlokedCursorService>(documents, server.GetConnector("document::render"), ctxManager));
     server.Register("document::manager", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
     server.Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(documents, ctxManager));
@@ -243,7 +244,7 @@ int main(int argc, const char **argv) {
     auto tabber = screenClient.Splitter.NewWindow(mainWindow.value(), Splitter::Constraints(0.0f, 1));
     screenClient.Handle.NewTabber("/0/0");
     auto tab1 = screenClient.Tabber.NewWindow("/0/0");
-    screenClient.Handle.NewTextEditor(tab1.value(), documentClient.GetId().value());
+    screenClient.Handle.NewTextEditor(tab1.value(), documentClient.GetId().value(), "default");
 
 
     SlokedTextPaneClient paneClient(slaveServer.Connect("screen::component::text.pane"), isScreenLocked);
