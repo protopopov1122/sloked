@@ -33,7 +33,7 @@ namespace sloked {
         const SlokedPath &GetRoot() const override;
         std::unique_ptr<SlokedFile> NewFile(const SlokedPath &) const override;
         SlokedPath ToPath(const std::string &) const override;
-        std::string ToURI(const std::string &) const override;
+        std::string ToURI(const SlokedPath &) const override;
 
      private:
         SlokedPath rootPath;

@@ -22,6 +22,8 @@
 #include "sloked/namespace/posix/Filesystem.h"
 #include "sloked/filesystem/posix/File.h"
 #include "sloked/core/Error.h"
+#include "sloked/core/URI.h"
+#include <sstream>
 
 namespace sloked {
 
@@ -49,7 +51,15 @@ namespace sloked {
         return SlokedPath(path);
     }
 
-    std::string SlokedPosixFilesystemAdapter::ToURI(const std::string &path) const {
-        return "file://" + path;
+    std::string SlokedPosixFilesystemAdapter::ToURI(const SlokedPath &path) const {
+        std::stringstream ss;
+        ss << "file://";
+        if (path.Components().empty()) {
+            ss << '/';
+        }
+        for (const auto &component : path.Components()) {
+            ss << '/' << SlokedUri::encodeComponent(component);
+        }
+        return ss.str();
     }
 }

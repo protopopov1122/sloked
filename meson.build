@@ -17,6 +17,7 @@ sloked_src = [
   'src/core/Scope.cpp',
   'src/core/Semaphore.cpp',
   'src/core/String.cpp',
+  'src/core/URI.cpp',
   'src/core/encoding/Utf8.cpp',
   'src/core/encoding/Utf32LE.cpp',
   'src/core/awaitable/Poll.cpp',
