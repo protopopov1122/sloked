@@ -1,11 +1,33 @@
+/*
+  SPDX-License-Identifier: LGPL-3.0
+
+  Copyright (c) 2019 Jevgenijs Protopopovs
+
+  This file is part of Sloked project.
+
+  Sloked is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License version 3 as published by
+  the Free Software Foundation.
+
+
+  Sloked is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+  along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "sloked/core/URI.h"
 #include "sloked/core/Locale.h"
+#include "sloked/core/Error.h"
 #include <sstream>
 #include <iomanip>
 
 namespace sloked {
 
-    constexpr char DigitToHex(uint8_t digit) {
+    static constexpr char DigitToHex(uint8_t digit) {
         if (digit < 10) {
             return '0' + digit;
         } else switch (digit) {
@@ -32,44 +54,190 @@ namespace sloked {
         }
     }
 
-    std::string SlokedUri::encodeComponent(std::string_view input) {
+    static const std::string PathNoEscape = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                            "abcdefghijklmnopqrstuvwxyz"
+                                            "0123456789"
+                                            "-_.!~*'()";
+
+    static const std::string UriNoEscape = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                           "abcdefghijklmnopqrstuvwxyz"
+                                           "0123456789"
+                                           ";,/?:@&=+$-_.!~*'()#";
+
+    static std::string encodeComponent(std::string_view input, std::string_view notEscaped = PathNoEscape) {
         std::stringstream ss;
         SlokedLocale::SystemEncoding().IterateCodepoints(input, [&](auto position, auto length, auto chr) {
             auto content = input.substr(position, length);
-            switch (chr) {
-                // Unreserved uppercase Ucharacters
-                case U'A': case U'B': case U'C': case U'D':
-                case U'E': case U'F': case U'G': case U'H':
-                case U'I': case U'J': case U'K': case U'L':
-                case U'M': case U'N': case U'O': case U'P':
-                case U'Q': case U'R': case U'S': case U'T':
-                case U'U': case U'V': case U'W': case U'X':
-                case U'Y': case U'Z':
-                // Unreserved lowercase Ucharacters
-                case U'a': case U'b': case U'c': case U'd':
-                case U'e': case U'f': case U'g': case U'h':
-                case U'i': case U'j': case U'k': case U'l':
-                case U'm': case U'n': case U'o': case U'p':
-                case U'q': case U'r': case U's': case U't':
-                case U'u': case U'v': case U'w': case U'x':
-                case U'y': case U'z':
-                // Numbers
-                case U'0': case U'1': case U'2': case U'3':
-                case U'4': case U'5': case U'6': case U'7':
-                case U'8': case U'9':
-                // Other
-                case U'-': case U'_': case U'.': case U'~':
-                    ss << content;
-                    break;
-
-                default:
-                    for (auto b : content) {
-                        ss << '%' << DigitToHex((b & 0xf0) >> 4) << DigitToHex(b & 0xf);
-                    }
-                    break;
+            if (notEscaped.find_first_of(chr) != notEscaped.npos) {
+                ss << content;
+            } else {
+                for (auto b : content) {
+                    ss << '%' << DigitToHex((b & 0xf0) >> 4) << DigitToHex(b & 0xf);
+                }
             }
             return true;
         });
         return ss.str();
+    }
+
+    SlokedUri::Authority::Authority(std::string host, std::optional<Port> port)
+        : host(std::move(host)), port(std::move(port)) {}
+
+    SlokedUri::Authority::Authority(std::string userinfo, std::string host, std::optional<Port> port)
+        : userinfo(std::move(userinfo)), host(std::move(host)), port(std::move(port)) {}
+
+    const std::optional<std::string> &SlokedUri::Authority::GetUserinfo() const {
+        return this->userinfo;
+    }
+
+    SlokedUri::Authority &SlokedUri::Authority::SetUserinfo(std::optional<std::string> userinfo) {
+        this->userinfo = std::move(userinfo);
+        return *this;
+    }
+
+    const std::string &SlokedUri::Authority::GetHost() const {
+        return this->host;
+    }
+
+    SlokedUri::Authority &SlokedUri::Authority::SetHost(std::string host) {
+        this->host = std::move(host);
+        return *this;
+    }
+
+    const std::optional<SlokedUri::Authority::Port> &SlokedUri::Authority::GetPort() const {
+        return this->port;
+    }
+
+    SlokedUri::Authority &SlokedUri::Authority::SetPort(std::optional<Port> port) {
+        this->port = std::move(port);
+        return *this;
+    }
+
+    std::ostream &operator<<(std::ostream &os, const SlokedUri::Authority &auth) {
+        if (auth.userinfo.has_value()) {
+            os << encodeComponent(auth.userinfo.value(), UriNoEscape) << '@';
+        }
+        os << encodeComponent(auth.host, UriNoEscape);
+        if (auth.port.has_value()) {
+            os << ':' << auth.port.value();
+        }
+        return os;
+    }
+
+    SlokedUri::Path::Path(String path, Preset preset)
+        : SlokedPath(std::move(path), std::move(preset)) {}
+    
+    SlokedUri::Query::Query(std::map<std::string, std::string> content)
+        : prms(std::move(content)) {}
+
+    SlokedUri::Query &SlokedUri::Query::Put(std::string key, std::string value) {
+        this->prms.emplace(std::move(key), std::move(value));
+        return *this;
+    }
+
+    bool SlokedUri::Query::Has(const std::string &key) const {
+        return this->prms.count(key) != 0;
+    }
+
+    const std::string &SlokedUri::Query::Get(const std::string &key) const {
+        if (this->Has(key)) {
+            return this->prms.at(key);
+        } else {
+            throw SlokedError("URI: parameter not found");
+        }
+    }
+
+    bool SlokedUri::Query::Empty() const {
+        return this->prms.empty();
+    }
+
+    std::ostream &operator<<(std::ostream &os, const SlokedUri::Query &query) {
+        for (auto it = query.prms.begin(); it != query.prms.end();) {
+            os << encodeComponent(it->first) << '=' << encodeComponent(it->second);
+            if (++it != query.prms.end()) {
+                os << '&';
+            }
+        }
+        return os;
+    }
+
+    SlokedUri::SlokedUri(std::string scheme, Path path)
+        : scheme(std::move(scheme)), path(std::move(path)) {}
+
+    SlokedUri::SlokedUri(std::string scheme, Authority auth, Path path, std::optional<Query> query, std::optional<std::string> fragment)
+        : scheme(std::move(scheme)), authority(std::move(auth)), path(std::move(path)), query(std::move(query)), fragment(std::move(fragment)) {}
+
+    const std::string &SlokedUri::GetScheme() const {
+        return this->scheme;
+    }
+
+    SlokedUri &SlokedUri::SetScheme(std::string scheme) {
+        this->scheme = std::move(scheme);
+        return*this;
+    }
+
+    const std::optional<SlokedUri::Authority> SlokedUri::GetAuthority() const {
+        return this->authority;
+    }
+
+    SlokedUri &SlokedUri::SetAuthority(Authority auth) {
+        this->authority = std::move(auth);
+        return *this;
+    }
+
+    const SlokedUri::Path &SlokedUri::GetPath() const {
+        return this->path;
+    }
+
+    SlokedUri &SlokedUri::SetPath(Path path) {
+        this->path = std::move(path);
+        return *this;
+    }
+
+    const std::optional<SlokedUri::Query> &SlokedUri::GetQuery() const {
+        return this->query;
+    }
+
+    SlokedUri &SlokedUri::SetQuery(Query query) {
+        this->query = std::move(query);
+        return *this;
+    }
+
+    const std::optional<std::string> &SlokedUri::GetFragment() const {
+        return this->fragment;
+    }
+
+    SlokedUri &SlokedUri::SetFragment(std::optional<std::string> fragment) {
+        this->fragment = std::move(fragment);
+        return *this;
+    }
+
+    std::string SlokedUri::ToString() const {
+        std::stringstream ss;
+        ss << *this;
+        return ss.str();
+    }
+
+    std::ostream &operator<<(std::ostream &os, const SlokedUri &uri) {
+        os << encodeComponent(uri.scheme, UriNoEscape) << ':';
+        if (uri.authority.has_value()) {
+            os << "//" << uri.authority.value();
+        }
+        if (uri.path.IsAbsolute() || uri.authority.has_value()) {
+            os << '/';
+        }
+        for (auto it = uri.path.Components().begin(); it != uri.path.Components().end();) {
+            os << encodeComponent(*it);
+            if (++it != uri.path.Components().end()) {
+                os << '/';
+            }
+        }
+        if (uri.query.has_value() && !uri.query.value().Empty()) {
+            os << '?' << uri.query.value();
+        }
+        if (uri.fragment.has_value()) {
+            os << '#' << encodeComponent(uri.fragment.value(), UriNoEscape);
+        }
+        return os;
     }
 }

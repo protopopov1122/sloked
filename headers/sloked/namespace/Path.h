@@ -64,6 +64,7 @@ namespace sloked {
         SlokedPath(String, Preset = Preset{std::string{"/"}});
         SlokedPath(const SlokedPath &) = default;
         SlokedPath(SlokedPath &&) = default;
+        virtual ~SlokedPath() = default;
 
         SlokedPath &operator=(const SlokedPath &) = default;
         SlokedPath &operator=(SlokedPath &&) = default;
