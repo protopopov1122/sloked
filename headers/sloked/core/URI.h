@@ -22,7 +22,7 @@
 #ifndef SLOKED_CORE_URI_H_
 #define SLOKED_CORE_URI_H_
 
-#include "sloked/namespace/Path.h"
+#include "sloked/Base.h"
 #include <string>
 #include <optional>
 #include <iosfwd>
@@ -59,16 +59,6 @@ namespace sloked {
             std::optional<Port> port;
         };
 
-        class Path : public SlokedPath {
-         public:
-            Path(String, Preset = Preset{"/"});
-            Path(const Path &) = default;
-            Path(Path &&) = default;
-
-            Path &operator=(const Path &) = default;
-            Path &operator=(Path &&) = default;
-        };
-
         class Query {
          public:
             Query() = default;
@@ -84,8 +74,8 @@ namespace sloked {
             std::map<std::string, std::string> prms;
         };
 
-        SlokedUri(std::string, Path = {""});
-        SlokedUri(std::string, Authority, Path = {""}, std::optional<Query> = {}, std::optional<std::string> = {});
+        SlokedUri(std::string, std::string = "");
+        SlokedUri(std::string, Authority, std::string = "", std::optional<Query> = {}, std::optional<std::string> = {});
         SlokedUri(const SlokedUri &) = default;
         SlokedUri(SlokedUri &&) = default;
 
@@ -96,8 +86,8 @@ namespace sloked {
         SlokedUri &SetScheme(std::string);
         const std::optional<Authority> GetAuthority() const;
         SlokedUri &SetAuthority(Authority);
-        const Path &GetPath() const;
-        SlokedUri &SetPath(Path);
+        const std::string &GetPath() const;
+        SlokedUri &SetPath(std::string);
         const std::optional<Query> &GetQuery() const;
         SlokedUri &SetQuery(Query);
         const std::optional<std::string> &GetFragment() const;
@@ -106,11 +96,14 @@ namespace sloked {
         std::string ToString() const;
 
         friend std::ostream &operator<<(std::ostream &, const SlokedUri &);
+        static SlokedUri Parse(const std::string &);
+        static std::string encodeURI(std::string_view);
+        static std::string encodeURIComponent(std::string_view);
 
      private:
         std::string scheme;
         std::optional<Authority> authority;
-        Path path;
+        std::string path;
         std::optional<Query> query;
         std::optional<std::string> fragment;
     };
