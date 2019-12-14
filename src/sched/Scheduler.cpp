@@ -57,6 +57,10 @@ namespace sloked {
     SlokedDefaultSchedulerThread::SlokedDefaultSchedulerThread()
         : work(false) {}
 
+    SlokedDefaultSchedulerThread::~SlokedDefaultSchedulerThread() {
+        this->Close();
+    }
+
     void SlokedDefaultSchedulerThread::Start() {
         if (!this->work.exchange(true)) {
             std::thread([this] {
@@ -71,7 +75,7 @@ namespace sloked {
         }
     }
 
-    void SlokedDefaultSchedulerThread::Stop() {
+    void SlokedDefaultSchedulerThread::Close() {
         if (this->work.exchange(false)) {
             this->cv.notify_all();
             this->timer_thread.Wait([](auto count) {

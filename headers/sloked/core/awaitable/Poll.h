@@ -22,6 +22,7 @@
 #ifndef SLOKED_CORE_AWAITABLE_POLL_H_
 #define SLOKED_CORE_AWAITABLE_POLL_H_
 
+#include "sloked/core/Closeable.h"
 #include "sloked/core/awaitable/Awaitable.h"
 #include "sloked/core/Counter.h"
 #include "sloked/core/Scope.h"
@@ -47,11 +48,12 @@ namespace sloked {
         virtual Handle Attach(std::unique_ptr<Awaitable>) = 0;
     };
 
-    class SlokedDefaultIOPollThread : public SlokedIOPoller {
+    class SlokedDefaultIOPollThread : public SlokedIOPoller, public SlokedCloseable {
      public:
         SlokedDefaultIOPollThread(SlokedIOPoll &);
+        ~SlokedDefaultIOPollThread();
         void Start(std::chrono::system_clock::duration);
-        void Stop();
+        void Close() final;
         Handle Attach(std::unique_ptr<Awaitable>) final;
 
      private:

@@ -40,7 +40,7 @@ namespace sloked {
         SlokedLuaEngine(SlokedSchedulerThread &, const std::string & = "");
         ~SlokedLuaEngine();
         void Start(const std::string &) final;
-        void Stop() final;
+        void Close() final;
         void BindServer(const std::string &, KgrNamedServer &) final;
     
      private:

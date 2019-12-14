@@ -64,44 +64,8 @@ namespace sloked {
 
     BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
         : term(term), encoding(encoding), charWidth(charWidth), cls(false), show_cursor(true), buffer(nullptr), line(0), col(0), width(0), height(0) {
-        this->Update();
+        this->UpdateDimensions();
         this->buffer = std::unique_ptr<Character[]>(new Character[this->width * this->height]);
-    }
-
-    void BufferedTerminal::Flush() {
-        this->term.Flush(false);
-        this->term.ShowCursor(false);
-        const auto fullSize = this->width * this->height;
-        std::unique_ptr<char32_t[]> buffer(new char32_t[fullSize]);
-        std::size_t buffer_ptr = 0;
-        std::size_t buffer_start = 0;
-
-        BufferedGraphicsMode prev_g;
-        for (std::size_t i = 0; i < fullSize; i++) {
-            Character &chr = this->buffer[i];
-            if (chr.graphics.has_value() && !(chr.graphics.value() == prev_g)) {
-                this->dump_buffer(std::u32string_view(buffer.get(), buffer_ptr), buffer_start);
-                buffer_ptr = 0;
-                chr.graphics.value().apply(term);
-                prev_g = chr.graphics.value();
-            }
-            if (chr.value != U'\0' && (chr.updated || this->cls)) {
-                if (!buffer_ptr) {
-                    buffer_start = i;
-                }
-                buffer[buffer_ptr++] = chr.value;
-            } else {
-                this->dump_buffer(std::u32string_view(buffer.get(), buffer_ptr), buffer_start);
-                buffer_ptr = 0;
-            }
-            chr.updated = false;
-            chr.graphics.reset();
-        }
-        this->cls = false;
-        this->dump_buffer(std::u32string_view(buffer.get(), buffer_ptr), buffer_start);
-        this->term.SetPosition(this->line, this->col);
-        this->term.ShowCursor(this->show_cursor);
-        this->term.Flush(true);
     }
 
     void BufferedTerminal::UpdateSize() {
@@ -220,8 +184,44 @@ namespace sloked {
         }
     }
 
-    void BufferedTerminal::Update() {
-        this->term.Update();
+    void BufferedTerminal::UpdateDimensions() {
+        this->term.UpdateDimensions();
         this->UpdateSize();
+    }
+
+    void BufferedTerminal::RenderFrame() {
+        this->term.Flush(false);
+        this->term.ShowCursor(false);
+        const auto fullSize = this->width * this->height;
+        std::unique_ptr<char32_t[]> buffer(new char32_t[fullSize]);
+        std::size_t buffer_ptr = 0;
+        std::size_t buffer_start = 0;
+
+        BufferedGraphicsMode prev_g;
+        for (std::size_t i = 0; i < fullSize; i++) {
+            Character &chr = this->buffer[i];
+            if (chr.graphics.has_value() && !(chr.graphics.value() == prev_g)) {
+                this->dump_buffer(std::u32string_view(buffer.get(), buffer_ptr), buffer_start);
+                buffer_ptr = 0;
+                chr.graphics.value().apply(term);
+                prev_g = chr.graphics.value();
+            }
+            if (chr.value != U'\0' && (chr.updated || this->cls)) {
+                if (!buffer_ptr) {
+                    buffer_start = i;
+                }
+                buffer[buffer_ptr++] = chr.value;
+            } else {
+                this->dump_buffer(std::u32string_view(buffer.get(), buffer_ptr), buffer_start);
+                buffer_ptr = 0;
+            }
+            chr.updated = false;
+            chr.graphics.reset();
+        }
+        this->cls = false;
+        this->dump_buffer(std::u32string_view(buffer.get(), buffer_ptr), buffer_start);
+        this->term.SetPosition(this->line, this->col);
+        this->term.ShowCursor(this->show_cursor);
+        this->term.Flush(true);
     }
 }

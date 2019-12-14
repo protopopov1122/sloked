@@ -27,6 +27,10 @@ namespace sloked {
     SlokedDefaultIOPollThread::SlokedDefaultIOPollThread(SlokedIOPoll &poll)
         : poll(poll), work(false), nextId{0} {}
 
+    SlokedDefaultIOPollThread::~SlokedDefaultIOPollThread() {
+        this->Close();
+    }
+
     void SlokedDefaultIOPollThread::Start(std::chrono::system_clock::duration timeout) {
         if (this->work.exchange(true)) {
             return;
@@ -58,12 +62,8 @@ namespace sloked {
         });
     }
 
-    void SlokedDefaultIOPollThread::Stop() {
-        if (!this->work.exchange(false)) {
-            return;
-        }
-        this->work = false;
-        if (this->worker.joinable()) {
+    void SlokedDefaultIOPollThread::Close() {
+        if (this->work.exchange(false) && this->worker.joinable()) {
             this->worker.join();
         }
     }

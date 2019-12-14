@@ -277,6 +277,10 @@ namespace sloked {
 
     KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedIOPoller &poll)
         : server(server), srvSocket(std::move(socket)), poll(poll), work(false) {}
+
+    KgrMasterNetServer::~KgrMasterNetServer() {
+        this->Close();
+    }
         
     bool KgrMasterNetServer::IsRunning() const {
         return this->work.load();
@@ -294,13 +298,11 @@ namespace sloked {
         this->awaiterHandle = this->poll.Attach(std::make_unique<Awaitable>(*this));
     }
 
-    void KgrMasterNetServer::Stop() {
-        if (!this->work.load()) {
-            return;
+    void KgrMasterNetServer::Close() {
+        if (this->work.exchange(false)) {
+            this->awaiterHandle.Detach();
+            this->workers.Wait([](auto count) { return count == 0; });
         }
-        this->awaiterHandle.Detach();
-        this->work = false;
-        this->workers.Wait([](auto count) { return count == 0; });
     }
 
     KgrMasterNetServer::Awaitable::Awaitable(KgrMasterNetServer &self)

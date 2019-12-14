@@ -23,6 +23,7 @@
 #define SLOKED_SCHED_SCHEDULER_H_
 
 #include "sloked/core/Counter.h"
+#include "sloked/core/Closeable.h"
 #include <map>
 #include <atomic>
 #include <utility>
@@ -58,7 +59,7 @@ namespace sloked {
         virtual void Defer(std::function<void()>) = 0;
     };
 
-    class SlokedDefaultSchedulerThread : public SlokedSchedulerThread {
+    class SlokedDefaultSchedulerThread : public SlokedSchedulerThread, public SlokedCloseable {
      public:
         class TimerTask : public SlokedSchedulerThread::TimerTask {
          public:
@@ -84,8 +85,9 @@ namespace sloked {
         friend class TimerTask;
 
         SlokedDefaultSchedulerThread();
+        ~SlokedDefaultSchedulerThread();
         void Start();
-        void Stop();
+        void Close() final;
 
         std::shared_ptr<SlokedSchedulerThread::TimerTask> At(TimePoint, Callback) final;
         std::shared_ptr<SlokedSchedulerThread::TimerTask> Sleep(TimeDiff, Callback) final;

@@ -97,7 +97,7 @@ namespace sloked {
     }
 
     void TerminalComponentHandle::UpdateDimensions() {
-        this->terminal.Update();
+        this->terminal.UpdateDimensions();
         if (this->component) {
             this->component->UpdateDimensions();
         }

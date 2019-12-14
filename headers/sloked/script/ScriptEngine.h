@@ -22,15 +22,15 @@
 #ifndef SLOKED_SCRIPT_SCRIPTENGINE_H_
 #define SLOKED_SCRIPT_SCRIPTENGINE_H_
 
+#include "sloked/core/Closeable.h"
 #include "sloked/kgr/NamedServer.h"
 
 namespace sloked {
 
-    class SlokedScriptEngine {
+    class SlokedScriptEngine : public SlokedCloseable {
      public:
         virtual ~SlokedScriptEngine() = default;
         virtual void Start(const std::string &) = 0;
-        virtual void Stop() = 0;
         virtual void BindServer(const std::string &, KgrNamedServer &) = 0;
     };
 }

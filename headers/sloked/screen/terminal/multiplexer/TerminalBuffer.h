@@ -36,8 +36,6 @@ namespace sloked {
      public:
         BufferedTerminal(SlokedTerminal &, const Encoding &, const SlokedCharWidth &);
 
-        using SlokedTerminal::Flush;
-        void Flush();
         void UpdateSize();
     
         void SetPosition(Line, Column) override;
@@ -58,7 +56,8 @@ namespace sloked {
         void SetGraphicsMode(SlokedBackgroundGraphics) override;
         void SetGraphicsMode(SlokedForegroundGraphics) override;
 
-        void Update() override;
+        void UpdateDimensions() override;
+        void RenderFrame() override;
         
      private:
         void dump_buffer(std::u32string_view, std::size_t);

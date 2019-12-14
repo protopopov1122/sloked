@@ -139,7 +139,7 @@ namespace sloked {
     }
 
     void TerminalSplitter::Update() {
-        this->term.Update();
+        this->term.UpdateDimensions();
         unsigned int max = this->direction == Splitter::Direction::Horizontal
             ? this->term.GetWidth()
             : this->term.GetHeight();

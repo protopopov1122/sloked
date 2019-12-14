@@ -110,8 +110,8 @@ namespace sloked {
             }
         }
 
-        void Update() override {
-            this->term.Update();
+        void UpdateDimensions() override {
+            this->term.UpdateDimensions();
         }
 
         void Flush(bool f) override {

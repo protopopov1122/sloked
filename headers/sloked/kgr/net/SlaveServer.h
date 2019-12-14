@@ -22,6 +22,7 @@
 #ifndef SLOKED_KGR_NET_SLAVESERVER_H_
 #define SLOKED_KGR_NET_SLAVESERVER_H_
 
+#include "sloked/core/Closeable.h"
 #include "sloked/core/Counter.h"
 #include "sloked/core/awaitable/Poll.h"
 #include "sloked/kgr/net/Interface.h"
@@ -32,13 +33,13 @@
 
 namespace sloked {
 
-    class KgrSlaveNetServer : public KgrNamedServer {
+    class KgrSlaveNetServer : public KgrNamedServer, public SlokedCloseable {
      public:
         KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, KgrNamedServer &, SlokedIOPoller &);
         ~KgrSlaveNetServer();
         bool IsRunning() const;
         void Start();
-        void Stop();
+        void Close() final;
 
         std::unique_ptr<KgrPipe> Connect(const std::string &) override;
         Connector GetConnector(const std::string &) override;

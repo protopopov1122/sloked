@@ -58,7 +58,7 @@ namespace sloked {
         void SetGraphicsMode(SlokedBackgroundGraphics) override;
         void SetGraphicsMode(SlokedForegroundGraphics) override;
 
-        void Update() override;
+        void UpdateDimensions() override;
         void Flush(bool) override;
 
      private:

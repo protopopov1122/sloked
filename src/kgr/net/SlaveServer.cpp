@@ -97,7 +97,7 @@ namespace sloked {
     }
     
     KgrSlaveNetServer::~KgrSlaveNetServer() {
-        this->Stop();
+        this->Close();
     }
 
     bool KgrSlaveNetServer::IsRunning() const {
@@ -112,16 +112,15 @@ namespace sloked {
         this->awaitableHandle = this->poll.Attach(std::make_unique<Awaitable>(*this));
     }
 
-    void KgrSlaveNetServer::Stop() {
-        if (!this->work.exchange(false)) {
-            return;
-        }
-        this->awaitableHandle.Detach();
-        for (const auto &pipe : this->pipes) {
-            pipe.second->Close();
-        }
-        if (this->net.Valid()) {
-            this->net.Close();
+    void KgrSlaveNetServer::Close() {
+        if (this->work.exchange(false)) {
+            this->awaitableHandle.Detach();
+            for (const auto &pipe : this->pipes) {
+                pipe.second->Close();
+            }
+            if (this->net.Valid()) {
+                this->net.Close();
+            }
         }
     }
 
@@ -237,7 +236,7 @@ namespace sloked {
             this->self.Ping();
         }
         if (!this->self.net.Valid()) {
-            this->self.Stop();
+            this->self.Close();
         }
     }
 }

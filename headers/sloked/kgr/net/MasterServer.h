@@ -22,6 +22,7 @@
 #ifndef SLOKED_KGR_NET_MASTERSERVER_H_
 #define SLOKED_KGR_NET_MASTERSERVER_H_
 
+#include "sloked/core/Closeable.h"
 #include "sloked/net/Socket.h"
 #include "sloked/core/awaitable/Poll.h"
 #include "sloked/kgr/NamedServer.h"
@@ -31,12 +32,13 @@
 
 namespace sloked {
 
-    class KgrMasterNetServer {
+    class KgrMasterNetServer : public SlokedCloseable {
      public:
         KgrMasterNetServer(KgrNamedServer &, std::unique_ptr<SlokedServerSocket>, SlokedIOPoller &);
+        ~KgrMasterNetServer();
         bool IsRunning() const;
         void Start();
-        void Stop();
+        void Close() final;
 
 
      private:

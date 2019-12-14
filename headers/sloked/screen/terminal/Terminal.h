@@ -79,8 +79,9 @@ namespace sloked {
         virtual void SetGraphicsMode(SlokedBackgroundGraphics) = 0;
         virtual void SetGraphicsMode(SlokedForegroundGraphics) = 0;
 
-        virtual void Update() {}
+        virtual void UpdateDimensions() {}
         virtual void Flush(bool) {}
+        virtual void RenderFrame() {}
     };
 
     class SlokedDuplexTerminal : public SlokedTerminal, public SlokedTerminalInputSource {};

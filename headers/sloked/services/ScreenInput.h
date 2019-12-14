@@ -46,7 +46,8 @@ namespace sloked {
      public:
         using Callback = std::function<void(const SlokedKeyboardInput &)>;
         SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe>, const Encoding &, std::function<bool()> = nullptr);
-        void Listen(const std::string &, bool, const std::vector<std::pair<SlokedControlKey, bool>> &, Callback);
+        void Listen(const std::string &, bool, const std::vector<std::pair<SlokedControlKey, bool>> &, Callback, bool = false);
+        void Listen(const std::string &, Callback, bool = false);
         void Close();
 
      private:

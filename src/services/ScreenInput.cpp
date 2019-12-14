@@ -100,28 +100,39 @@ namespace sloked {
         
         void Connect(const KgrValue &params) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
+            this->forwardInput = false;
+            this->subscribeAll = false;
             this->subscribeOnText = false;
             this->subscribes.clear();
+            if (params.AsDictionary().Has("forward")) {
+                this->forwardInput = params.AsDictionary()["forward"].AsBoolean();
+            }
+            if (params.AsDictionary().Has("all")) {
+                this->subscribeAll = params.AsDictionary()["all"].AsBoolean();
+            }
             RootLock([&](auto &component) {
                 if (this->listener.has_value()) {
                     SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
                 }
                 this->listener = SlokedComponentTree::Traverse(component, path).AsHandle().AttachInputHandler([this](const auto &evt) {
-                    if ((evt.value.index() == 0 && this->subscribeOnText) ||
+                    if (this->subscribeAll ||
+                        (evt.value.index() == 0 && this->subscribeOnText) ||
                         (evt.value.index() == 1 && this->subscribes.find(std::make_pair(std::get<1>(evt.value), evt.alt)) != this->subscribes.end())) {
                         this->SendInput(evt);
-                        return true;
+                        return !this->forwardInput;
                     } else {
                         return false;
                     }
                 });
                 this->path = path;
-                this->subscribeOnText = params.AsDictionary()["text"].AsBoolean();
-                const auto &keys = params.AsDictionary()["keys"].AsArray();
-                for (const auto &key : keys) {
-                    auto code = static_cast<SlokedControlKey>(key.AsDictionary()["code"].AsInt());
-                    auto alt = key.AsDictionary()["alt"].AsBoolean();
-                    this->subscribes.emplace(std::make_pair(code, alt));
+                if (!this->subscribeAll) {
+                    this->subscribeOnText = params.AsDictionary()["text"].AsBoolean();
+                    const auto &keys = params.AsDictionary()["keys"].AsArray();
+                    for (const auto &key : keys) {
+                        auto code = static_cast<SlokedControlKey>(key.AsDictionary()["code"].AsInt());
+                        auto alt = key.AsDictionary()["alt"].AsBoolean();
+                        this->subscribes.emplace(std::make_pair(code, alt));
+                    }
                 }
                 this->pipe->Write({});
             });
@@ -147,6 +158,8 @@ namespace sloked {
         const Encoding &encoding;
         std::optional<SlokedPath> path;
         std::optional<SlokedComponentListener> listener;
+        bool forwardInput;
+        bool subscribeAll;
         bool subscribeOnText;
         std::set<std::pair<SlokedControlKey, bool>> subscribes;
         SlokedDefaultEventLoop eventLoop;
@@ -164,12 +177,13 @@ namespace sloked {
     SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe> pipe, const Encoding &encoding, std::function<bool()> holdsLock)
         : pipe(std::move(pipe)), encoding(encoding), holdsLock(std::move(holdsLock)) {}
 
-    void SlokedScreenInputNotificationClient::Listen(const std::string &path, bool text, const std::vector<std::pair<SlokedControlKey, bool>> &keys, Callback callback) {
+    void SlokedScreenInputNotificationClient::Listen(const std::string &path, bool text, const std::vector<std::pair<SlokedControlKey, bool>> &keys, Callback callback, bool forwardInput) {
         if (this->holdsLock && this->holdsLock()) {
             throw SlokedError("ScreenInputNotificationService: Deadlock prevented");
         }
         KgrDictionary params {
             { "path", path },
+            { "forward", forwardInput },
             { "text", text }
         };
         KgrArray array;
@@ -180,6 +194,27 @@ namespace sloked {
             });
         }
         params.Put("keys", std::move(array));
+        this->pipe->Write(std::move(params));
+        this->pipe->ReadWait();
+        this->pipe->SetMessageListener([this, callback = std::move(callback)] {
+            while (!this->pipe->Empty()) {
+                auto msg = this->pipe->Read();
+                if (callback) {
+                    callback(KgrToEvent(this->encoding, msg));
+                }
+            }
+        });
+    }
+
+    void SlokedScreenInputNotificationClient::Listen(const std::string &path, Callback callback, bool forwardInput) {
+        if (this->holdsLock && this->holdsLock()) {
+            throw SlokedError("ScreenInputNotificationService: Deadlock prevented");
+        }
+        KgrDictionary params {
+            { "path", path },
+            { "forward", forwardInput },
+            { "all", true }
+        };
         this->pipe->Write(std::move(params));
         this->pipe->ReadWait();
         this->pipe->SetMessageListener([this, callback = std::move(callback)] {

@@ -22,6 +22,7 @@
 #ifndef SLOKED_KGR_LOCAL_CTX_MANAGER_RUNNABLECONTEXTMANAGER_H_
 #define SLOKED_KGR_LOCAL_CTX_MANAGER_RUNNABLECONTEXTMANAGER_H_
 
+#include "sloked/core/Closeable.h"
 #include "sloked/kgr/ContextManager.h"
 #include "sloked/core/Runnable.h"
 #include <mutex>
@@ -95,7 +96,7 @@ namespace sloked {
     };
 
     template <typename T>
-    class KgrRunnableContextManagerHandle {
+    class KgrRunnableContextManagerHandle : public SlokedCloseable {
      public:
         KgrRunnableContextManagerHandle()
             : work(false), notifications(0) {
@@ -107,7 +108,7 @@ namespace sloked {
         }
 
         ~KgrRunnableContextManagerHandle() {
-            this->Stop();
+            this->Close();
         }
 
         KgrContextManager<T> &GetManager() {
@@ -132,7 +133,7 @@ namespace sloked {
             });
         }
 
-        void Stop() {
+        void Close() final {
             if (this->work.load()) {
                 this->work = false;
                 this->notificationCV.notify_all();

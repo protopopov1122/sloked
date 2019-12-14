@@ -22,10 +22,11 @@
 #ifndef SLOKED_CORE_MONITOR_H_
 #define SLOKED_CORE_MONITOR_H_
 
-#include "sloked/Base.h"
+#include "sloked/core/Error.h"
 #include <mutex>
 #include <functional>
 #include <thread>
+#include <atomic>
 
 namespace sloked {
 

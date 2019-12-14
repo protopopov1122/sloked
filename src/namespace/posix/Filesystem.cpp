@@ -51,6 +51,6 @@ namespace sloked {
     }
 
     std::string SlokedPosixFilesystemAdapter::ToURI(const SlokedPath &path) const {
-        return SlokedUri("file", SlokedUri::encodeURI(path.ToString())).ToString();
+        return SlokedUri("file", path.ToString()).ToString();
     }
 }

@@ -39,7 +39,7 @@ namespace sloked {
     }
 
     SlokedLuaEngine::~SlokedLuaEngine() {
-        this->Stop();
+        this->Close();
     }
 
     void SlokedLuaEngine::Start(const std::string &script) {
@@ -50,7 +50,7 @@ namespace sloked {
         }
     }
 
-    void SlokedLuaEngine::Stop() {
+    void SlokedLuaEngine::Close() {
         if (this->work.exchange(false)) {
             this->activity.Notify();
             this->workerThread.join();

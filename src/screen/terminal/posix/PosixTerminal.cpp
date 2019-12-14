@@ -189,7 +189,7 @@ namespace sloked {
             fprintf(this->state->fd, "%s", str);
         }
         fflush(this->state->fd);
-        this->Update();
+        this->UpdateDimensions();
     }
 
     PosixTerminal::~PosixTerminal() {
@@ -428,7 +428,7 @@ namespace sloked {
         }
     }
 
-    void PosixTerminal::Update() {
+    void PosixTerminal::UpdateDimensions() {
         struct winsize w;
         ioctl(fileno(this->state->input), TIOCGWINSZ, &w);
         this->width = w.ws_col;

@@ -22,14 +22,13 @@
 #include <cstdlib>
 #include <iostream>
 #include "sloked/core/Locale.h"
+#include "sloked/core/Closeable.h"
+#include "sloked/core/Monitor.h"
+#include "sloked/core/Logger.h"
+#include "sloked/core/CLI.h"
+#include "sloked/core/awaitable/Poll.h"
 #include "sloked/screen/terminal/posix/PosixTerminal.h"
 #include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
-#include "sloked/screen/terminal/components/ComponentHandle.h"
-#include "sloked/screen/terminal/components/SplitterComponent.h"
-#include "sloked/screen/terminal/components/TabberComponent.h"
-#include "sloked/screen/terminal/components/MultiplexerComponent.h"
-#include "sloked/screen/widgets/TextEditor.h"
-#include "sloked/namespace/Filesystem.h"
 #include "sloked/namespace/Virtual.h"
 #include "sloked/namespace/Resolve.h"
 #include "sloked/namespace/posix/Environment.h"
@@ -49,24 +48,18 @@
 #include "sloked/services/Search.h"
 #include "sloked/services/TextPane.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
-#include "sloked/screen/components/ComponentTree.h"
-#include "sloked/core/Monitor.h"
+#include "sloked/editor/terminal/ScreenProvider.h"
 #include "sloked/net/PosixSocket.h"
 #include "sloked/kgr/net/MasterServer.h"
 #include "sloked/kgr/net/SlaveServer.h"
-#include "sloked/core/Logger.h"
-#include "sloked/core/CLI.h"
 #include "sloked/editor/Configuration.h"
 #include "sloked/kgr/Path.h"
-#include "sloked/core/Semaphore.h"
 #include "sloked/sched/Scheduler.h"
-#include "sloked/core/awaitable/Poll.h"
 #include "sloked/kgr/net/Config.h"
 #include "sloked/third-party/script/lua/Lua.h"
 #include <chrono>
 
 using namespace sloked;
-using namespace std::chrono_literals;
 
 class TestFragment : public SlokedTextTagger<int> {
  public:
@@ -167,26 +160,33 @@ int main(int argc, const char **argv) {
 
     logger.Debug() << "Initialization";
 
+    SlokedCloseablePool closeables;
+
     KgrLocalServer portServer;
     KgrLocalNamedServer server(portServer);
     KgrLocalServer portLocalServer;
     KgrLocalNamedServer localServer(portLocalServer);
     KgrRunnableContextManagerHandle<KgrLocalContext> ctxManagerHandle;
+    closeables.Attach(ctxManagerHandle);
     KgrContextManager<KgrLocalContext> &ctxManager = ctxManagerHandle.GetManager();
     ctxManagerHandle.Start();
 
     logger.Debug() << "Local servers started";
 
     SlokedDefaultSchedulerThread sched;
+    closeables.Attach(sched);
     sched.Start();
     SlokedPosixSocketFactory socketFactory;
     SlokedPosixAwaitablePoll socketPoll;
 
     SlokedDefaultIOPollThread socketPoller(socketPoll);
+    closeables.Attach(socketPoller);
     socketPoller.Start(KgrNetConfig::RequestTimeout);
     KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", cli["net-port"].As<int>()), socketPoller);
+    closeables.Attach(masterServer);
     masterServer.Start();
     KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), localServer, socketPoller);
+    closeables.Attach(slaveServer);
     slaveServer.Start();
 
     logger.Debug() << "Network servers started";
@@ -210,11 +210,11 @@ int main(int argc, const char **argv) {
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
+    SlokedTerminalScreenProvider screen(console, terminalEncoding, charWidth, terminal);
+    SlokedScreenServer screenServer(server, screen);
 
-    TerminalComponentHandle screen(console, terminalEncoding, charWidth);
-    SlokedMonitor<SlokedScreenComponent &> screenHandle(screen);
-    auto isScreenLocked = [&screenHandle] {
-        return screenHandle.IsHolder();
+    auto isScreenLocked = [&screen] {
+        return screen.GetScreen().IsHolder();
     };
 
     logger.Debug() << "Screen initialized";
@@ -224,14 +224,15 @@ int main(int argc, const char **argv) {
     server.Register("document::manager", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
     server.Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(documents, ctxManager));
     server.Register("document::search", std::make_unique<SlokedSearchService>(documents, ctxManager));
-    server.Register("screen::manager", std::make_unique<SlokedScreenService>(screenHandle, terminalEncoding, slaveServer.GetConnector("document::cursor"), slaveServer.GetConnector("document::notify"), ctxManager));
-    server.Register("screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(screenHandle, terminalEncoding, ctxManager));
-    server.Register("screen::component::input.forward", std::make_unique<SlokedScreenInputForwardingService>(screenHandle, terminalEncoding, ctxManager));
-    server.Register("screen::component::text.pane", std::make_unique<SlokedTextPaneService>(screenHandle, terminalEncoding, ctxManager));
     server.Register("namespace::root", std::make_unique<SlokedNamespaceService>(root, ctxManager));
+    screenServer.Register(
+        "screen::manager", std::make_unique<SlokedScreenService>(screen.GetScreen(), terminalEncoding, slaveServer.GetConnector("document::cursor"), slaveServer.GetConnector("document::notify"), ctxManager),
+        "screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(screen.GetScreen(), terminalEncoding, ctxManager),
+        "screen::component::input.forward", std::make_unique<SlokedScreenInputForwardingService>(screen.GetScreen(), terminalEncoding, ctxManager),
+        "screen::component::text.pane", std::make_unique<SlokedTextPaneService>(screen.GetScreen(), terminalEncoding, ctxManager)
+    );
 
     logger.Debug() << "Services bound";
-
 
     SlokedScreenClient screenClient(slaveServer.Connect("screen::manager"), isScreenLocked);
     SlokedDocumentSetClient documentClient(slaveServer.Connect("document::manager"));
@@ -253,15 +254,7 @@ int main(int argc, const char **argv) {
 
     logger.Debug() << "Editor initialized";
 
-    std::atomic<bool> work = true;
-    std::atomic<std::size_t> renderFlag = true;
-    screenHandle.Lock([&](auto &screen) {
-        screen.OnUpdate([&] {
-            renderFlag = true;
-        });
-    });
     int i = 0;
-
     auto renderStatus = [&] {
         render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
         render.ClearScreen();
@@ -271,58 +264,28 @@ int main(int argc, const char **argv) {
     };
     renderStatus();
     SlokedScreenInputNotificationClient screenInput(slaveServer.Connect("screen::component::input.notify"), terminalEncoding, isScreenLocked);
-    SlokedScreenInputForwardingClient inputForward(slaveServer.Connect("screen::component::input.forward"), terminalEncoding, isScreenLocked);
-    screenInput.Listen("/", true, {
-        { SlokedControlKey::Escape, false }
-    }, [&](auto &evt) {
+    screenInput.Listen("/", [&](auto &evt) {
         sched.Defer([&, evt] {
-            if (evt.value.index() == 0) {
-                inputForward.Send("/0", evt);
-            } else {
+            renderStatus();
+            if (evt.value.index() != 0 && std::get<1>(evt.value) == SlokedControlKey::Escape) {
                 logger.Debug() << "Saving document";
                 documentClient.Save(outputPath.ToString());
-                work = false;
+                screenServer.Close();
             }
         });
-    });
+    }, true);
 
     SlokedLuaEngine luaEngine(sched, cli["script-path"].As<std::string>());
+    closeables.Attach(luaEngine);
     luaEngine.BindServer("main", slaveServer);
     if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {
         luaEngine.Start(cli["script"].As<std::string>());
-        // std::this_thread::sleep_for(10000s);
     }
 
-    while (work.load()) {
-        if (renderFlag.exchange(false)) {
-            screenHandle.Lock([&](auto &screen) {
-                screen.UpdateDimensions();
-                console.SetGraphicsMode(SlokedTextGraphics::Off);
-                console.ClearScreen();
-                screen.Render();
-                console.Flush();
-            });
-        }
-
-        if (terminal.WaitInput(std::chrono::milliseconds(25))) {
-            renderStatus();
-            auto input = terminal.GetInput();
-            for (const auto &evt : input) {
-                screenHandle.Lock([&](auto &screen) {
-                    screen.ProcessInput(evt);
-                });
-            }
-        }
-    }
+    screenServer.Run(std::chrono::milliseconds(25));
 
     logger.Debug() << "Stopping servers";
-
-    luaEngine.Stop();
-    slaveServer.Stop();
-    masterServer.Stop();
-    socketPoller.Stop();
-    ctxManagerHandle.Stop();
-    sched.Stop();
+    closeables.Close();
 
     logger.Debug() << "Shutdown";
     return EXIT_SUCCESS;
