@@ -26,6 +26,7 @@
 #include "sloked/core/Monitor.h"
 #include "sloked/core/Logger.h"
 #include "sloked/core/CLI.h"
+#include "sloked/core/Semaphore.h"
 #include "sloked/core/awaitable/Poll.h"
 #include "sloked/screen/terminal/posix/PosixTerminal.h"
 #include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
@@ -57,6 +58,7 @@
 #include "sloked/sched/Scheduler.h"
 #include "sloked/kgr/net/Config.h"
 #include "sloked/third-party/script/lua/Lua.h"
+#include "sloked/editor/EditorCore.h"
 #include <chrono>
 
 using namespace sloked;
@@ -158,81 +160,47 @@ int main(int argc, const char **argv) {
     SlokedLoggingManager::Global.SetSink(SlokedLogLevel::Warning, SlokedLoggingSink::TextFile("./sloked.log", SlokedLoggingSink::TabularFormat(10, 30, 30)));
     SlokedLogger logger(SlokedLoggerTag);
 
-    logger.Debug() << "Initialization";
-
     SlokedCloseablePool closeables;
+    SlokedPosixAwaitablePoll socketPoll;
+    SlokedPosixSocketFactory socketFactory;
+    SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
+    SlokedCharWidth charWidth;
 
-    KgrLocalServer portServer;
-    KgrLocalNamedServer server(portServer);
+    SlokedEditorCore editor(logger, socketPoll, root, charWidth);
+    closeables.Attach(editor);
+    editor.Start();
+    editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>());
+
     KgrLocalServer portLocalServer;
     KgrLocalNamedServer localServer(portLocalServer);
-    KgrRunnableContextManagerHandle<KgrLocalContext> ctxManagerHandle;
-    closeables.Attach(ctxManagerHandle);
-    KgrContextManager<KgrLocalContext> &ctxManager = ctxManagerHandle.GetManager();
-    ctxManagerHandle.Start();
-
-    logger.Debug() << "Local servers started";
-
-    SlokedDefaultSchedulerThread sched;
-    closeables.Attach(sched);
-    sched.Start();
-    SlokedPosixSocketFactory socketFactory;
-    SlokedPosixAwaitablePoll socketPoll;
-
-    SlokedDefaultIOPollThread socketPoller(socketPoll);
-    closeables.Attach(socketPoller);
-    socketPoller.Start(KgrNetConfig::RequestTimeout);
-    KgrMasterNetServer masterServer(server, socketFactory.Bind("localhost", cli["net-port"].As<int>()), socketPoller);
-    closeables.Attach(masterServer);
-    masterServer.Start();
-    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), localServer, socketPoller);
+    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), localServer, editor.GetIO());
     closeables.Attach(slaveServer);
     slaveServer.Start();
 
-    logger.Debug() << "Network servers started";
-
-    SlokedPathResolver resolver(SlokedPosixNamespaceEnvironment::WorkDir(), SlokedPosixNamespaceEnvironment::HomeDir());
-    SlokedPath inputPath = resolver.Resolve(SlokedPath{cli.At(0)});
-    SlokedPath outputPath = resolver.Resolve(SlokedPath{cli["output"].As<std::string>()});
-    SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
-    SlokedEditorDocumentSet documents(root);
-
-    logger.Debug() << "Namespaces and documents initialized";
-
     SlokedLocale::Setup();
     const Encoding &terminalEncoding = Encoding::Get("system");
-
-    SlokedCharWidth charWidth;
-    SlokedTextTaggerRegistry<int> taggers;
-    taggers.Bind("default", std::make_unique<TestFragmentFactory>());
-
-    logger.Debug() << "Misc. initialization";
+    editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
     SlokedTerminalScreenProvider screen(console, terminalEncoding, charWidth, terminal);
-    SlokedScreenServer screenServer(server, screen);
 
     auto isScreenLocked = [&screen] {
         return screen.GetScreen().IsHolder();
     };
 
-    logger.Debug() << "Screen initialized";
-
-    server.Register("document::render", std::make_unique<SlokedTextRenderService>(documents, charWidth, taggers, ctxManager));
-    server.Register("document::cursor", std::make_unique<SlokedCursorService>(documents, server.GetConnector("document::render"), ctxManager));
-    server.Register("document::manager", std::make_unique<SlokedDocumentSetService>(documents, ctxManager));
-    server.Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(documents, ctxManager));
-    server.Register("document::search", std::make_unique<SlokedSearchService>(documents, ctxManager));
-    server.Register("namespace::root", std::make_unique<SlokedNamespaceService>(root, ctxManager));
+    SlokedScreenServer screenServer(editor.GetServer(), screen);
     screenServer.Register(
-        "screen::manager", std::make_unique<SlokedScreenService>(screen.GetScreen(), terminalEncoding, slaveServer.GetConnector("document::cursor"), slaveServer.GetConnector("document::notify"), ctxManager),
-        "screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(screen.GetScreen(), terminalEncoding, ctxManager),
-        "screen::component::input.forward", std::make_unique<SlokedScreenInputForwardingService>(screen.GetScreen(), terminalEncoding, ctxManager),
-        "screen::component::text.pane", std::make_unique<SlokedTextPaneService>(screen.GetScreen(), terminalEncoding, ctxManager)
+        "screen::manager", std::make_unique<SlokedScreenService>(screen.GetScreen(), terminalEncoding, slaveServer.GetConnector("document::cursor"), slaveServer.GetConnector("document::notify"), editor.GetContextManager()),
+        "screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(screen.GetScreen(), terminalEncoding, editor.GetContextManager()),
+        "screen::component::input.forward", std::make_unique<SlokedScreenInputForwardingService>(screen.GetScreen(), terminalEncoding, editor.GetContextManager()),
+        "screen::component::text.pane", std::make_unique<SlokedTextPaneService>(screen.GetScreen(), terminalEncoding, editor.GetContextManager())
     );
 
-    logger.Debug() << "Services bound";
+
+    SlokedPathResolver resolver(SlokedPosixNamespaceEnvironment::WorkDir(), SlokedPosixNamespaceEnvironment::HomeDir());
+    SlokedPath inputPath = resolver.Resolve(SlokedPath{cli.At(0)});
+    SlokedPath outputPath = resolver.Resolve(SlokedPath{cli["output"].As<std::string>()});
 
     SlokedScreenClient screenClient(slaveServer.Connect("screen::manager"), isScreenLocked);
     SlokedDocumentSetClient documentClient(slaveServer.Connect("document::manager"));
@@ -254,6 +222,7 @@ int main(int argc, const char **argv) {
 
     logger.Debug() << "Editor initialized";
 
+    SlokedSemaphore work;
     int i = 0;
     auto renderStatus = [&] {
         render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
@@ -265,24 +234,26 @@ int main(int argc, const char **argv) {
     renderStatus();
     SlokedScreenInputNotificationClient screenInput(slaveServer.Connect("screen::component::input.notify"), terminalEncoding, isScreenLocked);
     screenInput.Listen("/", [&](auto &evt) {
-        sched.Defer([&, evt] {
+        editor.GetScheduler().Defer([&, evt] {
             renderStatus();
             if (evt.value.index() != 0 && std::get<1>(evt.value) == SlokedControlKey::Escape) {
                 logger.Debug() << "Saving document";
                 documentClient.Save(outputPath.ToString());
-                screenServer.Close();
+                work.Notify();
             }
         });
     }, true);
 
-    SlokedLuaEngine luaEngine(sched, cli["script-path"].As<std::string>());
+    SlokedLuaEngine luaEngine(editor.GetScheduler(), cli["script-path"].As<std::string>());
     closeables.Attach(luaEngine);
     luaEngine.BindServer("main", slaveServer);
     if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {
         luaEngine.Start(cli["script"].As<std::string>());
     }
 
-    screenServer.Run(std::chrono::milliseconds(25));
+    screenServer.Start(std::chrono::milliseconds(25));
+    closeables.Attach(screenServer);
+    work.Wait();
 
     logger.Debug() << "Stopping servers";
     closeables.Close();

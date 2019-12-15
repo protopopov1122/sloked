@@ -25,6 +25,7 @@ sloked_src = [
   'src/core/awaitable/Posix.cpp',
   'src/demo/main.cpp',
   'src/editor/Configuration.cpp',
+  'src/editor/EditorCore.cpp',
   'src/editor/ScreenServer.cpp',
   'src/editor/doc-mgr/Document.cpp',
   'src/editor/doc-mgr/DocumentSet.cpp',

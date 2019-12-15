@@ -26,37 +26,53 @@ namespace sloked {
     SlokedScreenServer::SlokedScreenServer(KgrNamedServer &server, SlokedScreenProvider &provider)
         : server(server), provider(provider) {}
 
-    void SlokedScreenServer::Run(std::chrono::system_clock::duration timeout) {
-        if (!this->work.exchange(true)) {
-            this->provider.GetScreen().Lock([this](auto &screen) {
-                screen.OnUpdate([this] {
-                    this->renderRequested = true;
-                });
-            });
-            
-            while (work.load()) {
-                if (this->renderRequested.load()) {
-                    this->renderRequested = false;
-                    this->provider.Render([&](auto &screen) {
-                        screen.UpdateDimensions();
-                        screen.Render();
-                    });
-                }
+    SlokedScreenServer::~SlokedScreenServer() {
+        this->Close();
+    }
 
-                auto input = this->provider.ReceiveInput(timeout);
-                for (const auto &evt : input) {
-                    this->provider.GetScreen().Lock([&](auto &screen) {
-                        screen.ProcessInput(evt);
-                    });
-                }
-            }
-            this->provider.GetScreen().Lock([this](auto &screen) {
-                screen.OnUpdate(nullptr);
+    bool SlokedScreenServer::IsRunning() const {
+        return this->work.load();
+    }
+
+    void SlokedScreenServer::Start(std::chrono::system_clock::duration timeout) {
+        if (!this->work.exchange(true)) {
+            this->worker = std::thread([this, timeout] {
+                this->Run(timeout);
             });
         }
     }
 
     void SlokedScreenServer::Close() {
-        this->work = false;
+        if (this->work.exchange(false) && this->worker.joinable()) {
+            this->worker.join();
+        }
+    }
+
+    void SlokedScreenServer::Run(std::chrono::system_clock::duration timeout) {
+        this->provider.GetScreen().Lock([this](auto &screen) {
+            screen.OnUpdate([this] {
+                this->renderRequested = true;
+            });
+        });
+        
+        while (work.load()) {
+            if (this->renderRequested.load()) {
+                this->renderRequested = false;
+                this->provider.Render([&](auto &screen) {
+                    screen.UpdateDimensions();
+                    screen.Render();
+                });
+            }
+
+            auto input = this->provider.ReceiveInput(timeout);
+            for (const auto &evt : input) {
+                this->provider.GetScreen().Lock([&](auto &screen) {
+                    screen.ProcessInput(evt);
+                });
+            }
+        }
+        this->provider.GetScreen().Lock([this](auto &screen) {
+            screen.OnUpdate(nullptr);
+        });
     }
 }

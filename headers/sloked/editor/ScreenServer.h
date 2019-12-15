@@ -28,6 +28,7 @@
 #include "sloked/screen/Component.h"
 #include <atomic>
 #include <chrono>
+#include <thread>
 
 namespace sloked {
 
@@ -43,7 +44,9 @@ namespace sloked {
      public:
         using InputProcessor = std::function<std::vector<SlokedKeyboardInput>(std::vector<SlokedKeyboardInput>)>;
         SlokedScreenServer(KgrNamedServer &, SlokedScreenProvider &);
-        void Run(std::chrono::system_clock::duration);
+        ~SlokedScreenServer();
+        bool IsRunning() const;
+        void Start(std::chrono::system_clock::duration);
         void Close() final;
 
         template <typename A, typename ... B>
@@ -55,10 +58,13 @@ namespace sloked {
         }
 
      private:
+        void Run(std::chrono::system_clock::duration);
+
         KgrNamedServer &server;
         SlokedScreenProvider &provider;
         std::atomic<bool> work;
         std::atomic<bool> renderRequested;
+        std::thread worker;
     };
 }
 

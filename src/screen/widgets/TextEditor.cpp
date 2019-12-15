@@ -44,22 +44,30 @@ namespace sloked {
         } else switch (std::get<1>(cmd.value)) {
             case SlokedControlKey::ArrowUp:
                 this->cursorClient.MoveUp();
-                this->updateListener();
+                if (this->updateListener) {
+                    this->updateListener();
+                }
                 break;
             
             case SlokedControlKey::ArrowDown:
                 this->cursorClient.MoveDown();
-                this->updateListener();
+                if (this->updateListener) {
+                    this->updateListener();
+                }
                 break;
             
             case SlokedControlKey::ArrowLeft:
                 this->cursorClient.MoveBackward();
-                this->updateListener();
+                if (this->updateListener) {
+                    this->updateListener();
+                }
                 break;
             
             case SlokedControlKey::ArrowRight:
                 this->cursorClient.MoveForward();
-                this->updateListener();
+                if (this->updateListener) {
+                    this->updateListener();
+                }
                 break;
 
             case SlokedControlKey::Enter:
