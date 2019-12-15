@@ -143,6 +143,7 @@ static const KgrDictionary DefaultConfiguration {
 };
 
 int main(int argc, const char **argv) {
+    // Core initialization
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
     SlokedCLI cli;
     cli.Define("--encoding", mainConfig.Find("/encoding").AsString());
@@ -160,6 +161,7 @@ int main(int argc, const char **argv) {
     SlokedLoggingManager::Global.SetSink(SlokedLogLevel::Warning, SlokedLoggingSink::TextFile("./sloked.log", SlokedLoggingSink::TabularFormat(10, 30, 30)));
     SlokedLogger logger(SlokedLoggerTag);
 
+    // Editor initialization
     SlokedCloseablePool closeables;
     SlokedPosixAwaitablePoll socketPoll;
     SlokedPosixSocketFactory socketFactory;
@@ -170,42 +172,40 @@ int main(int argc, const char **argv) {
     closeables.Attach(editor);
     editor.Start();
     editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>());
+    editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
 
+    // Proxy initialization
     KgrLocalServer portLocalServer;
     KgrLocalNamedServer localServer(portLocalServer);
     KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), localServer, editor.GetIO());
     closeables.Attach(slaveServer);
     slaveServer.Start();
 
+    // Screen initialization
     SlokedLocale::Setup();
     const Encoding &terminalEncoding = Encoding::Get("system");
-    editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
     SlokedTerminalScreenProvider screen(console, terminalEncoding, charWidth, terminal);
 
-    auto isScreenLocked = [&screen] {
-        return screen.GetScreen().IsHolder();
-    };
+    SlokedScreenServer screenServer(editor.GetServer(), screen, editor.GetContextManager());
+    closeables.Attach(screenServer);
+    screenServer.Start(std::chrono::milliseconds(25));
 
-    SlokedScreenServer screenServer(editor.GetServer(), screen);
-    screenServer.Register(
-        "screen::manager", std::make_unique<SlokedScreenService>(screen.GetScreen(), terminalEncoding, slaveServer.GetConnector("document::cursor"), slaveServer.GetConnector("document::notify"), editor.GetContextManager()),
-        "screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(screen.GetScreen(), terminalEncoding, editor.GetContextManager()),
-        "screen::component::input.forward", std::make_unique<SlokedScreenInputForwardingService>(screen.GetScreen(), terminalEncoding, editor.GetContextManager()),
-        "screen::component::text.pane", std::make_unique<SlokedTextPaneService>(screen.GetScreen(), terminalEncoding, editor.GetContextManager())
-    );
-
-
+    // Editor configuration
     SlokedPathResolver resolver(SlokedPosixNamespaceEnvironment::WorkDir(), SlokedPosixNamespaceEnvironment::HomeDir());
     SlokedPath inputPath = resolver.Resolve(SlokedPath{cli.At(0)});
     SlokedPath outputPath = resolver.Resolve(SlokedPath{cli["output"].As<std::string>()});
 
+    auto isScreenLocked = [&screen] {
+        return screen.GetScreen().IsHolder();
+    };
     SlokedScreenClient screenClient(slaveServer.Connect("screen::manager"), isScreenLocked);
     SlokedDocumentSetClient documentClient(slaveServer.Connect("document::manager"));
     documentClient.Open(inputPath.ToString(), cli["encoding"].As<std::string>(), cli["newline"].As<std::string>());
 
+    // Screen layout
     screenClient.Handle.NewMultiplexer("/");
     auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
     screenClient.Handle.NewSplitter(mainWindow.value(), Splitter::Direction::Vertical);
@@ -215,13 +215,11 @@ int main(int argc, const char **argv) {
     auto tab1 = screenClient.Tabber.NewWindow("/0/0");
     screenClient.Handle.NewTextEditor(tab1.value(), documentClient.GetId().value(), "default");
 
-
     SlokedTextPaneClient paneClient(slaveServer.Connect("screen::component::text.pane"), isScreenLocked);
     paneClient.Connect("/0/1", false, {});
     auto &render = paneClient.GetRender();
 
-    logger.Debug() << "Editor initialized";
-
+    // Startup
     SlokedSemaphore work;
     int i = 0;
     auto renderStatus = [&] {
@@ -244,6 +242,7 @@ int main(int argc, const char **argv) {
         });
     }, true);
 
+    // Scripting engine startup
     SlokedLuaEngine luaEngine(editor.GetScheduler(), cli["script-path"].As<std::string>());
     closeables.Attach(luaEngine);
     luaEngine.BindServer("main", slaveServer);
@@ -251,13 +250,8 @@ int main(int argc, const char **argv) {
         luaEngine.Start(cli["script"].As<std::string>());
     }
 
-    screenServer.Start(std::chrono::milliseconds(25));
-    closeables.Attach(screenServer);
+    // Wait until editor finishes
     work.Wait();
-
-    logger.Debug() << "Stopping servers";
     closeables.Close();
-
-    logger.Debug() << "Shutdown";
     return EXIT_SUCCESS;
 }

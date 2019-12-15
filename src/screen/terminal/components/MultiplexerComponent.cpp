@@ -159,6 +159,7 @@ namespace sloked {
         auto handle = std::make_unique<TerminalComponentHandle>(*terminal, this->encoding, this->charWidth);
         auto id = this->nextId++;
         auto window = std::make_shared<TerminalMultiplexerWindow>(id, std::move(handle), std::move(terminal), *this);
+        window->GetComponent().OnUpdate(this->updateListener);
         this->windows[id] = window;
         this->focus.push_back(id);
         if (this->updateListener) {

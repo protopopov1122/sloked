@@ -24,7 +24,10 @@
 
 #include "sloked/core/Closeable.h"
 #include "sloked/core/Monitor.h"
+#include "sloked/core/Encoding.h"
 #include "sloked/kgr/NamedServer.h"
+#include "sloked/kgr/ContextManager.h"
+#include "sloked/kgr/local/Context.h"
 #include "sloked/screen/Component.h"
 #include <atomic>
 #include <chrono>
@@ -38,24 +41,17 @@ namespace sloked {
         virtual void Render(std::function<void(SlokedScreenComponent &)>) = 0;
         virtual std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration) = 0;
         virtual SlokedMonitor<SlokedScreenComponent &> &GetScreen() = 0;
+        virtual const Encoding &GetEncoding() = 0;
     };
 
     class SlokedScreenServer : public SlokedCloseable {
      public:
         using InputProcessor = std::function<std::vector<SlokedKeyboardInput>(std::vector<SlokedKeyboardInput>)>;
-        SlokedScreenServer(KgrNamedServer &, SlokedScreenProvider &);
+        SlokedScreenServer(KgrNamedServer &, SlokedScreenProvider &, KgrContextManager<KgrLocalContext> &);
         ~SlokedScreenServer();
         bool IsRunning() const;
         void Start(std::chrono::system_clock::duration);
         void Close() final;
-
-        template <typename A, typename ... B>
-        void Register(const std::string &id, std::unique_ptr<A> service, B &&... services) {
-            this->server.Register(id, std::move(service));
-            if constexpr (sizeof...(B) > 0) {
-                this->Register(std::forward<B>(services)...);
-            }
-        }
 
      private:
         void Run(std::chrono::system_clock::duration);

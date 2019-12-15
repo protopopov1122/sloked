@@ -34,9 +34,11 @@ namespace sloked {
         void Render(std::function<void(SlokedScreenComponent &)>) final;
         std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration) final;
         SlokedMonitor<SlokedScreenComponent &> &GetScreen() final;
+        const Encoding &GetEncoding() final;
 
      private:
         SlokedTerminal &terminal;
+        const Encoding &encoding;
         TerminalComponentHandle rootComponent;
         SlokedMonitor<SlokedScreenComponent &> screen;
         SlokedTerminalInputSource &inputSource;

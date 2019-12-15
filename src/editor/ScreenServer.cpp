@@ -20,11 +20,20 @@
 */
 
 #include "sloked/editor/ScreenServer.h"
+#include "sloked/services/Screen.h"
+#include "sloked/services/ScreenInput.h"
+#include "sloked/services/TextPane.h"
 
 namespace sloked {
 
-    SlokedScreenServer::SlokedScreenServer(KgrNamedServer &server, SlokedScreenProvider &provider)
-        : server(server), provider(provider) {}
+    SlokedScreenServer::SlokedScreenServer(KgrNamedServer &server, SlokedScreenProvider &provider, KgrContextManager<KgrLocalContext> &contextManager)
+        : server(server), provider(provider) {
+        this->server.Register("screen::manager", std::make_unique<SlokedScreenService>(this->provider.GetScreen(),
+            this->provider.GetEncoding(), this->server.GetConnector("document::cursor"), this->server.GetConnector("document::notify"), contextManager));
+        this->server.Register("screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(this->provider.GetScreen(), this->provider.GetEncoding(), contextManager));
+        this->server.Register("screen::component::input.forward", std::make_unique<SlokedScreenInputForwardingService>(this->provider.GetScreen(), this->provider.GetEncoding(), contextManager));
+        this->server.Register("screen::component::text.pane", std::make_unique<SlokedTextPaneService>(this->provider.GetScreen(), this->provider.GetEncoding(), contextManager));
+    }
 
     SlokedScreenServer::~SlokedScreenServer() {
         this->Close();

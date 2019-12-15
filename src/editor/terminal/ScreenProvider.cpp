@@ -24,7 +24,7 @@
 namespace sloked {
 
     SlokedTerminalScreenProvider::SlokedTerminalScreenProvider(SlokedTerminal &terminal, const Encoding &encoding, const SlokedCharWidth &charWidth, SlokedTerminalInputSource &inputSource)
-        : terminal(terminal), rootComponent(terminal, encoding, charWidth), screen(rootComponent), inputSource(inputSource) {}
+        : terminal(terminal), encoding(encoding), rootComponent(terminal, encoding, charWidth), screen(rootComponent), inputSource(inputSource) {}
     
     void SlokedTerminalScreenProvider::Render(std::function<void(SlokedScreenComponent &)> render) {
         this->screen.Lock([&](auto &screen) {
@@ -44,5 +44,9 @@ namespace sloked {
 
     SlokedMonitor<SlokedScreenComponent &> &SlokedTerminalScreenProvider::GetScreen() {
         return this->screen;
+    }
+
+    const Encoding &SlokedTerminalScreenProvider::GetEncoding() {
+        return this->encoding;
     }
 }

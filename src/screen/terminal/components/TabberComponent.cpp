@@ -145,6 +145,7 @@ namespace sloked {
         auto term = this->tabber.NewTab();
         auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
         auto window = std::make_shared<TerminalTabberWindow>(term.index, std::move(component), *this);
+        window->GetComponent().OnUpdate(this->updateListener);
         this->components.push_back(window);
         if (this->updateListener) {
             this->updateListener();
@@ -156,6 +157,7 @@ namespace sloked {
         auto term = this->tabber.NewTab(idx);
         auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
         auto window = std::make_shared<TerminalTabberWindow>(term.index, std::move(component), *this);
+        window->GetComponent().OnUpdate(this->updateListener);
         this->components.insert(this->components.begin() + idx, window);
         for (std::size_t i = 0; i < this->components.size(); i++) {
             this->components.at(i)->SetId(i);
