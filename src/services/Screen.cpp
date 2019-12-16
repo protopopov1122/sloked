@@ -74,7 +74,7 @@ namespace sloked {
 
         void HandleNewMultiplexer(const std::string &method, const KgrValue &params, Response &rsp) {
             const auto &path = params.AsString();
-            RootLock([&](auto &screen) {
+            RootLock([path, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &handle = SlokedComponentTree::Traverse(screen, SlokedPath{path}).AsHandle();
                     handle.NewMultiplexer();
@@ -88,7 +88,7 @@ namespace sloked {
         void HandleNewSplitter(const std::string &method, const KgrValue &params, Response &rsp) {
             const auto &path = params.AsDictionary()["path"].AsString();
             auto direction = static_cast<Splitter::Direction>(params.AsDictionary()["direction"].AsInt());
-            RootLock([&](auto &screen) {
+            RootLock([path, direction, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &handle = SlokedComponentTree::Traverse(screen, SlokedPath{path}).AsHandle();
                     handle.NewSplitter(direction);
@@ -101,7 +101,7 @@ namespace sloked {
 
         void HandleNewTabber(const std::string &method, const KgrValue &params, Response &rsp) {
             const auto &path = params.AsString();
-            RootLock([&](auto &screen) {
+            RootLock([path, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &handle = SlokedComponentTree::Traverse(screen, SlokedPath{path}).AsHandle();
                     handle.NewTabber();
@@ -116,7 +116,7 @@ namespace sloked {
             const auto &path = params.AsDictionary()["path"].AsString();
             auto documentId = static_cast<SlokedEditorDocumentSet::DocumentId>(params.AsDictionary()["document"].AsInt());
             const std::string &tagger = params.AsDictionary()["tagger"].AsString();
-            RootLock([&](auto &screen) {
+            RootLock([this, path, documentId, tagger, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &handle = SlokedComponentTree::Traverse(screen, SlokedPath{path}).AsHandle();
                     auto initCursor = [&](auto &cursorClient) {
@@ -141,7 +141,7 @@ namespace sloked {
                 static_cast<TextPosition::Line>(params.AsDictionary()["size"].AsDictionary()["line"].AsInt()),
                 static_cast<TextPosition::Column>(params.AsDictionary()["size"].AsDictionary()["column"].AsInt())
             };
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), pos, dim, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &multiplexer = SlokedComponentTree::Traverse(screen, path.Child("self")).AsMultiplexer();
                     auto win = multiplexer.NewWindow(pos, dim);
@@ -158,7 +158,7 @@ namespace sloked {
 
         void MultiplexerGetInfo(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &multiplexer = SlokedComponentTree::Traverse(screen, path.Child("self")).AsMultiplexer();
                     KgrDictionary response {
@@ -178,7 +178,7 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             SlokedPath multiplexerPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
-            RootLock([&](auto &screen) {
+            RootLock([winId, path = std::move(path), multiplexerPath = std::move(multiplexerPath), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &multiplexer = SlokedComponentTree::Traverse(screen, multiplexerPath).AsMultiplexer();
                     auto win = multiplexer.GetWindow(winId);
@@ -197,7 +197,7 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             SlokedPath multiplexerPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
-            RootLock([&](auto &screen) {
+            RootLock([winId, path = std::move(path), multiplexerPath = std::move(multiplexerPath), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &multiplexer = SlokedComponentTree::Traverse(screen, multiplexerPath).AsMultiplexer();
                     auto win = multiplexer.GetWindow(winId);
@@ -217,7 +217,7 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             SlokedPath multiplexerPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
-            RootLock([&](auto &screen) {
+            RootLock([winId, path = std::move(path), multiplexerPath = std::move(multiplexerPath), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &multiplexer = SlokedComponentTree::Traverse(screen, multiplexerPath).AsMultiplexer();
                     auto win = multiplexer.GetWindow(winId);
@@ -241,7 +241,7 @@ namespace sloked {
                 static_cast<TextPosition::Line>(params.AsDictionary()["pos"].AsDictionary()["line"].AsInt()),
                 static_cast<TextPosition::Column>(params.AsDictionary()["pos"].AsDictionary()["column"].AsInt())
             };
-            RootLock([&](auto &screen) {
+            RootLock([winId, path = std::move(path), multiplexerPath = std::move(multiplexerPath), pos = std::move(pos), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &multiplexer = SlokedComponentTree::Traverse(screen, multiplexerPath).AsMultiplexer();
                     auto win = multiplexer.GetWindow(winId);
@@ -265,7 +265,7 @@ namespace sloked {
                 static_cast<TextPosition::Line>(params.AsDictionary()["size"].AsDictionary()["line"].AsInt()),
                 static_cast<TextPosition::Column>(params.AsDictionary()["size"].AsDictionary()["column"].AsInt())
             };
-            RootLock([&](auto &screen) {
+            RootLock([winId, path = std::move(path), multiplexerPath = std::move(multiplexerPath), pos = std::move(pos), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &multiplexer = SlokedComponentTree::Traverse(screen, multiplexerPath).AsMultiplexer();
                     auto win = multiplexer.GetWindow(winId);
@@ -286,7 +286,7 @@ namespace sloked {
             Splitter::Constraints constraints(params.AsDictionary()["constraints"].AsDictionary()["dim"].AsNumber(),
                 params.AsDictionary()["constraints"].AsDictionary()["min"].AsInt(),
                 params.AsDictionary()["constraints"].AsDictionary()["max"].AsInt());
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), constraints = std::move(constraints), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &splitter = SlokedComponentTree::Traverse(screen, path.Child("self")).AsSplitter();
                     auto win = splitter.NewWindow(constraints);
@@ -308,7 +308,7 @@ namespace sloked {
             Splitter::Constraints constraints(params.AsDictionary()["constraints"].AsDictionary()["dim"].AsNumber(),
                 params.AsDictionary()["constraints"].AsDictionary()["min"].AsInt(),
                 params.AsDictionary()["constraints"].AsDictionary()["max"].AsInt());
-            RootLock([&](auto &screen) {
+            RootLock([winId, path = std::move(path), splitterPath = std::move(splitterPath), constraints = std::move(constraints), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
                     auto win = splitter.NewWindow(winId, constraints);
@@ -325,7 +325,7 @@ namespace sloked {
 
         void SplitterGetInfo(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &splitter = SlokedComponentTree::Traverse(screen, path.Child("self")).AsSplitter();
                     KgrDictionary response {
@@ -345,7 +345,7 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             SlokedPath splitterPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
-            RootLock([&](auto &screen) {
+            RootLock([winId, path = std::move(path), splitterPath = std::move(splitterPath), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
                     auto win = splitter.GetWindow(winId);
@@ -364,7 +364,7 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             SlokedPath splitterPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
-            RootLock([&](auto &screen) {
+            RootLock([winId, path = std::move(path), splitterPath = std::move(splitterPath), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
                     auto win = splitter.GetWindow(winId);
@@ -384,7 +384,7 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             SlokedPath splitterPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), splitterPath = std::move(splitterPath), winId, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
                     auto win = splitter.GetWindow(winId);
@@ -407,7 +407,7 @@ namespace sloked {
             Splitter::Constraints constraints(params.AsDictionary()["constraints"].AsDictionary()["dim"].AsNumber(),
                 params.AsDictionary()["constraints"].AsDictionary()["min"].AsInt(),
                 params.AsDictionary()["constraints"].AsDictionary()["max"].AsInt());
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), splitterPath = std::move(splitterPath), constraints = std::move(constraints), winId, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
                     auto win = splitter.GetWindow(winId);
@@ -428,7 +428,7 @@ namespace sloked {
             SlokedPath splitterPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             auto newWinId = static_cast<SlokedComponentWindow::Id>(params.AsDictionary()["position"].AsInt());
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), splitterPath = std::move(splitterPath), winId, newWinId, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &splitter = SlokedComponentTree::Traverse(screen, splitterPath).AsSplitter();
                     auto win = splitter.GetWindow(winId);
@@ -446,7 +446,7 @@ namespace sloked {
 
         void TabberNewWindow(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &tabber = SlokedComponentTree::Traverse(screen, path.Child("self")).AsTabber();
                     auto win = tabber.NewWindow();
@@ -461,7 +461,7 @@ namespace sloked {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
             SlokedPath tabberPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
-            RootLock([&](auto &screen) {
+            RootLock([winId, path = std::move(path), tabberPath = std::move(tabberPath), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &tabber = SlokedComponentTree::Traverse(screen, tabberPath).AsTabber();
                     auto win = tabber.NewWindow(winId);
@@ -478,7 +478,7 @@ namespace sloked {
 
         void TabberGetInfo(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsString()};
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &tabber = SlokedComponentTree::Traverse(screen, path.Child("self")).AsTabber();
                     KgrDictionary response {
@@ -498,7 +498,7 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             SlokedPath tabberPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), tabberPath = std::move(tabberPath), winId, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &tabber = SlokedComponentTree::Traverse(screen, tabberPath).AsTabber();
                     auto win = tabber.GetWindow(winId);
@@ -517,7 +517,7 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             SlokedPath tabberPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), tabberPath = std::move(tabberPath), winId, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &tabber = SlokedComponentTree::Traverse(screen, tabberPath).AsTabber();
                     auto win = tabber.GetWindow(winId);
@@ -537,7 +537,7 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             SlokedPath tabberPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), tabberPath = std::move(tabberPath), winId, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &tabber = SlokedComponentTree::Traverse(screen, tabberPath).AsTabber();
                     auto win = tabber.GetWindow(winId);
@@ -558,7 +558,7 @@ namespace sloked {
             SlokedPath tabberPath = path.Parent().Child("self");
             auto winId = static_cast<SlokedComponentWindow::Id>(std::stoull(path.Components().back()));
             auto newWinId = static_cast<SlokedComponentWindow::Id>(params.AsDictionary()["position"].AsInt());
-            RootLock([&](auto &screen) {
+            RootLock([path = std::move(path), tabberPath = std::move(tabberPath), winId, newWinId, rsp = std::move(rsp)](auto &screen) mutable {
                 try {
                     auto &tabber = SlokedComponentTree::Traverse(screen, tabberPath).AsTabber();
                     auto win = tabber.GetWindow(winId);

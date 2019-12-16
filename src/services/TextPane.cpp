@@ -204,7 +204,7 @@ namespace sloked {
         virtual ~SlokedTextPaneContext() {
             this->frame.Reset();
             if (this->path.has_value()) {
-                RootLock([&](auto &component) {
+                this->root.Lock([&](auto &component) {
                     SlokedComponentTree::Traverse(component, this->path.value()).AsHandle().Close();
                 });
             }
@@ -223,7 +223,7 @@ namespace sloked {
         void Connect(const std::string &method, const KgrValue &params, Response &rsp) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
             this->frame.Unsubscribe();
-            RootLock([&](auto &component) {
+            RootLock([this, path, params, rsp = std::move(rsp)](auto &component) mutable {
                 try {
                     if (this->path.has_value()) {
                         SlokedComponentTree::Traverse(component, this->path.value()).AsHandle().Close();
@@ -247,7 +247,7 @@ namespace sloked {
 
         void GetWidth(const std::string &method, const KgrValue &params, Response &rsp) {
             if (this->path.has_value()) {
-                RootLock([&](auto &component) {
+                RootLock([this, params, rsp = std::move(rsp)](auto &component) mutable {
                     auto &cmp = SlokedComponentTree::Traverse(component, this->path.value());
                     rsp.Result(static_cast<int64_t>(cmp.GetDimensions().column));
                 });
@@ -256,7 +256,7 @@ namespace sloked {
 
         void GetHeight(const std::string &method, const KgrValue &params, Response &rsp) {
             if (this->path.has_value()) {
-                RootLock([&](auto &component) {
+                RootLock([this, rsp = std::move(rsp)](auto &component) mutable {
                     auto &cmp = SlokedComponentTree::Traverse(component, this->path.value());
                     rsp.Result(static_cast<int64_t>(cmp.GetDimensions().line));
                 });
@@ -270,7 +270,7 @@ namespace sloked {
         void Close(const std::string &method, const KgrValue &params, Response &rsp) {
             this->frame.Reset();
             if (this->path.has_value()) {
-                RootLock([&](auto &component) {
+                RootLock([this, params](auto &component) {
                     SlokedComponentTree::Traverse(component, this->path.value()).AsHandle().Close();
                 });
             }

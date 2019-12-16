@@ -61,7 +61,7 @@ namespace sloked {
 
         virtual ~SlokedScreenInputNotifierContext() {
             if (this->listener.has_value()) {
-                RootLock([&](auto &component) {
+                this->root.Lock([&](auto &component) {
                     SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
                 });
             }
@@ -110,7 +110,7 @@ namespace sloked {
             if (params.AsDictionary().Has("all")) {
                 this->subscribeAll = params.AsDictionary()["all"].AsBoolean();
             }
-            RootLock([&](auto &component) {
+            RootLock([this, path = std::move(path), params](auto &component) {
                 if (this->listener.has_value()) {
                     SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
                 }
@@ -142,7 +142,7 @@ namespace sloked {
             this->subscribeOnText = false;
             this->subscribes.clear();
             if (this->listener.has_value()) {
-                RootLock([&](auto &component) {
+                RootLock([this](auto &component) {
                     SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
                     this->listener.reset();
                     this->path.reset();
