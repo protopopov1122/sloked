@@ -23,6 +23,7 @@
 #include "sloked/core/Error.h"
 #include "sloked/kgr/net/Interface.h"
 #include "sloked/kgr/net/Config.h"
+#include "sloked/kgr/local/Pipe.h"
 #include <thread>
 #include <cstring>
 #include <set>
@@ -37,44 +38,33 @@ namespace sloked {
 
     class KgrMasterNetServerContext : public SlokedIOPoller::Awaitable {
      public:
-        KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, SlokedCounter<std::size_t>::Handle counter, KgrNamedServer &server)
-            : net(std::move(socket)), work(work), server(server), nextPipeId(0), counterHandle(std::move(counter)), pinged{false} {
+        KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, SlokedCounter<std::size_t>::Handle counter, KgrNamedServer &server, KgrNamedServer &remoteServices)
+            : net(std::move(socket)), work(work), server(server), remoteServices(remoteServices), nextPipeId(0), counterHandle(std::move(counter)), workers{0}, pinged{false} {
 
             this->lastActivity = std::chrono::system_clock::now();
 
             this->net.BindMethod("connect", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 const auto &service = params.AsString();
-                auto pipe = this->server.Connect(service);
-                if (pipe == nullptr) {
-                    throw SlokedError("KgrMasterServer: Pipe can't be null");
-                }
                 std::unique_lock lock(this->mtx);
-                auto pipeId = this->nextPipeId++;
-                pipe->SetMessageListener([this, pipeId] {
-                    std::unique_lock lock(this->mtx);
-                    if (this->frozenPipes.count(pipeId) != 0) {
-                        return;
-                    }
-                    auto &pipe = *this->pipes.at(pipeId);
-                    while (!pipe.Empty()) {
-                        this->net.Invoke("send", KgrDictionary {
-                            { "pipe", pipeId },
-                            { "data", pipe.Read() }
-                        });
-                    }
-                    if (pipe.GetStatus() == KgrPipe::Status::Closed) {
-                        try {
-                            this->net.Invoke("close", pipeId);
-                        } catch (const SlokedError &err) {
-                            // Ignoring errors in case when socket already closed
+                if (this->remoteServices.Registered(service)) {
+                    SlokedCounter<std::size_t>::Handle handle(this->workers);
+                    std::thread([this, service, rsp = std::move(rsp), handle = std::move(handle)]() mutable {
+                        auto pipe = this->remoteServices.Connect(service);
+                        std::unique_lock lock(this->mtx);
+                        if (pipe) {
+                            this->Connect(std::move(pipe), rsp);
+                        } else {
+                            rsp.Error("KgrMasterServer: Pipe can't be null");
                         }
-                        this->frozenPipes.erase(pipeId);
-                        this->pipes.erase(pipeId);
+                    }).detach();
+                } else {
+                    auto pipe = this->server.Connect(service);
+                    if (pipe == nullptr) {
+                        throw SlokedError("KgrMasterServer: Pipe can't be null");
+                    } else {
+                        this->Connect(std::move(pipe), rsp);
                     }
-                });
-                this->frozenPipes.insert(pipeId);
-                this->pipes.emplace(pipeId, std::move(pipe));
-                rsp.Result(pipeId);
+                }
             });
 
             this->net.BindMethod("activate", [this](const std::string &method, const KgrValue &params, auto &rsp) {
@@ -125,9 +115,9 @@ namespace sloked {
             this->net.BindMethod("bind", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 std::unique_lock lock(this->mtx);
                 const auto &service = params.AsString();
-                if (!this->server.Registered(service)) {
-                    this->server.Register(service, std::make_unique<SlaveService>(*this, service));
-                    this->remoteServices.push_back(service);
+                if (!this->server.Registered(service) && !this->remoteServices.Registered(service)) {
+                    this->remoteServices.Register(service, std::make_unique<SlaveService>(*this, service));
+                    this->remoteServiceList.push_back(service);
                     rsp.Result(true);
                 } else {
                     rsp.Result(false);
@@ -137,16 +127,15 @@ namespace sloked {
             this->net.BindMethod("bound", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 std::unique_lock lock(this->mtx);
                 const auto &service = params.AsString();
-                rsp.Result(this->server.Registered(service));
+                rsp.Result(this->server.Registered(service) || this->remoteServices.Registered(service));
             });
 
             this->net.BindMethod("unbind", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 std::unique_lock lock(this->mtx);
                 const auto &service = params.AsString();
-                if (this->server.Registered(service)) {
-                    this->server.Deregister(service);
-                    this->remoteServices.erase(std::remove(this->remoteServices.begin(), this->remoteServices.end(), service),
-                        this->remoteServices.end());
+                if (this->remoteServices.Registered(service)) {
+                    this->remoteServices.Deregister(service);
+                    this->remoteServiceList.erase(std::remove(this->remoteServiceList.begin(), this->remoteServiceList.end(), service), this->remoteServiceList.end());
                     rsp.Result(true);
                 } else {
                     rsp.Result(false);
@@ -159,13 +148,17 @@ namespace sloked {
         }
 
         virtual ~KgrMasterNetServerContext() {
+            this->workers.Wait([](auto count) {
+                return count == 0;
+            });
             std::unique_lock lock(this->mtx);
             for (const auto &pipe : this->pipes) {
                 pipe.second->Close();
             }
-            for (const auto &service : this->remoteServices) {
-                this->server.Deregister(service);
+            for (const auto &rService : this->remoteServiceList) {
+                this->remoteServices.Deregister(rService);
             }
+            this->remoteServiceList.clear();
             if (this->net.Valid()) {
                 this->net.Close();
             }
@@ -208,7 +201,7 @@ namespace sloked {
             SlaveService(KgrMasterNetServerContext &srv, const std::string &service)
                 : srv(srv), service(service) {}
 
-            bool Attach(std::unique_ptr<KgrPipe> pipe) override {
+            bool Attach(std::unique_ptr<KgrPipe> pipe) {
                 try {
                     std::unique_lock lock(this->srv.mtx);
                     auto pipeId = this->srv.nextPipeId++;
@@ -253,6 +246,35 @@ namespace sloked {
             std::string service;
         };
 
+        void Connect(std::unique_ptr<KgrPipe> pipe, KgrNetInterface::Responder &rsp) {
+            auto pipeId = this->nextPipeId++;
+            pipe->SetMessageListener([this, pipeId] {
+                std::unique_lock lock(this->mtx);
+                if (this->frozenPipes.count(pipeId) != 0) {
+                    return;
+                }
+                auto &pipe = *this->pipes.at(pipeId);
+                while (!pipe.Empty()) {
+                    this->net.Invoke("send", KgrDictionary {
+                        { "pipe", pipeId },
+                        { "data", pipe.Read() }
+                    });
+                }
+                if (pipe.GetStatus() == KgrPipe::Status::Closed) {
+                    try {
+                        this->net.Invoke("close", pipeId);
+                    } catch (const SlokedError &err) {
+                        // Ignoring errors in case when socket already closed
+                    }
+                    this->frozenPipes.erase(pipeId);
+                    this->pipes.erase(pipeId);
+                }
+            });
+            this->frozenPipes.insert(pipeId);
+            this->pipes.emplace(pipeId, std::move(pipe));
+            rsp.Result(pipeId);
+        }
+
         void Accept(std::size_t count = 0) {
             if (this->net.Wait(KgrNetConfig::RequestTimeout)) {
                 this->net.Receive();
@@ -264,19 +286,21 @@ namespace sloked {
         KgrNetInterface net;
         const std::atomic<bool> &work;
         KgrNamedServer &server;
+        KgrNamedServer &remoteServices;
+        std::vector<std::string> remoteServiceList;
         std::map<int64_t, std::unique_ptr<KgrPipe>> pipes;
         int64_t nextPipeId;
         std::recursive_mutex mtx;
         std::set<int64_t> frozenPipes;
-        std::vector<std::string> remoteServices;
         SlokedCounter<std::size_t>::Handle counterHandle;
         SlokedIOPoller::Handle awaitableHandle;
         std::chrono::system_clock::time_point lastActivity;
+        SlokedCounter<std::size_t> workers;
         bool pinged;
     };
 
     KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedIOPoller &poll)
-        : server(server), srvSocket(std::move(socket)), poll(poll), work(false) {}
+        : server(server), remoteServices(rawRemoteServices), srvSocket(std::move(socket)), poll(poll), work(false) {}
 
     KgrMasterNetServer::~KgrMasterNetServer() {
         this->Close();
@@ -317,7 +341,7 @@ namespace sloked {
             auto client = this->self.srvSocket->Accept(KgrNetConfig::RequestTimeout);
             if (client) {
                 SlokedCounter<std::size_t>::Handle counterHandle(this->self.workers);
-                auto ctx = std::make_unique<KgrMasterNetServerContext>(std::move(client), this->self.work, std::move(counterHandle), this->self.server);
+                auto ctx = std::make_unique<KgrMasterNetServerContext>(std::move(client), this->self.work, std::move(counterHandle), this->self.server, this->self.remoteServices);
                 auto &ctx_ref = *ctx;
                 auto handle = this->self.poll.Attach(std::move(ctx));
                 ctx_ref.SetHandle(std::move(handle));

@@ -27,6 +27,8 @@
 #include "sloked/core/awaitable/Poll.h"
 #include "sloked/kgr/NamedServer.h"
 #include "sloked/core/Counter.h"
+#include "sloked/kgr/local/Server.h"
+#include "sloked/kgr/local/NamedServer.h"
 #include <atomic>
 #include <vector>
 
@@ -54,6 +56,8 @@ namespace sloked {
         friend class Awaitable;
 
         KgrNamedServer &server;
+        KgrLocalServer rawRemoteServices;
+        KgrLocalNamedServer remoteServices;
         std::unique_ptr<SlokedServerSocket> srvSocket;
         SlokedIOPoller &poll;
         SlokedIOPoller::Handle awaiterHandle;

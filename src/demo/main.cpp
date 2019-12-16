@@ -189,7 +189,7 @@ int main(int argc, const char **argv) {
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
     SlokedTerminalScreenProvider screen(console, terminalEncoding, charWidth, terminal);
 
-    SlokedScreenServer screenServer(editor.GetServer(), screen, editor.GetContextManager());
+    SlokedScreenServer screenServer(slaveServer, screen, editor.GetContextManager());
     closeables.Attach(screenServer);
     screenServer.Start(std::chrono::milliseconds(25));
 
