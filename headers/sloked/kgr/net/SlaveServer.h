@@ -27,6 +27,8 @@
 #include "sloked/core/awaitable/Poll.h"
 #include "sloked/kgr/net/Interface.h"
 #include "sloked/kgr/NamedServer.h"
+#include "sloked/kgr/local/Server.h"
+#include "sloked/kgr/local/NamedServer.h"
 #include <mutex>
 #include <atomic>
 #include <chrono>
@@ -35,7 +37,7 @@ namespace sloked {
 
     class KgrSlaveNetServer : public KgrNamedServer, public SlokedCloseable {
      public:
-        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, KgrNamedServer &, SlokedIOPoller &);
+        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &);
         ~KgrSlaveNetServer();
         bool IsRunning() const;
         void Start();
@@ -70,7 +72,8 @@ namespace sloked {
         std::mutex send_mtx;
         SlokedCounter<std::size_t> workers;
         std::map<int64_t, std::unique_ptr<KgrPipe>> pipes;
-        KgrNamedServer &localServer;
+        KgrLocalServer rawLocalServer;
+        KgrLocalNamedServer localServer;
         SlokedIOPoller &poll;
         std::chrono::system_clock::time_point lastActivity;
         bool pinged;

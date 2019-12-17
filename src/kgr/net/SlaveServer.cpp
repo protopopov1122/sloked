@@ -27,8 +27,8 @@
 
 namespace sloked {
 
-    KgrSlaveNetServer::KgrSlaveNetServer(std::unique_ptr<SlokedSocket> socket, KgrNamedServer &localServer, SlokedIOPoller &poll)
-        : net(std::move(socket)), work(false), localServer(localServer), poll(poll), pinged{false} {
+    KgrSlaveNetServer::KgrSlaveNetServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &poll)
+        : net(std::move(socket)), work(false), localServer(rawLocalServer), poll(poll), pinged{false} {
 
         this->lastActivity = std::chrono::system_clock::now();
 

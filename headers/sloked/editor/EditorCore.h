@@ -36,32 +36,49 @@
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/net/Socket.h"
 #include "sloked/kgr/net/MasterServer.h"
+#include "sloked/editor/EditorServer.h"
 
 namespace sloked {
 
-    class SlokedEditorCore : public SlokedCloseable {
+    class SlokedAbstractEditorCore : public SlokedCloseable {
      public:
-        SlokedEditorCore(SlokedLogger &, SlokedIOPoll &, SlokedNamespace &, const SlokedCharWidth &);
-        KgrNamedServer &GetServer();
-        SlokedTextTaggerRegistry<int> &GetTaggers();
+        ~SlokedAbstractEditorCore();
+        SlokedLogger &GetLogger();
         KgrContextManager<KgrLocalContext> &GetContextManager();
         SlokedSchedulerThread &GetScheduler();
         SlokedIOPoller &GetIO();
-        void SpawnNetServer(SlokedSocketFactory &, const std::string &, uint16_t);
+        KgrNamedServer &GetServer();
         void Start();
+        void SpawnNetServer(SlokedSocketFactory &, const std::string &, uint16_t);
         void Close() final;
 
-     private:
+     protected:
+        SlokedAbstractEditorCore(SlokedLogger &, SlokedIOPoll &);
+
         SlokedCloseablePool closeables;
         KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
         SlokedLogger &logger;
         SlokedDefaultSchedulerThread sched;
         SlokedDefaultIOPollThread io;
-        KgrLocalServer rawServer;
-        KgrLocalNamedServer server;
+        std::unique_ptr<SlokedEditorServer> server;
+        std::unique_ptr<KgrMasterNetServer> netServer;
+    };
+
+    class SlokedEditorMasterCore : public SlokedAbstractEditorCore {
+     public:
+        SlokedEditorMasterCore(SlokedLogger &, SlokedIOPoll &, SlokedNamespace &, const SlokedCharWidth &);
+        SlokedEditorMasterCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoll &, SlokedNamespace &, const SlokedCharWidth &);
+        SlokedTextTaggerRegistry<int> &GetTaggers();
+
+     private:
+        void Init(SlokedNamespace &, const SlokedCharWidth &);
         SlokedEditorDocumentSet documents;
         SlokedTextTaggerRegistry<int> taggers;
-        std::unique_ptr<KgrMasterNetServer> netServer;
+    };
+
+    class SlokedEditorSlaveCore : public SlokedAbstractEditorCore {
+     public:
+        SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoll &);
     };
 }
 

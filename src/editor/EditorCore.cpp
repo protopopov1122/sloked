@@ -30,40 +30,117 @@
 
 namespace sloked {
 
-    SlokedEditorCore::SlokedEditorCore(SlokedLogger &logger, SlokedIOPoll &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
-        : logger(logger), io(io), server(rawServer), documents(root), netServer(nullptr) {
-        
-        this->server.Register("document::render", std::make_unique<SlokedTextRenderService>(this->documents, charWidth, this->taggers, this->contextManager.GetManager()));
-        this->server.Register("document::cursor", std::make_unique<SlokedCursorService>(this->documents, this->server.GetConnector("document::render"), this->contextManager.GetManager()));
-        this->server.Register("document::manager", std::make_unique<SlokedDocumentSetService>(this->documents, this->contextManager.GetManager()));
-        this->server.Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(this->documents, this->contextManager.GetManager()));
-        this->server.Register("document::search", std::make_unique<SlokedSearchService>(this->documents, this->contextManager.GetManager()));
-        this->server.Register("namespace::root", std::make_unique<SlokedNamespaceService>(root, this->contextManager.GetManager()));
+    SlokedAbstractEditorCore::~SlokedAbstractEditorCore() {
+        this->Close();
     }
 
-    KgrNamedServer &SlokedEditorCore::GetServer() {
-        return this->server;
+    SlokedLogger &SlokedAbstractEditorCore::GetLogger() {
+        return this->logger;
     }
 
-    SlokedTextTaggerRegistry<int> &SlokedEditorCore::GetTaggers() {
-        return this->taggers;
-    }
-
-    KgrContextManager<KgrLocalContext> &SlokedEditorCore::GetContextManager() {
+    KgrContextManager<KgrLocalContext> &SlokedAbstractEditorCore::GetContextManager() {
         return this->contextManager.GetManager();
     }
 
-    SlokedSchedulerThread &SlokedEditorCore::GetScheduler() {
+    SlokedSchedulerThread &SlokedAbstractEditorCore::GetScheduler() {
         return this->sched;
     }
-
-    SlokedIOPoller &SlokedEditorCore::GetIO() {
+    SlokedIOPoller &SlokedAbstractEditorCore::GetIO() {
         return this->io;
     }
 
-    void SlokedEditorCore::SpawnNetServer(SlokedSocketFactory &socketFactory, const std::string &host, uint16_t port) {
+    KgrNamedServer &SlokedAbstractEditorCore::GetServer() {
+        if (this->server != nullptr) {
+            return this->server->GetServer();
+        } else {
+            throw SlokedError("SlokedEditorCore: Server not defined");
+        }
+    }
+
+    void SlokedAbstractEditorCore::Start() {
+        this->closeables.Attach(this->contextManager);
+        this->contextManager.Start();
+        this->closeables.Attach(this->sched);
+        this->closeables.Attach(this->io);
+        this->io.Start(KgrNetConfig::RequestTimeout);
+        this->sched.Start();
+        if (this->server != nullptr) {
+            this->closeables.Attach(*this->server);
+            this->server->Start();
+        } else {
+            throw SlokedError("SlokedEditorCore: Server not defined");
+        }
+    }
+
+    void SlokedAbstractEditorCore::Close() {
+        this->closeables.Close();
+    }
+
+    SlokedAbstractEditorCore::SlokedAbstractEditorCore(SlokedLogger &logger, SlokedIOPoll &io)
+        : logger(logger), io(io), server(nullptr) {}
+    
+    SlokedEditorMasterCore::SlokedEditorMasterCore(SlokedLogger &logger, SlokedIOPoll &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
+        : SlokedAbstractEditorCore(logger, io), documents(root) {
+        this->server = std::make_unique<SlokedLocalEditorServer>();
+        this->Init(root, charWidth);
+    }
+    
+    SlokedEditorMasterCore::SlokedEditorMasterCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoll &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
+        : SlokedAbstractEditorCore(logger, io), documents(root) {
+        this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io);
+        this->Init(root, charWidth);
+    }
+
+    SlokedTextTaggerRegistry<int> &SlokedEditorMasterCore::GetTaggers() {
+        return this->taggers;
+    }
+
+    void SlokedEditorMasterCore::Init(SlokedNamespace &root, const SlokedCharWidth &charWidth) {
+        this->GetServer().Register("document::render", std::make_unique<SlokedTextRenderService>(this->documents, charWidth, this->taggers, this->contextManager.GetManager()));
+        this->GetServer().Register("document::cursor", std::make_unique<SlokedCursorService>(this->documents, this->GetServer().GetConnector("document::render"), this->contextManager.GetManager()));
+        this->GetServer().Register("document::manager", std::make_unique<SlokedDocumentSetService>(this->documents, this->contextManager.GetManager()));
+        this->GetServer().Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(this->documents, this->contextManager.GetManager()));
+        this->GetServer().Register("document::search", std::make_unique<SlokedSearchService>(this->documents, this->contextManager.GetManager()));
+        this->GetServer().Register("namespace::root", std::make_unique<SlokedNamespaceService>(root, this->contextManager.GetManager()));
+    }
+
+    SlokedEditorSlaveCore::SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoll &io)
+        : SlokedAbstractEditorCore(logger, io) {
+        this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io);
+    }
+
+    // SlokedEditorMasterCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoll &, SlokedNamespace &, const SlokedCharWidth &);
+    // SlokedTextTaggerRegistry<int> &GetTaggers();
+
+    // SlokedEditorCore::SlokedEditorCore(SlokedLogger &logger, SlokedIOPoll &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
+    //     : logger(logger), io(io), server(rawServer), documents(root), netServer(nullptr) {
+        
+    
+    // }
+
+    // KgrNamedServer &SlokedEditorCore::GetServer() {
+    //     return this->server;
+    // }
+
+    // SlokedTextTaggerRegistry<int> &SlokedEditorCore::GetTaggers() {
+    //     return this->taggers;
+    // }
+
+    // KgrContextManager<KgrLocalContext> &SlokedEditorCore::GetContextManager() {
+    //     return this->contextManager.GetManager();
+    // }
+
+    // SlokedSchedulerThread &SlokedEditorCore::GetScheduler() {
+    //     return this->sched;
+    // }
+
+    // SlokedIOPoller &SlokedEditorCore::GetIO() {
+    //     return this->io;
+    // }
+
+    void SlokedAbstractEditorCore::SpawnNetServer(SlokedSocketFactory &socketFactory, const std::string &host, uint16_t port) {
         if (this->netServer == nullptr) {
-            this->netServer = std::make_unique<KgrMasterNetServer>(this->server, socketFactory.Bind(host, port), this->io);
+            this->netServer = std::make_unique<KgrMasterNetServer>(this->server->GetServer(), socketFactory.Bind(host, port), this->io);
             this->closeables.Attach(*this->netServer);
             this->netServer->Start();
         } else {
@@ -71,16 +148,16 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorCore::Start() {
-        this->closeables.Attach(this->contextManager);
-        this->contextManager.Start();
-        this->closeables.Attach(this->sched);
-        this->closeables.Attach(this->io);
-        this->io.Start(KgrNetConfig::RequestTimeout);
-        this->sched.Start();
-    }
+    // void SlokedEditorCore::Start() {
+    //     this->closeables.Attach(this->contextManager);
+    //     this->contextManager.Start();
+    //     this->closeables.Attach(this->sched);
+    //     this->closeables.Attach(this->io);
+    //     this->io.Start(KgrNetConfig::RequestTimeout);
+    //     this->sched.Start();
+    // }
 
-    void SlokedEditorCore::Close() {
-        this->closeables.Close();
-    }
+    // void SlokedEditorCore::Close() {
+    //     this->closeables.Close();
+    // }
 }

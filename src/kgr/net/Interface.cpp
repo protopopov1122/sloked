@@ -113,7 +113,9 @@ namespace sloked {
     }
 
     std::size_t KgrNetInterface::Available() const {
-        return this->socket->Available() + this->buffer.size();
+        return this->socket->Valid()
+            ? this->socket->Available() + this->buffer.size()
+            : 0;
     }
 
     bool KgrNetInterface::Valid() const {

@@ -34,7 +34,7 @@ namespace sloked {
 
     static int SlokedPipe_GC(lua_State *state) {
         SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-        if (pipe != nullptr) {
+        if (pipe != nullptr && pipe->pipe != nullptr) {
             pipe->pipe->Close();
             pipe->~SlokedPipeHandle();
         }
@@ -48,7 +48,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 lua_pushboolean(state, pipe->pipe->GetStatus() == KgrPipe::Status::Open);
                 return 1;
             } else {
@@ -67,7 +67,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 lua_pushboolean(state, pipe->pipe->Empty());
                 return 1;
             } else {
@@ -86,7 +86,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 lua_pushinteger(state, pipe->pipe->Count());
                 return 1;
             } else {
@@ -105,7 +105,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 pipe->pipe->Close();
                 return 0;
             } else {
@@ -168,7 +168,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 auto msg = pipe->pipe->Read();
                 KgrValueToLua(state, msg);
                 return 1;
@@ -188,7 +188,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 auto msg = pipe->pipe->ReadOptional();
                 if (msg.has_value()) {
                     KgrValueToLua(state, msg.value());
@@ -212,7 +212,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 auto msg = pipe->pipe->ReadWait();
                 KgrValueToLua(state, msg);
                 return 1;
@@ -290,7 +290,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 int count = 1;
                 if (lua_isinteger(state, 2)) {
                     count = lua_tointeger(state, 2);
@@ -313,7 +313,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 int count = 1;
                 if (lua_isinteger(state, 2)) {
                     count = lua_tointeger(state, 2);
@@ -336,7 +336,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 pipe->pipe->DropAll();
                 return 0;
             } else {
@@ -355,7 +355,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 lua_pushvalue(state, 2);
                 auto msg = LuaToKgrValue(state);
                 lua_pop(state, 1);
@@ -377,7 +377,7 @@ namespace sloked {
         }
         try {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 lua_pushvalue(state, 2);
                 auto msg = LuaToKgrValue(state);
                 lua_pop(state, 1);
@@ -400,7 +400,7 @@ namespace sloked {
         try {
             SlokedEventLoop &eventLoop = *reinterpret_cast<SlokedEventLoop *>(lua_touserdata(state, lua_upvalueindex(1)));
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(luaL_checkudata(state, 1, "sloked.pipe"));
-            if (pipe != nullptr) {
+            if (pipe != nullptr && pipe->pipe != nullptr) {
                 if (lua_isfunction(state, 2)) {
                     lua_pushvalue(state, 2);
                     auto callback = LuaCallback(state, eventLoop);

@@ -168,16 +168,14 @@ int main(int argc, const char **argv) {
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     SlokedCharWidth charWidth;
 
-    SlokedEditorCore editor(logger, socketPoll, root, charWidth);
+    SlokedEditorMasterCore editor(logger, socketPoll, root, charWidth);
     closeables.Attach(editor);
     editor.Start();
     editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>());
     editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
 
     // Proxy initialization
-    KgrLocalServer portLocalServer;
-    KgrLocalNamedServer localServer(portLocalServer);
-    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), localServer, editor.GetIO());
+    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), editor.GetIO());
     closeables.Attach(slaveServer);
     slaveServer.Start();
 
