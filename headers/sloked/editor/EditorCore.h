@@ -53,21 +53,21 @@ namespace sloked {
         void Close() final;
 
      protected:
-        SlokedAbstractEditorCore(SlokedLogger &, SlokedIOPoll &);
+        SlokedAbstractEditorCore(SlokedLogger &, SlokedIOPoller &);
 
         SlokedCloseablePool closeables;
         KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
         SlokedLogger &logger;
         SlokedDefaultSchedulerThread sched;
-        SlokedDefaultIOPollThread io;
+        SlokedIOPoller &io;
         std::unique_ptr<SlokedEditorServer> server;
         std::unique_ptr<KgrMasterNetServer> netServer;
     };
 
     class SlokedEditorMasterCore : public SlokedAbstractEditorCore {
      public:
-        SlokedEditorMasterCore(SlokedLogger &, SlokedIOPoll &, SlokedNamespace &, const SlokedCharWidth &);
-        SlokedEditorMasterCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoll &, SlokedNamespace &, const SlokedCharWidth &);
+        SlokedEditorMasterCore(SlokedLogger &, SlokedIOPoller &, SlokedNamespace &, const SlokedCharWidth &);
+        SlokedEditorMasterCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &, SlokedNamespace &, const SlokedCharWidth &);
         SlokedTextTaggerRegistry<int> &GetTaggers();
 
      private:
@@ -78,7 +78,7 @@ namespace sloked {
 
     class SlokedEditorSlaveCore : public SlokedAbstractEditorCore {
      public:
-        SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoll &);
+        SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &);
     };
 }
 

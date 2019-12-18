@@ -24,6 +24,7 @@
 #include "sloked/kgr/net/Interface.h"
 #include "sloked/kgr/net/Config.h"
 #include "sloked/kgr/local/Pipe.h"
+#include "sloked/core/ThreadPool.h"
 #include <thread>
 #include <cstring>
 #include <set>
@@ -33,13 +34,11 @@
 using namespace std::chrono_literals;
 
 namespace sloked {
-
-    static std::chrono::system_clock Clock;
-
+    
     class KgrMasterNetServerContext : public SlokedIOPoller::Awaitable {
      public:
         KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, SlokedCounter<std::size_t>::Handle counter, KgrNamedServer &server, KgrNamedServer &remoteServices)
-            : net(std::move(socket)), work(work), server(server), remoteServices(remoteServices), nextPipeId(0), counterHandle(std::move(counter)), workers{0}, pinged{false} {
+            : net(std::move(socket)), work(work), server(server), remoteServices(remoteServices), nextPipeId(0), counterHandle(std::move(counter)), pinged{false} {
 
             this->lastActivity = std::chrono::system_clock::now();
 
@@ -47,8 +46,7 @@ namespace sloked {
                 const auto &service = params.AsString();
                 std::unique_lock lock(this->mtx);
                 if (this->remoteServices.Registered(service)) {
-                    SlokedCounter<std::size_t>::Handle handle(this->workers);
-                    std::thread([this, service, rsp = std::move(rsp), handle = std::move(handle)]() mutable {
+                    this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
                         auto pipe = this->remoteServices.Connect(service);
                         std::unique_lock lock(this->mtx);
                         if (pipe) {
@@ -56,14 +54,17 @@ namespace sloked {
                         } else {
                             rsp.Error("KgrMasterServer: Pipe can't be null");
                         }
-                    }).detach();
+                    });
                 } else {
-                    auto pipe = this->server.Connect(service);
-                    if (pipe == nullptr) {
-                        throw SlokedError("KgrMasterServer: Pipe can't be null");
-                    } else {
-                        this->Connect(std::move(pipe), rsp);
-                    }
+                    this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
+                        auto pipe = this->server.Connect(service);
+                        std::unique_lock lock(this->mtx);
+                        if (pipe == nullptr) {
+                            throw SlokedError("KgrMasterServer: Pipe can't be null");
+                        } else {
+                            this->Connect(std::move(pipe), rsp);
+                        }
+                    });
                 }
             });
 
@@ -113,33 +114,39 @@ namespace sloked {
             });
 
             this->net.BindMethod("bind", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                std::unique_lock lock(this->mtx);
-                const auto &service = params.AsString();
-                if (!this->server.Registered(service) && !this->remoteServices.Registered(service)) {
-                    this->remoteServices.Register(service, std::make_unique<SlaveService>(*this, service));
-                    this->remoteServiceList.push_back(service);
-                    rsp.Result(true);
-                } else {
-                    rsp.Result(false);
-                }
+                this->workers.Start([this, params, rsp = std::move(rsp)]() mutable {
+                    std::unique_lock lock(this->mtx);
+                    const auto &service = params.AsString();
+                    if (!this->server.Registered(service) && !this->remoteServices.Registered(service)) {
+                        this->remoteServices.Register(service, std::make_unique<SlaveService>(*this, service));
+                        this->remoteServiceList.push_back(service);
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
+                    }
+                });
             });
 
             this->net.BindMethod("bound", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                std::unique_lock lock(this->mtx);
-                const auto &service = params.AsString();
-                rsp.Result(this->server.Registered(service) || this->remoteServices.Registered(service));
+                this->workers.Start([this, params, rsp = std::move(rsp)]() mutable {
+                    std::unique_lock lock(this->mtx);
+                    const auto &service = params.AsString();
+                    rsp.Result(this->server.Registered(service) || this->remoteServices.Registered(service));
+                });
             });
 
             this->net.BindMethod("unbind", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                std::unique_lock lock(this->mtx);
-                const auto &service = params.AsString();
-                if (this->remoteServices.Registered(service)) {
-                    this->remoteServices.Deregister(service);
-                    this->remoteServiceList.erase(std::remove(this->remoteServiceList.begin(), this->remoteServiceList.end(), service), this->remoteServiceList.end());
-                    rsp.Result(true);
-                } else {
-                    rsp.Result(false);
-                }
+                this->workers.Start([this, params, rsp = std::move(rsp)]() mutable {
+                    std::unique_lock lock(this->mtx);
+                    const auto &service = params.AsString();
+                    if (this->remoteServices.Registered(service)) {
+                        this->remoteServices.Deregister(service);
+                        this->remoteServiceList.erase(std::remove(this->remoteServiceList.begin(), this->remoteServiceList.end(), service), this->remoteServiceList.end());
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
+                    }
+                });
             });
 
             this->net.BindMethod("ping", [](const std::string &method, const KgrValue &params, auto &rsp) {
@@ -148,13 +155,12 @@ namespace sloked {
         }
 
         virtual ~KgrMasterNetServerContext() {
-            this->workers.Wait([](auto count) {
-                return count == 0;
-            });
+            this->workers.Wait();
             std::unique_lock lock(this->mtx);
             for (const auto &pipe : this->pipes) {
                 pipe.second->Close();
             }
+            this->pipes.clear();
             for (const auto &rService : this->remoteServiceList) {
                 this->remoteServices.Deregister(rService);
             }
@@ -209,13 +215,7 @@ namespace sloked {
                         { "pipe", pipeId },
                         { "service", this->service }
                     });
-                    auto start = Clock.now();
-                    while (!rsp.WaitResponse(KgrNetConfig::RequestTimeout) &&
-                        this->srv.work.load() &&
-                        Clock.now() - start < KgrNetConfig::ResponseTimeout) {
-                        this->srv.Accept(1);
-                    }
-                    if (rsp.HasResponse()) {
+                    if (rsp.WaitResponse(KgrNetConfig::ResponseTimeout) && rsp.HasResponse()) {
                         auto remotePipe = rsp.GetResponse().GetResult().AsInt();
                         pipe->SetMessageListener([this, pipeId, remotePipe] {
                             std::unique_lock lock(this->srv.mtx);
@@ -295,7 +295,7 @@ namespace sloked {
         SlokedCounter<std::size_t>::Handle counterHandle;
         SlokedIOPoller::Handle awaitableHandle;
         std::chrono::system_clock::time_point lastActivity;
-        SlokedCounter<std::size_t> workers;
+        SlokedThreadPool workers;
         bool pinged;
     };
 

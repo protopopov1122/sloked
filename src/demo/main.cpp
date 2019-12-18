@@ -164,11 +164,14 @@ int main(int argc, const char **argv) {
     // Editor initialization
     SlokedCloseablePool closeables;
     SlokedPosixAwaitablePoll socketPoll;
+    SlokedDefaultIOPollThread socketPoller(socketPoll);
+    closeables.Attach(socketPoller);
+    socketPoller.Start(KgrNetConfig::RequestTimeout);
     SlokedPosixSocketFactory socketFactory;
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     SlokedCharWidth charWidth;
 
-    SlokedEditorMasterCore editor(logger, socketPoll, root, charWidth);
+    SlokedEditorMasterCore editor(logger, socketPoller, root, charWidth);
     closeables.Attach(editor);
     editor.Start();
     editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>());

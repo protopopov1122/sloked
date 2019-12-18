@@ -27,7 +27,7 @@
 namespace sloked {
 
     SlokedScreenServer::SlokedScreenServer(KgrNamedServer &server, SlokedScreenProvider &provider, KgrContextManager<KgrLocalContext> &contextManager)
-        : server(server), provider(provider) {
+        : server(server), provider(provider), work{false} {
         this->server.Register("screen::manager", std::make_unique<SlokedScreenService>(this->provider.GetScreen(),
             this->provider.GetEncoding(), this->server.GetConnector("document::cursor"), this->server.GetConnector("document::notify"), contextManager));
         this->server.Register("screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(this->provider.GetScreen(), this->provider.GetEncoding(), contextManager));

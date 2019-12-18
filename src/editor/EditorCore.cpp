@@ -61,8 +61,6 @@ namespace sloked {
         this->closeables.Attach(this->contextManager);
         this->contextManager.Start();
         this->closeables.Attach(this->sched);
-        this->closeables.Attach(this->io);
-        this->io.Start(KgrNetConfig::RequestTimeout);
         this->sched.Start();
         if (this->server != nullptr) {
             this->closeables.Attach(*this->server);
@@ -76,16 +74,16 @@ namespace sloked {
         this->closeables.Close();
     }
 
-    SlokedAbstractEditorCore::SlokedAbstractEditorCore(SlokedLogger &logger, SlokedIOPoll &io)
+    SlokedAbstractEditorCore::SlokedAbstractEditorCore(SlokedLogger &logger, SlokedIOPoller &io)
         : logger(logger), io(io), server(nullptr) {}
     
-    SlokedEditorMasterCore::SlokedEditorMasterCore(SlokedLogger &logger, SlokedIOPoll &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
+    SlokedEditorMasterCore::SlokedEditorMasterCore(SlokedLogger &logger, SlokedIOPoller &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
         : SlokedAbstractEditorCore(logger, io), documents(root) {
         this->server = std::make_unique<SlokedLocalEditorServer>();
         this->Init(root, charWidth);
     }
     
-    SlokedEditorMasterCore::SlokedEditorMasterCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoll &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
+    SlokedEditorMasterCore::SlokedEditorMasterCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
         : SlokedAbstractEditorCore(logger, io), documents(root) {
         this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io);
         this->Init(root, charWidth);
@@ -104,7 +102,7 @@ namespace sloked {
         this->GetServer().Register("namespace::root", std::make_unique<SlokedNamespaceService>(root, this->contextManager.GetManager()));
     }
 
-    SlokedEditorSlaveCore::SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoll &io)
+    SlokedEditorSlaveCore::SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io)
         : SlokedAbstractEditorCore(logger, io) {
         this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io);
     }
