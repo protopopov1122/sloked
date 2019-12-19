@@ -107,35 +107,6 @@ namespace sloked {
         this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io);
     }
 
-    // SlokedEditorMasterCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoll &, SlokedNamespace &, const SlokedCharWidth &);
-    // SlokedTextTaggerRegistry<int> &GetTaggers();
-
-    // SlokedEditorCore::SlokedEditorCore(SlokedLogger &logger, SlokedIOPoll &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
-    //     : logger(logger), io(io), server(rawServer), documents(root), netServer(nullptr) {
-        
-    
-    // }
-
-    // KgrNamedServer &SlokedEditorCore::GetServer() {
-    //     return this->server;
-    // }
-
-    // SlokedTextTaggerRegistry<int> &SlokedEditorCore::GetTaggers() {
-    //     return this->taggers;
-    // }
-
-    // KgrContextManager<KgrLocalContext> &SlokedEditorCore::GetContextManager() {
-    //     return this->contextManager.GetManager();
-    // }
-
-    // SlokedSchedulerThread &SlokedEditorCore::GetScheduler() {
-    //     return this->sched;
-    // }
-
-    // SlokedIOPoller &SlokedEditorCore::GetIO() {
-    //     return this->io;
-    // }
-
     void SlokedAbstractEditorCore::SpawnNetServer(SlokedSocketFactory &socketFactory, const std::string &host, uint16_t port) {
         if (this->netServer == nullptr) {
             this->netServer = std::make_unique<KgrMasterNetServer>(this->server->GetServer(), socketFactory.Bind(host, port), this->io);
@@ -145,17 +116,4 @@ namespace sloked {
             throw SlokedError("Editor: network server already spawned");
         }
     }
-
-    // void SlokedEditorCore::Start() {
-    //     this->closeables.Attach(this->contextManager);
-    //     this->contextManager.Start();
-    //     this->closeables.Attach(this->sched);
-    //     this->closeables.Attach(this->io);
-    //     this->io.Start(KgrNetConfig::RequestTimeout);
-    //     this->sched.Start();
-    // }
-
-    // void SlokedEditorCore::Close() {
-    //     this->closeables.Close();
-    // }
 }

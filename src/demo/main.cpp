@@ -192,7 +192,7 @@ int main(int argc, const char **argv) {
 
     SlokedScreenServer screenServer(slaveServer, screen, editor.GetContextManager());
     closeables.Attach(screenServer);
-    screenServer.Start(std::chrono::milliseconds(25));
+    screenServer.Start(KgrNetConfig::RequestTimeout);
 
     // Editor configuration
     SlokedPathResolver resolver(SlokedPosixNamespaceEnvironment::WorkDir(), SlokedPosixNamespaceEnvironment::HomeDir());

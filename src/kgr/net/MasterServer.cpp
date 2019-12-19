@@ -34,7 +34,7 @@
 using namespace std::chrono_literals;
 
 namespace sloked {
-    
+
     class KgrMasterNetServerContext : public SlokedIOPoller::Awaitable {
      public:
         KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, SlokedCounter<std::size_t>::Handle counter, KgrNamedServer &server, KgrNamedServer &remoteServices)
@@ -107,9 +107,6 @@ namespace sloked {
                     auto &pipe = *this->pipes.at(pipeId);
                     pipe.Close();
                     this->pipes.erase(pipeId);
-                    rsp.Result(true);
-                } else {
-                    rsp.Result(false);
                 }
             });
 

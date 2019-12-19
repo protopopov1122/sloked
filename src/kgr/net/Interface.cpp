@@ -132,8 +132,6 @@ namespace sloked {
             std::size_t end;
             while (!this->buffer.empty() && (end = this->buffer.find('\0')) != std::string::npos) {
                 std::string message = this->buffer.substr(start, end);
-                std::string full = this->buffer;
-                const char *fullPtr = full.c_str();
                 this->buffer.erase(start, end + 1 - start);
                 try {
                     this->incoming.push(serializer.Deserialize(conv.Convert(message)));

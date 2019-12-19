@@ -49,9 +49,6 @@ namespace sloked {
             const auto pipeId = params.AsInt();
             if (this->pipes.count(pipeId) != 0) {
                 this->pipes.erase(pipeId);
-                rsp.Result(true);
-            } else {
-                rsp.Result(false);
             }
         }); 
 
@@ -146,6 +143,10 @@ namespace sloked {
                             { "pipe", pipeId },
                             { "data", pipe.Read() }
                         });
+                    }
+                    if (pipe.GetStatus() == KgrPipe::Status::Closed) {
+                        this->net.Invoke("close", pipeId);
+                        this->pipes.erase(pipeId);
                     }
                 });
                 this->pipes.emplace(pipeId, std::move(pipe1));
