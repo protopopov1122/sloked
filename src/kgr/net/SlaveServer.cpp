@@ -166,7 +166,6 @@ namespace sloked {
     }
     
     void KgrSlaveNetServer::Register(const std::string &serviceName, std::unique_ptr<KgrService> service) {
-        std::unique_lock lock(this->mtx);
         if (!this->localServer.Registered(serviceName)) {
             this->localServer.Register(serviceName, std::move(service));
             auto rsp = this->net.Invoke("bind", serviceName);

@@ -48,7 +48,6 @@ namespace sloked {
                 if (this->remoteServices.Registered(service)) {
                     this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
                         auto pipe = this->remoteServices.Connect(service);
-                        std::unique_lock lock(this->mtx);
                         if (pipe) {
                             this->Connect(std::move(pipe), rsp);
                         } else {
@@ -58,7 +57,6 @@ namespace sloked {
                 } else {
                     this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
                         auto pipe = this->server.Connect(service);
-                        std::unique_lock lock(this->mtx);
                         if (pipe == nullptr) {
                             throw SlokedError("KgrMasterServer: Pipe can't be null");
                         } else {
@@ -112,10 +110,10 @@ namespace sloked {
 
             this->net.BindMethod("bind", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 this->workers.Start([this, params, rsp = std::move(rsp)]() mutable {
-                    std::unique_lock lock(this->mtx);
                     const auto &service = params.AsString();
                     if (!this->server.Registered(service) && !this->remoteServices.Registered(service)) {
                         this->remoteServices.Register(service, std::make_unique<SlaveService>(*this, service));
+                        std::unique_lock lock(this->mtx);
                         this->remoteServiceList.push_back(service);
                         rsp.Result(true);
                     } else {
@@ -126,7 +124,6 @@ namespace sloked {
 
             this->net.BindMethod("bound", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 this->workers.Start([this, params, rsp = std::move(rsp)]() mutable {
-                    std::unique_lock lock(this->mtx);
                     const auto &service = params.AsString();
                     rsp.Result(this->server.Registered(service) || this->remoteServices.Registered(service));
                 });
@@ -134,10 +131,10 @@ namespace sloked {
 
             this->net.BindMethod("unbind", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 this->workers.Start([this, params, rsp = std::move(rsp)]() mutable {
-                    std::unique_lock lock(this->mtx);
                     const auto &service = params.AsString();
                     if (this->remoteServices.Registered(service)) {
                         this->remoteServices.Deregister(service);
+                        std::unique_lock lock(this->mtx);
                         this->remoteServiceList.erase(std::remove(this->remoteServiceList.begin(), this->remoteServiceList.end(), service), this->remoteServiceList.end());
                         rsp.Result(true);
                     } else {
@@ -208,6 +205,7 @@ namespace sloked {
                 try {
                     std::unique_lock lock(this->srv.mtx);
                     auto pipeId = this->srv.nextPipeId++;
+                    lock.unlock();
                     auto rsp = this->srv.net.Invoke("connect", KgrDictionary {
                         { "pipe", pipeId },
                         { "service", this->service }
@@ -228,6 +226,7 @@ namespace sloked {
                                 this->srv.pipes.erase(pipeId);
                             }
                         });
+                        lock.lock();
                         this->srv.pipes.emplace(pipeId, std::move(pipe));
                         return true;
                     } else {
@@ -244,6 +243,7 @@ namespace sloked {
         };
 
         void Connect(std::unique_ptr<KgrPipe> pipe, KgrNetInterface::Responder &rsp) {
+            std::unique_lock lock(this->mtx);
             auto pipeId = this->nextPipeId++;
             pipe->SetMessageListener([this, pipeId] {
                 std::unique_lock lock(this->mtx);
