@@ -80,7 +80,7 @@ namespace sloked {
                 });
             }
         }
-        this->provider.GetScreen().Lock([this](auto &screen) {
+        this->provider.GetScreen().Lock([](auto &screen) {
             screen.OnUpdate(nullptr);
         });
     }

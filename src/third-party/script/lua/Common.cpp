@@ -52,7 +52,7 @@ namespace sloked {
         lua_pop(state, 1);
         lua_xmove(state, mainThread, 1);
         auto handle = std::make_shared<LuaValueHandle>(mainThread, eventLoop);
-        return [state = mainThread, &eventLoop, functionHandle = std::move(handle)] {
+        return [state = mainThread, functionHandle = std::move(handle)] {
             functionHandle->Load();
             if (lua_pcall(state, 0, 0, 0) != 0) {
                 const char *msg = luaL_tolstring(state, -1, nullptr);
