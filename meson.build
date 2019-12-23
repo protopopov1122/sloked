@@ -111,6 +111,7 @@ sloked_src = [
   'src/third-party/crypto/Botan.cpp',
   'src/third-party/script/lua/Common.cpp',
   'src/third-party/script/lua/Lua.cpp',
+  'src/third-party/script/lua/Logger.cpp',
   'src/third-party/script/lua/Pipe.cpp',
   'src/third-party/script/lua/Sched.cpp',
   'src/third-party/script/lua/Server.cpp'

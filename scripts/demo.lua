@@ -4,6 +4,7 @@ local async = require 'slokedlib/async'
 local sched = require 'slokedlib/sched'
 local rpc = require 'slokedlib/rpc'
 
+sloked.logger:debug('Lua started')
 async(function(await)
     local await_unwrap = async.unwrap(await)
     local cursor = rpc:new(sloked.servers.main:connect('document::cursor'))

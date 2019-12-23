@@ -158,7 +158,7 @@ int main(int argc, const char **argv) {
         return EXIT_FAILURE;
     }
 
-    SlokedLoggingManager::Global.SetSink(SlokedLogLevel::Warning, SlokedLoggingSink::TextFile("./sloked.log", SlokedLoggingSink::TabularFormat(10, 30, 30)));
+    SlokedLoggingManager::Global.SetSink(SlokedLogLevel::Debug, SlokedLoggingSink::TextFile("./sloked.log", SlokedLoggingSink::TabularFormat(10, 30, 30)));
     SlokedLogger logger(SlokedLoggerTag);
 
     // Editor initialization

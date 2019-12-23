@@ -26,6 +26,7 @@
 #include "sloked/core/Semaphore.h"
 #include "sloked/sched/EventLoop.h"
 #include "sloked/sched/Scheduler.h"
+#include "sloked/core/Logger.h"
 #include <string>
 #include <atomic>
 #include <thread>
@@ -56,6 +57,7 @@ namespace sloked {
         SlokedDefaultEventLoop eventLoop;
         SlokedScheduledTaskPool sched;
         std::string path;
+        SlokedLogger logger;
     };
 }
 

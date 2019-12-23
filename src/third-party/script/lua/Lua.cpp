@@ -20,19 +20,18 @@
 */
 
 #include "sloked/third-party/script/lua/Lua.h"
+#include "sloked/third-party/script/lua/Logger.h"
 #include "sloked/third-party/script/lua/Common.h"
 #include "sloked/third-party/script/lua/Pipe.h"
 #include "sloked/third-party/script/lua/Sched.h"
 #include "sloked/third-party/script/lua/Server.h"
 #include "sloked/core/Error.h"
-#include "sloked/core/Logger.h"
 #include <iostream>
 
 namespace sloked {
-    static SlokedLogger logger(SlokedLoggerTag);
 
     SlokedLuaEngine::SlokedLuaEngine(SlokedSchedulerThread &sched, const std::string &path)
-        : state{nullptr}, work{false}, sched(sched), path{path} {
+        : state{nullptr}, work{false}, sched(sched), path{path}, logger(SlokedLoggerTag) {
         this->eventLoop.Notify([this] {
             this->activity.Notify();
         });
@@ -112,6 +111,8 @@ namespace sloked {
         lua_setfield(this->state, -2, "servers");
         SlokedSchedToLua(this->sched, this->eventLoop, this->state);
         lua_setfield(this->state, -2, "sched");
+        SlokedLoggerToLua(this->logger, this->state);
+        lua_setfield(this->state, -2, "logger");
         lua_setglobal(this->state, "sloked");
     }
 }
