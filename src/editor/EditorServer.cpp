@@ -24,9 +24,13 @@
 namespace sloked {
 
     SlokedLocalEditorServer::SlokedLocalEditorServer()
-        : server(rawServer) {}
+        : unrestrictedServer(rawServer), server(unrestrictedServer, std::make_unique<KgrNamedBlacklist>(), std::make_unique<KgrNamedBlacklist>()) {}
 
     KgrNamedServer &SlokedLocalEditorServer::GetServer() {
+        return this->server;
+    }
+
+    KgrNamedRestrictionManager &SlokedLocalEditorServer::GetRestrictions() {
         return this->server;
     }
 
@@ -35,7 +39,7 @@ namespace sloked {
     void SlokedLocalEditorServer::Close() {}
 
     SlokedRemoteEditorServer::SlokedRemoteEditorServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &io)
-        : server(std::move(socket), io) {}
+        : unrestrictedServer(std::move(socket), io), server(unrestrictedServer, std::make_unique<KgrNamedBlacklist>(), std::make_unique<KgrNamedBlacklist>()) {}
 
     SlokedRemoteEditorServer::~SlokedRemoteEditorServer() {
         this->Close();
@@ -45,11 +49,15 @@ namespace sloked {
         return this->server;
     }
 
+    KgrNamedRestrictionManager &SlokedRemoteEditorServer::GetRestrictions() {
+        return this->server;
+    }
+
     void SlokedRemoteEditorServer::Start() {
-        this->server.Start();
+        this->unrestrictedServer.Start();
     }
 
     void SlokedRemoteEditorServer::Close() {
-        this->server.Close();
+        this->unrestrictedServer.Close();
     }
 }

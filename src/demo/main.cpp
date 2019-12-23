@@ -176,6 +176,8 @@ int main(int argc, const char **argv) {
     editor.Start();
     editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>());
     editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
+    editor.GetRestrictions().SetAccessRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+    editor.GetRestrictions().SetModificationRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
 
     // Proxy initialization
     KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), editor.GetIO());

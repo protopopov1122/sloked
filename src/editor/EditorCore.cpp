@@ -30,6 +30,38 @@
 
 namespace sloked {
 
+    void SlokedAbstractEditorCore::Restrictions::SetAccessRestrictions(std::shared_ptr<KgrNamedRestrictions> restrictions) {
+        if (this->editor.server == nullptr) {
+            throw SlokedError("SlokedEditorCore: Server not defined");
+        }
+        this->accessRestrictions = std::move(restrictions);
+        this->Apply();
+    }
+
+    void SlokedAbstractEditorCore::Restrictions::SetModificationRestrictions(std::shared_ptr<KgrNamedRestrictions> restrictions) {
+        if (this->editor.server == nullptr) {
+            throw SlokedError("SlokedEditorCore: Server not defined");
+        }
+        this->modificationRestrictions = std::move(restrictions);
+        this->Apply();
+    }
+
+    void SlokedAbstractEditorCore::Restrictions::Apply() {
+        if (this->editor.server) {
+            this->editor.server->GetRestrictions().SetAccessRestrictions(this->accessRestrictions);
+            this->editor.server->GetRestrictions().SetModificationRestrictions(this->modificationRestrictions);
+        } else {
+            throw SlokedError("SlokedEditorCore: Server not defined");
+        }
+        if (this->editor.netServer) {
+            this->editor.netServer->GetRemoteRestrictions().SetAccessRestrictions(this->accessRestrictions);
+            this->editor.netServer->GetRemoteRestrictions().SetModificationRestrictions(this->modificationRestrictions);
+        }
+    }
+
+    SlokedAbstractEditorCore::Restrictions::Restrictions(SlokedAbstractEditorCore &editor)
+        : editor(editor), accessRestrictions(std::make_unique<KgrNamedBlacklist>()), modificationRestrictions(std::make_unique<KgrNamedBlacklist>()) {}
+
     SlokedAbstractEditorCore::~SlokedAbstractEditorCore() {
         this->Close();
     }
@@ -57,6 +89,10 @@ namespace sloked {
         }
     }
 
+    KgrNamedRestrictionManager &SlokedAbstractEditorCore::GetRestrictions() {
+        return this->restrictions;
+    }
+
     void SlokedAbstractEditorCore::Start() {
         this->closeables.Attach(this->contextManager);
         this->contextManager.Start();
@@ -75,7 +111,7 @@ namespace sloked {
     }
 
     SlokedAbstractEditorCore::SlokedAbstractEditorCore(SlokedLogger &logger, SlokedIOPoller &io)
-        : logger(logger), io(io), server(nullptr) {}
+        : logger(logger), io(io), server(nullptr), restrictions(*this) {}
     
     SlokedEditorMasterCore::SlokedEditorMasterCore(SlokedLogger &logger, SlokedIOPoller &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
         : SlokedAbstractEditorCore(logger, io), documents(root) {
@@ -111,6 +147,7 @@ namespace sloked {
         if (this->netServer == nullptr) {
             this->netServer = std::make_unique<KgrMasterNetServer>(this->server->GetServer(), socketFactory.Bind(host, port), this->io);
             this->closeables.Attach(*this->netServer);
+            this->restrictions.Apply();
             this->netServer->Start();
         } else {
             throw SlokedError("Editor: network server already spawned");
