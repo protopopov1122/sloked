@@ -178,6 +178,8 @@ int main(int argc, const char **argv) {
     editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
     editor.GetRestrictions().SetAccessRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
     editor.GetRestrictions().SetModificationRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+    editor.GetNetRestrictions().SetAccessRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+    editor.GetNetRestrictions().SetModificationRestrictions(KgrNamedWhitelist::Make({"screen::"}));
 
     // Proxy initialization
     KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), editor.GetIO());

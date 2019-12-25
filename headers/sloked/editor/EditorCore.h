@@ -42,23 +42,6 @@ namespace sloked {
 
     class SlokedAbstractEditorCore : public SlokedCloseable {
      public:
-        class Restrictions : public KgrNamedRestrictionManager {
-         public:
-            void SetAccessRestrictions(std::shared_ptr<KgrNamedRestrictions>) final;
-            void SetModificationRestrictions(std::shared_ptr<KgrNamedRestrictions>) final;
-            void Apply();
-
-            friend class SlokedAbstractEditorCore;
-
-         private:
-            Restrictions(SlokedAbstractEditorCore &);
-            SlokedAbstractEditorCore &editor;
-            std::shared_ptr<KgrNamedRestrictions> accessRestrictions;
-            std::shared_ptr<KgrNamedRestrictions> modificationRestrictions;
-        };
-
-        friend class Restrictions;
-
         ~SlokedAbstractEditorCore();
         SlokedLogger &GetLogger();
         KgrContextManager<KgrLocalContext> &GetContextManager();
@@ -66,6 +49,7 @@ namespace sloked {
         SlokedIOPoller &GetIO();
         KgrNamedServer &GetServer();
         KgrNamedRestrictionManager &GetRestrictions();
+        KgrNamedRestrictionManager &GetNetRestrictions();
         void Start();
         void SpawnNetServer(SlokedSocketFactory &, const std::string &, uint16_t);
         void Close() final;
@@ -80,7 +64,6 @@ namespace sloked {
         SlokedIOPoller &io;
         std::unique_ptr<SlokedEditorServer> server;
         std::unique_ptr<KgrMasterNetServer> netServer;
-        Restrictions restrictions;
     };
 
     class SlokedEditorMasterCore : public SlokedAbstractEditorCore {

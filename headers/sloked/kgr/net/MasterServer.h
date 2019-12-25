@@ -37,9 +37,9 @@ namespace sloked {
 
     class KgrMasterNetServer : public SlokedCloseable {
      public:
-        class RemoteRestrictions : public KgrNamedRestrictionManager {
+        class Restrictions : public KgrNamedRestrictionManager {
          public:
-            RemoteRestrictions();
+            Restrictions();
             void SetAccessRestrictions(std::shared_ptr<KgrNamedRestrictions>) final;
             void SetModificationRestrictions(std::shared_ptr<KgrNamedRestrictions>) final;
         
@@ -54,7 +54,7 @@ namespace sloked {
         bool IsRunning() const;
         void Start();
         void Close() final;
-        KgrNamedRestrictionManager &GetRemoteRestrictions();
+        KgrNamedRestrictionManager &GetRestrictions();
 
      private:
         class Awaitable : public SlokedIOPoller::Awaitable {
@@ -76,7 +76,7 @@ namespace sloked {
         SlokedIOPoller::Handle awaiterHandle;
         std::atomic<bool> work;
         SlokedCounter<std::size_t> workers;
-        RemoteRestrictions remoteRestrictions;
+        Restrictions restrictions;
     };
 }
 
