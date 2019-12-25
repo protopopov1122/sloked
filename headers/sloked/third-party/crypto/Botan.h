@@ -52,10 +52,16 @@ namespace sloked {
             std::unique_ptr<Impl> impl;
         };
 
+        class BotanRandom : public Random {
+         public:
+            uint8_t NextByte() final;
+        };
+
         SlokedBotanCrypto();
         virtual ~SlokedBotanCrypto();
         std::unique_ptr<Key> DeriveKey(const std::string &, const std::string &) final;
         std::unique_ptr<Cipher> NewCipher(const Key &) final;
+        std::unique_ptr<Random> NewRandom() final;
 
         static const EngineId Engine;
      private:

@@ -58,7 +58,9 @@
 #include "sloked/sched/Scheduler.h"
 #include "sloked/kgr/net/Config.h"
 #include "sloked/third-party/script/lua/Lua.h"
+#include "sloked/third-party/crypto/Botan.h"
 #include "sloked/editor/EditorCore.h"
+#include "sloked/security/Auth.h"
 #include <chrono>
 
 using namespace sloked;

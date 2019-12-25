@@ -5,6 +5,7 @@ if meson.get_compiler('cpp').get_id() == 'gcc' or meson.get_compiler('cpp').get_
 endif
 
 sloked_src = [
+  'src/core/Base64.cpp',
   'src/core/CharWidth.cpp',
   'src/core/CLI.cpp',
   'src/core/Closeable.cpp',
@@ -82,6 +83,7 @@ sloked_src = [
   'src/screen/terminal/components/TextPane.cpp',
   'src/screen/terminal/components/TextPaneComponent.cpp',
   'src/screen/widgets/TextEditor.cpp',
+  'src/security/Auth.cpp',
   'src/services/ScreenInput.cpp',
   'src/services/Cursor.cpp',
   'src/services/DocumentNotify.cpp',

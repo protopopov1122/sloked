@@ -23,6 +23,7 @@
 #include "sloked/core/Error.h"
 #include <botan/pwdhash.h>
 #include <botan/block_cipher.h>
+#include <botan/system_rng.h>
 
 namespace sloked {
 
@@ -74,6 +75,10 @@ namespace sloked {
         return this->impl->cipher->block_size();
     }
 
+    uint8_t SlokedBotanCrypto::BotanRandom::NextByte() {
+        return Botan::system_rng().next_byte();
+    }
+
     struct SlokedBotanCrypto::Impl {
         Impl()
             : hashFamily(Botan::PasswordHashFamily::create("Scrypt")) {
@@ -106,5 +111,9 @@ namespace sloked {
         }
         const BotanKey &botanKey = static_cast<const BotanKey &>(key);
         return std::make_unique<BotanCipher>(botanKey);
+    }
+
+    std::unique_ptr<SlokedCrypto::Random> SlokedBotanCrypto::NewRandom() {
+        return std::make_unique<BotanRandom>();
     }
 }

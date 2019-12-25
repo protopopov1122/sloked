@@ -57,9 +57,16 @@ namespace sloked {
             Cipher(EngineId engine) : Engine(engine) {}
         };
 
+        class Random {
+         public:
+            virtual ~Random() = default;
+            virtual uint8_t NextByte() = 0;
+        };
+
         virtual ~SlokedCrypto() = default;
         virtual std::unique_ptr<Key> DeriveKey(const std::string &, const std::string &) = 0;
         virtual std::unique_ptr<Cipher> NewCipher(const Key &) = 0;
+        virtual std::unique_ptr<Random> NewRandom() = 0;
     };
 }
 
