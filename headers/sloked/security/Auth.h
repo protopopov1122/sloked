@@ -25,12 +25,14 @@
 #include "sloked/core/Crypto.h"
 #include <memory>
 #include <map>
+#include <array>
 
 namespace sloked {
 
     class SlokedAuth {
      public: class Account;
      private: class AccountToken {
+         static constexpr std::size_t NonceSize = 16;
       public:
          const std::string &GetName() const;
          AccountToken &operator=(const AccountToken &);
@@ -38,12 +40,15 @@ namespace sloked {
          bool operator==(const AccountToken &) const;
          friend class Account;
 
+         using NonceType = std::array<uint8_t, NonceSize>;
+
       private:
          AccountToken(const SlokedAuth &, const std::string &);
-         AccountToken(const SlokedAuth &, const std::string &, uint64_t);
+         AccountToken(const SlokedAuth &, std::string, NonceType);
+         void GenerateCredentials(const SlokedAuth &);
 
          std::string name;
-         uint64_t nonce;
+         NonceType nonce;
          std::string credentials;
      };
      friend class AccountToken;
@@ -73,7 +78,7 @@ namespace sloked {
         Account &GetByCredential(const std::string &) const;
 
      private:
-        uint64_t NextNonce() const;
+        AccountToken::NonceType NextNonce() const;
         std::string Encode(std::string_view) const;
         std::string Decode(std::string_view) const;
 

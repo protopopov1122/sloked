@@ -40,7 +40,7 @@ namespace sloked {
     SlokedAuth::AccountToken &SlokedAuth::AccountToken::operator=(AccountToken &&token) {
         this->name = std::move(token.name);
         this->nonce = token.nonce;
-        token.nonce = 0;
+        token.nonce = {};
         this->credentials = std::move(token.credentials);
         return *this;
     }
@@ -52,15 +52,23 @@ namespace sloked {
 
     SlokedAuth::AccountToken::AccountToken(const SlokedAuth &auth, const std::string &name)
         : name(name), nonce(auth.NextNonce()), credentials{} {
-        std::stringstream ss;
-        ss << this->nonce << ':' << this->name;
-        this->credentials = auth.Encode(ss.str());
+        this->GenerateCredentials(auth);
     }
 
-    SlokedAuth::AccountToken::AccountToken(const SlokedAuth &auth, const std::string &name, uint64_t nonce)
-        : name(name), nonce(nonce), credentials{} {
+    SlokedAuth::AccountToken::AccountToken(const SlokedAuth &auth, std::string name, NonceType nonce)
+        : name(std::move(name)), nonce(std::move(nonce)), credentials{} {
+        this->GenerateCredentials(auth);
+    }
+
+    void SlokedAuth::AccountToken::GenerateCredentials(const SlokedAuth &auth) {
         std::stringstream ss;
-        ss << this->nonce << ':' << this->name;
+        for (std::size_t i = 0; i < this->nonce.size(); i++) {
+            ss << std::to_string(this->nonce[i]);
+            if (i + 1 < this->nonce.size()) {
+                ss << ',';
+            }
+        }
+        ss << ':' << this->name;
         this->credentials = auth.Encode(ss.str());
     }
 
@@ -89,8 +97,18 @@ namespace sloked {
         if (separator == data.npos) {
             throw SlokedError("Auth: Invalid token");
         }
-        uint64_t nonce = std::stoull(data.substr(0, separator));
+        std::string rawNonce = data.substr(0, separator);
         const std::string &name = data.substr(separator + 1);
+        AccountToken::NonceType nonce;
+        std::size_t lastSeparator = 0;
+        for (std::size_t i = 0; i < nonce.size(); i++) {
+            if (lastSeparator == rawNonce.npos) {
+                throw SlokedError("Auth: Invalid token");
+            }
+            separator = rawNonce.find(',', lastSeparator);
+            nonce[i] = std::stoul(rawNonce.substr(lastSeparator, separator));
+            lastSeparator = separator + 1;
+        }
         return SlokedAuth::AccountToken{auth, name, nonce};
     }
 
@@ -129,16 +147,12 @@ namespace sloked {
         }
     }
 
-    uint64_t SlokedAuth::NextNonce() const {
-        constexpr auto Count = sizeof(uint64_t) / sizeof(uint8_t);
-        union {
-            uint64_t u64;
-            uint8_t u8[Count];
-        } value;
-        for (std::size_t i = 0; i < Count; i++) {
-            value.u8[i] = this->random->NextByte();
+    SlokedAuth::AccountToken::NonceType SlokedAuth::NextNonce() const {
+        AccountToken::NonceType nonce;
+        for (std::size_t i = 0; i < nonce.size(); i++) {
+            nonce[i] = this->random->NextByte();
         }
-        return value.u64;
+        return nonce;
     }
 
     std::string SlokedAuth::Encode(std::string_view data) const {
