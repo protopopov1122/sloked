@@ -47,9 +47,17 @@ namespace sloked {
             Data Decrypt(const Data &) final;
             std::size_t BlockSize() const final;
 
-         private:
             struct Impl;
+         private:
             std::unique_ptr<Impl> impl;
+        };
+
+        class BotanOwningCipher : public BotanCipher {
+         public:
+            BotanOwningCipher(std::unique_ptr<BotanKey>);
+
+         private:
+            std::unique_ptr<BotanKey> key;
         };
 
         class BotanRandom : public Random {
@@ -61,6 +69,7 @@ namespace sloked {
         virtual ~SlokedBotanCrypto();
         std::unique_ptr<Key> DeriveKey(const std::string &, const std::string &) final;
         std::unique_ptr<Cipher> NewCipher(const Key &) final;
+        std::unique_ptr<Cipher> NewCipher(std::unique_ptr<Key>) final;
         std::unique_ptr<Random> NewRandom() final;
 
         static const EngineId Engine;

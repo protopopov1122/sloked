@@ -75,6 +75,9 @@ namespace sloked {
         return this->impl->cipher->block_size();
     }
 
+    SlokedBotanCrypto::BotanOwningCipher::BotanOwningCipher(std::unique_ptr<BotanKey> key)
+        : BotanCipher(*key), key(std::move(key)) {}
+
     uint8_t SlokedBotanCrypto::BotanRandom::NextByte() {
         return Botan::system_rng().next_byte();
     }
@@ -111,6 +114,14 @@ namespace sloked {
         }
         const BotanKey &botanKey = static_cast<const BotanKey &>(key);
         return std::make_unique<BotanCipher>(botanKey);
+    }
+
+    std::unique_ptr<SlokedCrypto::Cipher> SlokedBotanCrypto::NewCipher(std::unique_ptr<Key> key) {
+        if (key->Engine != SlokedBotanCrypto::Engine) {
+            throw SlokedError("BotanCrypto: Non-botan key");
+        }
+        std::unique_ptr<BotanKey> botanKey{static_cast<BotanKey *>(key.release())};
+        return std::make_unique<BotanOwningCipher>(std::move(botanKey));
     }
 
     std::unique_ptr<SlokedCrypto::Random> SlokedBotanCrypto::NewRandom() {

@@ -32,6 +32,13 @@
 
 namespace sloked {
 
+    class SlokedSocketAuthentication {
+     public:
+        virtual ~SlokedSocketAuthentication() = default;
+        virtual const std::string &GetAccount() const = 0;
+        virtual void ChangeAccount(const std::string &) = 0;
+    };
+
     class SlokedSocket {
      public:
         SlokedSocket(const SlokedSocket &) = delete;
@@ -49,6 +56,8 @@ namespace sloked {
         virtual void Write(SlokedSpan<const uint8_t>) = 0;
         virtual void Write(uint8_t) = 0;
         virtual std::unique_ptr<SlokedIOAwaitable> Awaitable() const = 0;
+        virtual const SlokedSocketAuthentication *GetAuthentication() const;
+        virtual SlokedSocketAuthentication *GetAuthentication();
 
      protected:
         SlokedSocket() = default;

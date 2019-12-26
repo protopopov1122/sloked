@@ -60,7 +60,8 @@
 #include "sloked/third-party/script/lua/Lua.h"
 #include "sloked/third-party/crypto/Botan.h"
 #include "sloked/editor/EditorCore.h"
-#include "sloked/security/Auth.h"
+#include "sloked/security/Master.h"
+#include "sloked/net/CryptoSocket.h"
 #include <chrono>
 
 using namespace sloked;
@@ -145,6 +146,16 @@ static const KgrDictionary DefaultConfiguration {
 };
 
 int main(int argc, const char **argv) {
+    SlokedBotanCrypto crypto;
+    auto key = crypto.DeriveKey("password", "salt");
+    SlokedAuthenticationMaster auth(crypto, *key);
+    auto &user = auth.New("user1");
+    // auto creds = user.GetCredentials();
+    // std::cout << creds << std::endl;
+    // // user.RevokeCredentials();
+    // std::cout << auth.GetByCredential(creds).GetName() << std::endl;
+    // return EXIT_SUCCESS;
+
     // Core initialization
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
     SlokedCLI cli;
@@ -169,7 +180,8 @@ int main(int argc, const char **argv) {
     SlokedDefaultIOPollThread socketPoller(socketPoll);
     closeables.Attach(socketPoller);
     socketPoller.Start(KgrNetConfig::RequestTimeout);
-    SlokedPosixSocketFactory socketFactory;
+    SlokedPosixSocketFactory rawSocketFactory;
+    SlokedCryptoSocketFactory socketFactory(rawSocketFactory, crypto, *key, &auth);
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     SlokedCharWidth charWidth;
 
@@ -184,9 +196,12 @@ int main(int argc, const char **argv) {
     editor.GetNetRestrictions().SetModificationRestrictions(KgrNamedWhitelist::Make({"screen::"}));
 
     // Proxy initialization
-    KgrSlaveNetServer slaveServer(socketFactory.Connect("localhost", cli["net-port"].As<int>()), editor.GetIO());
+    auto slaveSocket = socketFactory.Connect("localhost", cli["net-port"].As<int>());
+    slaveSocket->GetAuthentication()->ChangeAccount("user1");
+    KgrSlaveNetServer slaveServer(std::move(slaveSocket), editor.GetIO());
     closeables.Attach(slaveServer);
     slaveServer.Start();
+    user.RevokeCredentials();
 
     // Screen initialization
     SlokedLocale::Setup();

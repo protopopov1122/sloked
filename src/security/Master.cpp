@@ -19,25 +19,25 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/security/Auth.h"
+#include "sloked/security/Master.h"
 #include "sloked/core/Error.h"
 #include "sloked/core/Base64.h"
 #include <sstream>
 
 namespace sloked {
 
-    const std::string &SlokedAuth::AccountToken::GetName() const {
+    const std::string &SlokedAuthenticationMaster::AccountToken::GetName() const {
         return this->name;
     }
 
-    SlokedAuth::AccountToken &SlokedAuth::AccountToken::operator=(const AccountToken &token) {
+    SlokedAuthenticationMaster::AccountToken &SlokedAuthenticationMaster::AccountToken::operator=(const AccountToken &token) {
         this->name = token.name;
         this->nonce = token.nonce;
         this->credentials = token.credentials;
         return *this;
     }
 
-    SlokedAuth::AccountToken &SlokedAuth::AccountToken::operator=(AccountToken &&token) {
+    SlokedAuthenticationMaster::AccountToken &SlokedAuthenticationMaster::AccountToken::operator=(AccountToken &&token) {
         this->name = std::move(token.name);
         this->nonce = token.nonce;
         token.nonce = {};
@@ -45,22 +45,22 @@ namespace sloked {
         return *this;
     }
 
-    bool SlokedAuth::AccountToken::operator==(const AccountToken &token) const {
+    bool SlokedAuthenticationMaster::AccountToken::operator==(const AccountToken &token) const {
         return this->name == token.name &&
             this->nonce == token.nonce;
     }
 
-    SlokedAuth::AccountToken::AccountToken(const SlokedAuth &auth, const std::string &name)
+    SlokedAuthenticationMaster::AccountToken::AccountToken(const SlokedAuthenticationMaster &auth, const std::string &name)
         : name(name), nonce(auth.NextNonce()), credentials{} {
         this->GenerateCredentials(auth);
     }
 
-    SlokedAuth::AccountToken::AccountToken(const SlokedAuth &auth, std::string name, NonceType nonce)
+    SlokedAuthenticationMaster::AccountToken::AccountToken(const SlokedAuthenticationMaster &auth, std::string name, NonceType nonce)
         : name(std::move(name)), nonce(std::move(nonce)), credentials{} {
         this->GenerateCredentials(auth);
     }
 
-    void SlokedAuth::AccountToken::GenerateCredentials(const SlokedAuth &auth) {
+    void SlokedAuthenticationMaster::AccountToken::GenerateCredentials(const SlokedAuthenticationMaster &auth) {
         std::stringstream ss;
         for (std::size_t i = 0; i < this->nonce.size(); i++) {
             ss << std::to_string(this->nonce[i]);
@@ -72,26 +72,63 @@ namespace sloked {
         this->credentials = auth.Encode(ss.str());
     }
 
-    SlokedAuth::Account::Account(SlokedAuth &auth, const std::string &name)
-        : auth(auth), token(auth, name) {}
+    SlokedAuthenticationMaster::Account::Account(SlokedAuthenticationMaster &auth, const std::string &name)
+        : auth(auth), token(auth, name), nextWatcherId{0} {}
 
-    const std::string &SlokedAuth::Account::GetName() const {
+    SlokedAuthenticationMaster::Account::~Account() {
+        std::unique_lock lock(this->mtx);
+        this->token = AccountToken{this->auth, this->token.GetName()};
+        for (auto it = this->watchers.begin(); it != this->watchers.end();) {
+            auto current = it++;
+            lock.unlock();
+            current->second();
+            lock.lock();
+        }
+    }
+
+    const std::string &SlokedAuthenticationMaster::Account::GetName() const {
+        std::unique_lock lock(this->mtx);
         return this->token.GetName();
     }
 
-    void SlokedAuth::Account::RevokeCredentials() {
+    void SlokedAuthenticationMaster::Account::RevokeCredentials() {
+        std::unique_lock lock(this->mtx);
         this->token = AccountToken{this->auth, this->token.GetName()};
+        for (auto it = this->watchers.begin(); it != this->watchers.end();) {
+            auto current = it++;
+            lock.unlock();
+            current->second();
+            lock.lock();
+        }
     }
 
-    const std::string &SlokedAuth::Account::GetCredentials() const {
+    const std::string &SlokedAuthenticationMaster::Account::GetCredentials() const {
+        std::unique_lock lock(this->mtx);
         return this->token.credentials;
     }
 
-    bool SlokedAuth::Account::VerifyToken(const AccountToken &token) const {
+    std::unique_ptr<SlokedCrypto::Key> SlokedAuthenticationMaster::Account::DeriveKey(const std::string &salt) const {
+        std::unique_lock lock(this->mtx);
+        return this->auth.crypto.DeriveKey(this->token.credentials, salt);
+    }
+
+    SlokedAuthenticationMaster::Account::Callback SlokedAuthenticationMaster::Account::Watch(Callback watcher) {
+        std::unique_lock lock(this->mtx);
+        int64_t watcherId = this->nextWatcherId++;
+        this->watchers.emplace(watcherId, std::move(watcher));
+        return [this, watcherId] {
+            if (this->watchers.count(watcherId) != 0) {
+                this->watchers.erase(watcherId);
+            }
+        };
+    }
+
+    bool SlokedAuthenticationMaster::Account::VerifyToken(const AccountToken &token) const {
+        std::unique_lock lock(this->mtx);
         return token == this->token;
     }
 
-    SlokedAuth::AccountToken SlokedAuth::Account::ParseCredentials(const SlokedAuth &auth, const std::string &credentials) {
+    SlokedAuthenticationMaster::AccountToken SlokedAuthenticationMaster::Account::ParseCredentials(const SlokedAuthenticationMaster &auth, const std::string &credentials) {
         auto data = auth.Decode(credentials);
         auto separator = data.find(':');
         if (separator == data.npos) {
@@ -109,13 +146,14 @@ namespace sloked {
             nonce[i] = std::stoul(rawNonce.substr(lastSeparator, separator));
             lastSeparator = separator + 1;
         }
-        return SlokedAuth::AccountToken{auth, name, nonce};
+        return SlokedAuthenticationMaster::AccountToken{auth, name, nonce};
     }
 
-    SlokedAuth::SlokedAuth(std::unique_ptr<SlokedCrypto::Cipher> cipher, std::unique_ptr<SlokedCrypto::Random> random)
-        : cipher(std::move(cipher)), random(std::move(random)) {}
+    SlokedAuthenticationMaster::SlokedAuthenticationMaster(SlokedCrypto &crypto, SlokedCrypto::Key &key)
+        : crypto(crypto), cipher(crypto.NewCipher(key)), random(crypto.NewRandom()) {}
 
-    SlokedAuth::Account &SlokedAuth::New(const std::string &name) {
+    SlokedAuthenticationMaster::Account &SlokedAuthenticationMaster::New(const std::string &name) {
+        std::unique_lock lock(this->mtx);
         if (this->accounts.count(name) == 0) {
             auto account = std::make_unique<Account>(*this, name);
             this->accounts.emplace(name, std::move(account));
@@ -125,11 +163,13 @@ namespace sloked {
         }
     }
 
-    bool SlokedAuth::Has(const std::string &name) const {
+    bool SlokedAuthenticationMaster::Has(const std::string &name) const {
+        std::unique_lock lock(this->mtx);
         return this->accounts.count(name) != 0;
     }
 
-    SlokedAuth::Account &SlokedAuth::GetByName(const std::string &name) const {
+    SlokedAuthenticationMaster::Account &SlokedAuthenticationMaster::GetByName(const std::string &name) const {
+        std::unique_lock lock(this->mtx);
         if (this->accounts.count(name) != 0) {
             return *this->accounts.at(name);
         } else {
@@ -137,7 +177,8 @@ namespace sloked {
         }
     }
 
-    SlokedAuth::Account &SlokedAuth::GetByCredential(const std::string &credentials) const {
+    SlokedAuthenticationMaster::Account &SlokedAuthenticationMaster::GetByCredential(const std::string &credentials) const {
+        std::unique_lock lock(this->mtx);
         auto token = Account::ParseCredentials(*this, credentials);
         auto &account = this->GetByName(token.GetName());
         if (account.VerifyToken(token)) {
@@ -147,7 +188,7 @@ namespace sloked {
         }
     }
 
-    SlokedAuth::AccountToken::NonceType SlokedAuth::NextNonce() const {
+    SlokedAuthenticationMaster::AccountToken::NonceType SlokedAuthenticationMaster::NextNonce() const {
         AccountToken::NonceType nonce;
         for (std::size_t i = 0; i < nonce.size(); i++) {
             nonce[i] = this->random->NextByte();
@@ -155,7 +196,7 @@ namespace sloked {
         return nonce;
     }
 
-    std::string SlokedAuth::Encode(std::string_view data) const {
+    std::string SlokedAuthenticationMaster::Encode(std::string_view data) const {
         SlokedCrypto::Data bytes(data.data(), data.data() + data.size());
         if (bytes.size() % this->cipher->BlockSize() != 0) {
             std::size_t zeros = this->cipher->BlockSize() - (bytes.size() % this->cipher->BlockSize());
@@ -165,7 +206,7 @@ namespace sloked {
         return SlokedBase64::Encode(encrypted.data(), encrypted.data() + encrypted.size());
     }
 
-    std::string SlokedAuth::Decode(std::string_view data) const {
+    std::string SlokedAuthenticationMaster::Decode(std::string_view data) const {
         SlokedCrypto::Data encrypted = SlokedBase64::Decode(data);
         auto bytes = this->cipher->Decrypt(encrypted);
         std::string result{bytes.begin(), bytes.end()};

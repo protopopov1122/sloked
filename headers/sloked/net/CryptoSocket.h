@@ -24,14 +24,18 @@
 
 #include "sloked/core/Crypto.h"
 #include "sloked/net/Socket.h"
+#include "sloked/security/Provider.h"
 
 namespace sloked {
 
-    class SlokedCryptoSocket : public SlokedSocket {
+    class SlokedCryptoSocket : public SlokedSocket, public SlokedSocketAuthentication {
      public:
-        SlokedCryptoSocket(std::unique_ptr<SlokedSocket>, std::unique_ptr<SlokedCrypto::Cipher>);
+        using CipherGenerator = std::function<std::unique_ptr<SlokedCrypto::Cipher>(const std::string &)>;
+
+        SlokedCryptoSocket(std::unique_ptr<SlokedSocket>, SlokedCrypto &, std::unique_ptr<SlokedCrypto::Cipher>, SlokedAuthenticationProvider * = nullptr);
         SlokedCryptoSocket(const SlokedCryptoSocket &) = delete;
         SlokedCryptoSocket(SlokedCryptoSocket &&);
+        ~SlokedCryptoSocket();
         SlokedCryptoSocket &operator=(const SlokedCryptoSocket &) = delete;
         SlokedCryptoSocket &operator=(SlokedCryptoSocket &&);
 
@@ -44,20 +48,34 @@ namespace sloked {
         void Write(SlokedSpan<const uint8_t>) final;
         void Write(uint8_t) final;
         std::unique_ptr<SlokedIOAwaitable> Awaitable() const final;
+        const SlokedSocketAuthentication *GetAuthentication() const final;
+        SlokedSocketAuthentication *GetAuthentication() final;
+        
+        const std::string &GetAccount() const final;
+        void ChangeAccount(const std::string &) final;
 
      private:
-        void Put(const uint8_t *, std::size_t);
+        enum class Command {
+            Data = 'D',
+            Key = 'K'
+        };
+
+        void Put(const uint8_t *, std::size_t, Command = Command::Data);
         void Fetch(std::size_t = 0);
 
         std::unique_ptr<SlokedSocket> socket;
+        std::reference_wrapper<SlokedCrypto> crypto;
         std::unique_ptr<SlokedCrypto::Cipher> cipher;
+        SlokedAuthenticationProvider *authenticationProvider;
+        SlokedAuthenticationProvider::Account::Callback authWatcher;
         std::vector<uint8_t> encryptedBuffer;
         std::vector<uint8_t> buffer;
+        std::string accountId;
     };
 
     class SlokedCryptoServerSocket : public SlokedServerSocket {
      public:
-        SlokedCryptoServerSocket(std::unique_ptr<SlokedServerSocket>, SlokedCrypto &, SlokedCrypto::Key &);
+        SlokedCryptoServerSocket(std::unique_ptr<SlokedServerSocket>, SlokedCrypto &, SlokedCrypto::Key &, SlokedAuthenticationProvider * = nullptr);
         SlokedCryptoServerSocket(const SlokedCryptoServerSocket &) = delete;
         SlokedCryptoServerSocket(SlokedCryptoServerSocket &&);
         SlokedCryptoServerSocket &operator=(const SlokedCryptoServerSocket &) = delete;
@@ -73,11 +91,12 @@ namespace sloked {
         std::unique_ptr<SlokedServerSocket> serverSocket;
         SlokedCrypto &crypto;
         SlokedCrypto::Key &key;
+        SlokedAuthenticationProvider *authenticationProvider;
     };
 
     class SlokedCryptoSocketFactory : public SlokedSocketFactory {
      public:
-        SlokedCryptoSocketFactory(SlokedSocketFactory &, SlokedCrypto &, SlokedCrypto::Key &);
+        SlokedCryptoSocketFactory(SlokedSocketFactory &, SlokedCrypto &, SlokedCrypto::Key &, SlokedAuthenticationProvider * = nullptr);
         SlokedCryptoSocketFactory(const SlokedCryptoSocketFactory &) = delete;
         SlokedCryptoSocketFactory(SlokedCryptoSocketFactory &&);
 
@@ -91,6 +110,7 @@ namespace sloked {
         SlokedSocketFactory &socketFactory;
         SlokedCrypto &crypto;
         SlokedCrypto::Key &key;
+        SlokedAuthenticationProvider *authenticationProvider;
     };
 }
 

@@ -19,17 +19,18 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SECURITY_AUTH_H_
-#define SLOKED_SECURITY_AUTH_H_
+#ifndef SLOKED_SECURITY_MASTER_H_
+#define SLOKED_SECURITY_MASTER_H_
 
-#include "sloked/core/Crypto.h"
+#include "sloked/security/Provider.h"
 #include <memory>
 #include <map>
 #include <array>
+#include <mutex>
 
 namespace sloked {
 
-    class SlokedAuth {
+    class SlokedAuthenticationMaster : public SlokedAuthenticationProvider {
      public: class Account;
      private: class AccountToken {
          static constexpr std::size_t NonceSize = 16;
@@ -43,9 +44,9 @@ namespace sloked {
          using NonceType = std::array<uint8_t, NonceSize>;
 
       private:
-         AccountToken(const SlokedAuth &, const std::string &);
-         AccountToken(const SlokedAuth &, std::string, NonceType);
-         void GenerateCredentials(const SlokedAuth &);
+         AccountToken(const SlokedAuthenticationMaster &, const std::string &);
+         AccountToken(const SlokedAuthenticationMaster &, std::string, NonceType);
+         void GenerateCredentials(const SlokedAuthenticationMaster &);
 
          std::string name;
          NonceType nonce;
@@ -54,27 +55,33 @@ namespace sloked {
      friend class AccountToken;
 
      public:
-        class Account {
+        class Account : public SlokedAuthenticationProvider::Account {
          public:
-            Account(SlokedAuth &, const std::string &);
+            Account(SlokedAuthenticationMaster &, const std::string &);
+            ~Account();
             const std::string &GetName() const;
             void RevokeCredentials();
-            const std::string &GetCredentials() const;
-            friend class SlokedAuth;
+            const std::string &GetCredentials() const final;
+            std::unique_ptr<SlokedCrypto::Key> DeriveKey(const std::string &) const final;
+            Callback Watch(Callback) final;
 
+            friend class SlokedAuthenticationMaster;
          private:
             bool VerifyToken(const AccountToken &) const;
-            static AccountToken ParseCredentials(const SlokedAuth &, const std::string &);
+            static AccountToken ParseCredentials(const SlokedAuthenticationMaster &, const std::string &);
 
-            SlokedAuth &auth;
+            SlokedAuthenticationMaster &auth;
+            mutable std::mutex mtx;
             AccountToken token;
+            uint64_t nextWatcherId;
+            std::map<uint64_t, Callback> watchers;
         };
         friend class Account;
 
-        SlokedAuth(std::unique_ptr<SlokedCrypto::Cipher>, std::unique_ptr<SlokedCrypto::Random>);
+        SlokedAuthenticationMaster(SlokedCrypto &, SlokedCrypto::Key &);
         Account &New(const std::string &);
-        bool Has(const std::string &) const;
-        Account &GetByName(const std::string &) const;
+        bool Has(const std::string &) const final;
+        Account &GetByName(const std::string &) const final;
         Account &GetByCredential(const std::string &) const;
 
      private:
@@ -82,6 +89,8 @@ namespace sloked {
         std::string Encode(std::string_view) const;
         std::string Decode(std::string_view) const;
 
+        SlokedCrypto &crypto;
+        mutable std::mutex mtx;
         std::unique_ptr<SlokedCrypto::Cipher> cipher;
         std::unique_ptr<SlokedCrypto::Random> random;
         std::map<std::string, std::unique_ptr<Account>> accounts;
