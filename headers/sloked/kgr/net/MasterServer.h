@@ -50,7 +50,7 @@ namespace sloked {
             std::shared_ptr<KgrNamedRestrictions> modificationRestrictions;
         };
 
-        KgrMasterNetServer(KgrNamedServer &, std::unique_ptr<SlokedServerSocket>, SlokedIOPoller &, const SlokedAuthenticator * = nullptr);
+        KgrMasterNetServer(KgrNamedServer &, std::unique_ptr<SlokedServerSocket>, SlokedIOPoller &, SlokedAuthenticatorFactory &);
         ~KgrMasterNetServer();
         bool IsRunning() const;
         void Start();
@@ -74,7 +74,7 @@ namespace sloked {
         KgrLocalNamedServer remoteServices;
         std::unique_ptr<SlokedServerSocket> srvSocket;
         SlokedIOPoller &poll;
-        const SlokedAuthenticator *auth;
+        SlokedAuthenticatorFactory &authFactory;
         SlokedIOPoller::Handle awaiterHandle;
         std::atomic<bool> work;
         SlokedCounter<std::size_t> workers;

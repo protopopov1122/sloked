@@ -38,9 +38,9 @@ namespace sloked {
     class KgrMasterNetServerContext : public SlokedIOPoller::Awaitable {
      public:
         KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, SlokedCounter<std::size_t>::Handle counter,
-            KgrNamedServer &server, KgrNamedServer &remoteServices, KgrMasterNetServer::Restrictions &restrictions, const SlokedAuthenticator *auth)
+            KgrNamedServer &server, KgrNamedServer &remoteServices, KgrMasterNetServer::Restrictions &restrictions, SlokedAuthenticatorFactory &authFactory)
             : net(std::move(socket)), work(work), server(server), remoteServices(remoteServices), nextPipeId(0),
-              counterHandle(std::move(counter)), pinged{false}, restrictions(restrictions), auth(auth) {
+              counterHandle(std::move(counter)), pinged{false}, restrictions(restrictions), auth(authFactory.NewMaster(this->net.GetEncryption())) {
 
             this->lastActivity = std::chrono::system_clock::now();
 
@@ -164,9 +164,9 @@ namespace sloked {
 
             this->net.BindMethod("login-request", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 if (this->auth) {
-                    this->nonce = this->auth->GenerateChallenge();
+                    auto nonce = this->auth->InitiateLogin();
                     rsp.Result(KgrDictionary {
-                        { "nonce", static_cast<int64_t>(this->nonce.value()) }
+                        { "nonce", static_cast<int64_t>(nonce) }
                     });
                 } else {
                     rsp.Error("KgrMasterServer: Authentication not supported");
@@ -174,40 +174,17 @@ namespace sloked {
             });
 
             this->net.BindMethod("login-response", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                if (!this->nonce.has_value()) {
-                    rsp.Error("KgrMasterServer: Request nonce first");
-                    return;
-                }
-                if (!this->auth) {
-                    rsp.Error("KgrMasterServer: Authentication not supported");
-                    return;
-                }
                 const auto &keyId = params.AsDictionary()["id"].AsString();
                 const auto &result = params.AsDictionary()["result"].AsString();
-                auto cipher = this->auth->VerifyResponse(keyId, this->nonce.value(), result);
-                this->nonce.reset();
-                if (cipher) {
-                    if (this->net.Wait(KgrNetConfig::RequestTimeout)) {
-                        this->net.Receive();
-                    }
-                    if (this->unwatchAccount) {
-                        this->unwatchAccount();
-                    }
-                    rsp.Result(true);
-                    this->net.GetEncryption()->SetEncryption(std::move(cipher));
-                    this->unwatchAccount = this->auth->GetProvider().GetByName(keyId).Watch([this, keyId] {
-                        auto key = this->auth->GetProvider().GetByName(keyId).DeriveKey(this->auth->GetSalt());
-                        auto cipher = this->auth->GetCrypto().NewCipher(std::move(key));
-                        this->net.GetEncryption()->SetEncryption(std::move(cipher));
-                    });
-                } else {
-                    rsp.Result(false);
+                auto res = this->auth->ContinueLogin(keyId, result);
+                rsp.Result(res);
+                if (res) {
+                    this->auth->SetupEncryption();
                 }
             });
         }
 
         virtual ~KgrMasterNetServerContext() {
-            this->unwatchAccount();
             this->workers.Wait();
             std::unique_lock lock(this->mtx);
             for (const auto &pipe : this->pipes) {
@@ -354,9 +331,7 @@ namespace sloked {
         SlokedThreadPool workers;
         bool pinged;
         KgrMasterNetServer::Restrictions &restrictions;
-        const SlokedAuthenticator *auth;
-        std::optional<SlokedAuthenticator::Challenge> nonce;
-        SlokedAuthenticationProvider::Account::Callback unwatchAccount;
+        std::unique_ptr<SlokedMasterAuthenticator> auth;
     };
 
     KgrMasterNetServer::Restrictions::Restrictions()
@@ -370,8 +345,8 @@ namespace sloked {
         this->modificationRestrictions = std::move(restrictions);
     }
 
-    KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedIOPoller &poll, const SlokedAuthenticator *auth)
-        : server(server), remoteServices(rawRemoteServices), srvSocket(std::move(socket)), poll(poll), auth(auth), work(false) {}
+    KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedIOPoller &poll, SlokedAuthenticatorFactory &authFactory)
+        : server(server), remoteServices(rawRemoteServices), srvSocket(std::move(socket)), poll(poll), authFactory(authFactory), work(false) {}
 
     KgrMasterNetServer::~KgrMasterNetServer() {
         this->Close();
@@ -416,7 +391,7 @@ namespace sloked {
             auto client = this->self.srvSocket->Accept(KgrNetConfig::RequestTimeout);
             if (client) {
                 SlokedCounter<std::size_t>::Handle counterHandle(this->self.workers);
-                auto ctx = std::make_unique<KgrMasterNetServerContext>(std::move(client), this->self.work, std::move(counterHandle), this->self.server, this->self.remoteServices, this->self.restrictions, this->self.auth);
+                auto ctx = std::make_unique<KgrMasterNetServerContext>(std::move(client), this->self.work, std::move(counterHandle), this->self.server, this->self.remoteServices, this->self.restrictions, this->self.authFactory);
                 auto &ctx_ref = *ctx;
                 auto handle = this->self.poll.Attach(std::move(ctx));
                 ctx_ref.SetHandle(std::move(handle));

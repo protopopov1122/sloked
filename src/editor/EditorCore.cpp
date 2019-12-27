@@ -99,9 +99,10 @@ namespace sloked {
         this->Init(root, charWidth);
     }
     
-    SlokedEditorMasterCore::SlokedEditorMasterCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
+    SlokedEditorMasterCore::SlokedEditorMasterCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io, SlokedAuthenticatorFactory &authFactory,
+        SlokedNamespace &root, const SlokedCharWidth &charWidth)
         : SlokedAbstractEditorCore(logger, io), documents(root) {
-        this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io);
+        this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io, authFactory);
         this->Init(root, charWidth);
     }
 
@@ -118,14 +119,14 @@ namespace sloked {
         this->GetServer().Register("namespace::root", std::make_unique<SlokedNamespaceService>(root, this->contextManager.GetManager()));
     }
 
-    SlokedEditorSlaveCore::SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io)
+    SlokedEditorSlaveCore::SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io, SlokedAuthenticatorFactory &authFactory)
         : SlokedAbstractEditorCore(logger, io) {
-        this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io);
+        this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io, authFactory);
     }
 
-    void SlokedAbstractEditorCore::SpawnNetServer(SlokedSocketFactory &socketFactory, const std::string &host, uint16_t port, const SlokedAuthenticator *auth) {
+    void SlokedAbstractEditorCore::SpawnNetServer(SlokedSocketFactory &socketFactory, const std::string &host, uint16_t port, SlokedAuthenticatorFactory &authFactory) {
         if (this->netServer == nullptr) {
-            this->netServer = std::make_unique<KgrMasterNetServer>(this->server->GetServer(), socketFactory.Bind(host, port), this->io, auth);
+            this->netServer = std::make_unique<KgrMasterNetServer>(this->server->GetServer(), socketFactory.Bind(host, port), this->io, authFactory);
             this->closeables.Attach(*this->netServer);
             this->netServer->Start();
         } else {

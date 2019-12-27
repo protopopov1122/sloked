@@ -51,7 +51,7 @@ namespace sloked {
         KgrNamedRestrictionManager &GetRestrictions();
         KgrNamedRestrictionManager &GetNetRestrictions();
         void Start();
-        void SpawnNetServer(SlokedSocketFactory &, const std::string &, uint16_t, const SlokedAuthenticator * = nullptr);
+        void SpawnNetServer(SlokedSocketFactory &, const std::string &, uint16_t, SlokedAuthenticatorFactory &);
         void Close() final;
 
      protected:
@@ -69,7 +69,7 @@ namespace sloked {
     class SlokedEditorMasterCore : public SlokedAbstractEditorCore {
      public:
         SlokedEditorMasterCore(SlokedLogger &, SlokedIOPoller &, SlokedNamespace &, const SlokedCharWidth &);
-        SlokedEditorMasterCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &, SlokedNamespace &, const SlokedCharWidth &);
+        SlokedEditorMasterCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &, SlokedAuthenticatorFactory &, SlokedNamespace &, const SlokedCharWidth &);
         SlokedTextTaggerRegistry<int> &GetTaggers();
 
      private:
@@ -80,7 +80,7 @@ namespace sloked {
 
     class SlokedEditorSlaveCore : public SlokedAbstractEditorCore {
      public:
-        SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &);
+        SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &, SlokedAuthenticatorFactory &);
     };
 }
 

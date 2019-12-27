@@ -38,8 +38,8 @@ namespace sloked {
     
     void SlokedLocalEditorServer::Close() {}
 
-    SlokedRemoteEditorServer::SlokedRemoteEditorServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &io)
-        : unrestrictedServer(std::move(socket), io), server(unrestrictedServer, std::make_unique<KgrNamedBlacklist>(), std::make_unique<KgrNamedBlacklist>()) {}
+    SlokedRemoteEditorServer::SlokedRemoteEditorServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &io, SlokedAuthenticatorFactory &authFactory)
+        : unrestrictedServer(std::move(socket), io, authFactory), server(unrestrictedServer, std::make_unique<KgrNamedBlacklist>(), std::make_unique<KgrNamedBlacklist>()) {}
 
     SlokedRemoteEditorServer::~SlokedRemoteEditorServer() {
         this->Close();

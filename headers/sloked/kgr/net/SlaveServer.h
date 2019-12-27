@@ -38,7 +38,7 @@ namespace sloked {
 
     class KgrSlaveNetServer : public KgrNamedServer, public SlokedCloseable {
      public:
-        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &, const SlokedAuthenticator * = nullptr);
+        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &, SlokedAuthenticatorFactory &);
         ~KgrSlaveNetServer();
         bool IsRunning() const;
         void Start();
@@ -78,10 +78,9 @@ namespace sloked {
         KgrLocalServer rawLocalServer;
         KgrLocalNamedServer localServer;
         SlokedIOPoller &poll;
-        const SlokedAuthenticator *auth;
+        std::unique_ptr<SlokedSlaveAuthenticator> auth;
         std::chrono::system_clock::time_point lastActivity;
         bool pinged;
-        SlokedAuthenticationProvider::Account::Callback unwatchAccount;
     };
 }
 

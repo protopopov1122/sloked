@@ -148,8 +148,8 @@ static const KgrDictionary DefaultConfiguration {
 int main(int argc, const char **argv) {
     SlokedBotanCrypto crypto;
     auto key = crypto.DeriveKey("password", "salt");
-    SlokedAuthenticationMaster authMaster(crypto, *key);
-    SlokedAuthenticator auth(crypto, authMaster, "salt");
+    SlokedCredentialMaster authMaster(crypto, *key);
+    SlokedAuthenticatorFactory authFactory(crypto, authMaster, "salt");
     auto &user = authMaster.New("user1");
 
     // Core initialization
@@ -184,7 +184,7 @@ int main(int argc, const char **argv) {
     SlokedEditorMasterCore editor(logger, socketPoller, root, charWidth);
     closeables.Attach(editor);
     editor.Start();
-    editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>(), &auth);
+    editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>(), authFactory);
     editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
     editor.GetRestrictions().SetAccessRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
     editor.GetRestrictions().SetModificationRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
@@ -193,8 +193,7 @@ int main(int argc, const char **argv) {
 
     // Proxy initialization
     auto slaveSocket = socketFactory.Connect("localhost", cli["net-port"].As<int>());
-    // slaveSocket->GetEncryption()->ChangeAccount("user1");
-    KgrSlaveNetServer slaveServer(std::move(slaveSocket), editor.GetIO(), &auth);
+    KgrSlaveNetServer slaveServer(std::move(slaveSocket), editor.GetIO(), authFactory);
     closeables.Attach(slaveServer);
     slaveServer.Start();
     slaveServer.Login("user1");

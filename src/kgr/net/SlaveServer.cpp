@@ -29,8 +29,8 @@
 
 namespace sloked {
 
-    KgrSlaveNetServer::KgrSlaveNetServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &poll, const SlokedAuthenticator *auth)
-        : net(std::move(socket)), work(false), localServer(rawLocalServer), poll(poll), auth(auth), pinged{false} {
+    KgrSlaveNetServer::KgrSlaveNetServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &poll, SlokedAuthenticatorFactory &authFactory)
+        : net(std::move(socket)), work(false), localServer(rawLocalServer), poll(poll), auth(authFactory.NewSlave(this->net.GetEncryption())), pinged{false} {
 
         this->lastActivity = std::chrono::system_clock::now();
 
@@ -96,7 +96,6 @@ namespace sloked {
     }
     
     KgrSlaveNetServer::~KgrSlaveNetServer() {
-        this->unwatchAccount();
         this->Close();
     }
 
@@ -206,16 +205,13 @@ namespace sloked {
     }
 
     void KgrSlaveNetServer::Login(const std::string &account) {
-        // Sending login request and preparing ciphers
-        if (this->auth == nullptr) {
-            throw SlokedError("KgrSlaveServer: Authentication not supported");
-        }
+        // Sending login request
         auto loginRequest = this->net.Invoke("login-request", {});
         if (!(loginRequest.WaitResponse(KgrNetConfig::ResponseTimeout) && this->work.load())) {
             throw SlokedError("KgrSlaveServer: Error requesting login for \'" + account + "\'");
         }
-        auto nonce = static_cast<SlokedAuthenticator::Challenge>(loginRequest.GetResponse().GetResult().AsDictionary()["nonce"].AsInt());
-        auto [result, cipher] = this->auth->GenerateResponse(account, nonce);
+        auto nonce = static_cast<SlokedSlaveAuthenticator::Challenge>(loginRequest.GetResponse().GetResult().AsDictionary()["nonce"].AsInt());
+        auto result = this->auth->InitiateLogin(account, nonce);
         
         // Sending result
         auto loginResponse = this->net.Invoke("login-response", KgrDictionary {
@@ -226,15 +222,7 @@ namespace sloked {
             loginResponse.GetResponse().GetResult().AsBoolean())) {
             throw SlokedError("KgrSlaveServer: Error requesting login for \'" + account + "\'");
         }
-        if (this->unwatchAccount) {
-            this->unwatchAccount();
-        }
-        this->net.GetEncryption()->SetEncryption(std::move(cipher));
-        this->unwatchAccount = this->auth->GetProvider().GetByName(account).Watch([this, account] {
-            auto key = this->auth->GetProvider().GetByName(account).DeriveKey(this->auth->GetSalt());
-            auto cipher = this->auth->GetCrypto().NewCipher(std::move(key));
-            this->net.GetEncryption()->SetEncryption(std::move(cipher));
-        });
+        this->auth->FinalizeLogin(account);
     }
 
     void KgrSlaveNetServer::Accept() {

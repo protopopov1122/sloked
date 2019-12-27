@@ -22,28 +22,62 @@
 #ifndef SLOKED_SECUTIRY_AUTHENTICATOR_H_
 #define SLOKED_SECUTIRY_AUTHENTICATOR_H_
 
+#include "sloked/net/Socket.h"
 #include "sloked/core/Crypto.h"
 #include "sloked/security/Provider.h"
 
 namespace sloked {
 
-    class SlokedAuthenticator {
+    class SlokedMasterAuthenticator {
      public:
         using Challenge = uint32_t;
-        SlokedAuthenticator(SlokedCrypto &, SlokedAuthenticationProvider &, std::string);
-        SlokedCrypto &GetCrypto() const;
-        SlokedAuthenticationProvider &GetProvider() const;
-        const std::string &GetSalt() const;
-        Challenge GenerateChallenge() const;
-        std::pair<std::string, std::unique_ptr<SlokedCrypto::Cipher>> GenerateResponse(const std::string &, Challenge) const;
-        std::unique_ptr<SlokedCrypto::Cipher> VerifyResponse(const std::string &, Challenge, const std::string &) const;
+        SlokedMasterAuthenticator(SlokedCrypto &, SlokedCredentialProvider &, std::string, SlokedSocketEncryption * = nullptr);
+        ~SlokedMasterAuthenticator();
+        bool IsLoggedIn() const;
+        std::optional<std::string> GetAccount() const;
+        Challenge InitiateLogin();
+        bool ContinueLogin(const std::string &, const std::string &);
+        void SetupEncryption();
 
      private:
-        std::string GenerateResponse(SlokedCrypto::Cipher &, Challenge) const;
-
         SlokedCrypto &crypto;
         std::unique_ptr<SlokedCrypto::Random> random;
-        SlokedAuthenticationProvider &provider;
+        SlokedCredentialProvider &provider;
+        std::string salt;
+        SlokedSocketEncryption *encryption;
+        std::optional<std::string> account;
+        std::optional<Challenge> nonce;
+        SlokedCredentialProvider::Account::Callback unwatchCredentials;
+    };
+
+    class SlokedSlaveAuthenticator {
+     public:
+        using Challenge = SlokedMasterAuthenticator::Challenge;
+        SlokedSlaveAuthenticator(SlokedCrypto &, SlokedCredentialProvider &, std::string, SlokedSocketEncryption * = nullptr);
+        ~SlokedSlaveAuthenticator();
+        bool IsLoggedIn() const;
+        std::optional<std::string> GetAccount() const;
+        std::string InitiateLogin(const std::string, Challenge);
+        void FinalizeLogin(const std::string &);
+
+     private:
+        SlokedCrypto &crypto;
+        SlokedCredentialProvider &provider;
+        std::string salt;
+        SlokedSocketEncryption *encryption;
+        std::optional<std::string> account;
+        SlokedCredentialProvider::Account::Callback unwatchCredentials;
+    };
+
+    class SlokedAuthenticatorFactory {
+     public:
+        SlokedAuthenticatorFactory(SlokedCrypto &, SlokedCredentialProvider &, std::string);
+        std::unique_ptr<SlokedMasterAuthenticator> NewMaster(SlokedSocketEncryption * = nullptr);
+        std::unique_ptr<SlokedSlaveAuthenticator> NewSlave(SlokedSocketEncryption * = nullptr);
+
+     private:
+        SlokedCrypto &crypto;
+        SlokedCredentialProvider &provider;
         std::string salt;
     };
 }

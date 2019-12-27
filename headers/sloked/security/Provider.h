@@ -28,7 +28,7 @@
 
 namespace sloked {
 
-    class SlokedAuthenticationProvider {
+    class SlokedCredentialProvider {
      public:
         class Account {
          public:
@@ -40,7 +40,7 @@ namespace sloked {
             virtual Callback Watch(Callback) = 0;
         };
 
-        virtual ~SlokedAuthenticationProvider() = default;
+        virtual ~SlokedCredentialProvider() = default;
         virtual bool Has(const std::string &) const = 0;
         virtual Account &GetByName(const std::string &) const = 0;
     };

@@ -30,7 +30,7 @@
 
 namespace sloked {
 
-    class SlokedAuthenticationMaster : public SlokedAuthenticationProvider {
+    class SlokedCredentialMaster : public SlokedCredentialProvider {
      public: class Account;
      private: class AccountToken {
          static constexpr std::size_t NonceSize = 16;
@@ -44,9 +44,9 @@ namespace sloked {
          using NonceType = std::array<uint8_t, NonceSize>;
 
       private:
-         AccountToken(const SlokedAuthenticationMaster &, const std::string &);
-         AccountToken(const SlokedAuthenticationMaster &, std::string, NonceType);
-         void GenerateCredentials(const SlokedAuthenticationMaster &);
+         AccountToken(const SlokedCredentialMaster &, const std::string &);
+         AccountToken(const SlokedCredentialMaster &, std::string, NonceType);
+         void GenerateCredentials(const SlokedCredentialMaster &);
 
          std::string name;
          NonceType nonce;
@@ -55,9 +55,9 @@ namespace sloked {
      friend class AccountToken;
 
      public:
-        class Account : public SlokedAuthenticationProvider::Account {
+        class Account : public SlokedCredentialProvider::Account {
          public:
-            Account(SlokedAuthenticationMaster &, const std::string &);
+            Account(SlokedCredentialMaster &, const std::string &);
             ~Account();
             const std::string &GetName() const;
             void RevokeCredentials();
@@ -65,12 +65,12 @@ namespace sloked {
             std::unique_ptr<SlokedCrypto::Key> DeriveKey(const std::string &) const final;
             Callback Watch(Callback) final;
 
-            friend class SlokedAuthenticationMaster;
+            friend class SlokedCredentialMaster;
          private:
             bool VerifyToken(const AccountToken &) const;
-            static AccountToken ParseCredentials(const SlokedAuthenticationMaster &, const std::string &);
+            static AccountToken ParseCredentials(const SlokedCredentialMaster &, const std::string &);
 
-            SlokedAuthenticationMaster &auth;
+            SlokedCredentialMaster &auth;
             mutable std::mutex mtx;
             AccountToken token;
             uint64_t nextWatcherId;
@@ -78,7 +78,7 @@ namespace sloked {
         };
         friend class Account;
 
-        SlokedAuthenticationMaster(SlokedCrypto &, SlokedCrypto::Key &);
+        SlokedCredentialMaster(SlokedCrypto &, SlokedCrypto::Key &);
         Account &New(const std::string &);
         bool Has(const std::string &) const final;
         Account &GetByName(const std::string &) const final;
