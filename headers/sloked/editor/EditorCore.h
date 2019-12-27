@@ -51,7 +51,7 @@ namespace sloked {
         KgrNamedRestrictionManager &GetRestrictions();
         KgrNamedRestrictionManager &GetNetRestrictions();
         void Start();
-        void SpawnNetServer(SlokedSocketFactory &, const std::string &, uint16_t);
+        void SpawnNetServer(SlokedSocketFactory &, const std::string &, uint16_t, const SlokedAuthenticator * = nullptr);
         void Close() final;
 
      protected:

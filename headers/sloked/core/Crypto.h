@@ -27,6 +27,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <type_traits>
 
 namespace sloked {
 
@@ -61,6 +62,17 @@ namespace sloked {
          public:
             virtual ~Random() = default;
             virtual uint8_t NextByte() = 0;
+
+            template <typename T = uint32_t>
+            typename std::enable_if_t<std::is_integral_v<T>, T> NextInt() {
+               constexpr std::size_t Size = sizeof(T) / sizeof(uint8_t);
+               T value{0};
+               for (std::size_t i = 0; i < Size; i++) {
+                  value <<= std::numeric_limits<uint8_t>::digits;
+                  value |= this->NextByte();
+               }
+               return value;
+            }
         };
 
         virtual ~SlokedCrypto() = default;

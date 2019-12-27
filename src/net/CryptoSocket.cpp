@@ -27,26 +27,19 @@
 
 namespace sloked {
 
-    SlokedCryptoSocket::SlokedCryptoSocket(std::unique_ptr<SlokedSocket> socket, SlokedCrypto &crypto, std::unique_ptr<SlokedCrypto::Cipher> cipher, SlokedAuthenticationProvider *auth)
-        : socket(std::move(socket)), crypto(std::ref(crypto)), cipher(std::move(cipher)), authenticationProvider(auth), authWatcher{nullptr}, accountId{} {}
+    SlokedCryptoSocket::SlokedCryptoSocket(std::unique_ptr<SlokedSocket> socket, std::unique_ptr<SlokedCrypto::Cipher> cipher)
+        : socket(std::move(socket)), cipher(std::move(cipher)) {}
 
     SlokedCryptoSocket::SlokedCryptoSocket(SlokedCryptoSocket &&socket)
-        : socket(std::move(socket.socket)), crypto(std::move(socket.crypto)), cipher(std::move(socket.cipher)),
-          authenticationProvider(std::move(socket.authenticationProvider)), authWatcher(std::move(socket.authWatcher)) {}
-        
-    SlokedCryptoSocket::~SlokedCryptoSocket() {
-        if (this->authWatcher) {
-            this->authWatcher();
-        }
-    }
+        : socket(std::move(socket.socket)), cipher(std::move(socket.cipher)), defaultCipher(std::move(socket.defaultCipher)),
+          encryptedBuffer(std::move(socket.encryptedBuffer)), buffer(std::move(socket.buffer)) {}
 
     SlokedCryptoSocket &SlokedCryptoSocket::operator=(SlokedCryptoSocket &&socket) {
         this->socket = std::move(socket.socket);
-        this->crypto = std::move(socket.crypto);
         this->cipher = std::move(socket.cipher);
-        this->authenticationProvider = socket.authenticationProvider;
-        socket.authenticationProvider = nullptr;
-        this->authWatcher = std::move(socket.authWatcher);
+        this->defaultCipher = std::move(socket.defaultCipher);
+        this->encryptedBuffer = std::move(socket.encryptedBuffer);
+        this->buffer = std::move(socket.buffer);
         return *this;
     }
 
@@ -129,48 +122,20 @@ namespace sloked {
         return this->socket->Awaitable();
     }
 
-    const SlokedSocketAuthentication *SlokedCryptoSocket::GetAuthentication() const {
-        if (this->authenticationProvider) {
-            return this;
-        } else {
-            return nullptr;
-        }
+    SlokedSocketEncryption *SlokedCryptoSocket::GetEncryption() {
+        return this;
     }
 
-    SlokedSocketAuthentication *SlokedCryptoSocket::GetAuthentication() {
-        if (this->authenticationProvider) {
-            return this;
-        } else {
-            return nullptr;
+    void SlokedCryptoSocket::SetEncryption(std::unique_ptr<SlokedCrypto::Cipher> cipher) {
+        if (this->defaultCipher == nullptr) {
+            this->defaultCipher = std::move(this->cipher);
         }
-    }
-    
-    const std::string &SlokedCryptoSocket::GetAccount() const {
-        return this->accountId;
+        this->cipher = std::move(cipher);
     }
 
-    void SlokedCryptoSocket::ChangeAccount(const std::string &id) {
-        if (this->authenticationProvider && this->authenticationProvider->Has(id)) {
-            auto newKey = this->authenticationProvider->GetByName(id).DeriveKey("");
-            if (newKey) {
-                if (this->authWatcher) {
-                    this->authWatcher();
-                }
-                this->Fetch();
-                this->Put(reinterpret_cast<const uint8_t *>(id.data()), id.size(), Command::Key);
-                this->cipher = this->crypto.get().NewCipher(std::move(newKey));
-                this->accountId = id;
-                this->authWatcher = this->authenticationProvider->GetByName(id).Watch([this, id] {
-                    auto newKey = this->authenticationProvider->GetByName(id).DeriveKey("");
-                    if (newKey) {
-                        this->cipher = this->crypto.get().NewCipher(std::move(newKey));
-                    }
-                });
-            } else {
-                throw SlokedError("CryptoSocket: Encryption key \'" + id + "\' deriving issue");
-            }
-        } else {
-            throw SlokedError("CryptoSocket: Unknown encryption key \'" + id + "\'");
+    void SlokedCryptoSocket::RestoreDedaultEncryption() {
+        if (this->defaultCipher) {
+            this->cipher = std::move(this->defaultCipher);
         }
     }
 
@@ -180,7 +145,7 @@ namespace sloked {
         return (value >> (idx << 3)) & 0xff;
     }
 
-    void SlokedCryptoSocket::Put(const uint8_t *bytes, std::size_t length, Command cmd) {
+    void SlokedCryptoSocket::Put(const uint8_t *bytes, std::size_t length) {
         std::size_t totalLength = length;
         if (length % this->cipher->BlockSize() != 0) {
             totalLength = (length / this->cipher->BlockSize() + 1) * this->cipher->BlockSize();
@@ -190,7 +155,6 @@ namespace sloked {
         auto crc32 = SlokedCrc32::Calculate(raw.begin(), raw.end());
         auto encrypted = this->cipher->Encrypt(raw);
         std::vector<uint8_t> header {
-            static_cast<uint8_t>(cmd),
             ByteAt(length, 0),
             ByteAt(length, 1),
             ByteAt(length, 2),
@@ -205,7 +169,7 @@ namespace sloked {
     }
 
     void SlokedCryptoSocket::Fetch(std::size_t sz) {
-        constexpr std::size_t EncryptedHeaderSize = 9;
+        constexpr std::size_t EncryptedHeaderSize = 8;
         do {
             auto chunk = this->socket->Read(this->socket->Available());
             this->encryptedBuffer.insert(this->encryptedBuffer.end(), chunk.begin(), chunk.end());
@@ -213,15 +177,14 @@ namespace sloked {
                 continue;
             }
 
-            uint8_t command = this->encryptedBuffer.at(0);
-            std::size_t length = this->encryptedBuffer.at(1) +
-                (this->encryptedBuffer.at(2) << 8) +
-                (this->encryptedBuffer.at(3) << 16) +
-                (this->encryptedBuffer.at(4) << 24);
-            uint32_t crc32 = this->encryptedBuffer.at(5) +
-                (this->encryptedBuffer.at(6) << 8) +
-                (this->encryptedBuffer.at(7) << 16) +
-                (this->encryptedBuffer.at(8) << 24);
+            std::size_t length = this->encryptedBuffer.at(0) +
+                (this->encryptedBuffer.at(1) << 8) +
+                (this->encryptedBuffer.at(2) << 16) +
+                (this->encryptedBuffer.at(3) << 24);
+            uint32_t crc32 = this->encryptedBuffer.at(4) +
+                (this->encryptedBuffer.at(5) << 8) +
+                (this->encryptedBuffer.at(6) << 16) +
+                (this->encryptedBuffer.at(7) << 24);
             std::size_t totalLength = length;
             if (length % this->cipher->BlockSize() != 0) {
                 totalLength = (length / this->cipher->BlockSize() + 1) * this->cipher->BlockSize();
@@ -237,46 +200,15 @@ namespace sloked {
             if (actualCrc32 != crc32) {
                 throw SlokedError("CryptoSocket: Actual CRC32 doesn't equal to expected");
             }
-            switch (static_cast<Command>(command)) {
-                case Command::Data:
-                    this->buffer.insert(this->buffer.end(), raw.begin(), raw.begin() + length);
-                    break;
-
-                case Command::Key: {
-                    std::string keyId{raw.begin(), raw.begin() + length};
-                    if (this->authenticationProvider && this->authenticationProvider->Has(keyId)) {
-                        auto newKey = this->authenticationProvider->GetByName(keyId).DeriveKey("");
-                        if (newKey) {
-                            if (this->authWatcher) {
-                                this->authWatcher();
-                            }
-                            this->cipher = this->crypto.get().NewCipher(std::move(newKey));
-                            this->accountId = keyId;
-                            this->authWatcher = this->authenticationProvider->GetByName(keyId).Watch([this, keyId] {
-                                auto newKey = this->authenticationProvider->GetByName(keyId).DeriveKey("");
-                                if (newKey) {
-                                    this->cipher = this->crypto.get().NewCipher(std::move(newKey));
-                                }
-                            });
-                        } else {
-                            throw SlokedError("CryptoSocket: Encryption key \'" + keyId + "\' deriving error");
-                        }
-                    } else {
-                        throw SlokedError("CryptoSocket: Unknown encryption key \'" + keyId + "\'");
-                    }
-                } break;
-
-                default:
-                    break;
-            }
+            this->buffer.insert(this->buffer.end(), raw.begin(), raw.begin() + length);
         } while (this->buffer.size() < sz || this->socket->Available() > 0);
     }
 
-    SlokedCryptoServerSocket::SlokedCryptoServerSocket(std::unique_ptr<SlokedServerSocket> serverSocket, SlokedCrypto &crypto, SlokedCrypto::Key &key, SlokedAuthenticationProvider *auth)
-        : serverSocket(std::move(serverSocket)), crypto(crypto), key(key), authenticationProvider(auth) {}
+    SlokedCryptoServerSocket::SlokedCryptoServerSocket(std::unique_ptr<SlokedServerSocket> serverSocket, SlokedCrypto &crypto, SlokedCrypto::Key &key)
+        : serverSocket(std::move(serverSocket)), crypto(crypto), key(key) {}
 
     SlokedCryptoServerSocket::SlokedCryptoServerSocket(SlokedCryptoServerSocket &&serverSocket)
-        : serverSocket(std::move(serverSocket.serverSocket)), crypto(serverSocket.crypto), key(serverSocket.key), authenticationProvider(std::move(serverSocket.authenticationProvider)) {}
+        : serverSocket(std::move(serverSocket.serverSocket)), crypto(serverSocket.crypto), key(serverSocket.key) {}
 
     bool SlokedCryptoServerSocket::Valid() {
         return this->serverSocket != nullptr && this->serverSocket->Valid();
@@ -301,7 +233,7 @@ namespace sloked {
         if (this->Valid()) {
             auto rawSocket = this->serverSocket->Accept(timeout);
             if (rawSocket) {
-                return std::make_unique<SlokedCryptoSocket>(std::move(rawSocket), this->crypto, this->crypto.NewCipher(this->key), this->authenticationProvider);
+                return std::make_unique<SlokedCryptoSocket>(std::move(rawSocket), this->crypto.NewCipher(this->key));
             } else {
                 return nullptr;
             }
@@ -314,16 +246,16 @@ namespace sloked {
         return this->serverSocket->Awaitable();
     }
 
-    SlokedCryptoSocketFactory::SlokedCryptoSocketFactory(SlokedSocketFactory &socketFactory, SlokedCrypto &crypto, SlokedCrypto::Key &key, SlokedAuthenticationProvider *auth)
-        : socketFactory(socketFactory), crypto(crypto), key(key), authenticationProvider(auth) {}
+    SlokedCryptoSocketFactory::SlokedCryptoSocketFactory(SlokedSocketFactory &socketFactory, SlokedCrypto &crypto, SlokedCrypto::Key &key)
+        : socketFactory(socketFactory), crypto(crypto), key(key) {}
 
     SlokedCryptoSocketFactory::SlokedCryptoSocketFactory(SlokedCryptoSocketFactory &&socketFactory)
-        : socketFactory(socketFactory.socketFactory), crypto(socketFactory.crypto), key(socketFactory.key), authenticationProvider(std::move(socketFactory.authenticationProvider)) {}
+        : socketFactory(socketFactory.socketFactory), crypto(socketFactory.crypto), key(socketFactory.key) {}
 
     std::unique_ptr<SlokedSocket> SlokedCryptoSocketFactory::Connect(const std::string &host, uint16_t port) {
         auto rawSocket = this->socketFactory.Connect(host, port);
         if (rawSocket) {
-            return std::make_unique<SlokedCryptoSocket>(std::move(rawSocket), this->crypto, this->crypto.NewCipher(this->key), this->authenticationProvider);
+            return std::make_unique<SlokedCryptoSocket>(std::move(rawSocket), this->crypto.NewCipher(this->key));
         } else {
             return nullptr;
         }
@@ -332,7 +264,7 @@ namespace sloked {
     std::unique_ptr<SlokedServerSocket> SlokedCryptoSocketFactory::Bind(const std::string &host, uint16_t port) {
         auto rawSocket = this->socketFactory.Bind(host, port);
         if (rawSocket) {
-            return std::make_unique<SlokedCryptoServerSocket>(std::move(rawSocket), this->crypto, this->key, this->authenticationProvider);
+            return std::make_unique<SlokedCryptoServerSocket>(std::move(rawSocket), this->crypto, this->key);
         } else {
             return nullptr;
         }

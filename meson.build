@@ -84,6 +84,7 @@ sloked_src = [
   'src/screen/terminal/components/TextPane.cpp',
   'src/screen/terminal/components/TextPaneComponent.cpp',
   'src/screen/widgets/TextEditor.cpp',
+  'src/security/Authenticator.cpp',
   'src/security/Master.cpp',
   'src/services/ScreenInput.cpp',
   'src/services/Cursor.cpp',

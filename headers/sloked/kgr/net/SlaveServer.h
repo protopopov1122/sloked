@@ -29,6 +29,7 @@
 #include "sloked/kgr/NamedServer.h"
 #include "sloked/kgr/local/Server.h"
 #include "sloked/kgr/local/NamedServer.h"
+#include "sloked/security/Authenticator.h"
 #include <mutex>
 #include <atomic>
 #include <chrono>
@@ -37,7 +38,7 @@ namespace sloked {
 
     class KgrSlaveNetServer : public KgrNamedServer, public SlokedCloseable {
      public:
-        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &);
+        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &, const SlokedAuthenticator * = nullptr);
         ~KgrSlaveNetServer();
         bool IsRunning() const;
         void Start();
@@ -49,6 +50,8 @@ namespace sloked {
         void Register(const std::string &, std::unique_ptr<KgrService>) override;
         bool Registered(const std::string &) override;
         void Deregister(const std::string &) override;
+
+        void Login(const std::string &);
 
      private:
         void Accept();
@@ -75,8 +78,10 @@ namespace sloked {
         KgrLocalServer rawLocalServer;
         KgrLocalNamedServer localServer;
         SlokedIOPoller &poll;
+        const SlokedAuthenticator *auth;
         std::chrono::system_clock::time_point lastActivity;
         bool pinged;
+        SlokedAuthenticationProvider::Account::Callback unwatchAccount;
     };
 }
 

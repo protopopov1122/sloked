@@ -109,7 +109,7 @@ namespace sloked {
         : socket(std::move(socket)), nextId(0) {}
 
     bool KgrNetInterface::Wait(std::chrono::system_clock::duration timeout) const {
-        return this->socket->Wait(timeout);
+        return !this->buffer.empty() || this->socket->Wait(timeout);
     }
 
     std::size_t KgrNetInterface::Available() const {
@@ -193,6 +193,10 @@ namespace sloked {
 
     std::unique_ptr<SlokedIOAwaitable> KgrNetInterface::Awaitable() const {
         return this->socket->Awaitable();
+    }
+
+    SlokedSocketEncryption *KgrNetInterface::GetEncryption() {
+        return this->socket->GetEncryption();
     }
 
     void KgrNetInterface::InvokeMethod(const std::string &method, const KgrValue &params, Responder &rsp) {

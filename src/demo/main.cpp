@@ -148,13 +148,9 @@ static const KgrDictionary DefaultConfiguration {
 int main(int argc, const char **argv) {
     SlokedBotanCrypto crypto;
     auto key = crypto.DeriveKey("password", "salt");
-    SlokedAuthenticationMaster auth(crypto, *key);
-    auto &user = auth.New("user1");
-    // auto creds = user.GetCredentials();
-    // std::cout << creds << std::endl;
-    // // user.RevokeCredentials();
-    // std::cout << auth.GetByCredential(creds).GetName() << std::endl;
-    // return EXIT_SUCCESS;
+    SlokedAuthenticationMaster authMaster(crypto, *key);
+    SlokedAuthenticator auth(crypto, authMaster, "salt");
+    auto &user = authMaster.New("user1");
 
     // Core initialization
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
@@ -181,14 +177,14 @@ int main(int argc, const char **argv) {
     closeables.Attach(socketPoller);
     socketPoller.Start(KgrNetConfig::RequestTimeout);
     SlokedPosixSocketFactory rawSocketFactory;
-    SlokedCryptoSocketFactory socketFactory(rawSocketFactory, crypto, *key, &auth);
+    SlokedCryptoSocketFactory socketFactory(rawSocketFactory, crypto, *key);
     SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     SlokedCharWidth charWidth;
 
     SlokedEditorMasterCore editor(logger, socketPoller, root, charWidth);
     closeables.Attach(editor);
     editor.Start();
-    editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>());
+    editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>(), &auth);
     editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
     editor.GetRestrictions().SetAccessRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
     editor.GetRestrictions().SetModificationRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
@@ -197,10 +193,11 @@ int main(int argc, const char **argv) {
 
     // Proxy initialization
     auto slaveSocket = socketFactory.Connect("localhost", cli["net-port"].As<int>());
-    slaveSocket->GetAuthentication()->ChangeAccount("user1");
-    KgrSlaveNetServer slaveServer(std::move(slaveSocket), editor.GetIO());
+    // slaveSocket->GetEncryption()->ChangeAccount("user1");
+    KgrSlaveNetServer slaveServer(std::move(slaveSocket), editor.GetIO(), &auth);
     closeables.Attach(slaveServer);
     slaveServer.Start();
+    slaveServer.Login("user1");
     user.RevokeCredentials();
 
     // Screen initialization

@@ -25,6 +25,7 @@
 #include "sloked/core/Span.h"
 #include "sloked/core/Scope.h"
 #include "sloked/core/awaitable/Awaitable.h"
+#include "sloked/core/Crypto.h"
 #include <vector>
 #include <optional>
 #include <memory>
@@ -32,11 +33,11 @@
 
 namespace sloked {
 
-    class SlokedSocketAuthentication {
+    class SlokedSocketEncryption {
      public:
-        virtual ~SlokedSocketAuthentication() = default;
-        virtual const std::string &GetAccount() const = 0;
-        virtual void ChangeAccount(const std::string &) = 0;
+        virtual ~SlokedSocketEncryption() = default;
+        virtual void SetEncryption(std::unique_ptr<SlokedCrypto::Cipher>) = 0;
+        virtual void RestoreDedaultEncryption() = 0;
     };
 
     class SlokedSocket {
@@ -56,8 +57,7 @@ namespace sloked {
         virtual void Write(SlokedSpan<const uint8_t>) = 0;
         virtual void Write(uint8_t) = 0;
         virtual std::unique_ptr<SlokedIOAwaitable> Awaitable() const = 0;
-        virtual const SlokedSocketAuthentication *GetAuthentication() const;
-        virtual SlokedSocketAuthentication *GetAuthentication();
+        virtual SlokedSocketEncryption *GetEncryption();
 
      protected:
         SlokedSocket() = default;

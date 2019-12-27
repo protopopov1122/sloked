@@ -123,9 +123,9 @@ namespace sloked {
         this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io);
     }
 
-    void SlokedAbstractEditorCore::SpawnNetServer(SlokedSocketFactory &socketFactory, const std::string &host, uint16_t port) {
+    void SlokedAbstractEditorCore::SpawnNetServer(SlokedSocketFactory &socketFactory, const std::string &host, uint16_t port, const SlokedAuthenticator *auth) {
         if (this->netServer == nullptr) {
-            this->netServer = std::make_unique<KgrMasterNetServer>(this->server->GetServer(), socketFactory.Bind(host, port), this->io);
+            this->netServer = std::make_unique<KgrMasterNetServer>(this->server->GetServer(), socketFactory.Bind(host, port), this->io, auth);
             this->closeables.Attach(*this->netServer);
             this->netServer->Start();
         } else {

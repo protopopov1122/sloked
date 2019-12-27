@@ -88,6 +88,7 @@ namespace sloked {
         void Close();
         void BindMethod(const std::string &, std::function<void(const std::string &, const KgrValue &, Responder &)>);
         std::unique_ptr<SlokedIOAwaitable> Awaitable() const;
+        SlokedSocketEncryption *GetEncryption();
 
      protected:
         virtual void InvokeMethod(const std::string &, const KgrValue &, Responder &);
