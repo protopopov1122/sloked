@@ -61,6 +61,7 @@
 #include "sloked/third-party/crypto/Botan.h"
 #include "sloked/editor/EditorCore.h"
 #include "sloked/security/Master.h"
+#include "sloked/security/Slave.h"
 #include "sloked/net/CryptoSocket.h"
 #include <chrono>
 
@@ -149,8 +150,11 @@ int main(int argc, const char **argv) {
     SlokedBotanCrypto crypto;
     auto key = crypto.DeriveKey("password", "salt");
     SlokedCredentialMaster authMaster(crypto, *key);
+    SlokedCredentialSlave authSlave(crypto);
     SlokedAuthenticatorFactory authFactory(crypto, authMaster, "salt");
-    auto &user = authMaster.New("user1");
+    SlokedAuthenticatorFactory authSlaveFactory(crypto, authSlave, "salt");
+    auto user = authMaster.New("user1").lock();
+    authSlave.New(user->GetName(), user->GetCredentials());
 
     // Core initialization
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
@@ -193,11 +197,12 @@ int main(int argc, const char **argv) {
 
     // Proxy initialization
     auto slaveSocket = socketFactory.Connect("localhost", cli["net-port"].As<int>());
-    KgrSlaveNetServer slaveServer(std::move(slaveSocket), editor.GetIO(), authFactory);
+    KgrSlaveNetServer slaveServer(std::move(slaveSocket), editor.GetIO(), authSlaveFactory);
     closeables.Attach(slaveServer);
     slaveServer.Start();
     slaveServer.Login("user1");
-    user.RevokeCredentials();
+    user->RevokeCredentials();
+    authSlave.GetAccountByName(user->GetName()).lock()->ChangeCredentials(user->GetCredentials());
 
     // Screen initialization
     SlokedLocale::Setup();

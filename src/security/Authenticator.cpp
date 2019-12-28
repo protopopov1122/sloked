@@ -42,9 +42,13 @@ namespace sloked {
     }
 
     std::unique_ptr<SlokedCrypto::Cipher> SlokedBaseAuthenticator::DeriveCipher(const std::string &account) {
-        auto key = this->provider.GetByName(account).DeriveKey(this->salt);
-        auto cipher = this->crypto.NewCipher(std::move(key));
-        return cipher;
+        if (auto acc = this->provider.GetByName(account).lock()) {
+            auto key = acc->DeriveKey(this->salt);
+            auto cipher = this->crypto.NewCipher(std::move(key));
+            return cipher;
+        } else {
+            throw SlokedError("Authenticator: Account \'" + account + "\' is not available");
+        }
     }
     
     std::string SlokedBaseAuthenticator::GenerateToken(SlokedCrypto::Cipher &cipher, Challenge ch) {
@@ -77,12 +81,16 @@ namespace sloked {
         if (this->encryption) {
             auto cipher = this->DeriveCipher(this->account.value());
             this->encryption->SetEncryption(std::move(cipher));
-            this->unwatchCredentials = this->provider.GetByName(this->account.value()).Watch([this] {
-                if (this->account.has_value()) {
-                    auto cipher = this->DeriveCipher(this->account.value());
-                    this->encryption->SetEncryption(std::move(cipher));
-                }
-            });
+            if (auto acc = this->provider.GetByName(this->account.value()).lock()) {
+                this->unwatchCredentials = acc->Watch([this] {
+                    if (this->account.has_value()) {
+                        auto cipher = this->DeriveCipher(this->account.value());
+                        this->encryption->SetEncryption(std::move(cipher));
+                    }
+                });
+            } else {
+                throw SlokedError("Authenticator: Account \'" + this->account.value() + "\' is not available");
+            }
         }
     }
 

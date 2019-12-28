@@ -59,9 +59,9 @@ namespace sloked {
          public:
             Account(SlokedCredentialMaster &, const std::string &);
             ~Account();
-            const std::string &GetName() const;
+            std::string GetName() const;
             void RevokeCredentials();
-            const std::string &GetCredentials() const final;
+            std::string GetCredentials() const final;
             std::unique_ptr<SlokedCrypto::Key> DeriveKey(const std::string &) const final;
             Callback Watch(Callback) final;
 
@@ -69,6 +69,7 @@ namespace sloked {
          private:
             bool VerifyToken(const AccountToken &) const;
             static AccountToken ParseCredentials(const SlokedCredentialMaster &, const std::string &);
+            void TriggerWatchers(std::unique_lock<std::mutex> &);
 
             SlokedCredentialMaster &auth;
             mutable std::mutex mtx;
@@ -79,10 +80,11 @@ namespace sloked {
         friend class Account;
 
         SlokedCredentialMaster(SlokedCrypto &, SlokedCrypto::Key &);
-        Account &New(const std::string &);
+        std::weak_ptr<Account> New(const std::string &);
         bool Has(const std::string &) const final;
-        Account &GetByName(const std::string &) const final;
-        Account &GetByCredential(const std::string &) const;
+        std::weak_ptr<SlokedCredentialProvider::Account> GetByName(const std::string &) const final;
+        std::weak_ptr<Account> GetAccountByName(const std::string &) const;
+        Account &GetAccountByCredential(const std::string &) const;
 
      private:
         AccountToken::NonceType NextNonce() const;
@@ -93,7 +95,7 @@ namespace sloked {
         mutable std::mutex mtx;
         std::unique_ptr<SlokedCrypto::Cipher> cipher;
         std::unique_ptr<SlokedCrypto::Random> random;
-        std::map<std::string, std::unique_ptr<Account>> accounts;
+        std::map<std::string, std::shared_ptr<Account>> accounts;
     };
 }
 

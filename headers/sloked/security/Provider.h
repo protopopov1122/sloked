@@ -34,15 +34,15 @@ namespace sloked {
          public:
             using Callback = std::function<void()>;
             virtual ~Account() = default;
-            virtual const std::string &GetName() const = 0;
-            virtual const std::string &GetCredentials() const = 0;
+            virtual std::string GetName() const = 0;
+            virtual std::string GetCredentials() const = 0;
             virtual std::unique_ptr<SlokedCrypto::Key> DeriveKey(const std::string &) const = 0;
             virtual Callback Watch(Callback) = 0;
         };
 
         virtual ~SlokedCredentialProvider() = default;
         virtual bool Has(const std::string &) const = 0;
-        virtual Account &GetByName(const std::string &) const = 0;
+        virtual std::weak_ptr<Account> GetByName(const std::string &) const = 0;
     };
 }
 
