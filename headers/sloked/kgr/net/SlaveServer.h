@@ -51,7 +51,7 @@ namespace sloked {
         bool Registered(const std::string &) override;
         void Deregister(const std::string &) override;
 
-        void Login(const std::string &);
+        void Authorize(const std::string &);
 
      private:
         void Accept();

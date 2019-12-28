@@ -162,7 +162,7 @@ namespace sloked {
                 rsp.Result("pong");
             });
 
-            this->net.BindMethod("login-request", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+            this->net.BindMethod("auth-request", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 if (this->auth) {
                     auto nonce = this->auth->InitiateLogin();
                     rsp.Result(KgrDictionary {
@@ -173,7 +173,7 @@ namespace sloked {
                 }
             });
 
-            this->net.BindMethod("login-response", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+            this->net.BindMethod("auth-response", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 const auto &keyId = params.AsDictionary()["id"].AsString();
                 const auto &result = params.AsDictionary()["result"].AsString();
                 auto res = this->auth->ContinueLogin(keyId, result);

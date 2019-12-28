@@ -204,9 +204,9 @@ namespace sloked {
         }
     }
 
-    void KgrSlaveNetServer::Login(const std::string &account) {
+    void KgrSlaveNetServer::Authorize(const std::string &account) {
         // Sending login request
-        auto loginRequest = this->net.Invoke("login-request", {});
+        auto loginRequest = this->net.Invoke("auth-request", {});
         if (!(loginRequest.WaitResponse(KgrNetConfig::ResponseTimeout) && this->work.load())) {
             throw SlokedError("KgrSlaveServer: Error requesting login for \'" + account + "\'");
         }
@@ -214,7 +214,7 @@ namespace sloked {
         auto result = this->auth->InitiateLogin(account, nonce);
         
         // Sending result
-        auto loginResponse = this->net.Invoke("login-response", KgrDictionary {
+        auto loginResponse = this->net.Invoke("auth-response", KgrDictionary {
             { "id", account },
             { "result", result }
         });

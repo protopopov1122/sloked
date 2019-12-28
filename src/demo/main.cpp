@@ -200,7 +200,7 @@ int main(int argc, const char **argv) {
     KgrSlaveNetServer slaveServer(std::move(slaveSocket), editor.GetIO(), authSlaveFactory);
     closeables.Attach(slaveServer);
     slaveServer.Start();
-    slaveServer.Login("user1");
+    slaveServer.Authorize("user1");
     user->RevokeCredentials();
     authSlave.GetAccountByName(user->GetName()).lock()->ChangeCredentials(user->GetCredentials());
 
