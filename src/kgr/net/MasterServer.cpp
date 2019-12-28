@@ -179,7 +179,7 @@ namespace sloked {
                 auto res = this->auth->ContinueLogin(keyId, result);
                 rsp.Result(res);
                 if (res) {
-                    this->auth->SetupEncryption();
+                    this->auth->FinalizeLogin();
                 }
             });
         }

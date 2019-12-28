@@ -24,21 +24,75 @@
 
 namespace sloked {
 
-    SlokedMasterAuthenticator::SlokedMasterAuthenticator(SlokedCrypto &crypto, SlokedCredentialProvider &provider, std::string salt, SlokedSocketEncryption *encryption)
-        : crypto(crypto), random(crypto.NewRandom()), provider(provider), salt(std::move(salt)), encryption(encryption) {}
-    
-    SlokedMasterAuthenticator::~SlokedMasterAuthenticator() {
+    SlokedBaseAuthenticator::SlokedBaseAuthenticator(SlokedCrypto &crypto, SlokedCredentialProvider &provider, std::string salt, SlokedSocketEncryption *encryption)
+        : crypto(crypto), provider(provider), salt(std::move(salt)), encryption(encryption) {}
+
+    SlokedBaseAuthenticator::~SlokedBaseAuthenticator() {
         if (this->unwatchCredentials) {
             this->unwatchCredentials();
         }
     }
 
-    bool SlokedMasterAuthenticator::IsLoggedIn() const {
+    bool SlokedBaseAuthenticator::IsLoggedIn() const {
         return this->account.has_value();
     }
 
-    std::optional<std::string> SlokedMasterAuthenticator::GetAccount() const {
+    std::optional<std::string> SlokedBaseAuthenticator::GetAccount() const {
         return this->account;
+    }
+
+    std::unique_ptr<SlokedCrypto::Cipher> SlokedBaseAuthenticator::DeriveCipher(const std::string &account) {
+        auto key = this->provider.GetByName(account).DeriveKey(this->salt);
+        auto cipher = this->crypto.NewCipher(std::move(key));
+        return cipher;
+    }
+    
+    std::string SlokedBaseAuthenticator::GenerateToken(SlokedCrypto::Cipher &cipher, Challenge ch) {
+        if (cipher.BlockSize() < sizeof(Challenge)) {
+            throw SlokedError("Authenticator: Authentication not supported for current cipher");
+        }
+        constexpr std::size_t NonceSize = sizeof(Challenge) / sizeof(uint8_t);
+        union {
+            uint8_t bytes[NonceSize];
+            uint32_t value;
+        } nonce;
+        nonce.value = ch;
+        std::vector<uint8_t> raw;
+        raw.insert(raw.end(), cipher.BlockSize(), 0);
+        for (std::size_t i = 0; i < NonceSize; i++) {
+            raw[i] = nonce.bytes[i];
+        }
+        auto encrypted = cipher.Encrypt(raw);
+        return SlokedBase64::Encode(encrypted.data(), encrypted.data() + encrypted.size());
+    }
+
+    void SlokedBaseAuthenticator::SetupEncryption() {
+        if (!this->account.has_value()) {
+            throw SlokedError("Authenticator: Log in required");
+        }
+        if (this->unwatchCredentials) {
+            this->unwatchCredentials();
+            this->unwatchCredentials = nullptr;
+        }
+        if (this->encryption) {
+            auto cipher = this->DeriveCipher(this->account.value());
+            this->encryption->SetEncryption(std::move(cipher));
+            this->unwatchCredentials = this->provider.GetByName(this->account.value()).Watch([this] {
+                if (this->account.has_value()) {
+                    auto cipher = this->DeriveCipher(this->account.value());
+                    this->encryption->SetEncryption(std::move(cipher));
+                }
+            });
+        }
+    }
+
+    SlokedMasterAuthenticator::SlokedMasterAuthenticator(SlokedCrypto &crypto, SlokedCredentialProvider &provider, std::string salt, SlokedSocketEncryption *encryption)
+        : SlokedBaseAuthenticator(crypto, provider, std::move(salt), encryption), random(crypto.NewRandom()) {}
+    
+    SlokedMasterAuthenticator::~SlokedMasterAuthenticator() {
+        if (this->unwatchCredentials) {
+            this->unwatchCredentials();
+        }
     }
 
     SlokedMasterAuthenticator::Challenge SlokedMasterAuthenticator::InitiateLogin() {
@@ -51,25 +105,9 @@ namespace sloked {
         if (!this->nonce.has_value()) {
             throw SlokedError("AuthenticationMaster: Initiate login first");
         }
-        auto key = this->provider.GetByName(account).DeriveKey(this->salt);
-        auto cipher = this->crypto.NewCipher(std::move(key));
-        if (cipher->BlockSize() < sizeof(Challenge)) {
-            throw SlokedError("AuthenticationMaster: Authentication not supported for current cipher");
-        }
-        constexpr std::size_t NonceSize = sizeof(Challenge) / sizeof(uint8_t);
-        union {
-            uint8_t bytes[NonceSize];
-            uint32_t value;
-        } nonce;
-        nonce.value = this->nonce.value();
+        auto cipher = this->DeriveCipher(account);
+        auto expectedToken = this->GenerateToken(*cipher, this->nonce.value());
         this->nonce.reset();
-        std::vector<uint8_t> raw;
-        raw.insert(raw.end(), cipher->BlockSize(), 0);
-        for (std::size_t i = 0; i < NonceSize; i++) {
-            raw[i] = nonce.bytes[i];
-        }
-        auto encrypted = cipher->Encrypt(raw);
-        auto expectedToken = SlokedBase64::Encode(encrypted.data(), encrypted.data() + encrypted.size());
         if (expectedToken == token) {
             this->account = account;
             return true;
@@ -78,30 +116,12 @@ namespace sloked {
         }
     }
 
-    void SlokedMasterAuthenticator::SetupEncryption() {
-        if (!this->account.has_value()) {
-            throw SlokedError("AuthenticationMaster: Log in required");
-        }
-        if (this->unwatchCredentials) {
-            this->unwatchCredentials();
-            this->unwatchCredentials = nullptr;
-        }
-        if (this->encryption) {
-            auto key = this->provider.GetByName(this->account.value()).DeriveKey(this->salt);
-            auto cipher = this->crypto.NewCipher(std::move(key));
-            this->encryption->SetEncryption(std::move(cipher));
-            this->unwatchCredentials = this->provider.GetByName(this->account.value()).Watch([this] {
-                if (this->account.has_value()) {
-                    auto key = this->provider.GetByName(this->account.value()).DeriveKey(this->salt);
-                    auto cipher = this->crypto.NewCipher(std::move(key));
-                    this->encryption->SetEncryption(std::move(cipher));
-                }
-            });
-        }
+    void SlokedMasterAuthenticator::FinalizeLogin() {
+        this->SetupEncryption();
     }
 
     SlokedSlaveAuthenticator::SlokedSlaveAuthenticator(SlokedCrypto &crypto, SlokedCredentialProvider &provider, std::string salt, SlokedSocketEncryption *encryption)
-        : crypto(crypto), provider(provider), salt(std::move(salt)), encryption(encryption) {}
+        : SlokedBaseAuthenticator(crypto, provider, std::move(salt), encryption) {}
 
     SlokedSlaveAuthenticator::~SlokedSlaveAuthenticator() {
         if (this->unwatchCredentials) {
@@ -109,55 +129,21 @@ namespace sloked {
         }
     }
 
-    bool SlokedSlaveAuthenticator::IsLoggedIn() const {
-        return this->account.has_value();
-    }
-
-    std::optional<std::string> SlokedSlaveAuthenticator::GetAccount() const {
-        return this->account;
-    }
-
     std::string SlokedSlaveAuthenticator::InitiateLogin(const std::string keyId, Challenge ch) {
         this->account.reset();
-        auto key = this->provider.GetByName(keyId).DeriveKey(this->salt);
-        auto cipher = this->crypto.NewCipher(std::move(key));
-        if (cipher->BlockSize() < sizeof(ch)) {
-            throw SlokedError("Authentication: Authentication not supported for current cipher");
-        }
-        constexpr std::size_t NonceSize = sizeof(ch) / sizeof(uint8_t);
-        union {
-            uint8_t bytes[NonceSize];
-            uint32_t value;
-        } nonce;
-        nonce.value = ch;
-        std::vector<uint8_t> raw;
-        raw.insert(raw.end(), cipher->BlockSize(), 0);
-        for (std::size_t i = 0; i < NonceSize; i++) {
-            raw[i] = nonce.bytes[i];
-        }
-        auto encrypted = cipher->Encrypt(raw);
-        auto result = SlokedBase64::Encode(encrypted.data(), encrypted.data() + encrypted.size());
-        return result;
+        auto cipher = this->DeriveCipher(keyId);
+        return this->GenerateToken(*cipher, ch);
     }
 
-    void SlokedSlaveAuthenticator::FinalizeLogin(const std::string &keyId) {
+    void SlokedSlaveAuthenticator::ContinueLogin(const std::string &keyId) {
+        if (this->account.has_value()) {
+            throw SlokedError("SlaveAuthenticator: Login is not initiated");
+        }
         this->account = keyId;
-        if (this->unwatchCredentials) {
-            this->unwatchCredentials();
-            this->unwatchCredentials = nullptr;
-        }
-        if (this->encryption) {
-            auto key = this->provider.GetByName(keyId).DeriveKey(this->salt);
-            auto cipher = this->crypto.NewCipher(std::move(key));
-            this->encryption->SetEncryption(std::move(cipher));
-            this->unwatchCredentials = this->provider.GetByName(keyId).Watch([this] {
-                if (this->account.has_value()) {
-                    auto key = this->provider.GetByName(this->account.value()).DeriveKey(this->salt);
-                    auto cipher = this->crypto.NewCipher(std::move(key));
-                    this->encryption->SetEncryption(std::move(cipher));
-                }
-            });
-        }
+    }
+
+    void SlokedSlaveAuthenticator::FinalizeLogin() {
+        this->SetupEncryption();
     }
 
     SlokedAuthenticatorFactory::SlokedAuthenticatorFactory(SlokedCrypto &crypto, SlokedCredentialProvider &provider, std::string salt)

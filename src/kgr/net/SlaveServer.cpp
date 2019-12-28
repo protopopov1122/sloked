@@ -222,7 +222,8 @@ namespace sloked {
             loginResponse.GetResponse().GetResult().AsBoolean())) {
             throw SlokedError("KgrSlaveServer: Error requesting login for \'" + account + "\'");
         }
-        this->auth->FinalizeLogin(account);
+        this->auth->ContinueLogin(account);
+        this->auth->FinalizeLogin();
     }
 
     void KgrSlaveNetServer::Accept() {
