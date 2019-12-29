@@ -50,7 +50,7 @@ namespace sloked {
         KgrNamedServer &GetServer();
         SlokedNamedRestrictionTarget &GetRestrictions();
         void Start();
-        void SpawnNetServer(SlokedSocketFactory &, const std::string &, uint16_t, SlokedNamedRestrictionAuthority &, SlokedAuthenticatorFactory &);
+        void SpawnNetServer(SlokedSocketFactory &, const std::string &, uint16_t, SlokedNamedRestrictionAuthority * = nullptr, SlokedAuthenticatorFactory * = nullptr);
         void Close() final;
 
      protected:

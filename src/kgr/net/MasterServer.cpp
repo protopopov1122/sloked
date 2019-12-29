@@ -38,17 +38,20 @@ namespace sloked {
     class KgrMasterNetServerContext : public SlokedIOPoller::Awaitable {
      public:
         KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, SlokedCounter<std::size_t>::Handle counter,
-            KgrNamedServer &server, KgrNamedServer &remoteServices, SlokedNamedRestrictionAuthority &restrictions, SlokedAuthenticatorFactory &authFactory)
+            KgrNamedServer &server, KgrNamedServer &remoteServices, SlokedNamedRestrictionAuthority *restrictions, SlokedAuthenticatorFactory *authFactory)
             : net(std::move(socket)), work(work), server(server), remoteServices(remoteServices), nextPipeId(0),
-              counterHandle(std::move(counter)), pinged{false}, restrictions(restrictions), auth(authFactory.NewMaster(this->net.GetEncryption())) {
+              counterHandle(std::move(counter)), pinged{false}, restrictions(restrictions) {
+
+            if (authFactory) {
+                this->auth = authFactory->NewMaster(this->net.GetEncryption());
+            }
 
             this->lastActivity = std::chrono::system_clock::now();
 
             this->net.BindMethod("connect", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 const auto &service = params.AsString();
                 std::unique_lock lock(this->mtx);
-                auto restrictions = this->GetCurrentRestrictions().lock();
-                if (restrictions == nullptr || !restrictions->GetAccessRestrictions()->IsAllowed(service)) {
+                if (!this->IsAccessPermitted(service)) {
                         rsp.Error("KgrMasterServer: Access to \'" + service + "\' restricted");
                 } else if (this->remoteServices.Registered(service)) {
                     this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
@@ -115,51 +118,46 @@ namespace sloked {
 
             this->net.BindMethod("bind", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 const auto &service = params.AsString();
-                auto restrictions = this->GetCurrentRestrictions().lock();
-                if (restrictions == nullptr || !restrictions->GetModificationRestrictiions()->IsAllowed(service)) {
+                if (!this->IsModificationPermitted(service)) {
                     rsp.Error("KgrMasterServer: Modification of \'" + service + "\' restricted");
-                    return;
+                } else {
+                    this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
+                        if (!this->server.Registered(service) && !this->remoteServices.Registered(service)) {
+                            this->remoteServices.Register(service, std::make_unique<SlaveService>(*this, service));
+                            std::unique_lock lock(this->mtx);
+                            this->remoteServiceList.push_back(service);
+                            rsp.Result(true);
+                        } else {
+                            rsp.Result(false);
+                        }
+                    });
                 }
-                this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
-                    if (!this->server.Registered(service) && !this->remoteServices.Registered(service)) {
-                        this->remoteServices.Register(service, std::make_unique<SlaveService>(*this, service));
-                        std::unique_lock lock(this->mtx);
-                        this->remoteServiceList.push_back(service);
-                        rsp.Result(true);
-                    } else {
-                        rsp.Result(false);
-                    }
-                });
             });
 
             this->net.BindMethod("bound", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 this->workers.Start([this, params, rsp = std::move(rsp)]() mutable {
                     const auto &service = params.AsString();
-                    auto restrictions = this->GetCurrentRestrictions().lock();
                     rsp.Result((this->server.Registered(service) || this->remoteServices.Registered(service)) &&
-                            ((restrictions != nullptr && restrictions->GetAccessRestrictions()->IsAllowed(service)) ||
-                            (restrictions != nullptr && restrictions->GetModificationRestrictiions()->IsAllowed(service)))
-                    );
+                            (this->IsAccessPermitted(service) || this->IsModificationPermitted(service)));
                 });
             });
 
             this->net.BindMethod("unbind", [this](const std::string &method, const KgrValue &params, auto &rsp) {
                 const auto &service = params.AsString();
-                auto restrictions = this->GetCurrentRestrictions().lock();
-                if (restrictions == nullptr || !restrictions->GetModificationRestrictiions()->IsAllowed(service)) {
+                if (!this->IsModificationPermitted(service)) {
                     rsp.Error("KgrMasterServer: Modification of \'" + service + "\' restricted");
-                    return;
+                } else {
+                    this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
+                        if (this->remoteServices.Registered(service)) {
+                            this->remoteServices.Deregister(service);
+                            std::unique_lock lock(this->mtx);
+                            this->remoteServiceList.erase(std::remove(this->remoteServiceList.begin(), this->remoteServiceList.end(), service), this->remoteServiceList.end());
+                            rsp.Result(true);
+                        } else {
+                            rsp.Result(false);
+                        }
+                    });
                 }
-                this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
-                    if (this->remoteServices.Registered(service)) {
-                        this->remoteServices.Deregister(service);
-                        std::unique_lock lock(this->mtx);
-                        this->remoteServiceList.erase(std::remove(this->remoteServiceList.begin(), this->remoteServiceList.end(), service), this->remoteServiceList.end());
-                        rsp.Result(true);
-                    } else {
-                        rsp.Result(false);
-                    }
-                });
             });
 
             this->net.BindMethod("ping", [](const std::string &method, const KgrValue &params, auto &rsp) {
@@ -178,12 +176,16 @@ namespace sloked {
             });
 
             this->net.BindMethod("auth-response", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                const auto &keyId = params.AsDictionary()["id"].AsString();
-                const auto &result = params.AsDictionary()["result"].AsString();
-                auto res = this->auth->ContinueLogin(keyId, result);
-                rsp.Result(res);
-                if (res) {
-                    this->auth->FinalizeLogin();
+                if (this->auth) {
+                    const auto &keyId = params.AsDictionary()["id"].AsString();
+                    const auto &result = params.AsDictionary()["result"].AsString();
+                    auto res = this->auth->ContinueLogin(keyId, result);
+                    rsp.Result(res);
+                    if (res) {
+                        this->auth->FinalizeLogin();
+                    }
+                } else {
+                    rsp.Error("KgrMasterServer: Authentication not supported");
                 }
             });
         }
@@ -320,11 +322,37 @@ namespace sloked {
             }
         }
 
-        std::weak_ptr<SlokedNamedRestrictionAuthority::Account> GetCurrentRestrictions() {
+        bool IsAccessPermitted(const std::string &name) {
+            if (this->restrictions == nullptr || this->auth == nullptr) {
+                return true;
+            }
+            std::weak_ptr<SlokedNamedRestrictionAuthority::Account> acc;
             if (this->auth->IsLoggedIn()) {
-                return this->restrictions.GetRestrictionsByName(this->auth->GetAccount());
+                acc = this->restrictions->GetRestrictionsByName(this->auth->GetAccount());
             } else {
-                return this->restrictions.GetDefaultRestrictions();
+                acc = this->restrictions->GetDefaultRestrictions();
+            }
+            if (auto account = acc.lock()) {
+                return account->GetAccessRestrictions()->IsAllowed(name);
+            } else {
+                return false;
+            }
+        }
+
+        bool IsModificationPermitted(const std::string &name) {
+            if (this->restrictions == nullptr || this->auth == nullptr) {
+                return true;
+            }
+            std::weak_ptr<SlokedNamedRestrictionAuthority::Account> acc;
+            if (this->auth->IsLoggedIn()) {
+                acc = this->restrictions->GetRestrictionsByName(this->auth->GetAccount());
+            } else {
+                acc = this->restrictions->GetDefaultRestrictions();
+            }
+            if (auto account = acc.lock()) {
+                return account->GetModificationRestrictiions()->IsAllowed(name);
+            } else {
+                return false;
             }
         }
 
@@ -342,11 +370,11 @@ namespace sloked {
         std::chrono::system_clock::time_point lastActivity;
         SlokedThreadPool workers;
         bool pinged;
-        SlokedNamedRestrictionAuthority &restrictions;
+        SlokedNamedRestrictionAuthority *restrictions;
         std::unique_ptr<SlokedMasterAuthenticator> auth;
     };
 
-    KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedIOPoller &poll, SlokedNamedRestrictionAuthority &restrictions, SlokedAuthenticatorFactory &authFactory)
+    KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedIOPoller &poll, SlokedNamedRestrictionAuthority *restrictions, SlokedAuthenticatorFactory *authFactory)
         : server(server), remoteServices(rawRemoteServices), srvSocket(std::move(socket)), poll(poll), restrictions(restrictions), authFactory(authFactory), work(false) {}
 
     KgrMasterNetServer::~KgrMasterNetServer() {

@@ -38,7 +38,7 @@ namespace sloked {
 
     class KgrMasterNetServer : public SlokedCloseable {
      public:
-        KgrMasterNetServer(KgrNamedServer &, std::unique_ptr<SlokedServerSocket>, SlokedIOPoller &, SlokedNamedRestrictionAuthority &, SlokedAuthenticatorFactory &);
+        KgrMasterNetServer(KgrNamedServer &, std::unique_ptr<SlokedServerSocket>, SlokedIOPoller &, SlokedNamedRestrictionAuthority * = nullptr, SlokedAuthenticatorFactory * = nullptr);
         ~KgrMasterNetServer();
         bool IsRunning() const;
         void Start();
@@ -61,8 +61,8 @@ namespace sloked {
         KgrLocalNamedServer remoteServices;
         std::unique_ptr<SlokedServerSocket> srvSocket;
         SlokedIOPoller &poll;
-        SlokedNamedRestrictionAuthority &restrictions;
-        SlokedAuthenticatorFactory &authFactory;
+        SlokedNamedRestrictionAuthority *restrictions;
+        SlokedAuthenticatorFactory *authFactory;
         SlokedIOPoller::Handle awaiterHandle;
         std::atomic<bool> work;
         SlokedCounter<std::size_t> workers;
