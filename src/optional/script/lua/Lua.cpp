@@ -19,12 +19,12 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/third-party/script/lua/Lua.h"
-#include "sloked/third-party/script/lua/Logger.h"
-#include "sloked/third-party/script/lua/Common.h"
-#include "sloked/third-party/script/lua/Pipe.h"
-#include "sloked/third-party/script/lua/Sched.h"
-#include "sloked/third-party/script/lua/Server.h"
+#include "sloked/optional/script/lua/Lua.h"
+#include "sloked/optional/script/lua/Logger.h"
+#include "sloked/optional/script/lua/Common.h"
+#include "sloked/optional/script/lua/Pipe.h"
+#include "sloked/optional/script/lua/Sched.h"
+#include "sloked/optional/script/lua/Server.h"
 #include "sloked/core/Error.h"
 #include <iostream>
 

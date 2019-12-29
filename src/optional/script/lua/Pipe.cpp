@@ -19,8 +19,8 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/third-party/script/lua/Pipe.h"
-#include "sloked/third-party/script/lua/Common.h"
+#include "sloked/optional/script/lua/Pipe.h"
+#include "sloked/optional/script/lua/Common.h"
 #include "sloked/core/Error.h"
 #include <iostream>
 

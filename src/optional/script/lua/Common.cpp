@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/third-party/script/lua/Common.h"
+#include "sloked/optional/script/lua/Common.h"
 
 namespace sloked {
 

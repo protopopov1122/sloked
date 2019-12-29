@@ -118,13 +118,13 @@ sloked_src = [
   'src/text/cursor/TransactionStreamMultiplexer.cpp',
   'src/text/search/Match.cpp',
   'src/text/search/Replace.cpp',
-  'src/third-party/crypto/Botan.cpp',
-  'src/third-party/script/lua/Common.cpp',
-  'src/third-party/script/lua/Lua.cpp',
-  'src/third-party/script/lua/Logger.cpp',
-  'src/third-party/script/lua/Pipe.cpp',
-  'src/third-party/script/lua/Sched.cpp',
-  'src/third-party/script/lua/Server.cpp'
+  'src/optional/crypto/Botan.cpp',
+  'src/optional/script/lua/Common.cpp',
+  'src/optional/script/lua/Lua.cpp',
+  'src/optional/script/lua/Logger.cpp',
+  'src/optional/script/lua/Pipe.cpp',
+  'src/optional/script/lua/Sched.cpp',
+  'src/optional/script/lua/Server.cpp'
 ]
 
 cpp = meson.get_compiler('cpp')

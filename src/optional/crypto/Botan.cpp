@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/third-party/crypto/Botan.h"
+#include "sloked/optional/crypto/Botan.h"
 #include "sloked/core/Error.h"
 #include <botan/pwdhash.h>
 #include <botan/block_cipher.h>
