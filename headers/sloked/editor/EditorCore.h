@@ -48,10 +48,9 @@ namespace sloked {
         SlokedSchedulerThread &GetScheduler();
         SlokedIOPoller &GetIO();
         KgrNamedServer &GetServer();
-        KgrNamedRestrictionManager &GetRestrictions();
-        KgrNamedRestrictionManager &GetNetRestrictions();
+        SlokedNamedRestrictionTarget &GetRestrictions();
         void Start();
-        void SpawnNetServer(SlokedSocketFactory &, const std::string &, uint16_t, SlokedAuthenticatorFactory &);
+        void SpawnNetServer(SlokedSocketFactory &, const std::string &, uint16_t, SlokedNamedRestrictionAuthority &, SlokedAuthenticatorFactory &);
         void Close() final;
 
      protected:

@@ -154,7 +154,11 @@ int main(int argc, const char **argv) {
     SlokedAuthenticatorFactory authFactory(crypto, authMaster, "salt");
     SlokedAuthenticatorFactory authSlaveFactory(crypto, authSlave, "salt");
     auto user = authMaster.New("user1").lock();
+    user->SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+    user->SetModificationRestrictions(SlokedNamedWhitelist::Make({"screen::"}));
     authSlave.New(user->GetName(), user->GetCredentials());
+    authMaster.GetDefaultAccount().lock()->SetAccessRestrictions(SlokedNamedWhitelist::Make({}));
+    authMaster.GetDefaultAccount().lock()->SetModificationRestrictions(SlokedNamedWhitelist::Make({}));
 
     // Core initialization
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
@@ -188,12 +192,12 @@ int main(int argc, const char **argv) {
     SlokedEditorMasterCore editor(logger, socketPoller, root, charWidth);
     closeables.Attach(editor);
     editor.Start();
-    editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>(), authFactory);
+    editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>(), authMaster, authFactory);
     editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
-    editor.GetRestrictions().SetAccessRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
-    editor.GetRestrictions().SetModificationRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
-    editor.GetNetRestrictions().SetAccessRestrictions(KgrNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
-    editor.GetNetRestrictions().SetModificationRestrictions(KgrNamedWhitelist::Make({"screen::"}));
+    editor.GetRestrictions().SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+    editor.GetRestrictions().SetModificationRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+    // editor.GetNetRestrictions().SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+    // editor.GetNetRestrictions().SetModificationRestrictions(SlokedNamedWhitelist::Make({"screen::"}));
 
     // Proxy initialization
     auto slaveSocket = socketFactory.Connect("localhost", cli["net-port"].As<int>());

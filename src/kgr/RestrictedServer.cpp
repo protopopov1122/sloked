@@ -19,51 +19,20 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/kgr/local/RestrictedServer.h"
+#include "sloked/kgr/RestrictedServer.h"
 #include "sloked/core/Error.h"
 #include "sloked/core/String.h"
 
 namespace sloked {
 
-    static bool ContainsPrefix(const std::string &name, const std::vector<std::string> &prefixes) {
-        for (const auto &prefix : prefixes) {
-            if (starts_with(name, prefix)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    KgrNamedWhitelist::KgrNamedWhitelist(std::vector<std::string> prefixes)
-        : prefixes(std::move(prefixes)) {}
-
-    bool KgrNamedWhitelist::IsAllowed(const std::string &name) const {
-        return ContainsPrefix(name, this->prefixes);
-    }
-
-    std::unique_ptr<KgrNamedWhitelist> KgrNamedWhitelist::Make(std::vector<std::string> prefixes) {
-        return std::make_unique<KgrNamedWhitelist>(std::move(prefixes));
-    }
-
-    KgrNamedBlacklist::KgrNamedBlacklist(std::vector<std::string> prefixes)
-        : prefixes(prefixes) {}
-
-    bool KgrNamedBlacklist::IsAllowed(const std::string &name) const {
-        return !ContainsPrefix(name, this->prefixes);
-    }
-
-    std::unique_ptr<KgrNamedBlacklist> KgrNamedBlacklist::Make(std::vector<std::string> prefixes) {
-        return std::make_unique<KgrNamedBlacklist>(std::move(prefixes));
-    }
-
-    KgrRestrictedNamedServer::KgrRestrictedNamedServer(KgrNamedServer &server, std::shared_ptr<KgrNamedRestrictions> access, std::shared_ptr<KgrNamedRestrictions> modification)
+    KgrRestrictedNamedServer::KgrRestrictedNamedServer(KgrNamedServer &server, std::shared_ptr<SlokedNamedRestrictions> access, std::shared_ptr<SlokedNamedRestrictions> modification)
         : server(server), accessRestrictions(std::move(access)), modificationRestrictions(std::move(modification)) {}
 
-    void KgrRestrictedNamedServer::SetAccessRestrictions(std::shared_ptr<KgrNamedRestrictions> restrictions) {
+    void KgrRestrictedNamedServer::SetAccessRestrictions(std::shared_ptr<SlokedNamedRestrictions> restrictions) {
         this->accessRestrictions = std::move(restrictions);
     }
 
-    void KgrRestrictedNamedServer::SetModificationRestrictions(std::shared_ptr<KgrNamedRestrictions> restrictions) {
+    void KgrRestrictedNamedServer::SetModificationRestrictions(std::shared_ptr<SlokedNamedRestrictions> restrictions) {
         this->modificationRestrictions = std::move(restrictions);
     }
 

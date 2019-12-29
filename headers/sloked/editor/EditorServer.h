@@ -27,7 +27,7 @@
 #include "sloked/kgr/local/Server.h"
 #include "sloked/kgr/local/NamedServer.h"
 #include "sloked/kgr/net/SlaveServer.h"
-#include "sloked/kgr/local/RestrictedServer.h"
+#include "sloked/kgr/RestrictedServer.h"
 
 namespace sloked {
 
@@ -35,7 +35,7 @@ namespace sloked {
      public:
         virtual ~SlokedEditorServer() = default;
         virtual KgrNamedServer &GetServer() = 0;
-        virtual KgrNamedRestrictionManager &GetRestrictions() = 0;
+        virtual SlokedNamedRestrictionTarget &GetRestrictions() = 0;
         virtual void Start() = 0;
     };
 
@@ -43,7 +43,7 @@ namespace sloked {
      public:
         SlokedLocalEditorServer();
         KgrNamedServer &GetServer() final;
-        KgrNamedRestrictionManager &GetRestrictions() final;
+        SlokedNamedRestrictionTarget &GetRestrictions() final;
         void Start() final;
         void Close() final;
 
@@ -58,7 +58,7 @@ namespace sloked {
         SlokedRemoteEditorServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &, SlokedAuthenticatorFactory &);
         ~SlokedRemoteEditorServer();
         KgrNamedServer &GetServer() final;
-        KgrNamedRestrictionManager &GetRestrictions() final;
+        SlokedNamedRestrictionTarget &GetRestrictions() final;
         void Start() final;
         void Close() final;
 

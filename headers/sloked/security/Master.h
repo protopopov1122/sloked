@@ -23,6 +23,7 @@
 #define SLOKED_SECURITY_MASTER_H_
 
 #include "sloked/security/Provider.h"
+#include "sloked/security/Restriction.h"
 #include <memory>
 #include <map>
 #include <array>
@@ -30,7 +31,7 @@
 
 namespace sloked {
 
-    class SlokedCredentialMaster : public SlokedCredentialProvider {
+    class SlokedCredentialMaster : public SlokedCredentialProvider, public SlokedNamedRestrictionAuthority {
      public: class Account;
      private: class AccountToken {
          static constexpr std::size_t NonceSize = 16;
@@ -55,7 +56,7 @@ namespace sloked {
      friend class AccountToken;
 
      public:
-        class Account : public SlokedCredentialProvider::Account {
+        class Account : public SlokedCredentialProvider::Account, public SlokedNamedRestrictionAuthority::Account, public SlokedNamedRestrictionTarget {
          public:
             Account(SlokedCredentialMaster &, const std::string &);
             ~Account();
@@ -64,6 +65,12 @@ namespace sloked {
             std::string GetCredentials() const final;
             std::unique_ptr<SlokedCrypto::Key> DeriveKey(const std::string &) const final;
             Callback Watch(Callback) final;
+
+            std::shared_ptr<SlokedNamedRestrictions> GetAccessRestrictions() const final;
+            std::shared_ptr<SlokedNamedRestrictions> GetModificationRestrictiions() const final;
+            
+            void SetAccessRestrictions(std::shared_ptr<SlokedNamedRestrictions>) final;
+            void SetModificationRestrictions(std::shared_ptr<SlokedNamedRestrictions>) final;
 
             friend class SlokedCredentialMaster;
          private:
@@ -76,15 +83,23 @@ namespace sloked {
             AccountToken token;
             uint64_t nextWatcherId;
             std::map<uint64_t, Callback> watchers;
+            std::shared_ptr<SlokedNamedRestrictions> accessRestrictions;
+            std::shared_ptr<SlokedNamedRestrictions> modificationRestrictions;
         };
         friend class Account;
 
         SlokedCredentialMaster(SlokedCrypto &, SlokedCrypto::Key &);
         std::weak_ptr<Account> New(const std::string &);
-        bool Has(const std::string &) const final;
-        std::weak_ptr<SlokedCredentialProvider::Account> GetByName(const std::string &) const final;
+        std::weak_ptr<Account> EnableDefaultAccount(bool);
+        std::weak_ptr<Account> GetDefaultAccount();
         std::weak_ptr<Account> GetAccountByName(const std::string &) const;
         Account &GetAccountByCredential(const std::string &) const;
+
+        bool Has(const std::string &) const final;
+        std::weak_ptr<SlokedCredentialProvider::Account> GetByName(const std::string &) const final;
+
+        std::weak_ptr<SlokedNamedRestrictionAuthority::Account> GetRestrictionsByName(const std::string &) final;
+        std::weak_ptr<SlokedNamedRestrictionAuthority::Account> GetDefaultRestrictions() final;
 
      private:
         AccountToken::NonceType NextNonce() const;
@@ -95,6 +110,7 @@ namespace sloked {
         mutable std::mutex mtx;
         std::unique_ptr<SlokedCrypto::Cipher> cipher;
         std::unique_ptr<SlokedCrypto::Random> random;
+        std::shared_ptr<Account> defaultAccount;
         std::map<std::string, std::shared_ptr<Account>> accounts;
     };
 }

@@ -29,7 +29,7 @@
 #include "sloked/core/Counter.h"
 #include "sloked/kgr/local/Server.h"
 #include "sloked/kgr/local/NamedServer.h"
-#include "sloked/kgr/local/RestrictedServer.h"
+#include "sloked/kgr/RestrictedServer.h"
 #include "sloked/security/Authenticator.h"
 #include <atomic>
 #include <vector>
@@ -38,24 +38,11 @@ namespace sloked {
 
     class KgrMasterNetServer : public SlokedCloseable {
      public:
-        class Restrictions : public KgrNamedRestrictionManager {
-         public:
-            Restrictions();
-            void SetAccessRestrictions(std::shared_ptr<KgrNamedRestrictions>) final;
-            void SetModificationRestrictions(std::shared_ptr<KgrNamedRestrictions>) final;
-        
-            friend class KgrMasterNetServerContext;
-         private:
-            std::shared_ptr<KgrNamedRestrictions> accessRestrictions;
-            std::shared_ptr<KgrNamedRestrictions> modificationRestrictions;
-        };
-
-        KgrMasterNetServer(KgrNamedServer &, std::unique_ptr<SlokedServerSocket>, SlokedIOPoller &, SlokedAuthenticatorFactory &);
+        KgrMasterNetServer(KgrNamedServer &, std::unique_ptr<SlokedServerSocket>, SlokedIOPoller &, SlokedNamedRestrictionAuthority &, SlokedAuthenticatorFactory &);
         ~KgrMasterNetServer();
         bool IsRunning() const;
         void Start();
         void Close() final;
-        KgrNamedRestrictionManager &GetRestrictions();
 
      private:
         class Awaitable : public SlokedIOPoller::Awaitable {
@@ -74,11 +61,11 @@ namespace sloked {
         KgrLocalNamedServer remoteServices;
         std::unique_ptr<SlokedServerSocket> srvSocket;
         SlokedIOPoller &poll;
+        SlokedNamedRestrictionAuthority &restrictions;
         SlokedAuthenticatorFactory &authFactory;
         SlokedIOPoller::Handle awaiterHandle;
         std::atomic<bool> work;
         SlokedCounter<std::size_t> workers;
-        Restrictions restrictions;
     };
 }
 

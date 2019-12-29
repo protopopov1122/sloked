@@ -57,19 +57,11 @@ namespace sloked {
         }
     }
 
-    KgrNamedRestrictionManager &SlokedAbstractEditorCore::GetRestrictions() {
+    SlokedNamedRestrictionTarget &SlokedAbstractEditorCore::GetRestrictions() {
         if (this->server != nullptr) {
             return this->server->GetRestrictions();
         } else {
             throw SlokedError("SlokedEditorCore: Server not defined");
-        }
-    }
-
-    KgrNamedRestrictionManager &SlokedAbstractEditorCore::GetNetRestrictions() {
-        if (this->netServer != nullptr) {
-            return this->netServer->GetRestrictions();
-        } else {
-            throw SlokedError("SlokedEditorCore: NetServer not defined");
         }
     }
 
@@ -124,9 +116,9 @@ namespace sloked {
         this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io, authFactory);
     }
 
-    void SlokedAbstractEditorCore::SpawnNetServer(SlokedSocketFactory &socketFactory, const std::string &host, uint16_t port, SlokedAuthenticatorFactory &authFactory) {
+    void SlokedAbstractEditorCore::SpawnNetServer(SlokedSocketFactory &socketFactory, const std::string &host, uint16_t port, SlokedNamedRestrictionAuthority &restrictions, SlokedAuthenticatorFactory &authFactory) {
         if (this->netServer == nullptr) {
-            this->netServer = std::make_unique<KgrMasterNetServer>(this->server->GetServer(), socketFactory.Bind(host, port), this->io, authFactory);
+            this->netServer = std::make_unique<KgrMasterNetServer>(this->server->GetServer(), socketFactory.Bind(host, port), this->io, restrictions, authFactory);
             this->closeables.Attach(*this->netServer);
             this->netServer->Start();
         } else {

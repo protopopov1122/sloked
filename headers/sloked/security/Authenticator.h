@@ -34,7 +34,7 @@ namespace sloked {
         SlokedBaseAuthenticator(SlokedCrypto &, SlokedCredentialProvider &, std::string, SlokedSocketEncryption *);
         virtual ~SlokedBaseAuthenticator();
         bool IsLoggedIn() const;
-        std::optional<std::string> GetAccount() const;
+        std::string GetAccount() const;
 
      protected:
         std::unique_ptr<SlokedCrypto::Cipher> DeriveCipher(const std::string &);

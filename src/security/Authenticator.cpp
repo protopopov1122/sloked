@@ -37,8 +37,12 @@ namespace sloked {
         return this->account.has_value();
     }
 
-    std::optional<std::string> SlokedBaseAuthenticator::GetAccount() const {
-        return this->account;
+    std::string SlokedBaseAuthenticator::GetAccount() const {
+        if (this->account.has_value()) {
+            return this->account.value();
+        } else {
+            throw SlokedError("BaseAuthenticator: Not logged in");
+        }
     }
 
     std::unique_ptr<SlokedCrypto::Cipher> SlokedBaseAuthenticator::DeriveCipher(const std::string &account) {

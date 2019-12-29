@@ -73,7 +73,8 @@ namespace sloked {
     }
 
     SlokedCredentialMaster::Account::Account(SlokedCredentialMaster &auth, const std::string &name)
-        : auth(auth), token(auth, name), nextWatcherId{0} {}
+        : auth(auth), token(auth, name), nextWatcherId{0},
+          accessRestrictions(SlokedNamedBlacklist::Make({})), modificationRestrictions(SlokedNamedBlacklist::Make({})) {}
 
     SlokedCredentialMaster::Account::~Account() {
         std::unique_lock lock(this->mtx);
@@ -113,6 +114,26 @@ namespace sloked {
         };
     }
 
+    std::shared_ptr<SlokedNamedRestrictions> SlokedCredentialMaster::Account::GetAccessRestrictions() const {
+        std::unique_lock lock(this->mtx);
+        return this->accessRestrictions;
+    }
+
+    std::shared_ptr<SlokedNamedRestrictions> SlokedCredentialMaster::Account::GetModificationRestrictiions() const {
+        std::unique_lock lock(this->mtx);
+        return this->modificationRestrictions;
+    }
+    
+    void SlokedCredentialMaster::Account::SetAccessRestrictions(std::shared_ptr<SlokedNamedRestrictions> restrictions) {
+        std::unique_lock lock(this->mtx);
+        this->accessRestrictions = restrictions;
+    }
+
+    void SlokedCredentialMaster::Account::SetModificationRestrictions(std::shared_ptr<SlokedNamedRestrictions> restrictions) {
+        std::unique_lock lock(this->mtx);
+        this->modificationRestrictions = restrictions;
+    }
+
     bool SlokedCredentialMaster::Account::VerifyToken(const AccountToken &token) const {
         std::unique_lock lock(this->mtx);
         return token == this->token;
@@ -149,9 +170,13 @@ namespace sloked {
     }
 
     SlokedCredentialMaster::SlokedCredentialMaster(SlokedCrypto &crypto, SlokedCrypto::Key &key)
-        : crypto(crypto), cipher(crypto.NewCipher(key)), random(crypto.NewRandom()) {}
+        : crypto(crypto), cipher(crypto.NewCipher(key)), random(crypto.NewRandom()),
+          defaultAccount(std::make_shared<Account>(*this, "")) {}
 
     std::weak_ptr<SlokedCredentialMaster::Account> SlokedCredentialMaster::New(const std::string &name) {
+        if (name.empty()) {
+            throw SlokedError("CredentialMaster: Can't create account with empty name");
+        }
         std::unique_lock lock(this->mtx);
         if (this->accounts.count(name) == 0) {
             auto account = std::make_shared<Account>(*this, name);
@@ -160,6 +185,19 @@ namespace sloked {
         } else {
             throw SlokedError("Auth: Account \'" + name + "\' already exists");
         }
+    }
+    
+    std::weak_ptr<SlokedCredentialMaster::Account> SlokedCredentialMaster::EnableDefaultAccount(bool en) {
+        if (en) {
+            this->defaultAccount = std::make_shared<Account>(*this, "");
+        } else {
+            this->defaultAccount = nullptr;
+        }
+        return this->defaultAccount;
+    }
+
+    std::weak_ptr<SlokedCredentialMaster::Account> SlokedCredentialMaster::GetDefaultAccount() {
+        return this->defaultAccount;
     }
 
     bool SlokedCredentialMaster::Has(const std::string &name) const {
@@ -194,6 +232,19 @@ namespace sloked {
         } else {
             throw SlokedError("Auth: Invalid account \'" + account->GetName() + "\' credentials");
         }
+    }
+
+    std::weak_ptr<SlokedNamedRestrictionAuthority::Account> SlokedCredentialMaster::GetRestrictionsByName(const std::string &name) {
+        std::unique_lock lock(this->mtx);
+        if (this->accounts.count(name) != 0) {
+            return this->accounts.at(name);
+        } else {
+            throw SlokedError("Auth: Account \'" + name + "\' doesn't exist");
+        }
+    }
+
+    std::weak_ptr<SlokedNamedRestrictionAuthority::Account> SlokedCredentialMaster::GetDefaultRestrictions() {
+        return this->defaultAccount;
     }
 
     SlokedCredentialMaster::AccountToken::NonceType SlokedCredentialMaster::NextNonce() const {
