@@ -75,7 +75,7 @@ namespace sloked {
         std::vector<SlokedBase64::Byte> data;
         data.reserve(((encoded.size() / 4) * 3) - padding);
         std::size_t idx = 0;
-        uint32_t buffer;
+        uint32_t buffer{0};
         for (const auto chr : encoded) {
             buffer <<= 6;
             switch (chr) {

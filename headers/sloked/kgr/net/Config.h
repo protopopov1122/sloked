@@ -29,7 +29,7 @@ namespace sloked {
 
     struct KgrNetConfig {
         static constexpr std::chrono::system_clock::duration RequestTimeout = std::chrono::milliseconds(50);
-        static constexpr std::chrono::system_clock::duration ResponseTimeout = std::chrono::milliseconds(250);
+        static constexpr std::chrono::system_clock::duration ResponseTimeout = std::chrono::milliseconds(400);
         static constexpr std::chrono::system_clock::duration InactivityTimeout = std::chrono::seconds(5);
         static constexpr std::chrono::system_clock::duration InactivityThreshold = InactivityTimeout * 2;
     };
