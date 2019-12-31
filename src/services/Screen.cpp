@@ -584,10 +584,9 @@ namespace sloked {
         KgrServer::Connector cursorService, KgrServer::Connector notifyService, KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), cursorService(std::move(cursorService)), notifyService(std::move(notifyService)), contextManager(contextManager) {}
 
-    bool SlokedScreenService::Attach(std::unique_ptr<KgrPipe> pipe) {
+    void SlokedScreenService::Attach(std::unique_ptr<KgrPipe> pipe) {
         auto ctx = std::make_unique<SlokedScreenContext>(std::move(pipe), this->root, this->encoding, this->cursorService, this->notifyService);
         this->contextManager.Attach(std::move(ctx));
-        return true;
     }
 
     SlokedScreenClient::SlokedScreenClient(std::unique_ptr<KgrPipe> pipe, std::function<bool()> holdsLock)

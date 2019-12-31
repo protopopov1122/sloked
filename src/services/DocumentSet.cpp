@@ -123,10 +123,9 @@ namespace sloked {
     SlokedDocumentSetService::SlokedDocumentSetService(SlokedEditorDocumentSet &documents, KgrContextManager<KgrLocalContext> &contextManager)
         : documents(documents), contextManager(contextManager) {}
 
-    bool SlokedDocumentSetService::Attach(std::unique_ptr<KgrPipe> pipe) {
+    void SlokedDocumentSetService::Attach(std::unique_ptr<KgrPipe> pipe) {
         auto ctx = std::make_unique<SlokedDocumentSetContext>(std::move(pipe), this->documents);
         this->contextManager.Attach(std::move(ctx));
-        return true;
     }
 
     SlokedDocumentSetClient::SlokedDocumentSetClient(std::unique_ptr<KgrPipe> pipe)

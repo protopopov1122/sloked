@@ -34,7 +34,7 @@ namespace sloked {
     class SlokedScreenInputNotificationService : public KgrService {
      public:
         SlokedScreenInputNotificationService(SlokedMonitor<SlokedScreenComponent &> &, const Encoding &, KgrContextManager<KgrLocalContext> &);
-        bool Attach(std::unique_ptr<KgrPipe>) override;
+        void Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
         SlokedMonitor<SlokedScreenComponent &> &root;
@@ -59,7 +59,7 @@ namespace sloked {
     class SlokedScreenInputForwardingService : public KgrService {
      public:
         SlokedScreenInputForwardingService(SlokedMonitor<SlokedScreenComponent &> &, const Encoding &, KgrContextManager<KgrLocalContext> &);
-        bool Attach(std::unique_ptr<KgrPipe>) override;
+        void Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
         SlokedMonitor<SlokedScreenComponent &> &root;

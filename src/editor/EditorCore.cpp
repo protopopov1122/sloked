@@ -113,7 +113,13 @@ namespace sloked {
 
     SlokedEditorSlaveCore::SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io, SlokedAuthenticatorFactory &authFactory)
         : SlokedAbstractEditorCore(logger, io) {
-        this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io, authFactory);
+        auto server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io, authFactory);
+        this->remoteEditor = server.get();
+        this->server = std::move(server);
+    }
+
+    void SlokedEditorSlaveCore::Authorize(const std::string &user) {
+        this->remoteEditor->Authorize(user);
     }
 
     void SlokedAbstractEditorCore::SpawnNetServer(SlokedSocketFactory &socketFactory, const std::string &host, uint16_t port, SlokedNamedRestrictionAuthority *restrictions, SlokedAuthenticatorFactory *authFactory) {

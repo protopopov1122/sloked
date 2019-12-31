@@ -154,9 +154,8 @@ namespace sloked {
     SlokedSearchService::SlokedSearchService(SlokedEditorDocumentSet &documents, KgrContextManager<KgrLocalContext> &contextManager)
         : documents(documents), contextManager(contextManager) {}
 
-    bool SlokedSearchService::Attach(std::unique_ptr<KgrPipe> pipe) {
+    void SlokedSearchService::Attach(std::unique_ptr<KgrPipe> pipe) {
         auto ctx = std::make_unique<SlokedSearchContext>(std::move(pipe), this->documents);
         this->contextManager.Attach(std::move(ctx));
-        return true;
     }
 }

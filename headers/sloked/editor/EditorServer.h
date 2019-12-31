@@ -61,6 +61,7 @@ namespace sloked {
         SlokedNamedRestrictionTarget &GetRestrictions() final;
         void Start() final;
         void Close() final;
+        void Authorize(const std::string &);
 
      private:
         KgrSlaveNetServer unrestrictedServer;

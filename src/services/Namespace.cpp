@@ -188,9 +188,8 @@ namespace sloked {
     SlokedNamespaceService::SlokedNamespaceService(SlokedNamespace &root, KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), contextManager(contextManager) {}
 
-    bool SlokedNamespaceService::Attach(std::unique_ptr<KgrPipe> pipe) {
+    void SlokedNamespaceService::Attach(std::unique_ptr<KgrPipe> pipe) {
         auto ctx = std::make_unique<SlokedNamespaceServiceContext>(std::move(pipe), this->root);
         this->contextManager.Attach(std::move(ctx));
-        return true;
     }
 }

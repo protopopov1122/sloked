@@ -30,11 +30,8 @@ namespace sloked {
             throw SlokedError("KgrServer: Unknown service #" + std::to_string(srvId));
         }
         auto [clientPipe, servicePipe] = KgrLocalPipe::Make();
-        if (this->services.at(srvId)->Attach(std::move(servicePipe))) {
-            return std::move(clientPipe);
-        } else {
-            return nullptr;
-        }
+        this->services.at(srvId)->Attach(std::move(servicePipe));
+        return std::move(clientPipe);
     }
 
     KgrLocalServer::Connector KgrLocalServer::GetConnector(ServiceId srvId) {

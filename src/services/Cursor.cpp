@@ -206,10 +206,9 @@ namespace sloked {
     SlokedCursorService::SlokedCursorService(SlokedEditorDocumentSet &documents, KgrServer::Connector renderConnector, KgrContextManager<KgrLocalContext> &contextManager)
         : documents(documents), renderConnector(renderConnector), contextManager(contextManager) {}
 
-    bool SlokedCursorService::Attach(std::unique_ptr<KgrPipe> pipe) {
+    void SlokedCursorService::Attach(std::unique_ptr<KgrPipe> pipe) {
         auto ctx = std::make_unique<SlokedCursorContext>(std::move(pipe), this->renderConnector, this->documents);
         this->contextManager.Attach(std::move(ctx));
-        return true;
     }
 
     class SlokedCursorConnectionTask : public SlokedDeferredTask {

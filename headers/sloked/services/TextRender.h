@@ -37,7 +37,7 @@ namespace sloked {
     class SlokedTextRenderService : public KgrService {
      public:
         SlokedTextRenderService(SlokedEditorDocumentSet &, const SlokedCharWidth &, const SlokedTextTaggerRegistry<int> &, KgrContextManager<KgrLocalContext> &);
-        bool Attach(std::unique_ptr<KgrPipe>) override;
+        void Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
         SlokedEditorDocumentSet &documents;

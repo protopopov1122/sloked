@@ -193,10 +193,9 @@ namespace sloked {
         KgrContextManager<KgrLocalContext> &contextManager)
         : documents(documents), taggers(taggers), charWidth(charWidth), contextManager(contextManager) {}
 
-    bool SlokedTextRenderService::Attach(std::unique_ptr<KgrPipe> pipe) {
+    void SlokedTextRenderService::Attach(std::unique_ptr<KgrPipe> pipe) {
         auto ctx = std::make_unique<SlokedTextRenderContext>(std::move(pipe), documents, this->charWidth, this->taggers);
         this->contextManager.Attach(std::move(ctx));
-        return true;
     }
 
     SlokedTextRenderClient::SlokedTextRenderClient(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger)

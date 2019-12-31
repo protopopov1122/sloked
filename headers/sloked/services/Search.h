@@ -31,7 +31,7 @@ namespace sloked {
     class SlokedSearchService : public KgrService {
      public:
         SlokedSearchService(SlokedEditorDocumentSet &, KgrContextManager<KgrLocalContext> &);
-        bool Attach(std::unique_ptr<KgrPipe>) override;
+        void Attach(std::unique_ptr<KgrPipe>) override;
 
      private:
         SlokedEditorDocumentSet &documents;

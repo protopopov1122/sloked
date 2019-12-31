@@ -80,6 +80,10 @@ namespace sloked {
     class SlokedEditorSlaveCore : public SlokedAbstractEditorCore {
      public:
         SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &, SlokedAuthenticatorFactory &);
+        void Authorize(const std::string &);
+
+     private:
+        SlokedRemoteEditorServer *remoteEditor;
     };
 }
 

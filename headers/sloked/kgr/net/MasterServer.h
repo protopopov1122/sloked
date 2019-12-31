@@ -56,9 +56,9 @@ namespace sloked {
         };
         friend class Awaitable;
 
+        void DetachServices(std::vector<std::string>);
+
         KgrNamedServer &server;
-        KgrLocalServer rawRemoteServices;
-        KgrLocalNamedServer remoteServices;
         std::unique_ptr<SlokedServerSocket> srvSocket;
         SlokedIOPoller &poll;
         SlokedNamedRestrictionAuthority *restrictions;

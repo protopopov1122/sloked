@@ -168,10 +168,9 @@ namespace sloked {
     SlokedScreenInputNotificationService::SlokedScreenInputNotificationService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), contextManager(contextManager) {}
 
-    bool SlokedScreenInputNotificationService::Attach(std::unique_ptr<KgrPipe> pipe) {
+    void SlokedScreenInputNotificationService::Attach(std::unique_ptr<KgrPipe> pipe) {
         auto ctx = std::make_unique<SlokedScreenInputNotifierContext>(std::move(pipe), this->root, this->encoding);
         this->contextManager.Attach(std::move(ctx));
-        return true;
     }
 
     SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe> pipe, const Encoding &encoding, std::function<bool()> holdsLock)
@@ -264,10 +263,9 @@ namespace sloked {
     SlokedScreenInputForwardingService::SlokedScreenInputForwardingService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), contextManager(contextManager) {}
 
-    bool SlokedScreenInputForwardingService::Attach(std::unique_ptr<KgrPipe> pipe) {
+    void SlokedScreenInputForwardingService::Attach(std::unique_ptr<KgrPipe> pipe) {
         auto ctx = std::make_unique<SlokedScreenInputForwardingContext>(std::move(pipe), this->root, this->encoding);
         this->contextManager.Attach(std::move(ctx));
-        return true;
     }
 
     SlokedScreenInputForwardingClient::SlokedScreenInputForwardingClient(std::unique_ptr<KgrPipe> pipe, const Encoding &encoding, std::function<bool()> holdsLock)

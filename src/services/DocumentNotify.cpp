@@ -81,10 +81,9 @@ namespace sloked {
     SlokedDocumentNotifyService::SlokedDocumentNotifyService(SlokedEditorDocumentSet &documents, KgrContextManager<KgrLocalContext> &ctxManager)
         : documents(documents), contextManager(ctxManager) {}
 
-    bool SlokedDocumentNotifyService::Attach(std::unique_ptr<KgrPipe> pipe) {
+    void SlokedDocumentNotifyService::Attach(std::unique_ptr<KgrPipe> pipe) {
         auto ctx = std::make_unique<SlokedDocumentNotifyContext>(std::move(pipe), this->documents);
         this->contextManager.Attach(std::move(ctx));
-        return true;
     }
 
     SlokedDocumentNotifyClient::SlokedDocumentNotifyClient(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet::DocumentId docId)

@@ -309,10 +309,9 @@ namespace sloked {
     SlokedTextPaneService::SlokedTextPaneService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), contextManager(contextManager) {}
 
-    bool SlokedTextPaneService::Attach(std::unique_ptr<KgrPipe> pipe) {
+    void SlokedTextPaneService::Attach(std::unique_ptr<KgrPipe> pipe) {
         auto ctx = std::make_unique<SlokedTextPaneContext>(std::move(pipe), this->root, this->encoding);
         this->contextManager.Attach(std::move(ctx));
-        return true;
     }
 
     class SlokedTextPaneClient::SlokedTextPaneRender : public SlokedTextPaneClient::Render {

@@ -11,7 +11,7 @@ namespace sloked {
     class SlokedDocumentNotifyService : public KgrService {
      public:
         SlokedDocumentNotifyService(SlokedEditorDocumentSet &, KgrContextManager<KgrLocalContext> &);
-        bool Attach(std::unique_ptr<KgrPipe>) override;
+        void Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
         SlokedEditorDocumentSet &documents;

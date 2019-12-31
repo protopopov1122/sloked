@@ -60,4 +60,8 @@ namespace sloked {
     void SlokedRemoteEditorServer::Close() {
         this->unrestrictedServer.Close();
     }
+
+    void SlokedRemoteEditorServer::Authorize(const std::string &user) {
+        this->unrestrictedServer.Authorize(user);
+    }
 }
