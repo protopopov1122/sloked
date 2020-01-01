@@ -27,8 +27,8 @@
 namespace sloked {
 
     const std::string EncodingIdentifiers::System = "system";
-    const std::string EncodingIdentifiers::Utf8 = "utf-8";
-    const std::string EncodingIdentifiers::Utf32LE = "utf-32le";
+    const std::string EncodingIdentifiers::Utf8 = "UTF-8";
+    const std::string EncodingIdentifiers::Utf32LE = "UTF-32LE";
 
     static std::map<std::string, std::reference_wrapper<const Encoding>> Encodings = {
         { EncodingIdentifiers::Utf8, Encoding::Utf8 },
@@ -55,7 +55,7 @@ namespace sloked {
         if (Encodings.count(id) != 0) {
             return Encodings.at(id).get();
         } else {
-            throw SlokedError("Unknown encoding " + id);
+            throw SlokedError("Encoding: Unknown encoding " + id);
         }
     }
 

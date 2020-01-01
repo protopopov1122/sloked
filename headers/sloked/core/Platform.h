@@ -19,9 +19,15 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_BASE_H_
-#define SLOKED_BASE_H_
+#ifndef SLOKED_CORE_PLATFORM_H_
+#define SLOKED_CORE_PLATFORM_H_
 
-#include "sloked/core/Platform.h"
+#if defined(__linux__)
+#define SLOKED_PLATFORM_LINUX
+#elif defined(__unix__)
+#define SLOKED_PLATFORM_UNIX
+#else
+#error "Unsupported platform"
+#endif
 
 #endif

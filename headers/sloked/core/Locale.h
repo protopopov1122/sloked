@@ -32,6 +32,9 @@ namespace sloked {
         static void Setup();
         static const Encoding &SystemEncoding();
         static std::unique_ptr<NewLine> SystemNewline(const Encoding &);
+
+     private:
+        static std::reference_wrapper<const Encoding> encoding;
     };
 }
 

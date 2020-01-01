@@ -20,27 +20,35 @@
 */
 
 #include "sloked/core/Locale.h"
+#include "sloked/core/Error.h"
 #include <locale>
 #include <clocale>
 #include <iostream>
 
 namespace sloked {
 
-    // TODO Proper system locale setup and detection
+    std::reference_wrapper<const Encoding> SlokedLocale::encoding{Encoding::Utf8};
 
     void SlokedLocale::Setup() {
-        constexpr auto Locale = "C";
-        constexpr auto LocaleEnc = "C.UTF-8";
-        std::setlocale(LC_ALL, LocaleEnc);
-        std::locale::global(std::locale(Locale));
-        std::cout.imbue(std::locale(Locale));
+        std::locale userLocale("");
+        auto locale = userLocale.name();
+        auto separator = locale.find(".");
+        if (locale == "*" || separator == locale.npos) {
+            throw SlokedError("Locale: Unknown locale");
+        }
+        auto encoding = locale.substr(separator + 1);
+        SlokedLocale::encoding = std::cref(Encoding::Get(encoding));
     }
 
     const Encoding &SlokedLocale::SystemEncoding() {
-        return Encoding::Utf8;
+        return SlokedLocale::encoding.get();
     }
 
     std::unique_ptr<NewLine> SlokedLocale::SystemNewline(const Encoding &encoding) {
+#if defined(SLOKED_PLATFORM_LINUX) || defined(SLOKED_PLATFORM_UNIX)
         return NewLine::LF(encoding);
+#else
+#error "Internal error: Unknown platform"
+#endif
     }
 }
