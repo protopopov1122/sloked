@@ -199,11 +199,12 @@ int main(int argc, const char **argv) {
     editor.GetRestrictions().SetModificationRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
 
     // Proxy initialization
-    auto slaveSocket = socketFactory.Connect("localhost", cli["net-port"].As<int>());
-    KgrSlaveNetServer slaveServer(std::move(slaveSocket), editor.GetIO(), &authSlaveFactory);
-    closeables.Attach(slaveServer);
-    slaveServer.Start();
-    slaveServer.Authorize("user1");
+    SlokedEditorSlaveCore slaveEditor(socketFactory.Connect("localhost", cli["net-port"].As<int>()), logger, socketPoller, &authSlaveFactory);
+    closeables.Attach(slaveEditor);
+    slaveEditor.Start();
+    slaveEditor.Authorize("user1");
+    auto &slaveServer = slaveEditor.GetServer();
+
     user->RevokeCredentials();
     authSlave.GetAccountByName(user->GetName()).lock()->ChangeCredentials(user->GetCredentials());
 
