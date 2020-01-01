@@ -38,7 +38,7 @@ namespace sloked {
     
     void SlokedLocalEditorServer::Close() {}
 
-    SlokedRemoteEditorServer::SlokedRemoteEditorServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &io, SlokedAuthenticatorFactory &authFactory)
+    SlokedRemoteEditorServer::SlokedRemoteEditorServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &io, SlokedAuthenticatorFactory *authFactory)
         : unrestrictedServer(std::move(socket), io, authFactory), server(unrestrictedServer, std::make_unique<SlokedNamedBlacklist>(), std::make_unique<SlokedNamedBlacklist>()) {}
 
     SlokedRemoteEditorServer::~SlokedRemoteEditorServer() {

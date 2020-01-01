@@ -68,7 +68,7 @@ namespace sloked {
     class SlokedEditorMasterCore : public SlokedAbstractEditorCore {
      public:
         SlokedEditorMasterCore(SlokedLogger &, SlokedIOPoller &, SlokedNamespace &, const SlokedCharWidth &);
-        SlokedEditorMasterCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &, SlokedAuthenticatorFactory &, SlokedNamespace &, const SlokedCharWidth &);
+        SlokedEditorMasterCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &, SlokedAuthenticatorFactory *, SlokedNamespace &, const SlokedCharWidth &);
         SlokedTextTaggerRegistry<int> &GetTaggers();
 
      private:
@@ -79,7 +79,7 @@ namespace sloked {
 
     class SlokedEditorSlaveCore : public SlokedAbstractEditorCore {
      public:
-        SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &, SlokedAuthenticatorFactory &);
+        SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &, SlokedAuthenticatorFactory *);
         void Authorize(const std::string &);
 
      private:

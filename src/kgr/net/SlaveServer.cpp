@@ -29,8 +29,12 @@
 
 namespace sloked {
 
-    KgrSlaveNetServer::KgrSlaveNetServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &poll, SlokedAuthenticatorFactory &authFactory)
-        : net(std::move(socket)), work(false), localServer(rawLocalServer), poll(poll), auth(authFactory.NewSlave(this->net.GetEncryption())), pinged{false} {
+    KgrSlaveNetServer::KgrSlaveNetServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &poll, SlokedAuthenticatorFactory *authFactory)
+        : net(std::move(socket)), work(false), localServer(rawLocalServer), poll(poll), pinged{false} {
+
+        if (authFactory) {
+            this->auth = authFactory->NewSlave(this->net.GetEncryption());
+        }
 
         this->lastActivity = std::chrono::system_clock::now();
 
@@ -206,6 +210,9 @@ namespace sloked {
     }
 
     void KgrSlaveNetServer::Authorize(const std::string &account) {
+        if (this->auth == nullptr) {
+            throw SlokedError("KgrSlaveServer: Authenticator not defined");
+        }
         // Sending login request
         auto loginRequest = this->net.Invoke("auth-request", {});
         if (!(loginRequest.WaitResponse(KgrNetConfig::ResponseTimeout) && this->work.load())) {

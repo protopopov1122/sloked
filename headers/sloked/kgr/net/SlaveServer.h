@@ -38,7 +38,7 @@ namespace sloked {
 
     class KgrSlaveNetServer : public KgrNamedServer, public SlokedCloseable {
      public:
-        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &, SlokedAuthenticatorFactory &);
+        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &, SlokedAuthenticatorFactory *);
         ~KgrSlaveNetServer();
         bool IsRunning() const;
         void Start();

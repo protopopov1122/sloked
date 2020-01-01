@@ -200,7 +200,7 @@ int main(int argc, const char **argv) {
 
     // Proxy initialization
     auto slaveSocket = socketFactory.Connect("localhost", cli["net-port"].As<int>());
-    KgrSlaveNetServer slaveServer(std::move(slaveSocket), editor.GetIO(), authSlaveFactory);
+    KgrSlaveNetServer slaveServer(std::move(slaveSocket), editor.GetIO(), &authSlaveFactory);
     closeables.Attach(slaveServer);
     slaveServer.Start();
     slaveServer.Authorize("user1");

@@ -91,7 +91,7 @@ namespace sloked {
         this->Init(root, charWidth);
     }
     
-    SlokedEditorMasterCore::SlokedEditorMasterCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io, SlokedAuthenticatorFactory &authFactory,
+    SlokedEditorMasterCore::SlokedEditorMasterCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io, SlokedAuthenticatorFactory *authFactory,
         SlokedNamespace &root, const SlokedCharWidth &charWidth)
         : SlokedAbstractEditorCore(logger, io), documents(root) {
         this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io, authFactory);
@@ -111,7 +111,7 @@ namespace sloked {
         this->GetServer().Register("namespace::root", std::make_unique<SlokedNamespaceService>(root, this->contextManager.GetManager()));
     }
 
-    SlokedEditorSlaveCore::SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io, SlokedAuthenticatorFactory &authFactory)
+    SlokedEditorSlaveCore::SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io, SlokedAuthenticatorFactory *authFactory)
         : SlokedAbstractEditorCore(logger, io) {
         auto server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io, authFactory);
         this->remoteEditor = server.get();
