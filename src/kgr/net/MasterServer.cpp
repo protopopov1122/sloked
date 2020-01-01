@@ -263,7 +263,17 @@ namespace sloked {
                             }
                         });
                         std::unique_lock lock(this->srv.mtx);
-                        this->srv.pipes.emplace(pipeId, std::move(pipe));
+                        while (!pipe->Empty()) {
+                            this->srv.net.Invoke("send", KgrDictionary {
+                                { "pipe", remotePipe },
+                                { "data", pipe->Read() }
+                            });
+                        }
+                        if (pipe->GetStatus() == KgrPipe::Status::Closed) {
+                            this->srv.net.Invoke("close", remotePipe);
+                        } else {
+                            this->srv.pipes.emplace(pipeId, std::move(pipe));
+                        }
                     }
                 });
             }
