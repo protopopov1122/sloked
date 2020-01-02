@@ -85,30 +85,30 @@ namespace sloked {
     SlokedAbstractEditorCore::SlokedAbstractEditorCore(SlokedLogger &logger, SlokedIOPoller &io)
         : logger(logger), io(io), server(nullptr) {}
     
-    SlokedEditorMasterCore::SlokedEditorMasterCore(SlokedLogger &logger, SlokedIOPoller &io, SlokedNamespace &root, const SlokedCharWidth &charWidth)
+    SlokedEditorMasterCore::SlokedEditorMasterCore(SlokedLogger &logger, SlokedIOPoller &io, SlokedMountableNamespace &root, SlokedNamespaceMounter &mounter, const SlokedCharWidth &charWidth)
         : SlokedAbstractEditorCore(logger, io), documents(root) {
         this->server = std::make_unique<SlokedLocalEditorServer>();
-        this->Init(root, charWidth);
+        this->Init(root, mounter, charWidth);
     }
     
     SlokedEditorMasterCore::SlokedEditorMasterCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io, SlokedAuthenticatorFactory *authFactory,
-        SlokedNamespace &root, const SlokedCharWidth &charWidth)
+        SlokedMountableNamespace &root, SlokedNamespaceMounter &mounter, const SlokedCharWidth &charWidth)
         : SlokedAbstractEditorCore(logger, io), documents(root) {
         this->server = std::make_unique<SlokedRemoteEditorServer>(std::move(socket), this->io, authFactory);
-        this->Init(root, charWidth);
+        this->Init(root, mounter, charWidth);
     }
 
     SlokedTextTaggerRegistry<int> &SlokedEditorMasterCore::GetTaggers() {
         return this->taggers;
     }
 
-    void SlokedEditorMasterCore::Init(SlokedNamespace &root, const SlokedCharWidth &charWidth) {
+    void SlokedEditorMasterCore::Init(SlokedMountableNamespace &root, SlokedNamespaceMounter &mounter, const SlokedCharWidth &charWidth) {
         this->GetServer().Register("document::render", std::make_unique<SlokedTextRenderService>(this->documents, charWidth, this->taggers, this->contextManager.GetManager()));
         this->GetServer().Register("document::cursor", std::make_unique<SlokedCursorService>(this->documents, this->GetServer().GetConnector("document::render"), this->contextManager.GetManager()));
         this->GetServer().Register("document::manager", std::make_unique<SlokedDocumentSetService>(this->documents, this->contextManager.GetManager()));
         this->GetServer().Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(this->documents, this->contextManager.GetManager()));
         this->GetServer().Register("document::search", std::make_unique<SlokedSearchService>(this->documents, this->contextManager.GetManager()));
-        this->GetServer().Register("namespace::root", std::make_unique<SlokedNamespaceService>(root, this->contextManager.GetManager()));
+        this->GetServer().Register("namespace::root", std::make_unique<SlokedNamespaceService>(root, mounter, this->contextManager.GetManager()));
     }
 
     SlokedEditorSlaveCore::SlokedEditorSlaveCore(std::unique_ptr<SlokedSocket> socket, SlokedLogger &logger, SlokedIOPoller &io, SlokedAuthenticatorFactory *authFactory)

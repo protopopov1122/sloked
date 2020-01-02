@@ -222,6 +222,8 @@ namespace sloked {
         os << encodeComponent(uri.scheme) << ':';
         if (uri.authority.has_value()) {
             os << "//" << uri.authority.value();
+        } else if (uri.path.front() == '/') {
+            os << "//";
         }
         if (!uri.path.empty() && uri.path.front() != '/' && uri.authority.has_value()) {
             os << '/';

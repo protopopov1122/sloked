@@ -20,7 +20,12 @@ async(function(await)
         occurence=0,
         by='|'
     }))
-    await_unwrap(root('uri', '/bin/bash'))
+    await_unwrap(root('mount', {
+        mountpoint='/test/test2',
+        uri='root:///usr/bin'
+    }))
+    await_unwrap(root('mounted'))
+    await_unwrap(root('uri', '/test/test2/bash'))
 
     if await_unwrap(cursor('connect', 1)) then
         local notifier = pipe:promisify(sloked.servers.main:connect('document::notify'))

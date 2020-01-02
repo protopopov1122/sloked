@@ -25,16 +25,18 @@
 #include "sloked/kgr/NamedServer.h"
 #include "sloked/kgr/local/Context.h"
 #include "sloked/namespace/Object.h"
+#include "sloked/namespace/Mount.h"
 
 namespace sloked {
 
     class SlokedNamespaceService : public KgrService {
      public:
-        SlokedNamespaceService(SlokedNamespace &, KgrContextManager<KgrLocalContext> &);
+        SlokedNamespaceService(SlokedMountableNamespace &, const SlokedNamespaceMounter &, KgrContextManager<KgrLocalContext> &);
         void Attach(std::unique_ptr<KgrPipe>) final;
 
      private:
-        SlokedNamespace &root;
+        SlokedMountableNamespace &root;
+        const SlokedNamespaceMounter &mounter;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
 }

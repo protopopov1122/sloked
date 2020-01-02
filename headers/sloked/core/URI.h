@@ -74,8 +74,8 @@ namespace sloked {
             std::map<std::string, std::string> prms;
         };
 
-        SlokedUri(std::string, std::string = "");
-        SlokedUri(std::string, Authority, std::string = "", std::optional<Query> = {}, std::optional<std::string> = {});
+        explicit SlokedUri(std::string, std::string = "");
+        explicit SlokedUri(std::string, Authority, std::string = "", std::optional<Query> = {}, std::optional<std::string> = {});
         SlokedUri(const SlokedUri &) = default;
         SlokedUri(SlokedUri &&) = default;
 

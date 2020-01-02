@@ -51,6 +51,11 @@ namespace sloked {
     }
 
     std::string SlokedPosixFilesystemAdapter::ToURI(const SlokedPath &path) const {
-        return SlokedUri("file", path.ToString()).ToString();
+        SlokedPath realPath = path.IsAbsolute() ? path.RelativeTo(path.Root()) : path;
+        return SlokedUri("file", realPath.RelativeTo(this->rootPath).ToString()).ToString();
+    }
+
+    std::unique_ptr<SlokedFilesystemAdapter> SlokedPosixFilesystemAdapter::Rebase(std::string_view path) const {
+        return std::make_unique<SlokedPosixFilesystemAdapter>(path);
     }
 }

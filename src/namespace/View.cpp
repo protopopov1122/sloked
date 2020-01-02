@@ -43,6 +43,10 @@ namespace sloked {
         this->base.Iterate(this->MakePath(path), std::move(visitor));
     }
 
+    void SlokedNamespaceView::Traverse(const SlokedPath &path, Visitor visitor, bool b) const {
+        this->base.Traverse(this->MakePath(path), std::move(visitor), b);
+    }
+
     std::unique_ptr<SlokedNamespaceObjectHandle> SlokedNamespaceView::GetHandle(const SlokedPath &path) {
         return this->base.GetHandle(this->MakePath(path));
     }

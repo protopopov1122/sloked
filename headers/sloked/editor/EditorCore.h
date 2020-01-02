@@ -30,7 +30,7 @@
 #include "sloked/sched/Scheduler.h"
 #include "sloked/kgr/local/Server.h"
 #include "sloked/kgr/local/NamedServer.h"
-#include "sloked/namespace/Object.h"
+#include "sloked/namespace/Mount.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/kgr/ctx-manager/RunnableContextManager.h"
 #include "sloked/text/fragment/TaggedText.h"
@@ -67,12 +67,12 @@ namespace sloked {
 
     class SlokedEditorMasterCore : public SlokedAbstractEditorCore {
      public:
-        SlokedEditorMasterCore(SlokedLogger &, SlokedIOPoller &, SlokedNamespace &, const SlokedCharWidth &);
-        SlokedEditorMasterCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &, SlokedAuthenticatorFactory *, SlokedNamespace &, const SlokedCharWidth &);
+        SlokedEditorMasterCore(SlokedLogger &, SlokedIOPoller &, SlokedMountableNamespace &, SlokedNamespaceMounter &, const SlokedCharWidth &);
+        SlokedEditorMasterCore(std::unique_ptr<SlokedSocket>, SlokedLogger &, SlokedIOPoller &, SlokedAuthenticatorFactory *, SlokedMountableNamespace &, SlokedNamespaceMounter &, const SlokedCharWidth &);
         SlokedTextTaggerRegistry<int> &GetTaggers();
 
      private:
-        void Init(SlokedNamespace &, const SlokedCharWidth &);
+        void Init(SlokedMountableNamespace &, SlokedNamespaceMounter &, const SlokedCharWidth &);
         SlokedEditorDocumentSet documents;
         SlokedTextTaggerRegistry<int> taggers;
     };

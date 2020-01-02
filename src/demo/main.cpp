@@ -34,6 +34,7 @@
 #include "sloked/namespace/Resolve.h"
 #include "sloked/namespace/posix/Environment.h"
 #include "sloked/namespace/posix/Filesystem.h"
+#include "sloked/namespace/Mount.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/kgr/local/Pipe.h"
 #include "sloked/kgr/local/Server.h"
@@ -185,12 +186,13 @@ int main(int argc, const char **argv) {
     SlokedDefaultIOPollThread socketPoller(socketPoll);
     closeables.Attach(socketPoller);
     socketPoller.Start(KgrNetConfig::RequestTimeout);
-    SlokedPosixSocketFactory rawSocketFactory;
-    SlokedCryptoSocketFactory socketFactory(rawSocketFactory, crypto, *key);
-    SlokedVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
+    SlokedPosixSocketFactory socketFactory;
+    // SlokedCryptoSocketFactory socketFactory(rawSocketFactory, crypto, *key);
+    SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
+    SlokedDefaultNamespaceMounter mounter(std::make_unique<SlokedPosixFilesystemAdapter>("/"), root);
     SlokedCharWidth charWidth;
 
-    SlokedEditorMasterCore editor(logger, socketPoller, root, charWidth);
+    SlokedEditorMasterCore editor(logger, socketPoller, root, mounter, charWidth);
     closeables.Attach(editor);
     editor.Start();
     editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>(), &authMaster, &authFactory);

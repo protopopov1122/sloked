@@ -34,10 +34,11 @@ namespace sloked {
       virtual std::unique_ptr<SlokedFile> NewFile(const SlokedPath &) const = 0;
       virtual SlokedPath ToPath(const std::string &) const = 0;
       virtual std::string ToURI(const SlokedPath &) const = 0;
+      virtual std::unique_ptr<SlokedFilesystemAdapter> Rebase(std::string_view) const = 0;
    };
 
    class SlokedFilesystemNamespace : public SlokedNamespace {
-   public:
+    public:
       SlokedFilesystemNamespace(std::unique_ptr<SlokedFilesystemAdapter>);
       std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) override;
       bool HasObject(const SlokedPath &) const override;
@@ -45,7 +46,7 @@ namespace sloked {
       void Traverse(const SlokedPath &, Visitor, bool = false) const override;
       std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(const SlokedPath &) override;
 
-   private:
+    private:
       std::unique_ptr<SlokedFilesystemAdapter> filesystem;
    };
 }

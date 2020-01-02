@@ -23,16 +23,18 @@
 #define SLOKED_NAMESPACE_VIRTUAL_H_
 
 #include "sloked/namespace/Object.h"
+#include "sloked/namespace/Mount.h"
 #include <map>
 
 namespace sloked {
 
-    class SlokedVirtualNamespace : public SlokedNamespace {
+    class SlokedDefaultVirtualNamespace : public SlokedMountableNamespace {
      public:
-        SlokedVirtualNamespace(std::unique_ptr<SlokedNamespace>, const SlokedPath & = SlokedPath("/"));
+        SlokedDefaultVirtualNamespace(std::unique_ptr<SlokedNamespace>, const SlokedPath & = SlokedPath("/"));
 
-        void Mount(const SlokedPath &, std::unique_ptr<SlokedNamespace>);
-        void Umount(const SlokedPath &);
+        void Mount(const SlokedPath &, std::unique_ptr<SlokedNamespace>) override;
+        std::vector<SlokedPath> Mounted() const override;
+        void Umount(const SlokedPath &) override;
 
         std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) override;
         bool HasObject(const SlokedPath &) const override;
@@ -49,8 +51,10 @@ namespace sloked {
             std::map<std::string, Entry> subentries;
         };
 
+        void GetMounted(const Entry &, std::vector<SlokedPath> &) const;
         const Entry &find(const SlokedPath &) const;
         void cleanup(Entry &);
+
         Entry root;
     };
 }

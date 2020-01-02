@@ -180,6 +180,7 @@ namespace sloked {
             return *this;
         } else {
             SlokedPath path(this->preset);
+            path.absolute = this->absolute;
             path.path.insert(path.path.end(), this->path.begin(), std::prev(this->path.end()));
             path.Normalize();
             return path;
@@ -188,6 +189,7 @@ namespace sloked {
 
     SlokedPath SlokedPath::Child(String name) const {
         SlokedPath path(this->preset);
+        path.absolute = this->absolute;
         path.path = this->path;
         path.path.push_back(std::string{name});
         path.Normalize();

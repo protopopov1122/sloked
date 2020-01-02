@@ -61,6 +61,7 @@ sloked_src = [
   'src/namespace/Directory.cpp',
   'src/namespace/Filesystem.cpp',
   'src/namespace/Find.cpp',
+  'src/namespace/Mount.cpp',
   'src/namespace/Object.cpp',
   'src/namespace/Path.cpp',
   'src/namespace/Resolve.cpp',

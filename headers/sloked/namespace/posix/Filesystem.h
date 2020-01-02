@@ -34,6 +34,7 @@ namespace sloked {
         std::unique_ptr<SlokedFile> NewFile(const SlokedPath &) const override;
         SlokedPath ToPath(const std::string &) const override;
         std::string ToURI(const SlokedPath &) const override;
+        std::unique_ptr<SlokedFilesystemAdapter> Rebase(std::string_view) const override;
 
      private:
         SlokedPath rootPath;

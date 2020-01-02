@@ -26,8 +26,8 @@ namespace sloked {
 
     class SlokedNamespaceServiceContext : public SlokedServiceContext {
      public:
-        SlokedNamespaceServiceContext(std::unique_ptr<KgrPipe> pipe, SlokedNamespace &root)
-            : SlokedServiceContext(std::move(pipe)), root(root) {
+        SlokedNamespaceServiceContext(std::unique_ptr<KgrPipe> pipe, SlokedMountableNamespace &root, const SlokedNamespaceMounter &mounter)
+            : SlokedServiceContext(std::move(pipe)), root(root), mounter(mounter) {
             this->BindMethod("list", &SlokedNamespaceServiceContext::List);
             this->BindMethod("walk", &SlokedNamespaceServiceContext::Walk);
             this->BindMethod("type", &SlokedNamespaceServiceContext::GetType);
@@ -37,6 +37,9 @@ namespace sloked {
             this->BindMethod("rename", &SlokedNamespaceServiceContext::Rename);
             this->BindMethod("permissions", &SlokedNamespaceServiceContext::Permissions);
             this->BindMethod("uri", &SlokedNamespaceServiceContext::URI);
+            this->BindMethod("mount", &SlokedNamespaceServiceContext::Mount);
+            this->BindMethod("umount", &SlokedNamespaceServiceContext::Unmount);
+            this->BindMethod("mounted", &SlokedNamespaceServiceContext::Mounted);
         }
 
      private:
@@ -182,14 +185,42 @@ namespace sloked {
             }
         }
 
-        SlokedNamespace &root;
+        void Mount(const std::string &method, const KgrValue &params, Response &rsp) {
+            const auto &mountpoint = params.AsDictionary()["mountpoint"].AsString();
+            const auto &uri = params.AsDictionary()["uri"].AsString();
+            auto mount = this->mounter.Mount(SlokedUri::Parse(uri));
+            if (mount) {
+                this->root.Mount(SlokedPath{mountpoint}, std::move(mount));
+                rsp.Result(true);
+            } else {
+                rsp.Result(false);
+            }
+        }
+
+        void Unmount(const std::string &method, const KgrValue &params, Response &rsp) {
+            const auto &mountpoint = params.AsString();
+            this->root.Umount(SlokedPath{mountpoint});
+            rsp.Result(true);
+        }
+
+        void Mounted(const std::string &method, const KgrValue &params, Response &rsp) {
+            auto mounted = this->root.Mounted();
+            KgrArray res;
+            for (const auto &mountpoint : mounted) {
+                res.Append(KgrValue{mountpoint});
+            }
+            rsp.Result(std::move(res));
+        }
+
+        SlokedMountableNamespace &root;
+        const SlokedNamespaceMounter &mounter;
     };
 
-    SlokedNamespaceService::SlokedNamespaceService(SlokedNamespace &root, KgrContextManager<KgrLocalContext> &contextManager)
-        : root(root), contextManager(contextManager) {}
+    SlokedNamespaceService::SlokedNamespaceService(SlokedMountableNamespace &root, const SlokedNamespaceMounter &mounter, KgrContextManager<KgrLocalContext> &contextManager)
+        : root(root), mounter(mounter), contextManager(contextManager) {}
 
     void SlokedNamespaceService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedNamespaceServiceContext>(std::move(pipe), this->root);
+        auto ctx = std::make_unique<SlokedNamespaceServiceContext>(std::move(pipe), this->root, this->mounter);
         this->contextManager.Attach(std::move(ctx));
     }
 }
