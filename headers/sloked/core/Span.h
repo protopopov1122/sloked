@@ -2,7 +2,7 @@
 /*
   SPDX-License-Identifier: LGPL-3.0
 
-  Copyright (c) 2019 Jevgenijs Protopopovs
+  Copyright (c) 2019-2020 Jevgenijs Protopopovs
 
   This file is part of Sloked project.
 
