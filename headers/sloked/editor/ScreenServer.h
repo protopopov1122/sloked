@@ -29,6 +29,7 @@
 #include "sloked/kgr/ContextManager.h"
 #include "sloked/kgr/local/Context.h"
 #include "sloked/screen/Component.h"
+#include "sloked/screen/Size.h"
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -47,8 +48,9 @@ namespace sloked {
     class SlokedScreenServer : public SlokedCloseable {
      public:
         using InputProcessor = std::function<std::vector<SlokedKeyboardInput>(std::vector<SlokedKeyboardInput>)>;
-        SlokedScreenServer(KgrNamedServer &, SlokedScreenProvider &, KgrContextManager<KgrLocalContext> &);
+        SlokedScreenServer(KgrNamedServer &, SlokedScreenProvider &, SlokedScreenSize &, KgrContextManager<KgrLocalContext> &);
         ~SlokedScreenServer();
+        void Redraw();
         bool IsRunning() const;
         void Start(std::chrono::system_clock::duration);
         void Close() final;

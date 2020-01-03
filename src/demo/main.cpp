@@ -47,6 +47,7 @@
 #include "sloked/services/Namespace.h"
 #include "sloked/services/Screen.h"
 #include "sloked/services/ScreenInput.h"
+#include "sloked/services/ScreenSize.h"
 #include "sloked/services/Search.h"
 #include "sloked/services/TextPane.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
@@ -65,6 +66,7 @@
 #include "sloked/security/Slave.h"
 #include "sloked/net/CryptoSocket.h"
 #include "sloked/core/Failure.h"
+#include "sloked/screen/terminal/TerminalSize.h"
 #include <chrono>
 
 using namespace sloked;
@@ -184,6 +186,9 @@ int main(int argc, const char **argv) {
 
     // Editor initialization
     SlokedCloseablePool closeables;
+    SlokedDefaultSchedulerThread sched;
+    closeables.Attach(sched);
+    sched.Start();
     SlokedPosixAwaitablePoll socketPoll;
     SlokedDefaultIOPollThread socketPoller(socketPoll);
     closeables.Attach(socketPoller);
@@ -218,9 +223,10 @@ int main(int argc, const char **argv) {
 
     PosixTerminal terminal;
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
+    SlokedTerminalSize terminalSize(console);
     SlokedTerminalScreenProvider screen(console, terminalEncoding, charWidth, terminal);
 
-    SlokedScreenServer screenServer(slaveServer, screen, editor.GetContextManager());
+    SlokedScreenServer screenServer(slaveServer, screen, terminalSize, editor.GetContextManager());
     closeables.Attach(screenServer);
     screenServer.Start(KgrNetConfig::RequestTimeout);
 
@@ -233,12 +239,20 @@ int main(int argc, const char **argv) {
         return screen.GetScreen().IsHolder();
     };
     SlokedScreenClient screenClient(slaveServer.Connect("screen::manager"), isScreenLocked);
+    SlokedScreenSizeNotificationClient screenSizeClient(slaveServer.Connect("screen::size.notify"));
     SlokedDocumentSetClient documentClient(slaveServer.Connect("document::manager"));
     documentClient.Open(inputPath.ToString(), cli["encoding"].As<std::string>(), cli["newline"].As<std::string>());
 
     // Screen layout
     screenClient.Handle.NewMultiplexer("/");
     auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
+    screenSizeClient.Listen([&](const auto &size) {
+        if (screenServer.IsRunning() && mainWindow.has_value()) {
+            sched.Defer([&, size] {
+                screenClient.Multiplexer.ResizeWindow(mainWindow.value(), size);
+            });
+        }
+    });
     screenClient.Handle.NewSplitter(mainWindow.value(), Splitter::Direction::Vertical);
     screenClient.Splitter.NewWindow(mainWindow.value(), Splitter::Constraints(1.0f));
     auto tabber = screenClient.Splitter.NewWindow(mainWindow.value(), Splitter::Constraints(0.0f, 1));

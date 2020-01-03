@@ -34,7 +34,9 @@ namespace sloked {
         }
     }
 
-    void TerminalTextPaneComponent::UpdateDimensions() {}
+    void TerminalTextPaneComponent::UpdateDimensions() {
+        this->term.UpdateDimensions();
+    }
 
     TextPosition TerminalTextPaneComponent::GetDimensions() {
         return { this->term.GetHeight(), this->term.GetWidth() };

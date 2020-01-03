@@ -176,7 +176,7 @@ namespace sloked {
     }
 
     SlokedPath SlokedPath::Parent() const {
-        if (this->path.size() == 1) {
+        if (this->path.size() == 0) {
             return *this;
         } else {
             SlokedPath path(this->preset);

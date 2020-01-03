@@ -112,6 +112,7 @@ namespace sloked {
 
     void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Update() {
         if (this->component) {
+            this->window->UpdateDimensions();
             this->component->UpdateDimensions();
         }
     }
