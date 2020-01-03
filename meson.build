@@ -3,9 +3,10 @@ project('sloked', 'cpp', 'c', default_options : ['cpp_std=c++17', 'warning_level
 compiler_id = meson.get_compiler('cpp').get_id()
 if compiler_id == 'gcc' or compiler_id == 'clang'
   add_project_arguments('-Wno-unused-parameter', '-pedantic', language : 'cpp')
+  add_project_link_arguments('-rdynamic', language : 'cpp')
 elif compiler_id == 'pgi'
   add_project_arguments('-std=c++17', '-noswitcherror', language : 'cpp')
-  add_project_link_arguments('-noswitcherror', language : 'cpp')
+  add_project_link_arguments('-noswitcherror', '-rdynamic', language : 'cpp')
 endif
 
 sloked_src = [
@@ -16,6 +17,7 @@ sloked_src = [
   'src/core/DynamicBitset.cpp',
   'src/core/Encoding.cpp',
   'src/core/Error.cpp',
+  'src/core/Failure.cpp',
   'src/core/Locale.cpp',
   'src/core/Logger.cpp',
   'src/core/NewLine.cpp',

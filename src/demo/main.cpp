@@ -64,6 +64,7 @@
 #include "sloked/security/Master.h"
 #include "sloked/security/Slave.h"
 #include "sloked/net/CryptoSocket.h"
+#include "sloked/core/Failure.h"
 #include <chrono>
 
 using namespace sloked;
@@ -149,6 +150,7 @@ static const KgrDictionary DefaultConfiguration {
 
 int main(int argc, const char **argv) {
     // Core initialization
+    SlokedFailure::SetupHandler();
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
     SlokedCLI cli;
     cli.Define("--encoding", mainConfig.Find("/encoding").AsString());
