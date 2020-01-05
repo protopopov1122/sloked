@@ -104,9 +104,12 @@ sloked_src = [
   'src/text/search/Replace.cpp',
 ]
 
+cpp = meson.get_compiler('cpp')
+
+atomic = cpp.find_library('atomic', required : false)
 threads = dependency('threads')
 sloked_framework_lib = static_library('sloked', sloked_src,
   include_directories : include_directories('headers'),
-  dependencies : [threads])
+  dependencies : [threads, atomic])
 sloked_framework = declare_dependency(link_with : sloked_framework_lib,
   include_directories : include_directories('headers'))
