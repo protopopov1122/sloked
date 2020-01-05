@@ -9,8 +9,8 @@ elif compiler_id == 'pgi'
   add_project_link_arguments('-noswitcherror', '-rdynamic', language : 'cpp')
 endif
 
-subdir('src/framework')
-subdir('src/crypto/botan')
-subdir('src/platform/posix')
-subdir('src/script/lua')
-subdir('src/demo')
+subdir('components/framework')
+subdir('components/crypto/botan')
+subdir('components/platform/posix')
+subdir('components/script/lua')
+subdir('components/demo')
