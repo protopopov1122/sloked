@@ -250,16 +250,18 @@ namespace sloked {
                         std::unique_ptr<KgrPipe> pipe{pipePtr};
                         pipe->SetMessageListener([this, pipeId, remotePipe] {
                             std::unique_lock lock(this->srv.mtx);
-                            auto &pipe = *this->srv.pipes.at(pipeId);
-                            while (!pipe.Empty()) {
-                                this->srv.net.Invoke("send", KgrDictionary {
-                                    { "pipe", remotePipe },
-                                    { "data", pipe.Read() }
-                                });
-                            }
-                            if (pipe.GetStatus() == KgrPipe::Status::Closed) {
-                                this->srv.net.Invoke("close", remotePipe);
-                                this->srv.pipes.erase(pipeId);
+                            if (this->srv.pipes.count(pipeId) != 0) {
+                                auto &pipe = *this->srv.pipes.at(pipeId);
+                                while (!pipe.Empty()) {
+                                    this->srv.net.Invoke("send", KgrDictionary {
+                                        { "pipe", remotePipe },
+                                        { "data", pipe.Read() }
+                                    });
+                                }
+                                if (pipe.GetStatus() == KgrPipe::Status::Closed) {
+                                    this->srv.net.Invoke("close", remotePipe);
+                                    this->srv.pipes.erase(pipeId);
+                                }
                             }
                         });
                         std::unique_lock lock(this->srv.mtx);
@@ -291,21 +293,23 @@ namespace sloked {
                 if (this->frozenPipes.count(pipeId) != 0) {
                     return;
                 }
-                auto &pipe = *this->pipes.at(pipeId);
-                while (!pipe.Empty()) {
-                    this->net.Invoke("send", KgrDictionary {
-                        { "pipe", pipeId },
-                        { "data", pipe.Read() }
-                    });
-                }
-                if (pipe.GetStatus() == KgrPipe::Status::Closed) {
-                    try {
-                        this->net.Invoke("close", pipeId);
-                    } catch (const SlokedError &err) {
-                        // Ignoring errors in case when socket already closed
+                if (this->pipes.count(pipeId) != 0) {
+                    auto &pipe = *this->pipes.at(pipeId);
+                    while (!pipe.Empty()) {
+                        this->net.Invoke("send", KgrDictionary {
+                            { "pipe", pipeId },
+                            { "data", pipe.Read() }
+                        });
                     }
-                    this->frozenPipes.erase(pipeId);
-                    this->pipes.erase(pipeId);
+                    if (pipe.GetStatus() == KgrPipe::Status::Closed) {
+                        try {
+                            this->net.Invoke("close", pipeId);
+                        } catch (const SlokedError &err) {
+                            // Ignoring errors in case when socket already closed
+                        }
+                        this->frozenPipes.erase(pipeId);
+                        this->pipes.erase(pipeId);
+                    }
                 }
             });
             this->frozenPipes.insert(pipeId);
