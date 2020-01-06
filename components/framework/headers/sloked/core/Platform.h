@@ -23,9 +23,9 @@
 #define SLOKED_CORE_PLATFORM_H_
 
 #if defined(__linux__)
-#define SLOKED_PLATFORM_LINUX
+#define SLOKED_PLATFORM_OS_LINUX
 #elif defined(__unix__)
-#define SLOKED_PLATFORM_UNIX
+#define SLOKED_PLATFORM_OS_UNIX
 #else
 #error "Unsupported platform"
 #endif

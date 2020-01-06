@@ -45,7 +45,7 @@ namespace sloked {
     }
 
     std::unique_ptr<NewLine> SlokedLocale::SystemNewline(const Encoding &encoding) {
-#if defined(SLOKED_PLATFORM_LINUX) || defined(SLOKED_PLATFORM_UNIX)
+#if defined(SLOKED_PLATFORM_OS_LINUX) || defined(SLOKED_PLATFORM_OS_UNIX)
         return NewLine::LF(encoding);
 #else
 #error "Internal error: Unknown platform"

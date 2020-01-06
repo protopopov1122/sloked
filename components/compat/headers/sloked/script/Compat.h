@@ -19,16 +19,25 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CORE_FAILURE_GNU_H_
-#define SLOKED_CORE_FAILURE_GNU_H_
+#ifndef SLOKED_SCRIPT_COMPAT_H_
+#define SLOKED_SCRIPT_COMPAT_H_
 
-#include "sloked/Base.h"
+#include "sloked/script/ScriptEngine.h"
+#include "sloked/sched/Scheduler.h"
 
 namespace sloked {
 
-    class SlokedFailure {
+    class SlokedScriptCompat {
      public:
-        static void SetupHandler();
+        static constexpr bool IsSupported() {
+#ifdef SLOKED_FEATURE_SCRIPTING
+            return true;
+#else
+            return false;
+#endif
+        }
+
+        static std::unique_ptr<SlokedScriptEngine> GetEngine(SlokedSchedulerThread &, const std::string &);
     };
 }
 

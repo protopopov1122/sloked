@@ -3,5 +3,10 @@ demo_src = [
   'main.cpp'
 ]
 
+demo_editor_flags = []
+demo_editor_flags += sloked_compat_flags
+demo_editor_flags += sloked_platform_flags
+
 demo_editor = executable('sloked', demo_src,
-  dependencies : [sloked_framework, sloked_posix_platform, sloked_botan_crypto, sloked_lua_bindings])
+  cpp_args : demo_editor_flags,
+  dependencies : [sloked_framework, sloked_compat, sloked_platform])

@@ -8,7 +8,9 @@ lua_bindings_src = [
 ]
 
 lua = dependency('lua')
+sloked_lua_bindings_flags = ['-DSLOKED_FEATURE_SCRIPTING', '-DSLOKED_FEATURE_SCRIPTING_LUA']
 sloked_lua_bindings_lib = static_library('sloked_lua', lua_bindings_src,
+  cpp_args : sloked_lua_bindings_flags,
   include_directories : include_directories('headers'),
   dependencies : [lua, sloked_framework])
 sloked_lua_bindings = declare_dependency(link_with : sloked_lua_bindings_lib,

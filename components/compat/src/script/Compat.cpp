@@ -19,17 +19,19 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CORE_FAILURE_GNU_H_
-#define SLOKED_CORE_FAILURE_GNU_H_
+#include "sloked/script/Compat.h"
 
-#include "sloked/Base.h"
+#if defined(SLOKED_FEATURE_SCRIPTING) && !defined(SLOKED_FEATURE_SCRIPTING_LUA)
+#error "Build system error: scripting language bindings are not defined"
+#endif
+
+#ifdef SLOKED_FEATURE_SCRIPTING_LUA
+#include "sloked/script/lua/Lua.h"
 
 namespace sloked {
 
-    class SlokedFailure {
-     public:
-        static void SetupHandler();
-    };
+    std::unique_ptr<SlokedScriptEngine> SlokedScriptCompat::GetEngine(SlokedSchedulerThread &sched, const std::string &path) {
+        return std::make_unique<SlokedLuaEngine>(sched, path);
+    }
 }
-
 #endif

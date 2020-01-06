@@ -19,17 +19,20 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CORE_FAILURE_GNU_H_
-#define SLOKED_CORE_FAILURE_GNU_H_
+#include "sloked/crypto/Compat.h"
 
-#include "sloked/Base.h"
+#if defined(SLOKED_FEATURE_CRYPTO) && !defined(SLOKED_FEATURE_CRYPTO_BOTAN)
+#error "Build system error: crypto engine is not defined"
+#endif
+
+#ifdef SLOKED_FEATURE_CRYPTO_BOTAN
+#include "sloked/crypto/botan/Botan.h"
 
 namespace sloked {
 
-    class SlokedFailure {
-     public:
-        static void SetupHandler();
-    };
+    SlokedCrypto &SlokedCryptoCompat::GetCrypto() {
+        static SlokedBotanCrypto crypto;
+        return crypto;
+    }
 }
-
 #endif

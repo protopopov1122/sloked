@@ -19,16 +19,24 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CORE_FAILURE_GNU_H_
-#define SLOKED_CORE_FAILURE_GNU_H_
+#ifndef SLOKED_CRYPTO_COMPAT_H_
+#define SLOKED_CRYPTO_COMPAT_H_
 
-#include "sloked/Base.h"
+#include "sloked/core/Crypto.h"
 
 namespace sloked {
 
-    class SlokedFailure {
+    class SlokedCryptoCompat {
      public:
-        static void SetupHandler();
+        static constexpr bool IsSupported() {
+#ifdef SLOKED_FEATURE_CRYPTO
+            return true;
+#else
+            return false;
+#endif
+        }
+
+        static SlokedCrypto &GetCrypto();
     };
 }
 

@@ -13,4 +13,13 @@ subdir('components/framework')
 subdir('components/crypto/botan')
 subdir('components/platform/posix')
 subdir('components/script/lua')
+
+sloked_crypto = sloked_botan_crypto
+sloked_crypto_flags = sloked_botan_crypto_flags
+sloked_platform = sloked_posix_platform
+sloked_platform_flags = sloked_posix_platform_flags
+sloked_scripting = sloked_lua_bindings
+sloked_scripting_flags = sloked_lua_bindings_flags
+subdir('components/compat')
+
 subdir('components/demo')

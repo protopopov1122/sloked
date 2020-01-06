@@ -59,8 +59,8 @@
 #include "sloked/kgr/Path.h"
 #include "sloked/sched/Scheduler.h"
 #include "sloked/kgr/net/Config.h"
-#include "sloked/script/lua/Lua.h"
-#include "sloked/crypto/botan/Botan.h"
+#include "sloked/script/Compat.h"
+#include "sloked/crypto/Compat.h"
 #include "sloked/editor/EditorCore.h"
 #include "sloked/security/Master.h"
 #include "sloked/security/Slave.h"
@@ -171,7 +171,10 @@ int main(int argc, const char **argv) {
     SlokedLogger logger(SlokedLoggerTag);
 
     // Cryptography & security
-    SlokedBotanCrypto crypto;
+    if constexpr (!SlokedCryptoCompat::IsSupported()) {
+        throw SlokedError("Demo: Crypto support required");
+    }
+    SlokedCrypto &crypto = SlokedCryptoCompat::GetCrypto();
     auto key = crypto.DeriveKey("password", "salt");
     SlokedCredentialMaster authMaster(crypto, *key);
     SlokedCredentialSlave authSlave(crypto);
@@ -193,8 +196,8 @@ int main(int argc, const char **argv) {
     SlokedDefaultIOPollThread socketPoller(socketPoll);
     closeables.Attach(socketPoller);
     socketPoller.Start(KgrNetConfig::RequestTimeout);
-    SlokedPosixSocketFactory socketFactory;
-    // SlokedCryptoSocketFactory socketFactory(rawSocketFactory, crypto, *key);
+    SlokedPosixSocketFactory rawSocketFactory;
+    SlokedCryptoSocketFactory socketFactory(rawSocketFactory, crypto, *key);
     SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
     SlokedDefaultNamespaceMounter mounter(std::make_unique<SlokedPosixFilesystemAdapter>("/"), root);
     SlokedCharWidth charWidth;
@@ -288,11 +291,14 @@ int main(int argc, const char **argv) {
     }, true);
 
     // Scripting engine startup
-    SlokedLuaEngine luaEngine(editor.GetScheduler(), cli["script-path"].As<std::string>());
-    closeables.Attach(luaEngine);
-    luaEngine.BindServer("main", slaveServer);
-    if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {
-        luaEngine.Start(cli["script"].As<std::string>());
+    std::unique_ptr<SlokedScriptEngine> scriptEngine;
+    if constexpr (SlokedScriptCompat::IsSupported()) {
+        scriptEngine = SlokedScriptCompat::GetEngine(editor.GetScheduler(), cli["script-path"].As<std::string>());
+        closeables.Attach(*scriptEngine);
+        scriptEngine->BindServer("main", slaveServer);
+        if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {
+            scriptEngine->Start(cli["script"].As<std::string>());
+        }
     }
 
     // Wait until editor finishes
