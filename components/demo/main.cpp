@@ -28,12 +28,10 @@
 #include "sloked/core/CLI.h"
 #include "sloked/core/Semaphore.h"
 #include "sloked/core/awaitable/Poll.h"
-#include "sloked/screen/terminal/posix/PosixTerminal.h"
+#include "sloked/screen/terminal/Compat.h"
 #include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
 #include "sloked/namespace/Virtual.h"
 #include "sloked/namespace/Resolve.h"
-#include "sloked/namespace/posix/Environment.h"
-#include "sloked/namespace/posix/Filesystem.h"
 #include "sloked/namespace/Mount.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/kgr/local/Pipe.h"
@@ -52,7 +50,7 @@
 #include "sloked/services/TextPane.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/editor/terminal/ScreenProvider.h"
-#include "sloked/net/PosixSocket.h"
+#include "sloked/net/Compat.h"
 #include "sloked/kgr/net/MasterServer.h"
 #include "sloked/kgr/net/SlaveServer.h"
 #include "sloked/editor/Configuration.h"
@@ -66,6 +64,9 @@
 #include "sloked/security/Slave.h"
 #include "sloked/net/CryptoSocket.h"
 #include "sloked/core/Failure.h"
+#include "sloked/core/awaitable/Compat.h"
+#include "sloked/namespace/Compat.h"
+#include "sloked/screen/terminal/TerminalResize.h"
 #include "sloked/screen/terminal/TerminalSize.h"
 #include <chrono>
 
@@ -192,14 +193,14 @@ int main(int argc, const char **argv) {
     SlokedDefaultSchedulerThread sched;
     closeables.Attach(sched);
     sched.Start();
-    SlokedPosixAwaitablePoll socketPoll;
-    SlokedDefaultIOPollThread socketPoller(socketPoll);
+    auto socketPoll = SlokedIOPollCompat::NewPoll();
+    SlokedDefaultIOPollThread socketPoller(*socketPoll);
     closeables.Attach(socketPoller);
     socketPoller.Start(KgrNetConfig::RequestTimeout);
-    SlokedPosixSocketFactory rawSocketFactory;
+    SlokedSocketFactory &rawSocketFactory = SlokedNetCompat::GetNetwork();
     SlokedCryptoSocketFactory socketFactory(rawSocketFactory, crypto, *key);
-    SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(std::make_unique<SlokedPosixFilesystemAdapter>("/")));
-    SlokedDefaultNamespaceMounter mounter(std::make_unique<SlokedPosixFilesystemAdapter>("/"), root);
+    SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(SlokedNamespaceCompat::NewRootFilesystem()));
+    SlokedDefaultNamespaceMounter mounter(SlokedNamespaceCompat::NewRootFilesystem(), root);
     SlokedCharWidth charWidth;
 
     SlokedEditorMasterCore editor(logger, socketPoller, root, mounter, charWidth);
@@ -224,9 +225,12 @@ int main(int argc, const char **argv) {
     SlokedLocale::Setup();
     const Encoding &terminalEncoding = Encoding::Get("system");
 
-    PosixTerminal terminal;
+    if constexpr (!SlokedTerminalCompat::HasSystemTerminal()) {
+        throw SlokedError("Demo: system terminal is required");
+    }
+    SlokedDuplexTerminal &terminal = *SlokedTerminalCompat::GetSystemTerminal();
     BufferedTerminal console(terminal, terminalEncoding, charWidth);
-    SlokedTerminalSize terminalSize(console);
+    SlokedTerminalSize<SlokedTerminalResizeListener> terminalSize(console);
     SlokedTerminalScreenProvider screen(console, terminalEncoding, charWidth, terminal);
 
     SlokedScreenServer screenServer(slaveServer, screen, terminalSize, editor.GetContextManager());
@@ -234,7 +238,7 @@ int main(int argc, const char **argv) {
     screenServer.Start(KgrNetConfig::RequestTimeout);
 
     // Editor configuration
-    SlokedPathResolver resolver(SlokedPosixNamespaceEnvironment::WorkDir(), SlokedPosixNamespaceEnvironment::HomeDir());
+    SlokedPathResolver resolver(SlokedNamespaceCompat::GetWorkDir(), SlokedNamespaceCompat::GetHomeDir());
     SlokedPath inputPath = resolver.Resolve(SlokedPath{cli.At(0)});
     SlokedPath outputPath = resolver.Resolve(SlokedPath{cli["output"].As<std::string>()});
 

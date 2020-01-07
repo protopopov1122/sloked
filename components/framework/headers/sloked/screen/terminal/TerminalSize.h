@@ -29,15 +29,53 @@
 
 namespace sloked {
 
+    template <typename T>
     class SlokedTerminalSize : public SlokedScreenSize {
      public:
-        SlokedTerminalSize(SlokedTerminal &);
-        ~SlokedTerminalSize();
-        TextPosition GetSize() const final;
-        std::function<void()> Listen(Listener) final;
+        SlokedTerminalSize(SlokedTerminal &terminal)
+            : terminal(terminal), nextId{0} {
+            this->unsubscribe = T::Bind([this] {
+                this->Trigger();
+            });
+        }
+
+        ~SlokedTerminalSize() {
+            if (this->unsubscribe) {
+                this->unsubscribe();
+            }
+        }
+
+        TextPosition GetSize() const {
+            return {
+                this->terminal.GetHeight(),
+                this->terminal.GetWidth()
+            };
+        }
+
+        std::function<void()> Listen(Listener listener) {
+            std::unique_lock lock(this->mtx);
+            auto id = this->nextId++;
+            this->listeners.emplace(id, std::move(listener));
+            return [this, id] {
+                std::unique_lock lock(this->mtx);
+                if (this->listeners.count(id) != 0) {
+                    this->listeners.erase(id);
+                }
+            };
+        }
 
      private:
-        void Trigger();
+        void Trigger() {
+            this->terminal.UpdateDimensions();
+            auto size = this->GetSize();
+            std::unique_lock lock(this->mtx);
+            for (auto it = this->listeners.begin(); it != this->listeners.end();) {
+                auto current = it++;
+                lock.unlock();
+                current->second(size);
+                lock.lock();
+            }
+        }
         
         SlokedTerminal &terminal;
         std::mutex mtx;
