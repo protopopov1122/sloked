@@ -22,11 +22,97 @@
 #include "sloked/editor/EditorApp.h"
 #include "sloked/core/Error.h"
 #include "sloked/kgr/net/Config.h"
+#include "sloked/net/CryptoSocket.h"
 
 namespace sloked {
 
+    SlokedEditorApp::Crypto::Crypto(SlokedCrypto &crypto)
+        : crypto(crypto), credentials{std::unique_ptr<SlokedCredentialMaster>(nullptr)}, authenticator{} {}
+
+    SlokedCrypto &SlokedEditorApp::Crypto::GetEngine() const {
+        return this->crypto;
+    }
+
+    bool SlokedEditorApp::Crypto::HasCredentialMaster() const {
+        return this->credentials.index() == 0 && std::get<0>(this->credentials) != nullptr;
+    }
+
+    SlokedCredentialMaster &SlokedEditorApp::Crypto::GetCredentialMaster() const {
+        if (this->HasCredentialMaster()) {
+            return *std::get<0>(this->credentials);
+        } else {
+            throw SlokedError("EditorAppCrypto: Credential master not defined");
+        }
+    }
+
+    bool SlokedEditorApp::Crypto::HasCredentialSlave() const {
+        return this->credentials.index() == 1 && std::get<1>(this->credentials) != nullptr;
+    }
+
+    SlokedCredentialSlave &SlokedEditorApp::Crypto::GetCredentialSlave() const {
+        if (this->HasCredentialSlave()) {
+            return *std::get<1>(this->credentials);
+        } else {
+            throw SlokedError("EditorAppCrypto: Credential slave not defined");
+        }
+    }
+
+    bool SlokedEditorApp::Crypto::HasAuthenticator() const {
+        return this->authenticator != nullptr;
+    }
+
+    SlokedAuthenticatorFactory &SlokedEditorApp::Crypto::GetAuthenticator() const {
+        if (this->HasAuthenticator()) {
+            return *this->authenticator;
+        } else {
+            throw SlokedError("EditorAppCrypto: Authenticator not defined");
+        }
+    }
+
+    SlokedCredentialMaster &SlokedEditorApp::Crypto::SetupCredentialMaster(SlokedCrypto::Key &key) {
+        auto master = std::make_unique<SlokedCredentialMaster>(this->crypto, key);
+        auto &masterRef = *master;
+        this->authenticator = nullptr;
+        this->credentials = std::move(master);
+        return masterRef;
+    }
+
+    SlokedCredentialSlave &SlokedEditorApp::Crypto::SetupCredentialSlave() {
+        auto slave = std::make_unique<SlokedCredentialSlave>(this->crypto);
+        auto &slaveRef = *slave;
+        this->authenticator = nullptr;
+        this->credentials = std::move(slave);
+        return slaveRef;
+    }
+
+    SlokedAuthenticatorFactory &SlokedEditorApp::Crypto::SetupAuthenticator(const std::string &salt) {
+        if (this->HasCredentialMaster()) {
+            this->authenticator = std::make_unique<SlokedAuthenticatorFactory>(this->crypto, this->GetCredentialMaster(), salt);
+        } else if (this->HasCredentialSlave()) {
+            this->authenticator = std::make_unique<SlokedAuthenticatorFactory>(this->crypto, this->GetCredentialSlave(), salt);
+        } else {
+            throw SlokedError("EditorAppCrypto: Credentials not defined");
+        }
+        return *this->authenticator;
+    }
+
+    SlokedEditorApp::Network::Network(SlokedEditorApp &app, SlokedSocketFactory &baseEngine)
+        : app(app), baseEngine(baseEngine), engine{} {}
+
+    SlokedSocketFactory &SlokedEditorApp::Network::GetEngine() const {
+        if (this->engine) {
+            return *this->engine;
+        } else {
+            return this->baseEngine;
+        }
+    }
+
+    void SlokedEditorApp::Network::SetupCrypto(SlokedCrypto::Key &key) {
+        this->engine = std::make_unique<SlokedCryptoSocketFactory>(this->baseEngine, this->app.GetCrypto().GetEngine(), key);
+    }
+
     SlokedEditorApp::SlokedEditorApp()
-        : running(false), network{nullptr} {}
+        : running(false), network{nullptr}, crypto{nullptr}, server{std::unique_ptr<SlokedEditorMasterCore>(nullptr)} {}
 
     bool SlokedEditorApp::IsRunning() const {
         return this->running.load();
@@ -42,17 +128,48 @@ namespace sloked {
         this->closeables.Attach(*this->ioPoller);
         this->sched.Start();
         this->closeables.Attach(this->sched);
-        this->network = std::addressof(network);
+        this->network = std::make_unique<Network>(*this, network);
     }
 
-    void SlokedEditorApp::InitializeCrypto(SlokedCrypto &crypto) {
+    SlokedEditorApp::Crypto &SlokedEditorApp::InitializeCrypto(SlokedCrypto &crypto) {
         if (!this->running.load()) {
             throw SlokedError("EditorApp: Not running");
         } else if (this->crypto != nullptr) {
             throw SlokedError("EditorApp: Crypto already initialized");
         } else {
-            this->crypto = std::addressof(crypto);
+            this->crypto = std::make_unique<Crypto>(crypto);
+            return *this->crypto;
         }
+    }
+
+    bool SlokedEditorApp::HasMasterServer() const {
+        return this->server.index() == 0 && std::get<0>(this->server) != nullptr;
+    }
+
+    SlokedEditorMasterCore &SlokedEditorApp::GetMasterServer() const {
+        if (this->HasMasterServer()) {
+            return *std::get<0>(this->server);
+        } else {
+            throw SlokedError("EditorApp: Master server not defined");
+        }
+    }
+
+    SlokedEditorMasterCore &SlokedEditorApp::InitializeMasterServer(SlokedLogger &logger, SlokedMountableNamespace &root, SlokedNamespaceMounter &mounter) {
+        if (!this->running.load()) {
+            throw SlokedError("EditorApp: Not running");
+        } else if (this->HasMasterServer() || this->HasSlaveServer()) {
+            throw SlokedError("EditorApp: Server already initialized");
+        } else {
+            this->server = std::make_unique<SlokedEditorMasterCore>(logger, this->GetIO(), root, mounter, this->GetCharWidth());
+            auto &srv = *std::get<0>(this->server);
+            this->closeables.Attach(srv);
+            srv.Start();
+            return srv;
+        }
+    }
+
+    bool SlokedEditorApp::HasSlaveServer() const {
+        return this->server.index() == 1 && std::get<1>(this->server) != nullptr;
     }
 
     void SlokedEditorApp::RequestStop() {
@@ -90,11 +207,11 @@ namespace sloked {
         return *this->ioPoller;
     }
 
-    SlokedSocketFactory &SlokedEditorApp::GetNetwork() {
+    SlokedEditorApp::Network &SlokedEditorApp::GetNetwork() {
         return *this->network;
     }
 
-    SlokedCrypto &SlokedEditorApp::GetCrypto() {
+    SlokedEditorApp::Crypto &SlokedEditorApp::GetCrypto() {
         if (this->crypto) {
             return *this->crypto;
         } else {

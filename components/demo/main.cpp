@@ -180,11 +180,11 @@ int main(int argc, const char **argv) {
         throw SlokedError("Demo: Crypto support required");
     }
     editorApp.InitializeCrypto(SlokedCryptoCompat::GetCrypto());
-    auto key = editorApp.GetCrypto().DeriveKey("password", "salt");
-    SlokedCredentialMaster authMaster(editorApp.GetCrypto(), *key);
-    SlokedCredentialSlave authSlave(editorApp.GetCrypto());
-    SlokedAuthenticatorFactory authFactory(editorApp.GetCrypto(), authMaster, "salt");
-    SlokedAuthenticatorFactory authSlaveFactory(editorApp.GetCrypto(), authSlave, "salt");
+    auto key = editorApp.GetCrypto().GetEngine().DeriveKey("password", "salt");
+    auto &authMaster = editorApp.GetCrypto().SetupCredentialMaster(*key);
+    auto &authFactory = editorApp.GetCrypto().SetupAuthenticator("salt");
+    SlokedCredentialSlave authSlave(editorApp.GetCrypto().GetEngine());
+    SlokedAuthenticatorFactory authSlaveFactory(editorApp.GetCrypto().GetEngine(), authSlave, "salt");
     auto user = authMaster.New("user1").lock();
     user->SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
     user->SetModificationRestrictions(SlokedNamedWhitelist::Make({"screen::"}));
@@ -193,13 +193,12 @@ int main(int argc, const char **argv) {
     authMaster.GetDefaultAccount().lock()->SetModificationRestrictions(SlokedNamedWhitelist::Make({}));
 
     // Editor initialization
-    SlokedCryptoSocketFactory socketFactory(editorApp.GetNetwork(), editorApp.GetCrypto(), *key);
+    editorApp.GetNetwork().SetupCrypto(*key);
+    auto &socketFactory = editorApp.GetNetwork().GetEngine();
     SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(SlokedNamespaceCompat::NewRootFilesystem()));
     SlokedDefaultNamespaceMounter mounter(SlokedNamespaceCompat::NewRootFilesystem(), root);
 
-    SlokedEditorMasterCore editor(logger, editorApp.GetIO(), root, mounter, editorApp.GetCharWidth());
-    editorApp.Attach(editor);
-    editor.Start();
+    auto &editor = editorApp.InitializeMasterServer(logger, root, mounter);
     editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>(), &authMaster, &authFactory);
     editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
     editor.GetRestrictions().SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
