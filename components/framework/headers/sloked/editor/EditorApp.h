@@ -27,12 +27,9 @@
 #include "sloked/core/awaitable/Poll.h"
 #include "sloked/core/CharWidth.h"
 #include "sloked/sched/Scheduler.h"
-#include "sloked/net/Socket.h"
-#include "sloked/core/Crypto.h"
-#include "sloked/security/Master.h"
-#include "sloked/security/Slave.h"
-#include "sloked/security/Authenticator.h"
-#include "sloked/editor/EditorCore.h"
+#include "sloked/facade/Crypto.h"
+#include "sloked/facade/Network.h"
+#include "sloked/facade/Server.h"
 #include <atomic>
 #include <variant>
 
@@ -40,48 +37,10 @@ namespace sloked {
 
     class SlokedEditorApp {
      public:
-        class Crypto {
-         public:
-            Crypto(SlokedCrypto &);
-            SlokedCrypto &GetEngine() const;
-            bool HasCredentialMaster() const;
-            SlokedCredentialMaster &GetCredentialMaster() const;
-            bool HasCredentialSlave() const;
-            SlokedCredentialSlave &GetCredentialSlave() const;
-            bool HasAuthenticator() const;
-            SlokedAuthenticatorFactory &GetAuthenticator() const;
-
-            SlokedCredentialMaster &SetupCredentialMaster(SlokedCrypto::Key &);
-            SlokedCredentialSlave &SetupCredentialSlave();
-            SlokedAuthenticatorFactory &SetupAuthenticator(const std::string &);
-
-         private:
-            SlokedCrypto &crypto;
-            std::variant<std::unique_ptr<SlokedCredentialMaster>, std::unique_ptr<SlokedCredentialSlave>> credentials;
-            std::unique_ptr<SlokedAuthenticatorFactory> authenticator;
-        };
-
-        class Network {
-         public:
-            Network(SlokedEditorApp &, SlokedSocketFactory &);
-            SlokedSocketFactory &GetEngine() const;
-            void SetupCrypto(SlokedCrypto::Key &);
-
-         private:
-            SlokedEditorApp &app;
-            SlokedSocketFactory &baseEngine;
-            std::unique_ptr<SlokedSocketFactory> engine;
-        };
-
-        SlokedEditorApp();
-
-        bool IsRunning() const;
-        void Initialize(std::unique_ptr<SlokedIOPoll>, SlokedSocketFactory &);
-        SlokedEditorApp::Crypto &InitializeCrypto(SlokedCrypto &);
-        bool HasMasterServer() const;
-        SlokedEditorMasterCore &GetMasterServer() const;
-        SlokedEditorMasterCore &InitializeMasterServer(SlokedLogger &, SlokedMountableNamespace &, SlokedNamespaceMounter &);
-        bool HasSlaveServer() const;
+        SlokedEditorApp(std::unique_ptr<SlokedIOPoll>, SlokedSocketFactory &);
+        SlokedCryptoFacade &InitializeCrypto(SlokedCrypto &);
+        SlokedServerFacade &InitializeServer();
+        SlokedServerFacade &InitializeServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &, SlokedAuthenticatorFactory *);
         void RequestStop();
         void WaitForStop();
         void Attach(SlokedCloseable &);
@@ -89,19 +48,19 @@ namespace sloked {
         SlokedCharWidth &GetCharWidth();
         SlokedSchedulerThread &GetScheduler();
         SlokedIOPoller &GetIO();
-        Network &GetNetwork();
-        Crypto &GetCrypto();
+        SlokedNetworkFacade &GetNetwork();
+        SlokedCryptoFacade &GetCrypto();
+        SlokedServerFacade &GetServer();
 
      private:
-        std::atomic<bool> running;
         SlokedCloseablePool closeables;
         SlokedSemaphore termination;
         SlokedDefaultSchedulerThread sched;
         std::unique_ptr<SlokedIOPoll> ioPoll;
         std::unique_ptr<SlokedDefaultIOPollThread> ioPoller;
-        std::unique_ptr<Network> network;
-        std::unique_ptr<Crypto> crypto;
-        std::variant<std::unique_ptr<SlokedEditorMasterCore>, std::unique_ptr<SlokedEditorSlaveCore>> server;
+        std::unique_ptr<SlokedNetworkFacade> network;
+        std::unique_ptr<SlokedCryptoFacade> crypto;
+        std::unique_ptr<SlokedServerFacade> server;
         SlokedCharWidth charWidth;
     };
 }

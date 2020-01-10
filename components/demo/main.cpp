@@ -69,6 +69,7 @@
 #include "sloked/screen/terminal/TerminalResize.h"
 #include "sloked/screen/terminal/TerminalSize.h"
 #include "sloked/editor/EditorApp.h"
+#include "sloked/facade/Services.h"
 #include <chrono>
 
 using namespace sloked;
@@ -173,8 +174,7 @@ int main(int argc, const char **argv) {
     SlokedLogger logger(SlokedLoggerTag);
 
     // Cryptography & security
-    SlokedEditorApp editorApp;
-    editorApp.Initialize(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
+    SlokedEditorApp editorApp(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
 
     if constexpr (!SlokedCryptoCompat::IsSupported()) {
         throw SlokedError("Demo: Crypto support required");
@@ -193,14 +193,19 @@ int main(int argc, const char **argv) {
     authMaster.GetDefaultAccount().lock()->SetModificationRestrictions(SlokedNamedWhitelist::Make({}));
 
     // Editor initialization
-    editorApp.GetNetwork().SetupCrypto(*key);
+    editorApp.GetNetwork().EncryptionLayer(editorApp.GetCrypto().GetEngine(), *key);
     auto &socketFactory = editorApp.GetNetwork().GetEngine();
     SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(SlokedNamespaceCompat::NewRootFilesystem()));
     SlokedDefaultNamespaceMounter mounter(SlokedNamespaceCompat::NewRootFilesystem(), root);
 
-    auto &editor = editorApp.InitializeMasterServer(logger, root, mounter);
-    editor.SpawnNetServer(socketFactory, SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()}, &authMaster, &authFactory);
-    editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
+    auto &editor = editorApp.InitializeServer();
+    editor.SpawnNetServer(socketFactory, SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()}, editorApp.GetIO(), &authMaster, &authFactory);
+    SlokedDefaultServicesFacade services(logger, root, mounter, editorApp.GetCharWidth());
+    services.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
+    services.Start();
+    editorApp.Attach(services);
+    services.Apply(editor.GetServer());
+    editor.Start();
     editor.GetRestrictions().SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
     editor.GetRestrictions().SetModificationRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
 
@@ -226,7 +231,7 @@ int main(int argc, const char **argv) {
     SlokedTerminalSize<SlokedTerminalResizeListener> terminalSize(console);
     SlokedTerminalScreenProvider screen(console, terminalEncoding, editorApp.GetCharWidth(), terminal);
 
-    SlokedScreenServer screenServer(slaveServer, screen, terminalSize, editor.GetContextManager());
+    SlokedScreenServer screenServer(slaveServer, screen, terminalSize, services.GetContextManager());
     editorApp.Attach(screenServer);
     screenServer.Start(KgrNetConfig::RequestTimeout);
 
@@ -276,7 +281,7 @@ int main(int argc, const char **argv) {
     renderStatus();
     SlokedScreenInputNotificationClient screenInput(slaveServer.Connect("screen::component::input.notify"), terminalEncoding, isScreenLocked);
     screenInput.Listen("/", [&](auto &evt) {
-        editor.GetScheduler().Defer([&, evt] {
+        editorApp.GetScheduler().Defer([&, evt] {
             renderStatus();
             if (evt.value.index() != 0 && std::get<1>(evt.value) == SlokedControlKey::Escape) {
                 logger.Debug() << "Saving document";
@@ -289,7 +294,7 @@ int main(int argc, const char **argv) {
     // Scripting engine startup
     std::unique_ptr<SlokedScriptEngine> scriptEngine;
     if constexpr (SlokedScriptCompat::IsSupported()) {
-        scriptEngine = SlokedScriptCompat::GetEngine(editor.GetScheduler(), cli["script-path"].As<std::string>());
+        scriptEngine = SlokedScriptCompat::GetEngine(editorApp.GetScheduler(), cli["script-path"].As<std::string>());
         editorApp.Attach(*scriptEngine);
         scriptEngine->BindServer("main", slaveServer);
         if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {

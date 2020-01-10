@@ -29,6 +29,7 @@
 #include <thread>
 #include <condition_variable>
 #include <list>
+#include <atomic>
 
 namespace sloked {
 
