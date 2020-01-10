@@ -26,4 +26,19 @@ namespace sloked {
     SlokedSocketEncryption *SlokedSocket::GetEncryption() {
         return nullptr;
     }
+
+    SlokedSocketAddress::SlokedSocketAddress(Network addr)
+        : address(std::move(addr)) {}
+
+    bool SlokedSocketAddress::IsNetwork() const {
+        return this->address.index() == 0;
+    }
+
+    const SlokedSocketAddress::Network &SlokedSocketAddress::AsNetwork() const {
+        if (this->IsNetwork()) {
+            return std::get<0>(this->address);
+        } else {
+            throw SlokedError("SocketAddress: not a network address");
+        }
+    }
 }

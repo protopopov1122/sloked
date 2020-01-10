@@ -199,13 +199,13 @@ int main(int argc, const char **argv) {
     SlokedDefaultNamespaceMounter mounter(SlokedNamespaceCompat::NewRootFilesystem(), root);
 
     auto &editor = editorApp.InitializeMasterServer(logger, root, mounter);
-    editor.SpawnNetServer(socketFactory, "localhost", cli["net-port"].As<int>(), &authMaster, &authFactory);
+    editor.SpawnNetServer(socketFactory, SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()}, &authMaster, &authFactory);
     editor.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
     editor.GetRestrictions().SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
     editor.GetRestrictions().SetModificationRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
 
     // Proxy initialization
-    SlokedEditorSlaveCore slaveEditor(socketFactory.Connect("localhost", cli["net-port"].As<int>()), logger, editorApp.GetIO(), &authSlaveFactory);
+    SlokedEditorSlaveCore slaveEditor(socketFactory.Connect(SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()}), logger, editorApp.GetIO(), &authSlaveFactory);
     editorApp.Attach(slaveEditor);
     slaveEditor.Start();
     slaveEditor.Authorize("user1");

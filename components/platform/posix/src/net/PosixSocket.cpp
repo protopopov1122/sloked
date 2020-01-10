@@ -242,7 +242,9 @@ namespace sloked {
         return std::make_unique<SlokedPosixAwaitable>(this->socket);
     }
 
-    std::unique_ptr<SlokedSocket> SlokedPosixSocketFactory::Connect(const std::string &host, uint16_t port) {
+    std::unique_ptr<SlokedSocket> SlokedPosixSocketFactory::Connect(const SlokedSocketAddress &addr) {
+        const auto &host = addr.AsNetwork().host;
+        const auto &port = addr.AsNetwork().port;
         // Resolve hostname
         struct addrinfo *result = nullptr;
         int err = getaddrinfo(host.c_str(), nullptr, nullptr, &result);
@@ -290,7 +292,9 @@ namespace sloked {
         throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; unsupported AF");
     }
 
-    std::unique_ptr<SlokedServerSocket> SlokedPosixSocketFactory::Bind(const std::string &host, uint16_t port) {
+    std::unique_ptr<SlokedServerSocket> SlokedPosixSocketFactory::Bind(const SlokedSocketAddress &addr) {
+        const auto &host = addr.AsNetwork().host;
+        const auto &port = addr.AsNetwork().port;
         // Resolve hostname
         struct addrinfo *result = nullptr;
         int err = getaddrinfo(host.c_str(), nullptr, nullptr, &result);

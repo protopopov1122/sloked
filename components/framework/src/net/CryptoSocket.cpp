@@ -252,8 +252,8 @@ namespace sloked {
     SlokedCryptoSocketFactory::SlokedCryptoSocketFactory(SlokedCryptoSocketFactory &&socketFactory)
         : socketFactory(socketFactory.socketFactory), crypto(socketFactory.crypto), key(socketFactory.key) {}
 
-    std::unique_ptr<SlokedSocket> SlokedCryptoSocketFactory::Connect(const std::string &host, uint16_t port) {
-        auto rawSocket = this->socketFactory.Connect(host, port);
+    std::unique_ptr<SlokedSocket> SlokedCryptoSocketFactory::Connect(const SlokedSocketAddress &addr) {
+        auto rawSocket = this->socketFactory.Connect(addr);
         if (rawSocket) {
             return std::make_unique<SlokedCryptoSocket>(std::move(rawSocket), this->crypto.NewCipher(this->key));
         } else {
@@ -261,8 +261,8 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedServerSocket> SlokedCryptoSocketFactory::Bind(const std::string &host, uint16_t port) {
-        auto rawSocket = this->socketFactory.Bind(host, port);
+    std::unique_ptr<SlokedServerSocket> SlokedCryptoSocketFactory::Bind(const SlokedSocketAddress &addr) {
+        auto rawSocket = this->socketFactory.Bind(addr);
         if (rawSocket) {
             return std::make_unique<SlokedCryptoServerSocket>(std::move(rawSocket), this->crypto, this->key);
         } else {

@@ -30,6 +30,7 @@
 #include <optional>
 #include <memory>
 #include <chrono>
+#include <variant>
 
 namespace sloked {
 
@@ -81,6 +82,21 @@ namespace sloked {
         SlokedServerSocket() = default;
     };
 
+    class SlokedSocketAddress {
+     public:
+        struct Network {
+            std::string host;
+            uint16_t port;
+        };
+
+        SlokedSocketAddress(Network);
+        bool IsNetwork() const;
+        const Network &AsNetwork() const;
+
+     private:
+        std::variant<Network> address;
+    };
+
     class SlokedSocketFactory {
      public:
         SlokedSocketFactory(const SlokedSocketFactory &) = delete;
@@ -90,8 +106,8 @@ namespace sloked {
         SlokedSocketFactory &operator=(const SlokedSocketFactory &) = delete;
         SlokedSocketFactory &operator=(SlokedSocketFactory &&) = delete;
 
-        virtual std::unique_ptr<SlokedSocket> Connect(const std::string &, uint16_t) = 0;
-        virtual std::unique_ptr<SlokedServerSocket> Bind(const std::string &, uint16_t) = 0;
+        virtual std::unique_ptr<SlokedSocket> Connect(const SlokedSocketAddress &) = 0;
+        virtual std::unique_ptr<SlokedServerSocket> Bind(const SlokedSocketAddress &) = 0;
 
      protected:
         SlokedSocketFactory() = default;

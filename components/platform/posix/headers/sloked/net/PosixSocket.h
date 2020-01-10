@@ -84,8 +84,8 @@ namespace sloked {
     class SlokedPosixSocketFactory : public SlokedSocketFactory {
      public:
         SlokedPosixSocketFactory() = default;
-        std::unique_ptr<SlokedSocket> Connect(const std::string &, uint16_t) final;
-        std::unique_ptr<SlokedServerSocket> Bind(const std::string &, uint16_t) final;
+        std::unique_ptr<SlokedSocket> Connect(const SlokedSocketAddress &) final;
+        std::unique_ptr<SlokedServerSocket> Bind(const SlokedSocketAddress &) final;
     };
 }
 
