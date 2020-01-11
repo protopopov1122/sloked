@@ -59,7 +59,6 @@
 #include "sloked/kgr/net/Config.h"
 #include "sloked/script/Compat.h"
 #include "sloked/crypto/Compat.h"
-#include "sloked/editor/EditorCore.h"
 #include "sloked/security/Master.h"
 #include "sloked/security/Slave.h"
 #include "sloked/net/CryptoSocket.h"
