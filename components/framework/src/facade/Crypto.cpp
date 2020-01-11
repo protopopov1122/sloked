@@ -27,6 +27,10 @@ namespace sloked {
     SlokedCryptoFacade::SlokedCryptoFacade(SlokedCrypto &crypto)
         : crypto(crypto), credentials{std::unique_ptr<SlokedCredentialMaster>(nullptr)}, authenticator{} {}
 
+    SlokedCryptoFacade::~SlokedCryptoFacade() {
+        this->authenticator = nullptr;
+    }
+
     SlokedCrypto &SlokedCryptoFacade::GetEngine() const {
         return this->crypto;
     }

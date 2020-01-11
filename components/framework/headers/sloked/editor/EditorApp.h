@@ -37,7 +37,7 @@
 
 namespace sloked {
 
-    class SlokedEditorApp {
+    class SlokedEditorApp : public SlokedCloseable {
      public:
         SlokedEditorApp(std::unique_ptr<SlokedIOPoll>, SlokedSocketFactory &);
         SlokedCryptoFacade &InitializeCrypto(SlokedCrypto &);
@@ -50,6 +50,7 @@ namespace sloked {
         void Start();
         void Stop();
         void Wait();
+        void Close() final;
 
         SlokedCharWidth &GetCharWidth();
         SlokedSchedulerThread &GetScheduler();

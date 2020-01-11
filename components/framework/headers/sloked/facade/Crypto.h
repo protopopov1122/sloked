@@ -33,6 +33,7 @@ namespace sloked {
     class SlokedCryptoFacade {
      public:
         SlokedCryptoFacade(SlokedCrypto &);
+        ~SlokedCryptoFacade();
         SlokedCrypto &GetEngine() const;
         bool HasCredentialMaster() const;
         SlokedCredentialMaster &GetCredentialMaster() const;

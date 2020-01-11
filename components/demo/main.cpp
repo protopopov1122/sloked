@@ -154,8 +154,15 @@ static const KgrDictionary DefaultConfiguration {
 };
 
 int main(int argc, const char **argv) {
-    // Core initialization
+    // Initialize globals
     SlokedFailure::SetupHandler();
+    SlokedLocale::Setup();
+    SlokedLoggingManager::Global.SetSink(SlokedLogLevel::Debug, SlokedLoggingSink::TextFile("./sloked.log", SlokedLoggingSink::TabularFormat(10, 30, 30)));
+    SlokedLogger logger(SlokedLoggerTag);
+    const Encoding &terminalEncoding = Encoding::Get("system");
+    SlokedCloseablePool closeables;
+
+    // Configuration
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
     SlokedCLI cli;
     cli.Define("--encoding", mainConfig.Find("/encoding").AsString());
@@ -169,81 +176,78 @@ int main(int argc, const char **argv) {
         std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
         return EXIT_FAILURE;
     }
-
-    SlokedLoggingManager::Global.SetSink(SlokedLogLevel::Debug, SlokedLoggingSink::TextFile("./sloked.log", SlokedLoggingSink::TabularFormat(10, 30, 30)));
-    SlokedLogger logger(SlokedLoggerTag);
-
-    // Cryptography & security
-    SlokedEditorApp editorApp(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
-
-    if constexpr (!SlokedCryptoCompat::IsSupported()) {
-        throw SlokedError("Demo: Crypto support required");
-    }
-    editorApp.InitializeCrypto(SlokedCryptoCompat::GetCrypto());
-    auto key = editorApp.GetCrypto().GetEngine().DeriveKey("password", "salt");
-    auto &authMaster = editorApp.GetCrypto().SetupCredentialMaster(*key);
-    auto &authFactory = editorApp.GetCrypto().SetupAuthenticator("salt");
-    SlokedCredentialSlave authSlave(editorApp.GetCrypto().GetEngine());
-    SlokedAuthenticatorFactory authSlaveFactory(editorApp.GetCrypto().GetEngine(), authSlave, "salt");
-    auto user = authMaster.New("user1").lock();
-    user->SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
-    user->SetModificationRestrictions(SlokedNamedWhitelist::Make({"screen::"}));
-    authSlave.New(user->GetName(), user->GetCredentials());
-    authMaster.GetDefaultAccount().lock()->SetAccessRestrictions(SlokedNamedWhitelist::Make({}));
-    authMaster.GetDefaultAccount().lock()->SetModificationRestrictions(SlokedNamedWhitelist::Make({}));
-
-    // Editor initialization
-    editorApp.GetNetwork().EncryptionLayer(editorApp.GetCrypto().GetEngine(), *key);
-    auto &socketFactory = editorApp.GetNetwork().GetEngine();
-    SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(SlokedNamespaceCompat::NewRootFilesystem()));
-    SlokedDefaultNamespaceMounter mounter(SlokedNamespaceCompat::NewRootFilesystem(), root);
-
-    auto &editor = editorApp.InitializeServer();
-    editor.SpawnNetServer(socketFactory, SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()}, editorApp.GetIO(), &authMaster, &authFactory);
-    auto &services = editorApp.InitializeServices(std::make_unique<SlokedDefaultServicesFacade>(logger, root, mounter, editorApp.GetCharWidth()));
-    services.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
-    editor.GetRestrictions().SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
-    editor.GetRestrictions().SetModificationRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
-
-    editorApp.Start();
-
-    // Proxy initialization
-    SlokedEditorSlaveCore slaveEditor(socketFactory.Connect(SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()}), logger, editorApp.GetIO(), &authSlaveFactory);
-    editorApp.Attach(slaveEditor);
-    slaveEditor.Start();
-    slaveEditor.Authorize("user1");
-    auto &slaveServer = slaveEditor.GetServer();
-
-    user->RevokeCredentials();
-    authSlave.GetAccountByName(user->GetName()).lock()->ChangeCredentials(user->GetCredentials());
-
-    // Screen initialization
-    SlokedLocale::Setup();
-    const Encoding &terminalEncoding = Encoding::Get("system");
-
-    if constexpr (!SlokedTerminalCompat::HasSystemTerminal()) {
-        throw SlokedError("Demo: system terminal is required");
-    }
-    SlokedDuplexTerminal &terminal = *SlokedTerminalCompat::GetSystemTerminal();
-    BufferedTerminal console(terminal, terminalEncoding, editorApp.GetCharWidth());
-    SlokedTerminalSize<SlokedTerminalResizeListener> terminalSize(console);
-    SlokedTerminalScreenProvider screen(console, terminalEncoding, editorApp.GetCharWidth(), terminal);
-
-    SlokedScreenServer screenServer(slaveServer, screen, terminalSize, services.GetContextManager());
-    editorApp.Attach(screenServer);
-    screenServer.Start(KgrNetConfig::RequestTimeout);
-
-    // Editor configuration
     SlokedPathResolver resolver(SlokedNamespaceCompat::GetWorkDir(), SlokedNamespaceCompat::GetHomeDir());
     SlokedPath inputPath = resolver.Resolve(SlokedPath{cli.At(0)});
     SlokedPath outputPath = resolver.Resolve(SlokedPath{cli["output"].As<std::string>()});
 
+    // Main editor
+    SlokedEditorApp mainEditor(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
+    closeables.Attach(mainEditor);
+    // Cryptography
+    std::unique_ptr<SlokedCrypto::Key> masterKey;
+    std::shared_ptr<SlokedCredentialMaster::Account> user;
+    if constexpr (SlokedCryptoCompat::IsSupported()) {
+        mainEditor.InitializeCrypto(SlokedCryptoCompat::GetCrypto());
+        masterKey = mainEditor.GetCrypto().GetEngine().DeriveKey("password", "salt");
+        auto &authMaster = mainEditor.GetCrypto().SetupCredentialMaster(*masterKey);
+        mainEditor.GetCrypto().SetupAuthenticator("salt");
+        user = authMaster.New("user1").lock();
+        user->SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+        user->SetModificationRestrictions(SlokedNamedWhitelist::Make({"screen::"}));
+        authMaster.GetDefaultAccount().lock()->SetAccessRestrictions(SlokedNamedWhitelist::Make({}));
+        authMaster.GetDefaultAccount().lock()->SetModificationRestrictions(SlokedNamedWhitelist::Make({}));
+        mainEditor.GetNetwork().EncryptionLayer(mainEditor.GetCrypto().GetEngine(), *masterKey);
+    }
+    // Server
+    SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(SlokedNamespaceCompat::NewRootFilesystem()));
+    SlokedDefaultNamespaceMounter mounter(SlokedNamespaceCompat::NewRootFilesystem(), root);
+    auto &mainServer = mainEditor.InitializeServer();
+    mainServer.SpawnNetServer(mainEditor.GetNetwork().GetEngine(), SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()},
+        mainEditor.GetIO(), &mainEditor.GetCrypto().GetCredentialMaster(), &mainEditor.GetCrypto().GetAuthenticator());
+    auto &services = mainEditor.InitializeServices(std::make_unique<SlokedDefaultServicesFacade>(logger, root, mounter, mainEditor.GetCharWidth()));
+    services.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
+    mainServer.GetRestrictions().SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+    mainServer.GetRestrictions().SetModificationRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+    mainEditor.Start();
+
+    // Secondary editor
+    SlokedEditorApp secondaryEditor(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
+    closeables.Attach(secondaryEditor);
+    // Cryptography
+    if (masterKey) {
+        secondaryEditor.InitializeCrypto(SlokedCryptoCompat::GetCrypto());
+        auto &authSlave = secondaryEditor.GetCrypto().SetupCredentialSlave();
+        secondaryEditor.GetCrypto().SetupAuthenticator("salt");
+        authSlave.New(user->GetName(), user->GetCredentials());
+        secondaryEditor.GetNetwork().EncryptionLayer(secondaryEditor.GetCrypto().GetEngine(), *masterKey);
+    }
+    // Server
+    auto &secondaryServer = secondaryEditor.InitializeServer(secondaryEditor.GetNetwork().GetEngine().Connect(SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()}));
+    secondaryEditor.Start();
+    if (masterKey) {
+        secondaryServer.AsRemoteServer().Authorize("user1");
+    }
+
+    // Screen
+    if constexpr (!SlokedTerminalCompat::HasSystemTerminal()) {
+        throw SlokedError("Demo: system terminal is required");
+    }
+    SlokedDuplexTerminal &terminal = *SlokedTerminalCompat::GetSystemTerminal();
+    BufferedTerminal console(terminal, terminalEncoding, mainEditor.GetCharWidth());
+    SlokedTerminalSize<SlokedTerminalResizeListener> terminalSize(console);
+    SlokedTerminalScreenProvider screen(console, terminalEncoding, mainEditor.GetCharWidth(), terminal);
+    SlokedScreenServer screenServer(secondaryServer.GetServer(), screen, terminalSize, services.GetContextManager());
+    closeables.Attach(screenServer);
+    screenServer.Start(KgrNetConfig::RequestTimeout);
+
+
+    // Editor initialization
     auto isScreenLocked = [&screen] {
         return screen.GetScreen().IsHolder();
     };
-    SlokedScreenClient screenClient(slaveServer.Connect("screen::manager"), isScreenLocked);
-    SlokedScreenSizeNotificationClient screenSizeClient(slaveServer.Connect("screen::size.notify"));
-    SlokedDocumentSetClient documentClient(slaveServer.Connect("document::manager"));
+    SlokedScreenClient screenClient(secondaryServer.GetServer().Connect("screen::manager"), isScreenLocked);
+    SlokedScreenSizeNotificationClient screenSizeClient(secondaryServer.GetServer().Connect("screen::size.notify"));
+    SlokedDocumentSetClient documentClient(secondaryServer.GetServer().Connect("document::manager"));
     documentClient.Open(inputPath.ToString(), cli["encoding"].As<std::string>(), cli["newline"].As<std::string>());
 
     // Screen layout
@@ -251,7 +255,7 @@ int main(int argc, const char **argv) {
     auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
     screenSizeClient.Listen([&](const auto &size) {
         if (screenServer.IsRunning() && mainWindow.has_value()) {
-            editorApp.GetScheduler().Defer([&, size] {
+            mainEditor.GetScheduler().Defer([&, size] {
                 screenClient.Multiplexer.ResizeWindow(mainWindow.value(), size);
             });
         }
@@ -263,11 +267,12 @@ int main(int argc, const char **argv) {
     auto tab1 = screenClient.Tabber.NewWindow("/0/0");
     screenClient.Handle.NewTextEditor(tab1.value(), documentClient.GetId().value(), "default");
 
-    SlokedTextPaneClient paneClient(slaveServer.Connect("screen::component::text.pane"), isScreenLocked);
+    SlokedTextPaneClient paneClient(secondaryServer.GetServer().Connect("screen::component::text.pane"), isScreenLocked);
     paneClient.Connect("/0/1", false, {});
     auto &render = paneClient.GetRender();
 
     // Startup
+    SlokedSemaphore terminate;
     int i = 0;
     auto renderStatus = [&] {
         render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
@@ -277,14 +282,14 @@ int main(int argc, const char **argv) {
         render.Flush();
     };
     renderStatus();
-    SlokedScreenInputNotificationClient screenInput(slaveServer.Connect("screen::component::input.notify"), terminalEncoding, isScreenLocked);
+    SlokedScreenInputNotificationClient screenInput(secondaryServer.GetServer().Connect("screen::component::input.notify"), terminalEncoding, isScreenLocked);
     screenInput.Listen("/", [&](auto &evt) {
-        editorApp.GetScheduler().Defer([&, evt] {
+        mainEditor.GetScheduler().Defer([&, evt] {
             renderStatus();
             if (evt.value.index() != 0 && std::get<1>(evt.value) == SlokedControlKey::Escape) {
                 logger.Debug() << "Saving document";
                 documentClient.Save(outputPath.ToString());
-                editorApp.Stop();
+                terminate.Notify();
             }
         });
     }, true);
@@ -292,15 +297,14 @@ int main(int argc, const char **argv) {
     // Scripting engine startup
     std::unique_ptr<SlokedScriptEngine> scriptEngine;
     if constexpr (SlokedScriptCompat::IsSupported()) {
-        scriptEngine = SlokedScriptCompat::GetEngine(editorApp.GetScheduler(), cli["script-path"].As<std::string>());
-        editorApp.Attach(*scriptEngine);
-        scriptEngine->BindServer("main", slaveServer);
+        scriptEngine = SlokedScriptCompat::GetEngine(mainEditor.GetScheduler(), cli["script-path"].As<std::string>());
+        closeables.Attach(*scriptEngine);
+        scriptEngine->BindServer("main", secondaryServer.GetServer());
         if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {
             scriptEngine->Start(cli["script"].As<std::string>());
         }
     }
-
-    // Wait until editor finishes
-    editorApp.Wait();
+    terminate.WaitAll();
+    closeables.Close();
     return EXIT_SUCCESS;
 }

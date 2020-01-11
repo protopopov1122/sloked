@@ -119,10 +119,11 @@ namespace sloked {
     void SlokedEditorApp::Stop() {
         if (this->running.load()) {
             std::thread([this] {
+                std::unique_lock lock(this->termination_mtx);
                 this->closeables.Close();
-                this->crypto = nullptr;
                 this->server = nullptr;
                 this->services = nullptr;
+                this->crypto = nullptr;
                 this->running = false;
                 this->termination_cv.notify_all();
             }).detach();
@@ -133,7 +134,14 @@ namespace sloked {
 
     void SlokedEditorApp::Wait() {
         std::unique_lock lock(this->termination_mtx);
-        this->termination_cv.wait(lock);
+        while (this->running.load()) {
+            this->termination_cv.wait(lock);
+        }
+    }
+
+    void SlokedEditorApp::Close() {
+        this->Stop();
+        this->Wait();
     }
 
     SlokedCharWidth &SlokedEditorApp::GetCharWidth() {
