@@ -208,8 +208,7 @@ namespace sloked {
         EncodingConverter conv(SlokedLocale::SystemEncoding(), Encoding::Utf8);
         auto raw = conv.Convert(serializer.Serialize(msg));
         std::unique_lock lock(this->write_mtx);
-        this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(raw.data()), raw.size()));
-        this->socket->Write('\0');
+        this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(raw.c_str()), raw.size() + 1));
     }
 
     void KgrNetInterface::ActionInvoke(const KgrValue &msg) {
