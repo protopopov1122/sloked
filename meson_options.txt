@@ -1,0 +1,2 @@
+option('crypto_botan', type: 'boolean', value: 'true')
+option('scripting_lua', type: 'boolean', value: 'true')

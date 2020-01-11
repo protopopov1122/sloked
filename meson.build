@@ -9,17 +9,26 @@ elif compiler_id == 'pgi'
   add_project_link_arguments('-noswitcherror', '-rdynamic', language : 'cpp')
 endif
 
-subdir('components/framework')
-subdir('components/crypto/botan')
-subdir('components/platform/posix')
-subdir('components/script/lua')
+sloked_disable_crypto = true
+sloked_disable_scripting = true
 
-sloked_crypto = sloked_botan_crypto
-sloked_crypto_flags = sloked_botan_crypto_flags
+subdir('components/framework')
+if get_option('crypto_botan')
+  subdir('components/crypto/botan')
+  sloked_crypto = sloked_botan_crypto
+  sloked_crypto_flags = sloked_botan_crypto_flags
+  sloked_disable_crypto = false
+endif
+subdir('components/platform/posix')
+if get_option('scripting_lua')
+  subdir('components/script/lua')
+  sloked_scripting = sloked_lua_bindings
+  sloked_scripting_flags = sloked_lua_bindings_flags
+  sloked_disable_scripting = false
+endif
+
 sloked_platform = sloked_posix_platform
 sloked_platform_flags = sloked_posix_platform_flags
-sloked_scripting = sloked_lua_bindings
-sloked_scripting_flags = sloked_lua_bindings_flags
 subdir('components/compat')
 
 subdir('components/demo')

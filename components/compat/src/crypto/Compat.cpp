@@ -35,4 +35,12 @@ namespace sloked {
         return crypto;
     }
 }
+
+#else
+namespace sloked {
+
+    SlokedCrypto &SlokedCryptoCompat::GetCrypto() {
+        throw SlokedError("Compat: Crypto not supported");
+    }
+}
 #endif

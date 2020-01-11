@@ -201,8 +201,13 @@ int main(int argc, const char **argv) {
     SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(SlokedNamespaceCompat::NewRootFilesystem()));
     SlokedDefaultNamespaceMounter mounter(SlokedNamespaceCompat::NewRootFilesystem(), root);
     auto &mainServer = mainEditor.InitializeServer();
-    mainServer.SpawnNetServer(mainEditor.GetNetwork().GetEngine(), SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()},
-        mainEditor.GetIO(), &mainEditor.GetCrypto().GetCredentialMaster(), &mainEditor.GetCrypto().GetAuthenticator());
+    if constexpr (SlokedCryptoCompat::IsSupported()) {
+        mainServer.SpawnNetServer(mainEditor.GetNetwork().GetEngine(), SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()},
+            mainEditor.GetIO(), &mainEditor.GetCrypto().GetCredentialMaster(), &mainEditor.GetCrypto().GetAuthenticator());
+    } else {
+        mainServer.SpawnNetServer(mainEditor.GetNetwork().GetEngine(), SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()},
+            mainEditor.GetIO(), nullptr, nullptr);
+    }
     auto &services = mainEditor.InitializeServices(std::make_unique<SlokedDefaultServicesFacade>(logger, root, mounter, mainEditor.GetCharWidth()));
     services.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
     mainServer.GetRestrictions().SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
@@ -213,7 +218,7 @@ int main(int argc, const char **argv) {
     SlokedEditorApp secondaryEditor(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
     closeables.Attach(secondaryEditor);
     // Cryptography
-    if (masterKey) {
+    if constexpr (SlokedCryptoCompat::IsSupported()) {
         secondaryEditor.InitializeCrypto(SlokedCryptoCompat::GetCrypto());
         auto &authSlave = secondaryEditor.GetCrypto().SetupCredentialSlave();
         secondaryEditor.GetCrypto().SetupAuthenticator("salt");
