@@ -23,6 +23,7 @@ sloked_src = [
   'src/editor/EditorApp.cpp',
   'src/editor/EditorServer.cpp',
   'src/editor/ScreenServer.cpp',
+  'src/editor/Startup.cpp',
   'src/editor/doc-mgr/Document.cpp',
   'src/editor/doc-mgr/DocumentSet.cpp',
   'src/editor/doc-mgr/DocumentUpstream.cpp',

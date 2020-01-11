@@ -69,6 +69,7 @@
 #include "sloked/screen/terminal/TerminalSize.h"
 #include "sloked/editor/EditorApp.h"
 #include "sloked/facade/Services.h"
+#include "sloked/editor/Startup.h"
 #include <chrono>
 
 using namespace sloked;
@@ -160,6 +161,7 @@ int main(int argc, const char **argv) {
     SlokedLogger logger(SlokedLoggerTag);
     const Encoding &terminalEncoding = Encoding::Get("system");
     SlokedCloseablePool closeables;
+    SlokedEditorStartup startup(SlokedCryptoCompat::IsSupported() ? &SlokedCryptoCompat::GetCrypto() : nullptr);
 
     // Configuration
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
@@ -183,20 +185,57 @@ int main(int argc, const char **argv) {
     SlokedEditorApp mainEditor(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
     closeables.Attach(mainEditor);
     // Cryptography
-    std::unique_ptr<SlokedCrypto::Key> masterKey;
-    std::shared_ptr<SlokedCredentialMaster::Account> user;
-    if constexpr (SlokedCryptoCompat::IsSupported()) {
-        mainEditor.InitializeCrypto(SlokedCryptoCompat::GetCrypto());
-        masterKey = mainEditor.GetCrypto().GetEngine().DeriveKey("password", "salt");
-        auto &authMaster = mainEditor.GetCrypto().SetupCredentialMaster(*masterKey);
-        mainEditor.GetCrypto().SetupAuthenticator("salt");
-        user = authMaster.New("user1").lock();
-        user->SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
-        user->SetModificationRestrictions(SlokedNamedWhitelist::Make({"screen::"}));
-        authMaster.GetDefaultAccount().lock()->SetAccessRestrictions(SlokedNamedWhitelist::Make({}));
-        authMaster.GetDefaultAccount().lock()->SetModificationRestrictions(SlokedNamedWhitelist::Make({}));
-        mainEditor.GetNetwork().EncryptionLayer(mainEditor.GetCrypto().GetEngine(), *masterKey);
-    }
+    auto mainRuntimeConf = startup.Setup(mainEditor, KgrDictionary {
+        {
+            "crypto", KgrDictionary {
+                { "masterPassword", "password" },
+                { "salt", "salt" },
+                {
+                    "authentication", KgrDictionary {
+                        {
+                            "master", KgrDictionary {
+                                {
+                                    "users", KgrArray {
+                                        KgrDictionary {
+                                            { "id", "user1" },
+                                            {
+                                                "restrictAccess", KgrDictionary {
+                                                    { "whitelist", true },
+                                                    { "content", KgrArray {"document::", "namespace::", "screen::"} }
+                                                }
+                                            },
+                                            {
+                                                "restrictModification", KgrDictionary {
+                                                    { "whitelist", true },
+                                                    { "content", KgrArray {"screen::"} }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    "defaultUser", KgrDictionary {
+                                        {
+                                            "restrictAccess", KgrDictionary {
+                                                { "whitelist", true },
+                                                { "content", KgrArray {} }
+                                            }
+                                        },
+                                        {
+                                            "restrictModification", KgrDictionary {
+                                                { "whitelist", true },
+                                                { "content", KgrArray {} }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
     // Server
     SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(SlokedNamespaceCompat::NewRootFilesystem()));
     SlokedDefaultNamespaceMounter mounter(SlokedNamespaceCompat::NewRootFilesystem(), root);
@@ -217,18 +256,34 @@ int main(int argc, const char **argv) {
     // Secondary editor
     SlokedEditorApp secondaryEditor(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
     closeables.Attach(secondaryEditor);
-    // Cryptography
-    if constexpr (SlokedCryptoCompat::IsSupported()) {
-        secondaryEditor.InitializeCrypto(SlokedCryptoCompat::GetCrypto());
-        auto &authSlave = secondaryEditor.GetCrypto().SetupCredentialSlave();
-        secondaryEditor.GetCrypto().SetupAuthenticator("salt");
-        authSlave.New(user->GetName(), user->GetCredentials());
-        secondaryEditor.GetNetwork().EncryptionLayer(secondaryEditor.GetCrypto().GetEngine(), *masterKey);
-    }
+    auto secondaryRuntimeConf = startup.Setup(secondaryEditor, KgrDictionary {
+        {
+            "crypto", KgrDictionary {
+                { "masterPassword", "password" },
+                { "salt", "salt" },
+                {
+                    "authentication", KgrDictionary {
+                        {
+                            "slave", KgrDictionary {
+                                {
+                                    "users", KgrArray {
+                                        KgrDictionary {
+                                            { "id", "user1" },
+                                            { "credentials", mainEditor.GetCrypto().GetCredentialMaster().GetAccountByName("user1").lock()->GetCredentials() }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
     // Server
     auto &secondaryServer = secondaryEditor.InitializeServer(secondaryEditor.GetNetwork().GetEngine().Connect(SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()}));
     secondaryEditor.Start();
-    if (masterKey) {
+    if constexpr (SlokedCryptoCompat::IsSupported()) {
         secondaryServer.AsRemoteServer().Authorize("user1");
     }
 
