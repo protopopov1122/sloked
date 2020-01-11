@@ -27,17 +27,16 @@
 namespace sloked {
 
     SlokedEditorApp::SlokedEditorApp(std::unique_ptr<SlokedIOPoll> ioPoll, SlokedSocketFactory &network)
-        : ioPoll(std::move(ioPoll)), network{nullptr}, crypto{nullptr}, server{nullptr} {
+        : running{false}, ioPoll(std::move(ioPoll)), network(network) {
         this->ioPoller = std::make_unique<SlokedDefaultIOPollThread>(*this->ioPoll);
-        this->ioPoller->Start(KgrNetConfig::RequestTimeout);
         this->closeables.Attach(*this->ioPoller);
-        this->sched.Start();
         this->closeables.Attach(this->sched);
-        this->network = std::make_unique<SlokedNetworkFacade>(network);
     }
 
     SlokedCryptoFacade &SlokedEditorApp::InitializeCrypto(SlokedCrypto &crypto) {
-        if (this->crypto != nullptr) {
+        if (this->running.load()) {
+            throw SlokedError("EditorApp: Already running");
+        } else if (this->crypto != nullptr) {
             throw SlokedError("EditorApp: Crypto already initialized");
         } else {
             this->crypto = std::make_unique<SlokedCryptoFacade>(crypto);
@@ -46,40 +45,95 @@ namespace sloked {
     }
 
     SlokedServerFacade &SlokedEditorApp::InitializeServer() {
-        if (this->server != nullptr) {
+        if (this->running.load()) {
+            throw SlokedError("EditorApp: Already running");
+        } else if (this->server != nullptr) {
             throw SlokedError("EditorApp: Server already initialized");
         } else {
             this->server = std::make_unique<SlokedServerFacade>(std::make_unique<SlokedLocalEditorServer>());
             this->closeables.Attach(*this->server);
-            this->server->Start();
-            return this->GetServer();
+            if (this->services) {
+                this->services->Apply(this->server->GetServer());
+            }
+            return *this->server;
         }
     }
 
-    SlokedServerFacade &SlokedEditorApp::InitializeServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &io, SlokedAuthenticatorFactory *auth) {
-        if (this->server != nullptr) {
+    SlokedServerFacade &SlokedEditorApp::InitializeServer(std::unique_ptr<SlokedSocket> socket) {
+        if (this->running.load()) {
+            throw SlokedError("EditorApp: Already running");
+        } else if (this->server != nullptr) {
             throw SlokedError("EditorApp: Server already initialized");
         } else {
-            this->server = std::make_unique<SlokedServerFacade>(std::make_unique<SlokedRemoteEditorServer>(std::move(socket), io, auth));
+            SlokedAuthenticatorFactory *auth{nullptr};
+            if (this->crypto && this->crypto->HasAuthenticator()) {
+                auth = std::addressof(this->crypto->GetAuthenticator());
+            }
+            this->server = std::make_unique<SlokedServerFacade>(std::make_unique<SlokedRemoteEditorServer>(std::move(socket), *this->ioPoller, auth));
             this->closeables.Attach(*this->server);
-            this->server->Start();
-            return this->GetServer();
+            if (this->services) {
+                this->services->Apply(this->server->GetServer());
+            }
+            return *this->server;
         }
     }
 
-    void SlokedEditorApp::RequestStop() {
-        this->termination.Notify();
-    }
-
-    void SlokedEditorApp::WaitForStop() {
-        this->termination.WaitAll();
-        this->closeables.Close();
-        this->crypto = nullptr;
-        this->server = nullptr;
+    SlokedAbstractServicesFacade &SlokedEditorApp::InitializeServices(std::unique_ptr<SlokedAbstractServicesFacade> services) {
+        if (this->running.load()) {
+            throw SlokedError("EditorApp: Already running");
+        } else if (this->services != nullptr) {
+            throw SlokedError("EditorApp: Services already initialized");
+        } else {
+            this->services = std::move(services);
+            this->closeables.Attach(*this->services);
+            if (this->server) {
+                this->services->Apply(this->server->GetServer());
+            }
+            return *this->services;
+        }
     }
 
     void SlokedEditorApp::Attach(SlokedCloseable &closeable) {
         this->closeables.Attach(closeable);
+    }
+
+    bool SlokedEditorApp::IsRunning() const {
+        return this->running.load();
+    }
+
+    void SlokedEditorApp::Start() {
+        if (!this->running.exchange(true)) {
+            this->ioPoller->Start(KgrNetConfig::RequestTimeout);
+            this->sched.Start();
+            if (this->services) {
+                this->services->Start();
+            }
+            if (this->server) {
+                this->server->Start();
+            }
+        } else {
+            throw SlokedError("EditorApp: Already running");
+        }
+    }
+
+    void SlokedEditorApp::Stop() {
+        if (this->running.load()) {
+            std::thread([this] {
+                this->closeables.Close();
+                this->crypto = nullptr;
+                this->server = nullptr;
+                this->services = nullptr;
+                this->running = false;
+                this->termination_cv.notify_all();
+            }).detach();
+        } else {
+            throw SlokedError("EditorApp: Not running");
+        }
+    }
+
+    void SlokedEditorApp::Wait() {
+        std::unique_lock lock(this->termination_mtx);
+        this->termination_cv.wait(lock);
     }
 
     SlokedCharWidth &SlokedEditorApp::GetCharWidth() {
@@ -95,7 +149,7 @@ namespace sloked {
     }
 
     SlokedNetworkFacade &SlokedEditorApp::GetNetwork() {
-        return *this->network;
+        return this->network;
     }
 
     SlokedCryptoFacade &SlokedEditorApp::GetCrypto() {

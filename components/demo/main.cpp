@@ -200,14 +200,12 @@ int main(int argc, const char **argv) {
 
     auto &editor = editorApp.InitializeServer();
     editor.SpawnNetServer(socketFactory, SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()}, editorApp.GetIO(), &authMaster, &authFactory);
-    SlokedDefaultServicesFacade services(logger, root, mounter, editorApp.GetCharWidth());
+    auto &services = editorApp.InitializeServices(std::make_unique<SlokedDefaultServicesFacade>(logger, root, mounter, editorApp.GetCharWidth()));
     services.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
-    services.Start();
-    editorApp.Attach(services);
-    services.Apply(editor.GetServer());
-    editor.Start();
     editor.GetRestrictions().SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
     editor.GetRestrictions().SetModificationRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+
+    editorApp.Start();
 
     // Proxy initialization
     SlokedEditorSlaveCore slaveEditor(socketFactory.Connect(SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()}), logger, editorApp.GetIO(), &authSlaveFactory);
@@ -286,7 +284,7 @@ int main(int argc, const char **argv) {
             if (evt.value.index() != 0 && std::get<1>(evt.value) == SlokedControlKey::Escape) {
                 logger.Debug() << "Saving document";
                 documentClient.Save(outputPath.ToString());
-                editorApp.RequestStop();
+                editorApp.Stop();
             }
         });
     }, true);
@@ -303,6 +301,6 @@ int main(int argc, const char **argv) {
     }
 
     // Wait until editor finishes
-    editorApp.WaitForStop();
+    editorApp.Wait();
     return EXIT_SUCCESS;
 }

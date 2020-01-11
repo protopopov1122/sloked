@@ -23,15 +23,17 @@
 #define SLOKED_EDITOR_EDITORAPP_H_
 
 #include "sloked/core/Closeable.h"
-#include "sloked/core/Semaphore.h"
 #include "sloked/core/awaitable/Poll.h"
 #include "sloked/core/CharWidth.h"
 #include "sloked/sched/Scheduler.h"
 #include "sloked/facade/Crypto.h"
 #include "sloked/facade/Network.h"
 #include "sloked/facade/Server.h"
+#include "sloked/facade/Services.h"
 #include <atomic>
 #include <variant>
+#include <mutex>
+#include <condition_variable>
 
 namespace sloked {
 
@@ -40,10 +42,14 @@ namespace sloked {
         SlokedEditorApp(std::unique_ptr<SlokedIOPoll>, SlokedSocketFactory &);
         SlokedCryptoFacade &InitializeCrypto(SlokedCrypto &);
         SlokedServerFacade &InitializeServer();
-        SlokedServerFacade &InitializeServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &, SlokedAuthenticatorFactory *);
-        void RequestStop();
-        void WaitForStop();
+        SlokedServerFacade &InitializeServer(std::unique_ptr<SlokedSocket>);
+        SlokedAbstractServicesFacade &InitializeServices(std::unique_ptr<SlokedAbstractServicesFacade>);
         void Attach(SlokedCloseable &);
+
+        bool IsRunning() const;
+        void Start();
+        void Stop();
+        void Wait();
 
         SlokedCharWidth &GetCharWidth();
         SlokedSchedulerThread &GetScheduler();
@@ -53,14 +59,17 @@ namespace sloked {
         SlokedServerFacade &GetServer();
 
      private:
+        std::atomic<bool> running;
+        std::mutex termination_mtx;
+        std::condition_variable termination_cv;
         SlokedCloseablePool closeables;
-        SlokedSemaphore termination;
         SlokedDefaultSchedulerThread sched;
         std::unique_ptr<SlokedIOPoll> ioPoll;
         std::unique_ptr<SlokedDefaultIOPollThread> ioPoller;
-        std::unique_ptr<SlokedNetworkFacade> network;
+        SlokedNetworkFacade network;
         std::unique_ptr<SlokedCryptoFacade> crypto;
         std::unique_ptr<SlokedServerFacade> server;
+        std::unique_ptr<SlokedAbstractServicesFacade> services;
         SlokedCharWidth charWidth;
     };
 }
