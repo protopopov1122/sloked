@@ -52,9 +52,6 @@ namespace sloked {
         } else {
             this->server = std::make_unique<SlokedServerFacade>(std::make_unique<SlokedLocalEditorServer>());
             this->closeables.Attach(*this->server);
-            if (this->services) {
-                this->services->Apply(this->server->GetServer());
-            }
             return *this->server;
         }
     }
@@ -71,25 +68,19 @@ namespace sloked {
             }
             this->server = std::make_unique<SlokedServerFacade>(std::make_unique<SlokedRemoteEditorServer>(std::move(socket), *this->ioPoller, auth));
             this->closeables.Attach(*this->server);
-            if (this->services) {
-                this->services->Apply(this->server->GetServer());
-            }
             return *this->server;
         }
     }
 
-    SlokedAbstractServicesFacade &SlokedEditorApp::InitializeServices(std::unique_ptr<SlokedAbstractServicesFacade> services) {
+    SlokedServiceDependencyProvider &SlokedEditorApp::InitializeServices(std::unique_ptr<SlokedServiceDependencyProvider> provider) {
         if (this->running.load()) {
             throw SlokedError("EditorApp: Already running");
-        } else if (this->services != nullptr) {
-            throw SlokedError("EditorApp: Services already initialized");
+        } else if (this->serviceProvider != nullptr) {
+            throw SlokedError("EditorApp: Service provider already initialized");
         } else {
-            this->services = std::move(services);
-            this->closeables.Attach(*this->services);
-            if (this->server) {
-                this->services->Apply(this->server->GetServer());
-            }
-            return *this->services;
+            this->serviceProvider = std::move(provider);
+            this->closeables.Attach(*this->serviceProvider);
+            return *this->serviceProvider;
         }
     }
 
@@ -105,8 +96,8 @@ namespace sloked {
         if (!this->running.exchange(true)) {
             this->ioPoller->Start(KgrNetConfig::RequestTimeout);
             this->sched.Start();
-            if (this->services) {
-                this->services->Start();
+            if (this->serviceProvider) {
+                this->serviceProvider->Start();
             }
             if (this->server) {
                 this->server->Start();
@@ -122,7 +113,7 @@ namespace sloked {
                 std::unique_lock lock(this->termination_mtx);
                 this->closeables.Close();
                 this->server = nullptr;
-                this->services = nullptr;
+                this->serviceProvider = nullptr;
                 this->crypto = nullptr;
                 this->running = false;
                 this->termination_cv.notify_all();
@@ -159,6 +150,10 @@ namespace sloked {
     SlokedNetworkFacade &SlokedEditorApp::GetNetwork() {
         return this->network;
     }
+    
+    bool SlokedEditorApp::HasCrypto() const {
+        return this->crypto != nullptr;
+    }
 
     SlokedCryptoFacade &SlokedEditorApp::GetCrypto() {
         if (this->crypto) {
@@ -173,6 +168,14 @@ namespace sloked {
             return *this->server;
         } else {
             throw SlokedError("EditorApp: Server not defined");
+        }
+    }
+
+    SlokedServiceDependencyProvider &SlokedEditorApp::GetServices() {
+        if (this->serviceProvider) {
+            return *this->serviceProvider;
+        } else {
+            throw SlokedError("EditorApp: Service provider not defined");
         }
     }
 }

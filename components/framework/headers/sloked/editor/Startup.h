@@ -32,14 +32,18 @@ namespace sloked {
             std::unique_ptr<SlokedCrypto::Key> masterKey;
         };
 
-        SlokedEditorStartup(SlokedCrypto * = nullptr);
+        SlokedEditorStartup(SlokedLogger &, SlokedMountableNamespace &, SlokedNamespaceMounter &, SlokedCrypto * = nullptr);
         RuntimeConfiguration Setup(SlokedEditorApp &, const KgrValue &);
 
      private:
-        std::unique_ptr<SlokedCrypto::Key> SetupCrypto(SlokedEditorApp &, const KgrDictionary &);
+        void SetupCrypto(SlokedEditorApp &, const KgrDictionary &, RuntimeConfiguration &);
         void SetupMasterAuth(SlokedEditorApp &, const KgrDictionary &, SlokedCrypto::Key &, const std::string &);
         void SetupSlaveAuth(SlokedEditorApp &, const KgrDictionary &, const std::string &);
-
+        void SetupServer(SlokedEditorApp &, const KgrDictionary &, RuntimeConfiguration &);
+        
+        SlokedLogger &logger;
+        SlokedMountableNamespace &root;
+        SlokedNamespaceMounter &mounter;
         SlokedCrypto *cryptoEngine;
     };
 }

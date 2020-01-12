@@ -33,30 +33,63 @@
 
 namespace sloked {
 
-    class SlokedAbstractServicesFacade : public SlokedCloseable {
+    class SlokedServiceDependencyProvider : public SlokedCloseable {
      public:
-        SlokedAbstractServicesFacade(SlokedLogger &, SlokedMountableNamespace &, SlokedNamespaceMounter &, const SlokedCharWidth &);
-        virtual ~SlokedAbstractServicesFacade() = default;
-        KgrContextManager<KgrLocalContext> &GetContextManager();
-        SlokedTextTaggerRegistry<int> &GetTaggers();
-        void Start();
-        virtual void Close() override;
-        virtual void Apply(KgrNamedServer &) = 0;
+        virtual ~SlokedServiceDependencyProvider() = default;
+        virtual KgrContextManager<KgrLocalContext> &GetContextManager() = 0;
+        virtual SlokedTextTaggerRegistry<int> &GetTaggers() = 0;
+        virtual SlokedLogger &GetLogger() = 0;
+        virtual SlokedMountableNamespace &GetRoot() = 0;
+        virtual SlokedNamespaceMounter &GetMounter() = 0;
+        virtual const SlokedCharWidth &GetCharWidth() = 0;
+        virtual KgrNamedServer &GetServer() = 0;
+        virtual SlokedEditorDocumentSet &GetDocuments() = 0;
+        virtual void Start() = 0;
+    };
+
+    class SlokedServiceDependencyDefaultProvider : public SlokedServiceDependencyProvider {
+     public:
+        SlokedServiceDependencyDefaultProvider(SlokedLogger &, SlokedMountableNamespace &, SlokedNamespaceMounter &, const SlokedCharWidth &, KgrNamedServer &);
+        KgrContextManager<KgrLocalContext> &GetContextManager() override;
+        SlokedTextTaggerRegistry<int> &GetTaggers() override;
+        SlokedLogger &GetLogger() override;
+        SlokedMountableNamespace &GetRoot() override;
+        SlokedNamespaceMounter &GetMounter() override;
+        const SlokedCharWidth &GetCharWidth() override;
+        KgrNamedServer &GetServer() override;
+        SlokedEditorDocumentSet &GetDocuments() override;
+        void Close() override;
+        void Start() override;
 
      protected:
         SlokedLogger &logger;
         SlokedMountableNamespace &root;
         SlokedNamespaceMounter &mounter;
         const SlokedCharWidth &charWidth;
+        KgrNamedServer &server;
         SlokedEditorDocumentSet documents;
         KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
         SlokedTextTaggerRegistry<int> taggers;
     };
 
+    class SlokedAbstractServicesFacade {
+     public:
+        SlokedAbstractServicesFacade(SlokedServiceDependencyProvider &);
+        virtual ~SlokedAbstractServicesFacade() = default;
+        SlokedServiceDependencyProvider &GetProvider() const;
+        virtual std::unique_ptr<KgrService> Build(const std::string &) = 0;
+
+     protected:
+        SlokedServiceDependencyProvider &provider;
+    };
+
     class SlokedDefaultServicesFacade : public SlokedAbstractServicesFacade {
      public:
-        using SlokedAbstractServicesFacade::SlokedAbstractServicesFacade;
-        void Apply(KgrNamedServer &) final;
+        SlokedDefaultServicesFacade(SlokedServiceDependencyProvider &);
+        std::unique_ptr<KgrService> Build(const std::string &) final;
+
+     private:
+        std::map<std::string, std::function<std::unique_ptr<KgrService>(SlokedServiceDependencyProvider &)>> builders;
     };
 }
 

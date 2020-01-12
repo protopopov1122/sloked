@@ -29,31 +29,84 @@
 
 namespace sloked {
 
-    SlokedAbstractServicesFacade::SlokedAbstractServicesFacade(SlokedLogger &logger, SlokedMountableNamespace &root, SlokedNamespaceMounter &mounter, const SlokedCharWidth &charWidth)
-        : logger(logger), root(root), mounter(mounter), charWidth(charWidth), documents(root) {}
+    SlokedServiceDependencyDefaultProvider::SlokedServiceDependencyDefaultProvider(SlokedLogger &logger, SlokedMountableNamespace &root, SlokedNamespaceMounter &mounter, const SlokedCharWidth &charWidth, KgrNamedServer &server)
+        : logger(logger), root(root), mounter(mounter), charWidth(charWidth), server(server), documents(root) {}
 
-    KgrContextManager<KgrLocalContext> &SlokedAbstractServicesFacade::GetContextManager() {
+    KgrContextManager<KgrLocalContext> &SlokedServiceDependencyDefaultProvider::GetContextManager() {
         return this->contextManager.GetManager();
     }
 
-    SlokedTextTaggerRegistry<int> &SlokedAbstractServicesFacade::GetTaggers() {
+    SlokedTextTaggerRegistry<int> &SlokedServiceDependencyDefaultProvider::GetTaggers() {
         return this->taggers;
     }
 
-    void SlokedAbstractServicesFacade::Start() {
-        this->contextManager.Start();
+    SlokedLogger &SlokedServiceDependencyDefaultProvider::GetLogger() {
+        return this->logger;
+    }
+    
+    SlokedMountableNamespace &SlokedServiceDependencyDefaultProvider::GetRoot() {
+        return this->root;
     }
 
-    void SlokedAbstractServicesFacade::Close() {
+    SlokedNamespaceMounter &SlokedServiceDependencyDefaultProvider::GetMounter() {
+        return this->mounter;
+    }
+
+    const SlokedCharWidth &SlokedServiceDependencyDefaultProvider::GetCharWidth() {
+        return this->charWidth;
+    }
+
+    KgrNamedServer &SlokedServiceDependencyDefaultProvider::GetServer() {
+        return this->server;
+    }
+
+    SlokedEditorDocumentSet &SlokedServiceDependencyDefaultProvider::GetDocuments() {
+        return this->documents;
+    }
+
+    void SlokedServiceDependencyDefaultProvider::Close() {
         this->contextManager.Close();
     }
 
-    void SlokedDefaultServicesFacade::Apply(KgrNamedServer &server) {
-        server.Register("document::render", std::make_unique<SlokedTextRenderService>(this->documents, this->charWidth, this->taggers, this->contextManager.GetManager()));
-        server.Register("document::cursor", std::make_unique<SlokedCursorService>(this->documents, server.GetConnector("document::render"), this->contextManager.GetManager()));
-        server.Register("document::manager", std::make_unique<SlokedDocumentSetService>(this->documents, this->contextManager.GetManager()));
-        server.Register("document::notify", std::make_unique<SlokedDocumentNotifyService>(this->documents, this->contextManager.GetManager()));
-        server.Register("document::search", std::make_unique<SlokedSearchService>(this->documents, this->contextManager.GetManager()));
-        server.Register("namespace::root", std::make_unique<SlokedNamespaceService>(root, mounter, this->contextManager.GetManager()));
+    void SlokedServiceDependencyDefaultProvider::Start() {
+        this->contextManager.Start();
+    }
+
+    SlokedAbstractServicesFacade::SlokedAbstractServicesFacade(SlokedServiceDependencyProvider &provider)
+        : provider(provider) {}
+
+    SlokedServiceDependencyProvider &SlokedAbstractServicesFacade::GetProvider() const {
+        return this->provider;
+    }
+
+    SlokedDefaultServicesFacade::SlokedDefaultServicesFacade(SlokedServiceDependencyProvider &provider)
+        : SlokedAbstractServicesFacade(provider) {
+        
+        this->builders.emplace("document::render", [](SlokedServiceDependencyProvider &provider) {
+            return std::make_unique<SlokedTextRenderService>(provider.GetDocuments(), provider.GetCharWidth(), provider.GetTaggers(), provider.GetContextManager());
+        });
+        this->builders.emplace("document::cursor", [](SlokedServiceDependencyProvider &provider) {
+            return std::make_unique<SlokedCursorService>(provider.GetDocuments(), provider.GetServer().GetConnector("document::render"), provider.GetContextManager());
+        });
+        this->builders.emplace("document::manager", [](SlokedServiceDependencyProvider &provider) {
+            return std::make_unique<SlokedDocumentSetService>(provider.GetDocuments(), provider.GetContextManager());
+        });
+        this->builders.emplace("document::notify", [](SlokedServiceDependencyProvider &provider) {
+            return std::make_unique<SlokedDocumentNotifyService>(provider.GetDocuments(), provider.GetContextManager());
+        });
+        this->builders.emplace("document::search", [](SlokedServiceDependencyProvider &provider) {
+            return std::make_unique<SlokedSearchService>(provider.GetDocuments(), provider.GetContextManager());
+        });
+        this->builders.emplace("namespace::root", [](SlokedServiceDependencyProvider &provider) {
+            return std::make_unique<SlokedNamespaceService>(provider.GetRoot(), provider.GetMounter(), provider.GetContextManager());
+        });
+    }
+
+    std::unique_ptr<KgrService> SlokedDefaultServicesFacade::Build(const std::string &id) {
+        if (this->builders.count(id) != 0) {
+            return this->builders.at(id)(this->provider);
+        } else {
+            return nullptr;
+        }
     }
 }

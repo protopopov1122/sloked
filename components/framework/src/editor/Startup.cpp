@@ -23,20 +23,21 @@
 
 namespace sloked {
 
-    SlokedEditorStartup::SlokedEditorStartup(SlokedCrypto *crypto)
-        : cryptoEngine(crypto) {}
+    SlokedEditorStartup::SlokedEditorStartup(SlokedLogger &logger, SlokedMountableNamespace &root, SlokedNamespaceMounter &mounter, SlokedCrypto *crypto)
+        : logger(logger), root(root), mounter(mounter), cryptoEngine(crypto) {}
 
     SlokedEditorStartup::RuntimeConfiguration SlokedEditorStartup::Setup(SlokedEditorApp &editor, const KgrValue &rawConfig) {
         RuntimeConfiguration runtimeConf;
         const auto &config = rawConfig.AsDictionary();
         if (config.Has("crypto") && this->cryptoEngine) {
             const auto &cryptoConfig = config["crypto"].AsDictionary();
-            runtimeConf.masterKey = this->SetupCrypto(editor, cryptoConfig);
+            this->SetupCrypto(editor, cryptoConfig, runtimeConf);
         }
+        this->SetupServer(editor, config["server"].AsDictionary(), runtimeConf);
         return runtimeConf;
     }
 
-    std::unique_ptr<SlokedCrypto::Key> SlokedEditorStartup::SetupCrypto(SlokedEditorApp &editor, const KgrDictionary &cryptoConfig) {
+    void SlokedEditorStartup::SetupCrypto(SlokedEditorApp &editor, const KgrDictionary &cryptoConfig, RuntimeConfiguration &conf) {
         std::unique_ptr<SlokedCrypto::Key> masterKey;
         editor.InitializeCrypto(*this->cryptoEngine);
         masterKey = editor.GetCrypto().GetEngine().DeriveKey(cryptoConfig["masterPassword"].AsString(), cryptoConfig["salt"].AsString());
@@ -51,7 +52,7 @@ namespace sloked {
             }
         }
         editor.GetNetwork().EncryptionLayer(editor.GetCrypto().GetEngine(), *masterKey);
-        return masterKey;
+        conf.masterKey = std::move(masterKey);
     }
 
     static std::unique_ptr<SlokedNamedRestrictions> KgrToRestriction(const KgrDictionary &config) {
@@ -103,6 +104,46 @@ namespace sloked {
             for (const auto &usr : slaveConfig["users"].AsArray()) {
                 const auto &userConfig = usr.AsDictionary();
                 authSlave.New(userConfig["id"].AsString(), userConfig["credentials"].AsString());
+            }
+        }
+    }
+
+    static SlokedSocketAddress KgrToSocketAddress(const KgrDictionary &conf) {
+        return SlokedSocketAddress::Network {
+            conf["host"].AsString(),
+            static_cast<uint16_t>(conf["port"].AsInt())
+        };
+    }
+
+    void SlokedEditorStartup::SetupServer(SlokedEditorApp &editor, const KgrDictionary &serverConfig, RuntimeConfiguration &conf) {
+        if (serverConfig.Has("slave")) {
+            const auto &slaveConfig = serverConfig["slave"].AsDictionary();
+            auto socket = editor.GetNetwork().GetEngine().Connect(KgrToSocketAddress(slaveConfig["address"].AsDictionary()));
+            editor.InitializeServer(std::move(socket));
+        } else {
+            editor.InitializeServer();
+        }
+        if (serverConfig.Has("netServer")) {
+            auto address = KgrToSocketAddress(serverConfig["netServer"].AsDictionary());
+            if (editor.HasCrypto()) {
+                editor.GetServer().SpawnNetServer(editor.GetNetwork().GetEngine(), address, editor.GetIO(),
+                    &editor.GetCrypto().GetCredentialMaster(), &editor.GetCrypto().GetAuthenticator());
+            } else {
+                editor.GetServer().SpawnNetServer(editor.GetNetwork().GetEngine(), address, editor.GetIO(),
+                    nullptr, nullptr);
+            }
+        }
+        if (serverConfig.Has("restrictAccess")) {
+            editor.GetServer().GetRestrictions().SetAccessRestrictions(KgrToRestriction(serverConfig["restrictAccess"].AsDictionary()));
+        }
+        if (serverConfig.Has("restrictModification")) {
+            editor.GetServer().GetRestrictions().SetModificationRestrictions(KgrToRestriction(serverConfig["restrictModification"].AsDictionary()));
+        }
+        if (serverConfig.Has("services")) {
+            auto &serviceProvider = editor.InitializeServices(std::make_unique<SlokedServiceDependencyDefaultProvider>(this->logger, this->root, this->mounter, editor.GetCharWidth(), editor.GetServer().GetServer()));
+            SlokedDefaultServicesFacade services(serviceProvider);
+            for (const auto &service : serverConfig["services"].AsArray()) {
+                editor.GetServer().GetServer().Register(service.AsString(), services.Build(service.AsString()));
             }
         }
     }

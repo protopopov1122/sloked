@@ -161,7 +161,9 @@ int main(int argc, const char **argv) {
     SlokedLogger logger(SlokedLoggerTag);
     const Encoding &terminalEncoding = Encoding::Get("system");
     SlokedCloseablePool closeables;
-    SlokedEditorStartup startup(SlokedCryptoCompat::IsSupported() ? &SlokedCryptoCompat::GetCrypto() : nullptr);
+    SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(SlokedNamespaceCompat::NewRootFilesystem()));
+    SlokedDefaultNamespaceMounter mounter(SlokedNamespaceCompat::NewRootFilesystem(), root);
+    SlokedEditorStartup startup(logger, root, mounter, SlokedCryptoCompat::IsSupported() ? &SlokedCryptoCompat::GetCrypto() : nullptr);
 
     // Configuration
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
@@ -234,23 +236,43 @@ int main(int argc, const char **argv) {
                     }
                 }
             }
+        },
+        {
+            "server", KgrDictionary {
+                {
+                    "netServer", KgrDictionary {
+                        { "host", "localhost" },
+                        { "port", cli["net-port"].As<int64_t>() }
+                    }
+                },
+                {
+                    "restrictAccess", KgrDictionary {
+                        { "whitelist", true },
+                        { "content", KgrArray {"document::", "namespace::", "screen::"} }
+                    }
+                },
+                {
+                    "restrictModification", KgrDictionary {
+                        { "whitelist", true },
+                        { "content", KgrArray {"document::", "namespace::", "screen::"} }
+                    }
+                },
+                {
+                    "services", KgrArray {
+                        "document::render",
+                        "document::cursor",
+                        "document::manager",
+                        "document::notify",
+                        "document::search",
+                        "namespace::root"
+                    }
+                }
+            }
         }
     });
     // Server
-    SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(SlokedNamespaceCompat::NewRootFilesystem()));
-    SlokedDefaultNamespaceMounter mounter(SlokedNamespaceCompat::NewRootFilesystem(), root);
-    auto &mainServer = mainEditor.InitializeServer();
-    if constexpr (SlokedCryptoCompat::IsSupported()) {
-        mainServer.SpawnNetServer(mainEditor.GetNetwork().GetEngine(), SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()},
-            mainEditor.GetIO(), &mainEditor.GetCrypto().GetCredentialMaster(), &mainEditor.GetCrypto().GetAuthenticator());
-    } else {
-        mainServer.SpawnNetServer(mainEditor.GetNetwork().GetEngine(), SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()},
-            mainEditor.GetIO(), nullptr, nullptr);
-    }
-    auto &services = mainEditor.InitializeServices(std::make_unique<SlokedDefaultServicesFacade>(logger, root, mounter, mainEditor.GetCharWidth()));
-    services.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
-    mainServer.GetRestrictions().SetAccessRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
-    mainServer.GetRestrictions().SetModificationRestrictions(SlokedNamedWhitelist::Make({"document::", "namespace::", "screen::"}));
+    auto &serviceProvider = mainEditor.GetServices();
+    serviceProvider.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
     mainEditor.Start();
 
     // Secondary editor
@@ -278,10 +300,24 @@ int main(int argc, const char **argv) {
                     }
                 }
             }
+        },
+        {
+            "server", KgrDictionary {
+                {
+                    "slave", KgrDictionary {
+                        {
+                            "address", KgrDictionary {
+                                { "host", "localhost" },
+                                { "port", cli["net-port"].As<int64_t>() }
+                            }
+                        }
+                    }
+                }
+            }
         }
     });
     // Server
-    auto &secondaryServer = secondaryEditor.InitializeServer(secondaryEditor.GetNetwork().GetEngine().Connect(SlokedSocketAddress::Network{"localhost", cli["net-port"].As<uint16_t>()}));
+    auto &secondaryServer = secondaryEditor.GetServer();
     secondaryEditor.Start();
     if constexpr (SlokedCryptoCompat::IsSupported()) {
         secondaryServer.AsRemoteServer().Authorize("user1");
@@ -295,7 +331,7 @@ int main(int argc, const char **argv) {
     BufferedTerminal console(terminal, terminalEncoding, mainEditor.GetCharWidth());
     SlokedTerminalSize<SlokedTerminalResizeListener> terminalSize(console);
     SlokedTerminalScreenProvider screen(console, terminalEncoding, mainEditor.GetCharWidth(), terminal);
-    SlokedScreenServer screenServer(secondaryServer.GetServer(), screen, terminalSize, services.GetContextManager());
+    SlokedScreenServer screenServer(secondaryServer.GetServer(), screen, terminalSize, serviceProvider.GetContextManager());
     closeables.Attach(screenServer);
     screenServer.Start(KgrNetConfig::RequestTimeout);
 
