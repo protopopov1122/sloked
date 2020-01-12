@@ -315,29 +315,7 @@ int main(int argc, const char **argv) {
     // Secondary editor
     SlokedEditorApp secondaryEditor(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
     closeables.Attach(secondaryEditor);
-    auto secondaryRuntimeConf = startup.Setup(secondaryEditor, KgrDictionary {
-        {
-            "crypto", KgrDictionary {
-                { "masterPassword", "password" },
-                { "salt", "salt" },
-                {
-                    "authentication", KgrDictionary {
-                        {
-                            "slave", KgrDictionary {
-                                {
-                                    "users", KgrArray {
-                                        KgrDictionary {
-                                            { "id", "user1" },
-                                            { "credentials", mainEditor.GetCrypto().GetCredentialMaster().GetAccountByName("user1").lock()->GetCredentials() }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
+    KgrDictionary secondaryConfig {
         {
             "server", KgrDictionary {
                 {
@@ -352,7 +330,30 @@ int main(int argc, const char **argv) {
                 }
             }
         }
-    });
+    };
+    if constexpr (SlokedCryptoCompat::IsSupported()) {
+        secondaryConfig.Put("crypto", KgrDictionary {
+            { "masterPassword", "password" },
+            { "salt", "salt" },
+            {
+                "authentication", KgrDictionary {
+                    {
+                        "slave", KgrDictionary {
+                            {
+                                "users", KgrArray {
+                                    KgrDictionary {
+                                        { "id", "user1" },
+                                        { "credentials", mainEditor.GetCrypto().GetCredentialMaster().GetAccountByName("user1").lock()->GetCredentials() }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    auto secondaryRuntimeConf = startup.Setup(secondaryEditor, secondaryConfig);
     // Server
     auto &secondaryServer = secondaryEditor.GetServer();
     secondaryEditor.Start();

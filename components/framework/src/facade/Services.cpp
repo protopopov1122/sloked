@@ -94,7 +94,7 @@ namespace sloked {
             return std::make_unique<SlokedSearchService>(provider.GetDocuments(), provider.GetContextManager());
         });
         this->builders.emplace("namespace::root", [](SlokedServiceDependencyProvider &provider) {
-            return std::make_unique<SlokedNamespaceService>(provider.GetNamespace().GetRoot(), provider.GetNamespace().GetMounter(), provider.GetContextManager());
+            return std::make_unique<SlokedNamespaceService>(provider.GetNamespace(), provider.GetContextManager());
         });
     }
 

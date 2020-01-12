@@ -34,7 +34,7 @@ namespace sloked {
         this->currentDir = std::move(dir);
     }
 
-    const std::optional<SlokedPath> &SlokedPathResolver::GetHometDir() const {
+    const std::optional<SlokedPath> &SlokedPathResolver::GetHomeDir() const {
         return this->homeDir;
     }
 

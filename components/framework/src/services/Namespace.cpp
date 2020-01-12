@@ -26,8 +26,8 @@ namespace sloked {
 
     class SlokedNamespaceServiceContext : public SlokedServiceContext {
      public:
-        SlokedNamespaceServiceContext(std::unique_ptr<KgrPipe> pipe, SlokedMountableNamespace &root, const SlokedNamespaceMounter &mounter)
-            : SlokedServiceContext(std::move(pipe)), root(root), mounter(mounter) {
+        SlokedNamespaceServiceContext(std::unique_ptr<KgrPipe> pipe, SlokedRootNamespace &root)
+            : SlokedServiceContext(std::move(pipe)), rootNamespace(root), root(root.GetRoot()), mounter(root.GetMounter()) {
             this->BindMethod("list", &SlokedNamespaceServiceContext::List);
             this->BindMethod("walk", &SlokedNamespaceServiceContext::Walk);
             this->BindMethod("type", &SlokedNamespaceServiceContext::GetType);
@@ -40,6 +40,10 @@ namespace sloked {
             this->BindMethod("mount", &SlokedNamespaceServiceContext::Mount);
             this->BindMethod("umount", &SlokedNamespaceServiceContext::Unmount);
             this->BindMethod("mounted", &SlokedNamespaceServiceContext::Mounted);
+            this->BindMethod("resolve", &SlokedNamespaceServiceContext::Resolve);
+            this->BindMethod("resolver", &SlokedNamespaceServiceContext::Resolver);
+            this->BindMethod("chdir", &SlokedNamespaceServiceContext::ChDir);
+            this->BindMethod("chhome", &SlokedNamespaceServiceContext::ChHome);
         }
 
      private:
@@ -212,15 +216,44 @@ namespace sloked {
             rsp.Result(std::move(res));
         }
 
+        void Resolve(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath src{params.AsString()};
+            auto dst = this->rootNamespace.GetResolver().Resolve(src);
+            rsp.Result(dst.ToString());
+        }
+
+        void Resolver(const std::string &method, const KgrValue &params, Response &rsp) {
+            KgrDictionary res {
+                { "current", this->rootNamespace.GetResolver().GetCurrentDir().ToString() }
+            };
+            if (this->rootNamespace.GetResolver().GetHomeDir().has_value()) {
+                res.Put("home", this->rootNamespace.GetResolver().GetHomeDir().value().ToString());
+            }
+            rsp.Result(std::move(res));
+        }
+
+        void ChDir(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            this->rootNamespace.GetResolver().ChangeDir(path);
+            rsp.Result(true);
+        }
+
+        void ChHome(const std::string &method, const KgrValue &params, Response &rsp) {
+            SlokedPath path{params.AsString()};
+            this->rootNamespace.GetResolver().ChangeHomeDir(path);
+            rsp.Result(true);
+        }
+
+        SlokedRootNamespace &rootNamespace;
         SlokedMountableNamespace &root;
         const SlokedNamespaceMounter &mounter;
     };
 
-    SlokedNamespaceService::SlokedNamespaceService(SlokedMountableNamespace &root, const SlokedNamespaceMounter &mounter, KgrContextManager<KgrLocalContext> &contextManager)
-        : root(root), mounter(mounter), contextManager(contextManager) {}
+    SlokedNamespaceService::SlokedNamespaceService(SlokedRootNamespace &root, KgrContextManager<KgrLocalContext> &contextManager)
+        : root(root), contextManager(contextManager) {}
 
     void SlokedNamespaceService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedNamespaceServiceContext>(std::move(pipe), this->root, this->mounter);
+        auto ctx = std::make_unique<SlokedNamespaceServiceContext>(std::move(pipe), this->root);
         this->contextManager.Attach(std::move(ctx));
     }
 }

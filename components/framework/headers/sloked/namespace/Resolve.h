@@ -32,7 +32,7 @@ namespace sloked {
         SlokedPathResolver(SlokedPath = {"/"}, std::optional<SlokedPath> = {});
         const SlokedPath &GetCurrentDir() const;
         void ChangeDir(SlokedPath);
-        const std::optional<SlokedPath> &GetHometDir() const;
+        const std::optional<SlokedPath> &GetHomeDir() const;
         void ChangeHomeDir(std::optional<SlokedPath> = {});
         SlokedPath Resolve(SlokedPath);
 
