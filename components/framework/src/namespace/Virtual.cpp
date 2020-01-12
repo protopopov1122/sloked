@@ -103,9 +103,6 @@ namespace sloked {
         SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(path.Root());
         Entry *entry = &this->root;
         SlokedPath entryPath = realPath.Root();
-        if (realPath == entryPath) {
-            throw SlokedError("Permission denied: Mounting root");
-        }
         for (const auto &name : realPath.Components()) {
             entryPath = entryPath.Child(name);
             if (entry->subentries.count(name)) {

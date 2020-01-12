@@ -29,8 +29,8 @@
 
 namespace sloked {
 
-    SlokedServiceDependencyDefaultProvider::SlokedServiceDependencyDefaultProvider(SlokedLogger &logger, SlokedMountableNamespace &root, SlokedNamespaceMounter &mounter, const SlokedCharWidth &charWidth, KgrNamedServer &server)
-        : logger(logger), root(root), mounter(mounter), charWidth(charWidth), server(server), documents(root) {}
+    SlokedServiceDependencyDefaultProvider::SlokedServiceDependencyDefaultProvider(SlokedLogger &logger, std::unique_ptr<SlokedRootNamespace> rootNamespace, const SlokedCharWidth &charWidth, KgrNamedServer &server)
+        : logger(logger), rootNamespace(std::move(rootNamespace)), charWidth(charWidth), server(server), documents(this->rootNamespace->GetRoot()) {}
 
     KgrContextManager<KgrLocalContext> &SlokedServiceDependencyDefaultProvider::GetContextManager() {
         return this->contextManager.GetManager();
@@ -44,12 +44,8 @@ namespace sloked {
         return this->logger;
     }
     
-    SlokedMountableNamespace &SlokedServiceDependencyDefaultProvider::GetRoot() {
-        return this->root;
-    }
-
-    SlokedNamespaceMounter &SlokedServiceDependencyDefaultProvider::GetMounter() {
-        return this->mounter;
+    SlokedRootNamespace &SlokedServiceDependencyDefaultProvider::GetNamespace() {
+        return *this->rootNamespace;
     }
 
     const SlokedCharWidth &SlokedServiceDependencyDefaultProvider::GetCharWidth() {
@@ -98,7 +94,7 @@ namespace sloked {
             return std::make_unique<SlokedSearchService>(provider.GetDocuments(), provider.GetContextManager());
         });
         this->builders.emplace("namespace::root", [](SlokedServiceDependencyProvider &provider) {
-            return std::make_unique<SlokedNamespaceService>(provider.GetRoot(), provider.GetMounter(), provider.GetContextManager());
+            return std::make_unique<SlokedNamespaceService>(provider.GetNamespace().GetRoot(), provider.GetNamespace().GetMounter(), provider.GetContextManager());
         });
     }
 

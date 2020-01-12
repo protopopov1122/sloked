@@ -43,7 +43,7 @@ namespace sloked {
         SlokedCryptoFacade &InitializeCrypto(SlokedCrypto &);
         SlokedServerFacade &InitializeServer();
         SlokedServerFacade &InitializeServer(std::unique_ptr<SlokedSocket>);
-        SlokedServiceDependencyProvider &InitializeServices(std::unique_ptr<SlokedServiceDependencyProvider>);
+        SlokedServiceDependencyProvider &InitializeServiceProvider(std::unique_ptr<SlokedServiceDependencyProvider>);
         void Attach(SlokedCloseable &);
 
         bool IsRunning() const;
@@ -59,7 +59,7 @@ namespace sloked {
         bool HasCrypto() const;
         SlokedCryptoFacade &GetCrypto();
         SlokedServerFacade &GetServer();
-        SlokedServiceDependencyProvider &GetServices();
+        SlokedServiceDependencyProvider &GetServiceProvider();
 
      private:
         std::atomic<bool> running;

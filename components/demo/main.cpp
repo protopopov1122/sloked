@@ -70,6 +70,8 @@
 #include "sloked/editor/EditorApp.h"
 #include "sloked/facade/Services.h"
 #include "sloked/editor/Startup.h"
+#include "sloked/namespace/Root.h"
+#include "sloked/namespace/Empty.h"
 #include <chrono>
 
 using namespace sloked;
@@ -137,6 +139,38 @@ class TestFragmentFactory : public SlokedTextTaggerFactory<int> {
     }
 };
 
+class SlokedDemoSystemNamespace : public SlokedRootNamespace {
+ public:
+    SlokedDemoSystemNamespace()
+        : root(std::make_unique<SlokedEmptyNamespace>()),
+          mounter(SlokedNamespaceCompat::NewRootFilesystem(), root),
+          resolver(SlokedNamespaceCompat::GetWorkDir(), SlokedNamespaceCompat::GetHomeDir()) {}
+
+    SlokedPathResolver &GetResolver() final {
+        return this->resolver;
+    }
+
+    SlokedMountableNamespace &GetRoot() final {
+        return this->root;
+    }
+
+    SlokedNamespaceMounter &GetMounter() final {
+        return this->mounter;
+    }
+
+ private:
+    SlokedDefaultVirtualNamespace root;
+    SlokedDefaultNamespaceMounter mounter;
+    SlokedPathResolver resolver;
+};
+
+class SlokedDemoRootNamespaceFactory : public SlokedRootNamespaceFactory {
+ public:
+    std::unique_ptr<SlokedRootNamespace> Build() const final {
+        return std::make_unique<SlokedDemoSystemNamespace>();
+    }
+};
+
 static const KgrDictionary DefaultConfiguration {
     { "encoding", "system" },
     { "newline", "system" },
@@ -161,9 +195,8 @@ int main(int argc, const char **argv) {
     SlokedLogger logger(SlokedLoggerTag);
     const Encoding &terminalEncoding = Encoding::Get("system");
     SlokedCloseablePool closeables;
-    SlokedDefaultVirtualNamespace root(std::make_unique<SlokedFilesystemNamespace>(SlokedNamespaceCompat::NewRootFilesystem()));
-    SlokedDefaultNamespaceMounter mounter(SlokedNamespaceCompat::NewRootFilesystem(), root);
-    SlokedEditorStartup startup(logger, root, mounter, SlokedCryptoCompat::IsSupported() ? &SlokedCryptoCompat::GetCrypto() : nullptr);
+    SlokedDemoRootNamespaceFactory nsFactory;
+    SlokedEditorStartup startup(logger, nsFactory, SlokedCryptoCompat::IsSupported() ? &SlokedCryptoCompat::GetCrypto() : nullptr);
 
     // Configuration
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
@@ -179,9 +212,6 @@ int main(int argc, const char **argv) {
         std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
         return EXIT_FAILURE;
     }
-    SlokedPathResolver resolver(SlokedNamespaceCompat::GetWorkDir(), SlokedNamespaceCompat::GetHomeDir());
-    SlokedPath inputPath = resolver.Resolve(SlokedPath{cli.At(0)});
-    SlokedPath outputPath = resolver.Resolve(SlokedPath{cli["output"].As<std::string>()});
 
     // Main editor
     SlokedEditorApp mainEditor(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
@@ -258,22 +288,29 @@ int main(int argc, const char **argv) {
                     }
                 },
                 {
-                    "services", KgrArray {
-                        "document::render",
-                        "document::cursor",
-                        "document::manager",
-                        "document::notify",
-                        "document::search",
-                        "namespace::root"
+                    "services", KgrDictionary {
+                        { "root", "file:///" },
+                        {
+                            "endpoints", KgrArray {
+                                "document::render",
+                                "document::cursor",
+                                "document::manager",
+                                "document::notify",
+                                "document::search",
+                                "namespace::root"
+                            }
+                        }
                     }
                 }
             }
         }
     });
     // Server
-    auto &serviceProvider = mainEditor.GetServices();
+    auto &serviceProvider = mainEditor.GetServiceProvider();
     serviceProvider.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
     mainEditor.Start();
+    SlokedPath inputPath = mainEditor.GetServiceProvider().GetNamespace().GetResolver().Resolve(SlokedPath{cli.At(0)});
+    SlokedPath outputPath = mainEditor.GetServiceProvider().GetNamespace().GetResolver().Resolve(SlokedPath{cli["output"].As<std::string>()});
 
     // Secondary editor
     SlokedEditorApp secondaryEditor(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());

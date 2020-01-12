@@ -72,7 +72,7 @@ namespace sloked {
         }
     }
 
-    SlokedServiceDependencyProvider &SlokedEditorApp::InitializeServices(std::unique_ptr<SlokedServiceDependencyProvider> provider) {
+    SlokedServiceDependencyProvider &SlokedEditorApp::InitializeServiceProvider(std::unique_ptr<SlokedServiceDependencyProvider> provider) {
         if (this->running.load()) {
             throw SlokedError("EditorApp: Already running");
         } else if (this->serviceProvider != nullptr) {
@@ -171,7 +171,7 @@ namespace sloked {
         }
     }
 
-    SlokedServiceDependencyProvider &SlokedEditorApp::GetServices() {
+    SlokedServiceDependencyProvider &SlokedEditorApp::GetServiceProvider() {
         if (this->serviceProvider) {
             return *this->serviceProvider;
         } else {

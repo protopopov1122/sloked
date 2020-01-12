@@ -23,6 +23,7 @@
 #define SLOKED_EDITOR_STARTUP_H_
 
 #include "sloked/editor/EditorApp.h"
+#include "sloked/namespace/Root.h"
 
 namespace sloked {
 
@@ -32,7 +33,7 @@ namespace sloked {
             std::unique_ptr<SlokedCrypto::Key> masterKey;
         };
 
-        SlokedEditorStartup(SlokedLogger &, SlokedMountableNamespace &, SlokedNamespaceMounter &, SlokedCrypto * = nullptr);
+        SlokedEditorStartup(SlokedLogger &, SlokedRootNamespaceFactory &, SlokedCrypto * = nullptr);
         RuntimeConfiguration Setup(SlokedEditorApp &, const KgrValue &);
 
      private:
@@ -42,8 +43,7 @@ namespace sloked {
         void SetupServer(SlokedEditorApp &, const KgrDictionary &, RuntimeConfiguration &);
         
         SlokedLogger &logger;
-        SlokedMountableNamespace &root;
-        SlokedNamespaceMounter &mounter;
+        SlokedRootNamespaceFactory &namespaceFactory;
         SlokedCrypto *cryptoEngine;
     };
 }

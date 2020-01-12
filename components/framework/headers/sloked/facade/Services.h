@@ -30,6 +30,7 @@
 #include "sloked/core/CharWidth.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
+#include "sloked/namespace/Root.h"
 
 namespace sloked {
 
@@ -39,8 +40,7 @@ namespace sloked {
         virtual KgrContextManager<KgrLocalContext> &GetContextManager() = 0;
         virtual SlokedTextTaggerRegistry<int> &GetTaggers() = 0;
         virtual SlokedLogger &GetLogger() = 0;
-        virtual SlokedMountableNamespace &GetRoot() = 0;
-        virtual SlokedNamespaceMounter &GetMounter() = 0;
+        virtual SlokedRootNamespace &GetNamespace() = 0;
         virtual const SlokedCharWidth &GetCharWidth() = 0;
         virtual KgrNamedServer &GetServer() = 0;
         virtual SlokedEditorDocumentSet &GetDocuments() = 0;
@@ -49,12 +49,11 @@ namespace sloked {
 
     class SlokedServiceDependencyDefaultProvider : public SlokedServiceDependencyProvider {
      public:
-        SlokedServiceDependencyDefaultProvider(SlokedLogger &, SlokedMountableNamespace &, SlokedNamespaceMounter &, const SlokedCharWidth &, KgrNamedServer &);
+        SlokedServiceDependencyDefaultProvider(SlokedLogger &, std::unique_ptr<SlokedRootNamespace>, const SlokedCharWidth &, KgrNamedServer &);
         KgrContextManager<KgrLocalContext> &GetContextManager() override;
         SlokedTextTaggerRegistry<int> &GetTaggers() override;
         SlokedLogger &GetLogger() override;
-        SlokedMountableNamespace &GetRoot() override;
-        SlokedNamespaceMounter &GetMounter() override;
+        SlokedRootNamespace &GetNamespace() override;
         const SlokedCharWidth &GetCharWidth() override;
         KgrNamedServer &GetServer() override;
         SlokedEditorDocumentSet &GetDocuments() override;
@@ -63,8 +62,7 @@ namespace sloked {
 
      protected:
         SlokedLogger &logger;
-        SlokedMountableNamespace &root;
-        SlokedNamespaceMounter &mounter;
+        std::unique_ptr<SlokedRootNamespace> rootNamespace;
         const SlokedCharWidth &charWidth;
         KgrNamedServer &server;
         SlokedEditorDocumentSet documents;

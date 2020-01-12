@@ -23,8 +23,8 @@
 
 namespace sloked {
 
-    SlokedEditorStartup::SlokedEditorStartup(SlokedLogger &logger, SlokedMountableNamespace &root, SlokedNamespaceMounter &mounter, SlokedCrypto *crypto)
-        : logger(logger), root(root), mounter(mounter), cryptoEngine(crypto) {}
+    SlokedEditorStartup::SlokedEditorStartup(SlokedLogger &logger, SlokedRootNamespaceFactory &namespaceFactory, SlokedCrypto *crypto)
+        : logger(logger), namespaceFactory(namespaceFactory), cryptoEngine(crypto) {}
 
     SlokedEditorStartup::RuntimeConfiguration SlokedEditorStartup::Setup(SlokedEditorApp &editor, const KgrValue &rawConfig) {
         RuntimeConfiguration runtimeConf;
@@ -140,9 +140,12 @@ namespace sloked {
             editor.GetServer().GetRestrictions().SetModificationRestrictions(KgrToRestriction(serverConfig["restrictModification"].AsDictionary()));
         }
         if (serverConfig.Has("services")) {
-            auto &serviceProvider = editor.InitializeServices(std::make_unique<SlokedServiceDependencyDefaultProvider>(this->logger, this->root, this->mounter, editor.GetCharWidth(), editor.GetServer().GetServer()));
+            const auto &serviceConfig = serverConfig["services"].AsDictionary();
+            auto &serviceProvider = editor.InitializeServiceProvider(std::make_unique<SlokedServiceDependencyDefaultProvider>(this->logger, this->namespaceFactory.Build(), editor.GetCharWidth(), editor.GetServer().GetServer()));
+            serviceProvider.GetNamespace().GetRoot().Mount(SlokedPath{"/"},
+                serviceProvider.GetNamespace().GetMounter().Mount(SlokedUri::Parse(serviceConfig["root"].AsString())));
             SlokedDefaultServicesFacade services(serviceProvider);
-            for (const auto &service : serverConfig["services"].AsArray()) {
+            for (const auto &service : serviceConfig["endpoints"].AsArray()) {
                 editor.GetServer().GetServer().Register(service.AsString(), services.Build(service.AsString()));
             }
         }
