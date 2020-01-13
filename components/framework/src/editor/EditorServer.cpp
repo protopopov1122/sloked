@@ -39,7 +39,7 @@ namespace sloked {
     void SlokedLocalEditorServer::Close() {}
 
     SlokedRemoteEditorServer::SlokedRemoteEditorServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &io, SlokedAuthenticatorFactory *authFactory)
-        : unrestrictedServer(std::move(socket), io, authFactory), server(unrestrictedServer, std::make_unique<SlokedNamedBlacklist>(), std::make_unique<SlokedNamedBlacklist>()) {}
+        : unrestrictedServer(std::move(socket), io, authFactory), server(unrestrictedServer, std::make_unique<SlokedNamedBlacklist>(), std::make_unique<SlokedNamedBlacklist>()), deferredAuth{} {}
 
     SlokedRemoteEditorServer::~SlokedRemoteEditorServer() {
         this->Close();
@@ -55,6 +55,10 @@ namespace sloked {
 
     void SlokedRemoteEditorServer::Start() {
         this->unrestrictedServer.Start();
+        if (this->deferredAuth.has_value()) {
+            this->unrestrictedServer.Authorize(this->deferredAuth.value());
+            this->deferredAuth.reset();
+        }
     }
 
     void SlokedRemoteEditorServer::Close() {
@@ -62,6 +66,10 @@ namespace sloked {
     }
 
     void SlokedRemoteEditorServer::Authorize(const std::string &user) {
-        this->unrestrictedServer.Authorize(user);
+        if (this->unrestrictedServer.IsRunning()) {
+            this->unrestrictedServer.Authorize(user);
+        } else {
+            this->deferredAuth = user;
+        }
     }
 }

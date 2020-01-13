@@ -66,6 +66,7 @@ namespace sloked {
      private:
         KgrSlaveNetServer unrestrictedServer;
         KgrRestrictedNamedServer server;
+        std::optional<std::string> deferredAuth;
     };
 }
 

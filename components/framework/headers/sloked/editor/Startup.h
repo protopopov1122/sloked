@@ -29,21 +29,18 @@ namespace sloked {
 
     class SlokedEditorStartup {
      public:
-        struct RuntimeConfiguration {
-            std::unique_ptr<SlokedCrypto::Key> masterKey;
-        };
-
-        SlokedEditorStartup(SlokedLogger &, SlokedRootNamespaceFactory &, SlokedCrypto * = nullptr);
-        RuntimeConfiguration Setup(SlokedEditorApp &, const KgrValue &);
+        SlokedEditorStartup(SlokedLogger &, SlokedRootNamespaceFactory &, SlokedTextTaggerRegistry<int> * = nullptr, SlokedCrypto * = nullptr);
+        void Setup(SlokedEditorApp &, const KgrValue &);
 
      private:
-        void SetupCrypto(SlokedEditorApp &, const KgrDictionary &, RuntimeConfiguration &);
-        void SetupMasterAuth(SlokedEditorApp &, const KgrDictionary &, SlokedCrypto::Key &, const std::string &);
+        void SetupCrypto(SlokedEditorApp &, const KgrDictionary &);
+        void SetupMasterAuth(SlokedEditorApp &, const KgrDictionary &, const std::string &);
         void SetupSlaveAuth(SlokedEditorApp &, const KgrDictionary &, const std::string &);
-        void SetupServer(SlokedEditorApp &, const KgrDictionary &, RuntimeConfiguration &);
+        void SetupServer(SlokedEditorApp &, const KgrDictionary &);
         
         SlokedLogger &logger;
         SlokedRootNamespaceFactory &namespaceFactory;
+        SlokedTextTaggerRegistry<int> *baseTaggers;
         SlokedCrypto *cryptoEngine;
     };
 }

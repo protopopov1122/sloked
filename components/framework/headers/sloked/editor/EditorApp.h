@@ -30,6 +30,7 @@
 #include "sloked/facade/Network.h"
 #include "sloked/facade/Server.h"
 #include "sloked/facade/Services.h"
+#include "sloked/core/DataHandle.h"
 #include <atomic>
 #include <variant>
 #include <mutex>
@@ -45,6 +46,7 @@ namespace sloked {
         SlokedServerFacade &InitializeServer(std::unique_ptr<SlokedSocket>);
         SlokedServiceDependencyProvider &InitializeServiceProvider(std::unique_ptr<SlokedServiceDependencyProvider>);
         void Attach(SlokedCloseable &);
+        void Attach(std::unique_ptr<SlokedDataHandle>);
 
         bool IsRunning() const;
         void Start();
@@ -74,6 +76,7 @@ namespace sloked {
         std::unique_ptr<SlokedServerFacade> server;
         std::unique_ptr<SlokedServiceDependencyProvider> serviceProvider;
         SlokedCharWidth charWidth;
+        std::vector<std::unique_ptr<SlokedDataHandle>> handles;
     };
 }
 

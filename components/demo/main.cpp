@@ -196,7 +196,12 @@ int main(int argc, const char **argv) {
     const Encoding &terminalEncoding = Encoding::Get("system");
     SlokedCloseablePool closeables;
     SlokedDemoRootNamespaceFactory nsFactory;
-    SlokedEditorStartup startup(logger, nsFactory, SlokedCryptoCompat::IsSupported() ? &SlokedCryptoCompat::GetCrypto() : nullptr);
+    SlokedDefaultTextTaggerRegistry<int> baseTaggers;
+    baseTaggers.Bind("default", std::make_unique<TestFragmentFactory>());
+    SlokedEditorStartup startup(logger, nsFactory, &baseTaggers,
+        SlokedCryptoCompat::IsSupported()
+            ? &SlokedCryptoCompat::GetCrypto()
+            : nullptr);
 
     // Configuration
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
@@ -217,7 +222,7 @@ int main(int argc, const char **argv) {
     SlokedEditorApp mainEditor(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
     closeables.Attach(mainEditor);
     // Cryptography
-    auto mainRuntimeConf = startup.Setup(mainEditor, KgrDictionary {
+    startup.Setup(mainEditor, KgrDictionary {
         {
             "crypto", KgrDictionary {
                 { "masterPassword", "password" },
@@ -226,6 +231,8 @@ int main(int argc, const char **argv) {
                     "authentication", KgrDictionary {
                         {
                             "master", KgrDictionary {
+                                { "masterPassword", "password" },
+                                { "salt", "salt" },
                                 {
                                     "users", KgrArray {
                                         KgrDictionary {
@@ -307,10 +314,9 @@ int main(int argc, const char **argv) {
     });
     // Server
     auto &serviceProvider = mainEditor.GetServiceProvider();
-    serviceProvider.GetTaggers().Bind("default", std::make_unique<TestFragmentFactory>());
     mainEditor.Start();
-    SlokedPath inputPath = mainEditor.GetServiceProvider().GetNamespace().GetResolver().Resolve(SlokedPath{cli.At(0)});
-    SlokedPath outputPath = mainEditor.GetServiceProvider().GetNamespace().GetResolver().Resolve(SlokedPath{cli["output"].As<std::string>()});
+    SlokedPath inputPath = serviceProvider.GetNamespace().GetResolver().Resolve(SlokedPath{cli.At(0)});
+    SlokedPath outputPath = serviceProvider.GetNamespace().GetResolver().Resolve(SlokedPath{cli["output"].As<std::string>()});
 
     // Secondary editor
     SlokedEditorApp secondaryEditor(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
@@ -332,6 +338,7 @@ int main(int argc, const char **argv) {
         }
     };
     if constexpr (SlokedCryptoCompat::IsSupported()) {
+        secondaryConfig["server"].AsDictionary()["slave"].AsDictionary().Put("authorize", "user1");
         secondaryConfig.Put("crypto", KgrDictionary {
             { "masterPassword", "password" },
             { "salt", "salt" },
@@ -353,13 +360,9 @@ int main(int argc, const char **argv) {
             }
         });
     }
-    auto secondaryRuntimeConf = startup.Setup(secondaryEditor, secondaryConfig);
-    // Server
+    startup.Setup(secondaryEditor, secondaryConfig);
     auto &secondaryServer = secondaryEditor.GetServer();
     secondaryEditor.Start();
-    if constexpr (SlokedCryptoCompat::IsSupported()) {
-        secondaryServer.AsRemoteServer().Authorize("user1");
-    }
 
     // Screen
     if constexpr (!SlokedTerminalCompat::HasSystemTerminal()) {

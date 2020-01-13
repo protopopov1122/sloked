@@ -48,13 +48,29 @@ namespace sloked {
     template <typename T>
     class SlokedTextTaggerRegistry {
      public:
+        virtual ~SlokedTextTaggerRegistry() = default;
+        virtual bool Has(const std::string &id) const = 0;
+        virtual std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &, const TextBlockView &, const Encoding &, const SlokedCharWidth &) const = 0;
+        virtual std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &, const TextBlockView &, const Encoding &, const SlokedCharWidth &) const = 0;
+        virtual void Bind(const std::string &, std::unique_ptr<SlokedTextTaggerFactory<T>>) = 0;
+    };
+
+    template <typename T>
+    class SlokedDefaultTextTaggerRegistry : public SlokedTextTaggerRegistry<T> {
+     public:
+        SlokedDefaultTextTaggerRegistry(SlokedTextTaggerRegistry<T> *base = nullptr)
+            : base(base) {}
+
         bool Has(const std::string &id) const {
-            return this->factories.count(id) != 0;
+            return this->factories.count(id) != 0 ||    
+                (this->base != nullptr && this->base->Has(id));
         }
 
         std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &id, const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth) const {
-            if (this->Has(id)) {
+            if (this->factories.count(id) != 0) {
                 return this->factories.at(id)->Create(text, encoding, charWidth);
+            } else if (this->base != nullptr) {
+                return this->base->Create(id, text, encoding, charWidth);
             } else {
                 throw SlokedError("TextTaggerRegistry: Unknown tagger \'" + id + "\'");
             }
@@ -62,8 +78,8 @@ namespace sloked {
 
         std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &id, const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth) const {
             if (this->Has(id)) {
-                return this->factories.at(id)->Create(text, encoding, charWidth);
-            } else {
+                return this->Create(id, text, encoding, charWidth);
+            }  else {
                 return nullptr;
             }
         }
@@ -73,6 +89,7 @@ namespace sloked {
         }
 
      private:
+        SlokedTextTaggerRegistry<T> *base;
         std::map<std::string, std::unique_ptr<SlokedTextTaggerFactory<T>>> factories;
     };
 

@@ -49,7 +49,7 @@ namespace sloked {
 
     class SlokedServiceDependencyDefaultProvider : public SlokedServiceDependencyProvider {
      public:
-        SlokedServiceDependencyDefaultProvider(SlokedLogger &, std::unique_ptr<SlokedRootNamespace>, const SlokedCharWidth &, KgrNamedServer &);
+        SlokedServiceDependencyDefaultProvider(SlokedLogger &, std::unique_ptr<SlokedRootNamespace>, const SlokedCharWidth &, KgrNamedServer &, SlokedTextTaggerRegistry<int> * = nullptr);
         KgrContextManager<KgrLocalContext> &GetContextManager() override;
         SlokedTextTaggerRegistry<int> &GetTaggers() override;
         SlokedLogger &GetLogger() override;
@@ -67,7 +67,7 @@ namespace sloked {
         KgrNamedServer &server;
         SlokedEditorDocumentSet documents;
         KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
-        SlokedTextTaggerRegistry<int> taggers;
+        SlokedDefaultTextTaggerRegistry<int> taggers;
     };
 
     class SlokedAbstractServicesFacade {

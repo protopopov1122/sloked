@@ -88,6 +88,10 @@ namespace sloked {
         this->closeables.Attach(closeable);
     }
 
+    void SlokedEditorApp::Attach(std::unique_ptr<SlokedDataHandle> handle) {
+        this->handles.emplace_back(std::move(handle));
+    }
+
     bool SlokedEditorApp::IsRunning() const {
         return this->running.load();
     }
@@ -116,6 +120,7 @@ namespace sloked {
                 this->serviceProvider = nullptr;
                 this->crypto = nullptr;
                 this->running = false;
+                this->handles.clear();
                 this->termination_cv.notify_all();
             }).detach();
         } else {

@@ -29,8 +29,9 @@
 
 namespace sloked {
 
-    SlokedServiceDependencyDefaultProvider::SlokedServiceDependencyDefaultProvider(SlokedLogger &logger, std::unique_ptr<SlokedRootNamespace> rootNamespace, const SlokedCharWidth &charWidth, KgrNamedServer &server)
-        : logger(logger), rootNamespace(std::move(rootNamespace)), charWidth(charWidth), server(server), documents(this->rootNamespace->GetRoot()) {}
+    SlokedServiceDependencyDefaultProvider::SlokedServiceDependencyDefaultProvider(SlokedLogger &logger, std::unique_ptr<SlokedRootNamespace> rootNamespace,
+        const SlokedCharWidth &charWidth, KgrNamedServer &server, SlokedTextTaggerRegistry<int> *baseTaggers)
+        : logger(logger), rootNamespace(std::move(rootNamespace)), charWidth(charWidth), server(server), documents(this->rootNamespace->GetRoot()), taggers(baseTaggers) {}
 
     KgrContextManager<KgrLocalContext> &SlokedServiceDependencyDefaultProvider::GetContextManager() {
         return this->contextManager.GetManager();
