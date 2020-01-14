@@ -27,9 +27,16 @@
 
 namespace sloked {
 
-    class SlokedEditorStartup {
+    class SlokedEditorStartup : public SlokedCloseable {
      public:
-        SlokedEditorStartup(SlokedLogger &, SlokedRootNamespaceFactory &, SlokedTextTaggerRegistry<int> * = nullptr, SlokedCrypto * = nullptr);
+        using EditorFactory = std::function<std::unique_ptr<SlokedEditorApp>()>;
+        SlokedEditorStartup(SlokedLogger &, SlokedRootNamespaceFactory &, SlokedTextTaggerRegistry<int> * = nullptr, EditorFactory = nullptr, SlokedCrypto * = nullptr);
+        void Start(const KgrValue &);
+        SlokedEditorApp &Start(const std::string &, const KgrValue &);
+        bool Has(const std::string &) const;
+        SlokedEditorApp &Get(const std::string &) const;
+        void Close(const std::string &);
+        void Close() final;
         void Setup(SlokedEditorApp &, const KgrValue &);
 
      private:
@@ -38,9 +45,11 @@ namespace sloked {
         void SetupSlaveAuth(SlokedEditorApp &, const KgrDictionary &, const std::string &);
         void SetupServer(SlokedEditorApp &, const KgrDictionary &);
         
+        std::map<std::string, std::unique_ptr<SlokedEditorApp>> editors;
         SlokedLogger &logger;
         SlokedRootNamespaceFactory &namespaceFactory;
         SlokedTextTaggerRegistry<int> *baseTaggers;
+        EditorFactory editorFactory;
         SlokedCrypto *cryptoEngine;
     };
 }
