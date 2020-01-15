@@ -26,47 +26,10 @@ namespace sloked {
     SlokedEditorStartup::SlokedEditorStartup(SlokedLogger &logger, SlokedRootNamespaceFactory &namespaceFactory, SlokedTextTaggerRegistry<int> *baseTaggers, EditorFactory editorFactory, SlokedCrypto *crypto)
         : logger(logger), namespaceFactory(namespaceFactory), baseTaggers(baseTaggers), editorFactory(std::move(editorFactory)), cryptoEngine(crypto) {}
         
-    void SlokedEditorStartup::Start(const KgrValue &config) {
+    void SlokedEditorStartup::Spawn(const KgrValue &config) {
         const auto &editors = config.AsDictionary();
         for (const auto &kv : editors) {
-            this->Start(kv.first, kv.second);
-        }
-    }
-
-    SlokedEditorApp &SlokedEditorStartup::Start(const std::string &key, const KgrValue &config) {
-        if (this->editorFactory == nullptr) {
-            throw SlokedError("EditorStartup: editor factory not defined");
-        }
-        if (this->editors.count(key) == 0) {
-            auto editor = this->editorFactory();
-            this->Setup(*editor, config);
-            editor->Start();
-            this->editors.emplace(key, std::move(editor));
-            return *this->editors.at(key);
-        } else {
-            throw SlokedError("EditorStartup: Editor \'" + key + "\' is already defined");
-        }
-    }
-
-    bool SlokedEditorStartup::Has(const std::string &key) const {
-        return this->editors.count(key) != 0;
-    }
-
-    SlokedEditorApp &SlokedEditorStartup::Get(const std::string &key) const {
-        if (this->editors.count(key) != 0) {
-            return *this->editors.at(key);
-        } else {
-            throw SlokedError("EditorStartup: Editor \'" + key + "\' is not defined");
-        }
-    }
-
-    void SlokedEditorStartup::Close(const std::string &key) {
-        if (this->editors.count(key) != 0) {
-            auto &editor = *this->editors.at(key);
-            editor.Close();
-            this->editors.erase(key);
-        } else {
-            throw SlokedError("EditorStartup: Editor \'" + key + "\' is not defined");
+            this->Spawn(kv.first, kv.second);
         }
     }
 
@@ -83,6 +46,49 @@ namespace sloked {
             this->SetupCrypto(editor, cryptoConfig);
         }
         this->SetupServer(editor, config["server"].AsDictionary());
+    }
+
+    bool SlokedEditorStartup::Has(const std::string &key) const {
+        return this->editors.count(key) != 0;
+    }
+
+    SlokedEditorApp &SlokedEditorStartup::Get(const std::string &key) const {
+        if (this->editors.count(key) != 0) {
+            return *this->editors.at(key);
+        } else {
+            throw SlokedError("EditorStartup: Editor \'" + key + "\' is not defined");
+        }
+    }
+
+    void SlokedEditorStartup::Enumerate(std::function<void(const std::string, SlokedEditorApp &)> callback) const {
+        for (const auto &kv : this->editors) {
+            callback(kv.first, *kv.second);
+        }
+    }
+
+    SlokedEditorApp &SlokedEditorStartup::Spawn(const std::string &key, const KgrValue &config) {
+        if (this->editorFactory == nullptr) {
+            throw SlokedError("EditorStartup: editor factory not defined");
+        }
+        if (this->editors.count(key) == 0) {
+            auto editor = this->editorFactory();
+            this->Setup(*editor, config);
+            editor->Start();
+            this->editors.emplace(key, std::move(editor));
+            return *this->editors.at(key);
+        } else {
+            throw SlokedError("EditorStartup: Editor \'" + key + "\' is already defined");
+        }
+    }
+
+    void SlokedEditorStartup::Shutdown(const std::string &key) {
+        if (this->editors.count(key) != 0) {
+            auto &editor = *this->editors.at(key);
+            editor.Close();
+            this->editors.erase(key);
+        } else {
+            throw SlokedError("EditorStartup: Editor \'" + key + "\' is not defined");
+        }
     }
 
     void SlokedEditorStartup::SetupCrypto(SlokedEditorApp &editor, const KgrDictionary &cryptoConfig) {

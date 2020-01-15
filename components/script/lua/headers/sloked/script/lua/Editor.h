@@ -19,19 +19,16 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCRIPT_SCRIPTENGINE_H_
-#define SLOKED_SCRIPT_SCRIPTENGINE_H_
+#ifndef SLOKED_SCRIPT_LUA_EDITOR_H_
+#define SLOKED_SCRIPT_LUA_EDITOR_H_
 
-#include "sloked/core/Closeable.h"
-#include "sloked/kgr/NamedServer.h"
+#include "sloked/sched/EventLoop.h"
+#include "sloked/editor/EditorApp.h"
+#include <lua.hpp>
 
 namespace sloked {
 
-    class SlokedScriptEngine : public SlokedCloseable {
-     public:
-        virtual ~SlokedScriptEngine() = default;
-        virtual void Start(const std::string &) = 0;
-    };
+    int SlokedEditorToLua(SlokedEventLoop &, lua_State *, SlokedEditorApp &);
 }
 
 #endif

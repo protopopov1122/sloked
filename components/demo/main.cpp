@@ -311,7 +311,7 @@ int main(int argc, const char **argv) {
             }
         }
     };
-    auto &mainEditor = startup.Start("main", mainEditorConfig);
+    auto &mainEditor = startup.Spawn("main", mainEditorConfig);
 
     KgrDictionary secondaryEditorConfig {
         {
@@ -355,7 +355,7 @@ int main(int argc, const char **argv) {
         });
     }
 
-    auto &secondaryEditor = startup.Start("secondary", secondaryEditorConfig);
+    auto &secondaryEditor = startup.Spawn("secondary", secondaryEditorConfig);
     auto &secondaryServer = secondaryEditor.GetServer();
 
     auto &serviceProvider = mainEditor.GetServiceProvider();
@@ -431,9 +431,8 @@ int main(int argc, const char **argv) {
     // Scripting engine startup
     std::unique_ptr<SlokedScriptEngine> scriptEngine;
     if constexpr (SlokedScriptCompat::IsSupported()) {
-        scriptEngine = SlokedScriptCompat::GetEngine(mainEditor.GetScheduler(), cli["script-path"].As<std::string>());
+        scriptEngine = SlokedScriptCompat::GetEngine(startup, mainEditor.GetScheduler(), cli["script-path"].As<std::string>());
         closeables.Attach(*scriptEngine);
-        scriptEngine->BindServer("main", secondaryServer.GetServer());
         if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {
             scriptEngine->Start(cli["script"].As<std::string>());
         }

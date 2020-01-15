@@ -24,14 +24,14 @@
 #include "sloked/script/lua/Common.h"
 #include "sloked/script/lua/Pipe.h"
 #include "sloked/script/lua/Sched.h"
-#include "sloked/script/lua/Server.h"
+#include "sloked/script/lua/Editor.h"
 #include "sloked/core/Error.h"
 #include <iostream>
 
 namespace sloked {
 
-    SlokedLuaEngine::SlokedLuaEngine(SlokedSchedulerThread &sched, const std::string &path)
-        : state{nullptr}, work{false}, sched(sched), path{path}, logger(SlokedLoggerTag) {
+    SlokedLuaEngine::SlokedLuaEngine(SlokedEditorAppContainer &apps, SlokedSchedulerThread &sched, const std::string &path)
+        : state{nullptr}, work{false}, apps(apps), sched(sched), path{path}, logger(SlokedLoggerTag) {
         this->eventLoop.Notify([this] {
             this->activity.Notify();
         });
@@ -53,14 +53,6 @@ namespace sloked {
         if (this->work.exchange(false)) {
             this->activity.Notify();
             this->workerThread.join();
-        }
-    }
-
-    void SlokedLuaEngine::BindServer(const std::string &serverId, KgrNamedServer &srv) {
-        if (!this->work.load()) {
-            this->servers.emplace(serverId, std::ref(srv));
-        } else {
-            throw SlokedError("LuaEngine: Can't bind server to running engine");
         }
     }
 
@@ -100,15 +92,43 @@ namespace sloked {
         }
     }
 
+    static int SlokedAppContainer_Get(lua_State *state) {
+        int top = lua_gettop(state);
+        if (top != 2) {
+            return luaL_error(state, "sloked.editors[]: Expected 2 argument");
+        }
+        try {
+            std::string key(lua_tostring(state, 2));
+            SlokedEditorAppContainer &apps = *reinterpret_cast<SlokedEditorAppContainer *>(lua_touserdata(state, lua_upvalueindex(1)));
+            SlokedEventLoop &eventLoop = *reinterpret_cast<SlokedEventLoop *>(lua_touserdata(state, lua_upvalueindex(2)));
+            auto &app = apps.Get(key);
+            SlokedEditorToLua(eventLoop, state, app);
+            lua_pushvalue(state, 2);
+            lua_pushvalue(state, -2);
+            lua_rawset(state, 1);
+            return 1;
+        } catch (const SlokedError &err) {
+            DropLuaStack(state, top);
+            return luaL_error(state, err.what());
+        }
+    }
+
+    void SlokedLuaEngine::InitializeApps() {
+        if (luaL_newmetatable(this->state, "sloked.editors")) {
+            lua_pushlightuserdata(this->state, std::addressof(this->apps));
+            lua_pushlightuserdata(this->state, std::addressof(this->eventLoop));
+            lua_pushcclosure(this->state, SlokedAppContainer_Get, 2);
+            lua_setfield(this->state, -2, "__index");
+        }
+        lua_setmetatable(this->state, -2);
+    }
+
     void SlokedLuaEngine::InitializeGlobals() {
         luaL_openlibs(this->state);
         lua_newtable(this->state);
         lua_newtable(this->state);
-        for (auto &kv : this->servers) {
-            SlokedServerToLua(this->eventLoop, this->state, kv.second.get());
-            lua_setfield(state, -2, kv.first.c_str());
-        }
-        lua_setfield(this->state, -2, "servers");
+        this->InitializeApps();
+        lua_setfield(this->state, -2, "editors");
         SlokedSchedToLua(this->sched, this->eventLoop, this->state);
         lua_setfield(this->state, -2, "sched");
         SlokedLoggerToLua(this->logger, this->state);

@@ -1,5 +1,6 @@
 lua_bindings_src = [
   'src/Common.cpp',
+  'src/Editor.cpp',
   'src/Lua.cpp',
   'src/Logger.cpp',
   'src/Pipe.cpp',

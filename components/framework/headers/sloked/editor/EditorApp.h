@@ -78,6 +78,16 @@ namespace sloked {
         SlokedCharWidth charWidth;
         std::vector<std::unique_ptr<SlokedDataHandle>> handles;
     };
+
+    class SlokedEditorAppContainer {
+     public:
+        virtual ~SlokedEditorAppContainer() = default;
+        virtual bool Has(const std::string &) const = 0;
+        virtual SlokedEditorApp &Get(const std::string &) const = 0;
+        virtual void Enumerate(std::function<void(const std::string, SlokedEditorApp &)>) const = 0;
+        virtual SlokedEditorApp &Spawn(const std::string &, const KgrValue &) = 0;
+        virtual void Shutdown(const std::string &) = 0;
+    };
 }
 
 #endif
