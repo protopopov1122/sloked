@@ -171,6 +171,36 @@ class SlokedDemoRootNamespaceFactory : public SlokedRootNamespaceFactory {
     }
 };
 
+class SlokedDemoScreenBasis : public SlokedScreenBasis {
+ public:
+    SlokedDemoScreenBasis(const SlokedCharWidth &charWidth)
+        : terminal(*SlokedTerminalCompat::GetSystemTerminal()),
+          console(terminal, Encoding::Get("system"), charWidth),
+          provider(console, Encoding::Get("system"), charWidth, terminal),
+          size(console) {}
+        
+    SlokedScreenProvider &GetProvider() final {
+        return this->provider;
+    }
+
+    SlokedScreenSize &GetSize() final {
+        return this->size;
+    }
+
+ private:
+    SlokedDuplexTerminal &terminal;
+    BufferedTerminal console;
+    SlokedTerminalScreenProvider provider;
+    SlokedTerminalSize<SlokedTerminalResizeListener> size;
+};
+
+class SlokedDemoScreenFactory : SlokedScreenFactory {
+ public:
+    std::unique_ptr<SlokedScreenBasis> Make(const SlokedUri &, const SlokedCharWidth &charWidth) final {
+        return std::make_unique<SlokedDemoScreenBasis>(charWidth);
+    }
+};
+
 static const KgrDictionary DefaultConfiguration {
     { "encoding", "system" },
     { "newline", "system" },
@@ -203,7 +233,9 @@ int main(int argc, const char **argv) {
     }, SlokedCryptoCompat::IsSupported()
         ? &SlokedCryptoCompat::GetCrypto()
         : nullptr);
+    SlokedScreenServerContainer screens;
     closeables.Attach(startup);
+    closeables.Attach(screens);
 
     // Configuration
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
@@ -330,7 +362,6 @@ int main(int argc, const char **argv) {
         }
     };
 
-
     if constexpr (SlokedCryptoCompat::IsSupported()) {
         secondaryEditorConfig["server"].AsDictionary()["slave"].AsDictionary().Put("authorize", "user1");
         secondaryEditorConfig.Put("crypto", KgrDictionary {
@@ -366,18 +397,13 @@ int main(int argc, const char **argv) {
     if constexpr (!SlokedTerminalCompat::HasSystemTerminal()) {
         throw SlokedError("Demo: system terminal is required");
     }
-    SlokedDuplexTerminal &terminal = *SlokedTerminalCompat::GetSystemTerminal();
-    BufferedTerminal console(terminal, terminalEncoding, mainEditor.GetCharWidth());
-    SlokedTerminalSize<SlokedTerminalResizeListener> terminalSize(console);
-    SlokedTerminalScreenProvider screen(console, terminalEncoding, mainEditor.GetCharWidth(), terminal);
-    SlokedScreenServer screenServer(secondaryServer.GetServer(), screen, terminalSize, serviceProvider.GetContextManager());
-    closeables.Attach(screenServer);
-    screenServer.Start(KgrNetConfig::RequestTimeout);
+    SlokedDemoScreenFactory screenFactory;
+    auto &screenServer = screens.Spawn("main", secondaryServer.GetServer(), screenFactory.Make(SlokedUri::Parse("terminal:///system"), mainEditor.GetCharWidth()));
 
 
     // Editor initialization
-    auto isScreenLocked = [&screen] {
-        return screen.GetScreen().IsHolder();
+    auto isScreenLocked = [&screenServer] {
+        return screenServer.GetScreen().GetScreen().IsHolder();
     };
     SlokedScreenClient screenClient(secondaryServer.GetServer().Connect("screen::manager"), isScreenLocked);
     SlokedScreenSizeNotificationClient screenSizeClient(secondaryServer.GetServer().Connect("screen::size.notify"));
@@ -386,7 +412,7 @@ int main(int argc, const char **argv) {
 
     // Screen layout
     screenClient.Handle.NewMultiplexer("/");
-    auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{console.GetHeight(), console.GetWidth()});
+    auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{screenServer.GetScreenSize().GetSize().line, screenServer.GetScreenSize().GetSize().column});
     screenSizeClient.Listen([&](const auto &size) {
         if (screenServer.IsRunning() && mainWindow.has_value()) {
             mainEditor.GetScheduler().Defer([&, size] {

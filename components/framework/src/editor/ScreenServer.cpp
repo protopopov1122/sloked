@@ -24,11 +24,12 @@
 #include "sloked/services/ScreenInput.h"
 #include "sloked/services/ScreenSize.h"
 #include "sloked/services/TextPane.h"
+#include "sloked/kgr/net/Config.h"
 
 namespace sloked {
 
     SlokedScreenServer::SlokedScreenServer(KgrNamedServer &server, SlokedScreenProvider &provider, SlokedScreenSize &screenSize, KgrContextManager<KgrLocalContext> &contextManager)
-        : server(server), provider(provider), work{false} {
+        : server(server), provider(provider), size(screenSize), work{false} {
         this->server.Register("screen::manager", std::make_unique<SlokedScreenService>(this->provider.GetScreen(),
             this->provider.GetEncoding(), this->server.GetConnector("document::cursor"), this->server.GetConnector("document::notify"), contextManager));
         this->server.Register("screen::size.notify", std::make_unique<SlokedScreenSizeNotificationService>(screenSize, contextManager));
@@ -63,6 +64,14 @@ namespace sloked {
         }
     }
 
+    SlokedScreenProvider &SlokedScreenServer::GetScreen() const {
+        return this->provider;
+    }
+
+    SlokedScreenSize &SlokedScreenServer::GetScreenSize() const {
+        return this->size;
+    }
+
     void SlokedScreenServer::Run(std::chrono::system_clock::duration timeout) {
         this->provider.GetScreen().Lock([this](auto &screen) {
             screen.OnUpdate([this] {
@@ -89,5 +98,52 @@ namespace sloked {
         this->provider.GetScreen().Lock([](auto &screen) {
             screen.OnUpdate(nullptr);
         });
+    }
+
+    SlokedScreenServerContainer::Instance::Instance(KgrNamedServer &server, std::unique_ptr<SlokedScreenBasis> basis, KgrContextManager<KgrLocalContext> &contextManager)
+        : server(server, basis->GetProvider(), basis->GetSize(), contextManager), basis(std::move(basis)) {}
+    
+    SlokedScreenServerContainer::SlokedScreenServerContainer() {
+        this->contextManager.Start();
+    }
+
+    SlokedScreenServer &SlokedScreenServerContainer::Spawn(const std::string &id, KgrNamedServer &server, std::unique_ptr<SlokedScreenBasis> basis) {
+        if (this->screens.count(id) == 0) {
+            auto instance = std::make_unique<Instance>(server, std::move(basis), this->contextManager.GetManager());
+            this->screens.emplace(id, std::move(instance));
+            this->screens.at(id)->server.Start(KgrNetConfig::ResponseTimeout);
+            return this->screens.at(id)->server;
+        } else {
+            throw SlokedError("ScreenServerContainer: Server \'" + id + "\' already registered");
+        }
+    }
+
+    bool SlokedScreenServerContainer::Has(const std::string &id) const {
+        return this->screens.count(id) != 0;
+    }
+
+    SlokedScreenServer &SlokedScreenServerContainer::Get(const std::string &id) const {
+        if (this->Has(id)) {
+            return this->screens.at(id)->server;
+        } else {
+            throw SlokedError("ScreenServerContainer: Server \'" + id + "\' not defined");
+        }
+    }
+
+    void SlokedScreenServerContainer::Shutdown(const std::string &id) {
+        if (this->Has(id)) {
+            this->screens.at(id)->server.Close();
+            this->screens.erase(id);
+        } else {
+            throw SlokedError("ScreenServerContainer: Server \'" + id + "\' not defined");       
+        }
+    }
+
+    void SlokedScreenServerContainer::Close() {
+        for (auto &instance : this->screens) {
+            instance.second->server.Close();
+        }
+        this->contextManager.Close();
+        this->screens.clear();
     }
 }

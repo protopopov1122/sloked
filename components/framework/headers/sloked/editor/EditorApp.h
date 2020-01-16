@@ -31,13 +31,14 @@
 #include "sloked/facade/Server.h"
 #include "sloked/facade/Services.h"
 #include "sloked/core/DataHandle.h"
+#include "sloked/editor/ScreenServer.h"
 #include <atomic>
 #include <variant>
 #include <mutex>
 #include <condition_variable>
 
 namespace sloked {
-
+    
     class SlokedEditorApp : public SlokedCloseable {
      public:
         SlokedEditorApp(std::unique_ptr<SlokedIOPoll>, SlokedSocketFactory &);

@@ -30,6 +30,9 @@
 #include "sloked/kgr/local/Context.h"
 #include "sloked/screen/Component.h"
 #include "sloked/screen/Size.h"
+#include "sloked/kgr/ctx-manager/RunnableContextManager.h"
+#include "sloked/core/URI.h"
+#include "sloked/core/CharWidth.h"
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -54,15 +57,51 @@ namespace sloked {
         bool IsRunning() const;
         void Start(std::chrono::system_clock::duration);
         void Close() final;
+        SlokedScreenProvider &GetScreen() const;
+        SlokedScreenSize &GetScreenSize() const;
 
      private:
         void Run(std::chrono::system_clock::duration);
 
         KgrNamedServer &server;
         SlokedScreenProvider &provider;
+        SlokedScreenSize &size;
         std::atomic<bool> work;
         std::atomic<bool> renderRequested;
         std::thread worker;
+    };
+
+    class SlokedScreenBasis {
+     public:
+        virtual ~SlokedScreenBasis() = default;
+        virtual SlokedScreenProvider &GetProvider() = 0;
+        virtual SlokedScreenSize &GetSize() = 0;
+    };
+    
+    class SlokedScreenServerContainer : public SlokedCloseable {
+        struct Instance {
+            Instance(KgrNamedServer &, std::unique_ptr<SlokedScreenBasis>, KgrContextManager<KgrLocalContext> &);
+            
+            SlokedScreenServer server;
+            std::unique_ptr<SlokedScreenBasis> basis;
+        };
+     public:
+        SlokedScreenServerContainer();
+        SlokedScreenServer &Spawn(const std::string &, KgrNamedServer &, std::unique_ptr<SlokedScreenBasis>);
+        bool Has(const std::string &) const;
+        SlokedScreenServer &Get(const std::string &) const;
+        void Shutdown(const std::string &);
+        void Close() final;
+
+     private:
+        KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
+        std::map<std::string, std::unique_ptr<Instance>> screens;
+    };
+
+    class SlokedScreenFactory {
+     public:
+        virtual ~SlokedScreenFactory() = default;
+        virtual std::unique_ptr<SlokedScreenBasis> Make(const SlokedUri &, const SlokedCharWidth &) = 0;
     };
 }
 
