@@ -28,11 +28,11 @@
 
 namespace sloked {
 
-    SlokedScreenServer::SlokedScreenServer(KgrNamedServer &server, SlokedScreenProvider &provider, SlokedScreenSize &screenSize, KgrContextManager<KgrLocalContext> &contextManager)
-        : server(server), provider(provider), size(screenSize), work{false} {
+    SlokedScreenServer::SlokedScreenServer(KgrNamedServer &server, SlokedScreenProvider &provider, KgrContextManager<KgrLocalContext> &contextManager)
+        : server(server), provider(provider), work{false} {
         this->server.Register("screen::manager", std::make_unique<SlokedScreenService>(this->provider.GetScreen(),
             this->provider.GetEncoding(), this->server.GetConnector("document::cursor"), this->server.GetConnector("document::notify"), contextManager));
-        this->server.Register("screen::size.notify", std::make_unique<SlokedScreenSizeNotificationService>(screenSize, contextManager));
+        this->server.Register("screen::size.notify", std::make_unique<SlokedScreenSizeNotificationService>(provider.GetSize(), contextManager));
         this->server.Register("screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(this->provider.GetScreen(), this->provider.GetEncoding(), contextManager));
         this->server.Register("screen::component::input.forward", std::make_unique<SlokedScreenInputForwardingService>(this->provider.GetScreen(), this->provider.GetEncoding(), contextManager));
         this->server.Register("screen::component::text.pane", std::make_unique<SlokedTextPaneService>(this->provider.GetScreen(), this->provider.GetEncoding(), contextManager));
@@ -68,10 +68,6 @@ namespace sloked {
         return this->provider;
     }
 
-    SlokedScreenSize &SlokedScreenServer::GetScreenSize() const {
-        return this->size;
-    }
-
     void SlokedScreenServer::Run(std::chrono::system_clock::duration timeout) {
         this->provider.GetScreen().Lock([this](auto &screen) {
             screen.OnUpdate([this] {
@@ -100,16 +96,16 @@ namespace sloked {
         });
     }
 
-    SlokedScreenServerContainer::Instance::Instance(KgrNamedServer &server, std::unique_ptr<SlokedScreenBasis> basis, KgrContextManager<KgrLocalContext> &contextManager)
-        : server(server, basis->GetProvider(), basis->GetSize(), contextManager), basis(std::move(basis)) {}
+    SlokedScreenServerContainer::Instance::Instance(KgrNamedServer &server, std::unique_ptr<SlokedScreenProvider> provider, KgrContextManager<KgrLocalContext> &contextManager)
+        : server(server, *provider, contextManager), provider(std::move(provider)) {}
     
     SlokedScreenServerContainer::SlokedScreenServerContainer() {
         this->contextManager.Start();
     }
 
-    SlokedScreenServer &SlokedScreenServerContainer::Spawn(const std::string &id, KgrNamedServer &server, std::unique_ptr<SlokedScreenBasis> basis) {
+    SlokedScreenServer &SlokedScreenServerContainer::Spawn(const std::string &id, KgrNamedServer &server, std::unique_ptr<SlokedScreenProvider> provider) {
         if (this->screens.count(id) == 0) {
-            auto instance = std::make_unique<Instance>(server, std::move(basis), this->contextManager.GetManager());
+            auto instance = std::make_unique<Instance>(server, std::move(provider), this->contextManager.GetManager());
             this->screens.emplace(id, std::move(instance));
             this->screens.at(id)->server.Start(KgrNetConfig::ResponseTimeout);
             return this->screens.at(id)->server;

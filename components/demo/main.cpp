@@ -171,32 +171,42 @@ class SlokedDemoRootNamespaceFactory : public SlokedRootNamespaceFactory {
     }
 };
 
-class SlokedDemoScreenBasis : public SlokedScreenBasis {
+class SlokedDemoScreenBasis : public SlokedScreenProvider {
  public:
     SlokedDemoScreenBasis(const SlokedCharWidth &charWidth)
         : terminal(*SlokedTerminalCompat::GetSystemTerminal()),
           console(terminal, Encoding::Get("system"), charWidth),
-          provider(console, Encoding::Get("system"), charWidth, terminal),
-          size(console) {}
+          provider(console, Encoding::Get("system"), charWidth, terminal) {}
         
-    SlokedScreenProvider &GetProvider() final {
-        return this->provider;
+    void Render(std::function<void(SlokedScreenComponent &)> fn) final {
+        this->provider.Render(std::move(fn));
+    }
+
+    std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration timeout) final {
+        return this->provider.ReceiveInput(timeout);
+    }
+
+    SlokedMonitor<SlokedScreenComponent &> &GetScreen() final {
+        return this->provider.GetScreen();
     }
 
     SlokedScreenSize &GetSize() final {
-        return this->size;
+        return this->provider.GetSize();
+    }
+
+    const Encoding &GetEncoding() final {
+        return this->provider.GetEncoding();
     }
 
  private:
     SlokedDuplexTerminal &terminal;
     BufferedTerminal console;
-    SlokedTerminalScreenProvider provider;
-    SlokedTerminalSize<SlokedTerminalResizeListener> size;
+    SlokedTerminalScreenProvider<SlokedTerminalResizeListener> provider;
 };
 
-class SlokedDemoScreenFactory : SlokedScreenFactory {
+class SlokedDemoScreenFactory : SlokedScreenProviderFactory {
  public:
-    std::unique_ptr<SlokedScreenBasis> Make(const SlokedUri &, const SlokedCharWidth &charWidth) final {
+    std::unique_ptr<SlokedScreenProvider> Make(const SlokedUri &, const SlokedCharWidth &charWidth) final {
         return std::make_unique<SlokedDemoScreenBasis>(charWidth);
     }
 };
@@ -412,7 +422,7 @@ int main(int argc, const char **argv) {
 
     // Screen layout
     screenClient.Handle.NewMultiplexer("/");
-    auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{screenServer.GetScreenSize().GetSize().line, screenServer.GetScreenSize().GetSize().column});
+    auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{screenServer.GetScreen().GetSize().GetSize().line, screenServer.GetScreen().GetSize().GetSize().column});
     screenSizeClient.Listen([&](const auto &size) {
         if (screenServer.IsRunning() && mainWindow.has_value()) {
             mainEditor.GetScheduler().Defer([&, size] {

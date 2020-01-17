@@ -24,17 +24,45 @@
 
 #include "sloked/editor/ScreenServer.h"
 #include "sloked/screen/terminal/Terminal.h"
+#include "sloked/screen/terminal/TerminalSize.h"
 #include "sloked/screen/terminal/components/ComponentHandle.h"
 
 namespace sloked {
 
+    template <typename ResizeListener>
     class SlokedTerminalScreenProvider : public SlokedScreenProvider {
      public:
-        SlokedTerminalScreenProvider(SlokedTerminal &, const Encoding &, const SlokedCharWidth &, SlokedTerminalInputSource &);
-        void Render(std::function<void(SlokedScreenComponent &)>) final;
-        std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration) final;
-        SlokedMonitor<SlokedScreenComponent &> &GetScreen() final;
-        const Encoding &GetEncoding() final;
+        SlokedTerminalScreenProvider(SlokedTerminal &terminal, const Encoding &encoding, const SlokedCharWidth &charWidth, SlokedTerminalInputSource &inputSource)
+            : terminal(terminal), encoding(encoding), rootComponent(terminal, encoding, charWidth), screen(rootComponent), inputSource(inputSource), size(terminal) {}
+
+        void Render(std::function<void(SlokedScreenComponent &)> render) final {
+            this->screen.Lock([&](auto &screen) {
+                this->terminal.SetGraphicsMode(SlokedTextGraphics::Off);
+                this->terminal.ClearScreen();
+                render(screen);
+                this->terminal.RenderFrame();
+            });
+        }
+
+        std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration timeout) final {
+            if (this->inputSource.WaitInput(timeout)) {
+                return this->inputSource.GetInput();
+            } else {
+                return {};
+            }
+        }
+
+        SlokedMonitor<SlokedScreenComponent &> &GetScreen() final {
+            return this->screen;
+        }
+
+        SlokedScreenSize &GetSize() final {
+            return this->size;
+        }
+
+        const Encoding &GetEncoding() final {
+            return this->encoding;
+        }
 
      private:
         SlokedTerminal &terminal;
@@ -42,6 +70,7 @@ namespace sloked {
         TerminalComponentHandle rootComponent;
         SlokedMonitor<SlokedScreenComponent &> screen;
         SlokedTerminalInputSource &inputSource;
+        SlokedTerminalSize<ResizeListener> size;
     };
 }
 

@@ -45,49 +45,41 @@ namespace sloked {
         virtual void Render(std::function<void(SlokedScreenComponent &)>) = 0;
         virtual std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration) = 0;
         virtual SlokedMonitor<SlokedScreenComponent &> &GetScreen() = 0;
+        virtual SlokedScreenSize &GetSize() = 0;
         virtual const Encoding &GetEncoding() = 0;
     };
 
     class SlokedScreenServer : public SlokedCloseable {
      public:
         using InputProcessor = std::function<std::vector<SlokedKeyboardInput>(std::vector<SlokedKeyboardInput>)>;
-        SlokedScreenServer(KgrNamedServer &, SlokedScreenProvider &, SlokedScreenSize &, KgrContextManager<KgrLocalContext> &);
+        SlokedScreenServer(KgrNamedServer &, SlokedScreenProvider &, KgrContextManager<KgrLocalContext> &);
         ~SlokedScreenServer();
         void Redraw();
         bool IsRunning() const;
         void Start(std::chrono::system_clock::duration);
         void Close() final;
         SlokedScreenProvider &GetScreen() const;
-        SlokedScreenSize &GetScreenSize() const;
 
      private:
         void Run(std::chrono::system_clock::duration);
 
         KgrNamedServer &server;
         SlokedScreenProvider &provider;
-        SlokedScreenSize &size;
         std::atomic<bool> work;
         std::atomic<bool> renderRequested;
         std::thread worker;
     };
-
-    class SlokedScreenBasis {
-     public:
-        virtual ~SlokedScreenBasis() = default;
-        virtual SlokedScreenProvider &GetProvider() = 0;
-        virtual SlokedScreenSize &GetSize() = 0;
-    };
     
     class SlokedScreenServerContainer : public SlokedCloseable {
         struct Instance {
-            Instance(KgrNamedServer &, std::unique_ptr<SlokedScreenBasis>, KgrContextManager<KgrLocalContext> &);
+            Instance(KgrNamedServer &, std::unique_ptr<SlokedScreenProvider>, KgrContextManager<KgrLocalContext> &);
             
             SlokedScreenServer server;
-            std::unique_ptr<SlokedScreenBasis> basis;
+            std::unique_ptr<SlokedScreenProvider> provider;
         };
      public:
         SlokedScreenServerContainer();
-        SlokedScreenServer &Spawn(const std::string &, KgrNamedServer &, std::unique_ptr<SlokedScreenBasis>);
+        SlokedScreenServer &Spawn(const std::string &, KgrNamedServer &, std::unique_ptr<SlokedScreenProvider>);
         bool Has(const std::string &) const;
         SlokedScreenServer &Get(const std::string &) const;
         void Shutdown(const std::string &);
@@ -98,10 +90,10 @@ namespace sloked {
         std::map<std::string, std::unique_ptr<Instance>> screens;
     };
 
-    class SlokedScreenFactory {
+    class SlokedScreenProviderFactory {
      public:
-        virtual ~SlokedScreenFactory() = default;
-        virtual std::unique_ptr<SlokedScreenBasis> Make(const SlokedUri &, const SlokedCharWidth &) = 0;
+        virtual ~SlokedScreenProviderFactory() = default;
+        virtual std::unique_ptr<SlokedScreenProvider> Make(const SlokedUri &, const SlokedCharWidth &) = 0;
     };
 }
 
