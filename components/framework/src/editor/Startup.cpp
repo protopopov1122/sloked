@@ -41,8 +41,14 @@ namespace sloked {
         return *this;
     }
 
+    SlokedEditorStartup::Parameters &SlokedEditorStartup::Parameters::SetScreenProviders(SlokedScreenProviderFactory &provider) {
+        this->screenProviders = std::addressof(provider);
+        return *this;
+    }
+
     SlokedEditorStartup::SlokedEditorStartup(Parameters prms)
-        : logger(prms.logger), namespaceFactory(prms.root), baseTaggers(prms.taggers), editorFactory(std::move(prms.editors)), cryptoEngine(prms.crypto) {}
+        : logger(prms.logger), namespaceFactory(prms.root), baseTaggers(prms.taggers),
+          editorFactory(std::move(prms.editors)), cryptoEngine(prms.crypto), screenProviders(prms.screenProviders) {}
         
     void SlokedEditorStartup::Spawn(const KgrValue &config) {
         const auto &editors = config.AsDictionary();
@@ -227,6 +233,14 @@ namespace sloked {
             SlokedDefaultServicesFacade services(serviceProvider);
             for (const auto &service : serviceConfig["endpoints"].AsArray()) {
                 editor.GetServer().GetServer().Register(service.AsString(), services.Build(service.AsString()));
+            }
+        }
+        if (serverConfig.Has("screen")) {
+            if (this->screenProviders != nullptr) {
+                auto uri = SlokedUri::Parse(serverConfig["screen"].AsString());
+                editor.InitializeScreen(*this->screenProviders, uri);
+            } else {
+                throw SlokedError("Startup: Screen providers are not defined");
             }
         }
     }

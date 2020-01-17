@@ -65,6 +65,7 @@ namespace sloked {
 
         KgrNamedServer &server;
         SlokedScreenProvider &provider;
+        KgrContextManager<KgrLocalContext> &contextManager;
         std::atomic<bool> work;
         std::atomic<bool> renderRequested;
         std::thread worker;

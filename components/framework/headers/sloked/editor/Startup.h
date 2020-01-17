@@ -36,6 +36,7 @@ namespace sloked {
             Parameters &SetTaggers(SlokedTextTaggerRegistry<int> &);
             Parameters &SetEditors(SlokedEditorStartup::EditorFactory);
             Parameters &SetCrypto(SlokedCrypto &);   
+            Parameters &SetScreenProviders(SlokedScreenProviderFactory &);
 
             friend class SlokedEditorStartup;
          private:
@@ -44,6 +45,7 @@ namespace sloked {
             SlokedTextTaggerRegistry<int> *taggers;
             SlokedEditorStartup::EditorFactory editors;
             SlokedCrypto *crypto;
+            SlokedScreenProviderFactory *screenProviders;
         };
         SlokedEditorStartup(Parameters);
         void Spawn(const KgrValue &);
@@ -68,6 +70,7 @@ namespace sloked {
         SlokedTextTaggerRegistry<int> *baseTaggers;
         EditorFactory editorFactory;
         SlokedCrypto *cryptoEngine;
+        SlokedScreenProviderFactory *screenProviders;
     };
 }
 

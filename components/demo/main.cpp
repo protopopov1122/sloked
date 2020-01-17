@@ -204,7 +204,7 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
     SlokedTerminalScreenProvider<SlokedTerminalResizeListener> provider;
 };
 
-class SlokedDemoScreenFactory : SlokedScreenProviderFactory {
+class SlokedDemoScreenFactory : public SlokedScreenProviderFactory {
  public:
     std::unique_ptr<SlokedScreenProvider> Make(const SlokedUri &, const SlokedCharWidth &charWidth) final {
         return std::make_unique<SlokedDemoScreenBasis>(charWidth);
@@ -246,10 +246,13 @@ int main(int argc, const char **argv) {
     startupPrms.SetEditors([] {
         return std::make_unique<SlokedEditorApp>(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
     });
+    if constexpr (!SlokedTerminalCompat::HasSystemTerminal()) {
+        throw SlokedError("Demo: system terminal is required");
+    }
+    SlokedDemoScreenFactory screenFactory;
+    startupPrms.SetScreenProviders(screenFactory);
     SlokedEditorStartup startup(std::move(startupPrms));
-    SlokedScreenServerContainer screens;
     closeables.Attach(startup);
-    closeables.Attach(screens);
 
     // Configuration
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
@@ -353,7 +356,8 @@ int main(int argc, const char **argv) {
                             }
                         }
                     }
-                }
+                },
+                { "screen", "terminal:///system" }
             }
         }
     };
@@ -408,11 +412,7 @@ int main(int argc, const char **argv) {
     SlokedPath outputPath = serviceProvider.GetNamespace().GetResolver().Resolve(SlokedPath{cli["output"].As<std::string>()});
 
     // Screen
-    if constexpr (!SlokedTerminalCompat::HasSystemTerminal()) {
-        throw SlokedError("Demo: system terminal is required");
-    }
-    SlokedDemoScreenFactory screenFactory;
-    auto &screenServer = screens.Spawn("main", secondaryServer.GetServer(), screenFactory.Make(SlokedUri::Parse("terminal:///system"), mainEditor.GetCharWidth()));
+    auto &screenServer = mainEditor.GetScreen();
 
 
     // Editor initialization

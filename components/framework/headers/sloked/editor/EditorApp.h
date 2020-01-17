@@ -46,6 +46,7 @@ namespace sloked {
         SlokedServerFacade &InitializeServer();
         SlokedServerFacade &InitializeServer(std::unique_ptr<SlokedSocket>);
         SlokedServiceDependencyProvider &InitializeServiceProvider(std::unique_ptr<SlokedServiceDependencyProvider>);
+        SlokedScreenServer &InitializeScreen(SlokedScreenProviderFactory &, const SlokedUri &);
         void Attach(SlokedCloseable &);
         void Attach(std::unique_ptr<SlokedDataHandle>);
 
@@ -63,6 +64,8 @@ namespace sloked {
         SlokedCryptoFacade &GetCrypto();
         SlokedServerFacade &GetServer();
         SlokedServiceDependencyProvider &GetServiceProvider();
+        bool HasScreen() const;
+        SlokedScreenServer &GetScreen() const;
 
      private:
         std::atomic<bool> running;
@@ -76,6 +79,8 @@ namespace sloked {
         std::unique_ptr<SlokedCryptoFacade> crypto;
         std::unique_ptr<SlokedServerFacade> server;
         std::unique_ptr<SlokedServiceDependencyProvider> serviceProvider;
+        std::unique_ptr<SlokedScreenProvider> screenProvider;
+        std::unique_ptr<SlokedScreenServer> screen;
         SlokedCharWidth charWidth;
         std::vector<std::unique_ptr<SlokedDataHandle>> handles;
     };

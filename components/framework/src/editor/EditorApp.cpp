@@ -84,6 +84,19 @@ namespace sloked {
         }
     }
 
+    SlokedScreenServer &SlokedEditorApp::InitializeScreen(SlokedScreenProviderFactory &providers, const SlokedUri &uri) {
+        if (this->running.load()) {
+            throw SlokedError("EditorApp: Already running");
+        } else if (this->screen != nullptr) {
+            throw SlokedError("EditorApp: Screen already initialized");
+        } else {
+            this->screenProvider = providers.Make(uri, this->GetCharWidth());
+            this->screen = std::make_unique<SlokedScreenServer>(this->GetServer().GetServer(), *this->screenProvider, this->GetServiceProvider().GetContextManager());
+            this->closeables.Attach(*this->screen);
+            return *this->screen;
+        }
+    }
+
     void SlokedEditorApp::Attach(SlokedCloseable &closeable) {
         this->closeables.Attach(closeable);
     }
@@ -106,6 +119,9 @@ namespace sloked {
             if (this->server) {
                 this->server->Start();
             }
+            if (this->screen) {
+                this->screen->Start(KgrNetConfig::ResponseTimeout);
+            }
         } else {
             throw SlokedError("EditorApp: Already running");
         }
@@ -116,6 +132,8 @@ namespace sloked {
             std::thread([this] {
                 std::unique_lock lock(this->termination_mtx);
                 this->closeables.Close();
+                this->screen = nullptr;
+                this->screenProvider = nullptr;
                 this->server = nullptr;
                 this->serviceProvider = nullptr;
                 this->crypto = nullptr;
@@ -181,6 +199,18 @@ namespace sloked {
             return *this->serviceProvider;
         } else {
             throw SlokedError("EditorApp: Service provider not defined");
+        }
+    }
+
+    bool SlokedEditorApp::HasScreen() const {
+        return this->screen != nullptr;
+    }
+
+    SlokedScreenServer &SlokedEditorApp::GetScreen() const {
+        if (this->screen) {
+            return *this->screen;
+        } else {
+            throw SlokedError("EditorApp: Screen not defined");
         }
     }
 }
