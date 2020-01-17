@@ -238,11 +238,15 @@ int main(int argc, const char **argv) {
     SlokedDemoRootNamespaceFactory nsFactory;
     SlokedDefaultTextTaggerRegistry<int> baseTaggers;
     baseTaggers.Bind("default", std::make_unique<TestFragmentFactory>());
-    SlokedEditorStartup startup(logger, nsFactory, &baseTaggers, [] {
+    SlokedEditorStartup::Parameters startupPrms(logger, nsFactory);
+    startupPrms.SetTaggers(baseTaggers);
+    if constexpr (SlokedCryptoCompat::IsSupported()) {
+        startupPrms.SetCrypto(SlokedCryptoCompat::GetCrypto());
+    }
+    startupPrms.SetEditors([] {
         return std::make_unique<SlokedEditorApp>(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
-    }, SlokedCryptoCompat::IsSupported()
-        ? &SlokedCryptoCompat::GetCrypto()
-        : nullptr);
+    });
+    SlokedEditorStartup startup(std::move(startupPrms));
     SlokedScreenServerContainer screens;
     closeables.Attach(startup);
     closeables.Attach(screens);

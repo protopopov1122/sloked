@@ -23,8 +23,26 @@
 
 namespace sloked {
 
-    SlokedEditorStartup::SlokedEditorStartup(SlokedLogger &logger, SlokedRootNamespaceFactory &namespaceFactory, SlokedTextTaggerRegistry<int> *baseTaggers, EditorFactory editorFactory, SlokedCrypto *crypto)
-        : logger(logger), namespaceFactory(namespaceFactory), baseTaggers(baseTaggers), editorFactory(std::move(editorFactory)), cryptoEngine(crypto) {}
+    SlokedEditorStartup::Parameters::Parameters(SlokedLogger &logger, SlokedRootNamespaceFactory &root)
+        : logger(logger), root(root) {}
+    
+    SlokedEditorStartup::Parameters &SlokedEditorStartup::Parameters::SetTaggers(SlokedTextTaggerRegistry<int> &taggers) {
+        this->taggers = std::addressof(taggers);
+        return *this;
+    }
+
+    SlokedEditorStartup::Parameters &SlokedEditorStartup::Parameters::SetEditors(SlokedEditorStartup::EditorFactory editors) {
+        this->editors = std::move(editors);
+        return *this;
+    }
+
+    SlokedEditorStartup::Parameters &SlokedEditorStartup::Parameters::SetCrypto(SlokedCrypto &crypto) {
+        this->crypto = std::addressof(crypto);
+        return *this;
+    }
+
+    SlokedEditorStartup::SlokedEditorStartup(Parameters prms)
+        : logger(prms.logger), namespaceFactory(prms.root), baseTaggers(prms.taggers), editorFactory(std::move(prms.editors)), cryptoEngine(prms.crypto) {}
         
     void SlokedEditorStartup::Spawn(const KgrValue &config) {
         const auto &editors = config.AsDictionary();

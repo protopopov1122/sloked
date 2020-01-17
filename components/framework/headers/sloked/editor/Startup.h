@@ -30,7 +30,22 @@ namespace sloked {
     class SlokedEditorStartup : public SlokedCloseable, public SlokedEditorAppContainer {
      public:
         using EditorFactory = std::function<std::unique_ptr<SlokedEditorApp>()>;
-        SlokedEditorStartup(SlokedLogger &, SlokedRootNamespaceFactory &, SlokedTextTaggerRegistry<int> * = nullptr, EditorFactory = nullptr, SlokedCrypto * = nullptr);
+        class Parameters {
+         public:
+            Parameters(SlokedLogger &, SlokedRootNamespaceFactory &);
+            Parameters &SetTaggers(SlokedTextTaggerRegistry<int> &);
+            Parameters &SetEditors(SlokedEditorStartup::EditorFactory);
+            Parameters &SetCrypto(SlokedCrypto &);   
+
+            friend class SlokedEditorStartup;
+         private:
+            SlokedLogger &logger;
+            SlokedRootNamespaceFactory &root;
+            SlokedTextTaggerRegistry<int> *taggers;
+            SlokedEditorStartup::EditorFactory editors;
+            SlokedCrypto *crypto;
+        };
+        SlokedEditorStartup(Parameters);
         void Spawn(const KgrValue &);
         void Close() final;
         void Setup(SlokedEditorApp &, const KgrValue &);
