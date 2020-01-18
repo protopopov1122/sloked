@@ -26,12 +26,12 @@
 namespace sloked {
 
     SlokedTextReplacer::SlokedTextReplacer(TextBlock &text, std::unique_ptr<SlokedTransactionStream> transactions, const Encoding &encoding)
-        : text(text), transactions(std::move(transactions)), encoding(encoding) {}
+        : text(text), transactions(std::move(transactions)), encoding(encoding), conv(Encoding::Get("system"), encoding) {}
 
     void SlokedTextReplacer::Replace(const SlokedSearchEntry &entry, std::string_view value, bool replace_groups) {
         TransactionBatch batch(*this->transactions, this->encoding);
         TransactionCursor cursor(this->text, this->encoding, batch);
-        this->ReplaceImpl(cursor, entry, value, replace_groups);
+        this->ReplaceImpl(cursor, entry, this->conv.Convert(value), replace_groups);
         batch.Finish();
     }
 
