@@ -257,13 +257,14 @@ int main(int argc, const char **argv) {
     // Configuration
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
     SlokedCLI cli;
-    cli.Define("--encoding", mainConfig.Find("/encoding").AsString());
+    cli.Define("--encoding", cli.Option<std::string>());
     cli.Define("--newline", mainConfig.Find("/newline").AsString());
     cli.Define("-o,--output", cli.Option<std::string>());
     cli.Define("--net-port", mainConfig.Find("/network/port").AsInt());
     cli.Define("--script", mainConfig.Find("/script/init").AsString());
     cli.Define("--script-path", mainConfig.Find("/script/path").AsString());
     cli.Parse(argc, argv);
+    cli.Fallback("--encoding", mainConfig.Find("/encoding").AsString());
     if (cli.Size() == 0) {
         std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
         return EXIT_FAILURE;

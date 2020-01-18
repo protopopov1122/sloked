@@ -157,6 +157,15 @@ namespace sloked {
 		}
 
 		template <typename T>
+		auto As(T &&defaultValue) const {
+			if (this->value.has_value()) {
+				return this->value.value().As<T>();
+			} else {
+				return defaultValue;
+			}
+		}
+
+		template <typename T>
         void SetValue(std::enable_if_t<std::is_integral_v<T>, T> value) {
 			if (this->type == SlokedCLIValue::Type::Integer) {
 				this->value = SlokedCLIValue(static_cast<int64_t>(value));
@@ -171,6 +180,13 @@ namespace sloked {
 				this->value = SlokedCLIValue(static_cast<double>(value));
 			} else {
 				throw SlokedError("CLIOption: Error assigning float to " + std::string(SlokedCLIValue::TypeToName(this->type)));
+			}
+		}
+
+		template <typename T>
+		void SetFallback(T &&value) {
+			if (!this->value.has_value()) {
+				this->SetValue(std::forward<T>(value));
 			}
 		}
 
@@ -214,38 +230,24 @@ namespace sloked {
 		std::vector<std::string_view>::const_iterator end() const;
         void Parse(int, const char **);
 
-		template <typename T = bool>
-        void Define(const std::string &keys, T &&value = false) {
+		template <typename T>
+        void Define(const std::string &keys, T &&value, const std::string &description = "") {
 			std::shared_ptr<SlokedCLIOption> option;
 			if constexpr (std::is_integral_v<T>) {
 				option = std::make_shared<SlokedCLIOption>(static_cast<int64_t>((value)));
 			} else {
 				option = std::make_shared<SlokedCLIOption>(std::forward<T>(value));
 			}
-			std::string_view allKeys = keys;
-			while (!allKeys.empty()) {
-				auto keyEnd = allKeys.find(',');
-				auto key = allKeys.substr(0, keyEnd != allKeys.npos ? keyEnd : allKeys.size());
-				allKeys.remove_prefix(keyEnd != allKeys.npos ? keyEnd + 1 : allKeys.size());
-				if (starts_with(key, "--")) {
-					key.remove_prefix(2);
-					std::string optionKey{key};
-					if (this->options.count(optionKey) == 0) {
-						this->options.emplace(optionKey, option);
-					} else {
-						throw SlokedError("CLI: Duplicate option '--" + optionKey + "'");
-					}
-				} else if (starts_with(key, "-") && key.size() == 2) {
-					if (this->shortOptions.count(key[1]) == 0) {
-						this->shortOptions.emplace(key[1], option);
-					} else {
-						throw SlokedError("CLI: Duplicate option '" + std::string(1, key[1]) + "'");
-					}
-				} else {
-					throw SlokedError("CLI: Malformed option definition " + std::string(key));
-				}
+			this->DefineImpl(keys, option);
+			this->descriptions.push_back(std::make_pair(OptionDescription{keys, description}, option));
+		}
+
+		template <typename T>
+		void Fallback(const std::string &keys, T &&value) {
+			auto options = this->FindKeys(keys);
+			for (auto &option : options) {
+				option->SetFallback<T>(std::forward<T>(value));
 			}
-			this->descriptions.push_back(std::make_pair(OptionDescription{keys, ""}, option));
 		}
 
 		template <typename T>
@@ -265,6 +267,8 @@ namespace sloked {
      private:
         void ParseOption(std::string_view, SlokedCLIArgumentIterator &);
         void ParseShortOption(std::string_view, SlokedCLIArgumentIterator &);
+		void DefineImpl(std::string_view, std::shared_ptr<SlokedCLIOption>);
+		std::vector<std::shared_ptr<SlokedCLIOption>> FindKeys(std::string_view); 
 
 		struct OptionDescription {
 			std::string keys;

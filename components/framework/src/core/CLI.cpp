@@ -225,4 +225,56 @@ namespace sloked {
             }
         }
     }
+
+    void SlokedCLI::DefineImpl(std::string_view allKeys, std::shared_ptr<SlokedCLIOption> option) {
+        while (!allKeys.empty()) {
+            auto keyEnd = allKeys.find(',');
+            auto key = allKeys.substr(0, keyEnd != allKeys.npos ? keyEnd : allKeys.size());
+            allKeys.remove_prefix(keyEnd != allKeys.npos ? keyEnd + 1 : allKeys.size());
+            if (starts_with(key, "--")) {
+                key.remove_prefix(2);
+                std::string optionKey{key};
+                if (this->options.count(optionKey) == 0) {
+                    this->options.emplace(optionKey, option);
+                } else {
+                    throw SlokedError("CLI: Duplicate option '--" + optionKey + "'");
+                }
+            } else if (starts_with(key, "-") && key.size() == 2) {
+                if (this->shortOptions.count(key[1]) == 0) {
+                    this->shortOptions.emplace(key[1], option);
+                } else {
+                    throw SlokedError("CLI: Duplicate option '" + std::string(1, key[1]) + "'");
+                }
+            } else {
+                throw SlokedError("CLI: Malformed option definition " + std::string(key));
+            }
+        }
+    }
+
+    std::vector<std::shared_ptr<SlokedCLIOption>> SlokedCLI::FindKeys(std::string_view allKeys) {
+        std::vector<std::shared_ptr<SlokedCLIOption>> result;
+        while (!allKeys.empty()) {
+            auto keyEnd = allKeys.find(',');
+            auto key = allKeys.substr(0, keyEnd != allKeys.npos ? keyEnd : allKeys.size());
+            allKeys.remove_prefix(keyEnd != allKeys.npos ? keyEnd + 1 : allKeys.size());
+            if (starts_with(key, "--")) {
+                key.remove_prefix(2);
+                std::string optionKey{key};
+                if (this->options.count(optionKey) != 0) {
+                    result.push_back(this->options.at(optionKey));
+                } else {
+                    throw SlokedError("CLI: Unknown option '--" + optionKey + "'");
+                }
+            } else if (starts_with(key, "-") && key.size() == 2) {
+                if (this->shortOptions.count(key[1]) != 0) {
+                   result.push_back(this->shortOptions.at(key[1]));
+                } else {
+                    throw SlokedError("CLI: Unknown option '" + std::string(1, key[1]) + "'");
+                }
+            } else {
+                throw SlokedError("CLI: Malformed option definition " + std::string(key));
+            }
+        }
+        return result;
+    }
 }

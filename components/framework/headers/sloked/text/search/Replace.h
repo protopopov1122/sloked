@@ -54,6 +54,7 @@ namespace sloked {
         TextBlock &text;
         std::unique_ptr<SlokedTransactionStream> transactions;
         const Encoding &encoding;
+        EncodingConverter conv;
     };
 }
 
