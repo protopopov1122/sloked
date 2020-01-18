@@ -70,26 +70,6 @@ namespace sloked {
         std::atomic<bool> renderRequested;
         std::thread worker;
     };
-    
-    class SlokedScreenServerContainer : public SlokedCloseable {
-        struct Instance {
-            Instance(KgrNamedServer &, std::unique_ptr<SlokedScreenProvider>, KgrContextManager<KgrLocalContext> &);
-            
-            SlokedScreenServer server;
-            std::unique_ptr<SlokedScreenProvider> provider;
-        };
-     public:
-        SlokedScreenServerContainer();
-        SlokedScreenServer &Spawn(const std::string &, KgrNamedServer &, std::unique_ptr<SlokedScreenProvider>);
-        bool Has(const std::string &) const;
-        SlokedScreenServer &Get(const std::string &) const;
-        void Shutdown(const std::string &);
-        void Close() final;
-
-     private:
-        KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
-        std::map<std::string, std::unique_ptr<Instance>> screens;
-    };
 
     class SlokedScreenProviderFactory {
      public:
