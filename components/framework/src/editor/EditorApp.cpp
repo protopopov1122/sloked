@@ -31,6 +31,7 @@ namespace sloked {
         this->ioPoller = std::make_unique<SlokedDefaultIOPollThread>(*this->ioPoll);
         this->closeables.Attach(*this->ioPoller);
         this->closeables.Attach(this->sched);
+        this->closeables.Attach(this->contextManager);
     }
 
     SlokedCryptoFacade &SlokedEditorApp::InitializeCrypto(SlokedCrypto &crypto) {
@@ -91,7 +92,7 @@ namespace sloked {
             throw SlokedError("EditorApp: Screen already initialized");
         } else {
             this->screenProvider = providers.Make(uri, this->GetCharWidth());
-            this->screen = std::make_unique<SlokedScreenServer>(this->GetServer().GetServer(), *this->screenProvider, this->GetServiceProvider().GetContextManager());
+            this->screen = std::make_unique<SlokedScreenServer>(this->GetServer().GetServer(), *this->screenProvider, this->GetContextManager());
             this->closeables.Attach(*this->screen);
             return *this->screen;
         }
@@ -113,9 +114,7 @@ namespace sloked {
         if (!this->running.exchange(true)) {
             this->ioPoller->Start(KgrNetConfig::RequestTimeout);
             this->sched.Start();
-            if (this->serviceProvider) {
-                this->serviceProvider->Start();
-            }
+            this->contextManager.Start();
             if (this->server) {
                 this->server->Start();
             }
@@ -212,5 +211,9 @@ namespace sloked {
         } else {
             throw SlokedError("EditorApp: Screen not defined");
         }
+    }
+
+    KgrContextManager<KgrLocalContext> &SlokedEditorApp::GetContextManager() {
+        return this->contextManager.GetManager();
     }
 }

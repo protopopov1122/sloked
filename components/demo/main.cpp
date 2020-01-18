@@ -356,8 +356,7 @@ int main(int argc, const char **argv) {
                             }
                         }
                     }
-                },
-                { "screen", "terminal:///system" }
+                }
             }
         }
     };
@@ -375,7 +374,8 @@ int main(int argc, const char **argv) {
                             }
                         }
                     }
-                }
+                },
+                { "screen", "terminal:///system" }
             }
         }
     };
@@ -412,7 +412,7 @@ int main(int argc, const char **argv) {
     SlokedPath outputPath = serviceProvider.GetNamespace().GetResolver().Resolve(SlokedPath{cli["output"].As<std::string>()});
 
     // Screen
-    auto &screenServer = mainEditor.GetScreen();
+    auto &screenServer = secondaryEditor.GetScreen();
 
 
     // Editor initialization

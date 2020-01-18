@@ -225,7 +225,8 @@ namespace sloked {
         if (serverConfig.Has("services")) {
             const auto &serviceConfig = serverConfig["services"].AsDictionary();
             auto &serviceProvider = editor.InitializeServiceProvider(std::make_unique<SlokedServiceDependencyDefaultProvider>(
-                this->logger, this->namespaceFactory.Build(), editor.GetCharWidth(), editor.GetServer().GetServer(), this->baseTaggers));
+                this->logger, this->namespaceFactory.Build(), editor.GetCharWidth(), editor.GetServer().GetServer(), editor.GetContextManager(),
+                this->baseTaggers));
             if (serviceConfig.Has("root")) {
                 serviceProvider.GetNamespace().GetRoot().Mount(SlokedPath{"/"},
                     serviceProvider.GetNamespace().GetMounter().Mount(SlokedUri::Parse(serviceConfig["root"].AsString())));

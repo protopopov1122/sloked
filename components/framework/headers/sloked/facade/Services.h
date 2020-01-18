@@ -44,12 +44,11 @@ namespace sloked {
         virtual const SlokedCharWidth &GetCharWidth() = 0;
         virtual KgrNamedServer &GetServer() = 0;
         virtual SlokedEditorDocumentSet &GetDocuments() = 0;
-        virtual void Start() = 0;
     };
 
     class SlokedServiceDependencyDefaultProvider : public SlokedServiceDependencyProvider {
      public:
-        SlokedServiceDependencyDefaultProvider(SlokedLogger &, std::unique_ptr<SlokedRootNamespace>, const SlokedCharWidth &, KgrNamedServer &, SlokedTextTaggerRegistry<int> * = nullptr);
+        SlokedServiceDependencyDefaultProvider(SlokedLogger &, std::unique_ptr<SlokedRootNamespace>, const SlokedCharWidth &, KgrNamedServer &, KgrContextManager<KgrLocalContext> &, SlokedTextTaggerRegistry<int> * = nullptr);
         KgrContextManager<KgrLocalContext> &GetContextManager() override;
         SlokedTextTaggerRegistry<int> &GetTaggers() override;
         SlokedLogger &GetLogger() override;
@@ -58,7 +57,6 @@ namespace sloked {
         KgrNamedServer &GetServer() override;
         SlokedEditorDocumentSet &GetDocuments() override;
         void Close() override;
-        void Start() override;
 
      protected:
         SlokedLogger &logger;
@@ -66,7 +64,7 @@ namespace sloked {
         const SlokedCharWidth &charWidth;
         KgrNamedServer &server;
         SlokedEditorDocumentSet documents;
-        KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
+        KgrContextManager<KgrLocalContext> &contextManager;
         SlokedDefaultTextTaggerRegistry<int> taggers;
     };
 

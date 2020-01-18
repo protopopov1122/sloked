@@ -30,11 +30,12 @@
 namespace sloked {
 
     SlokedServiceDependencyDefaultProvider::SlokedServiceDependencyDefaultProvider(SlokedLogger &logger, std::unique_ptr<SlokedRootNamespace> rootNamespace,
-        const SlokedCharWidth &charWidth, KgrNamedServer &server, SlokedTextTaggerRegistry<int> *baseTaggers)
-        : logger(logger), rootNamespace(std::move(rootNamespace)), charWidth(charWidth), server(server), documents(this->rootNamespace->GetRoot()), taggers(baseTaggers) {}
+        const SlokedCharWidth &charWidth, KgrNamedServer &server, KgrContextManager<KgrLocalContext> &contextManager, SlokedTextTaggerRegistry<int> *baseTaggers)
+        : logger(logger), rootNamespace(std::move(rootNamespace)), charWidth(charWidth), server(server),
+          documents(this->rootNamespace->GetRoot()), contextManager(contextManager), taggers(baseTaggers) {}
 
     KgrContextManager<KgrLocalContext> &SlokedServiceDependencyDefaultProvider::GetContextManager() {
-        return this->contextManager.GetManager();
+        return this->contextManager;
     }
 
     SlokedTextTaggerRegistry<int> &SlokedServiceDependencyDefaultProvider::GetTaggers() {
@@ -61,13 +62,7 @@ namespace sloked {
         return this->documents;
     }
 
-    void SlokedServiceDependencyDefaultProvider::Close() {
-        this->contextManager.Close();
-    }
-
-    void SlokedServiceDependencyDefaultProvider::Start() {
-        this->contextManager.Start();
-    }
+    void SlokedServiceDependencyDefaultProvider::Close() {}
 
     SlokedAbstractServicesFacade::SlokedAbstractServicesFacade(SlokedServiceDependencyProvider &provider)
         : provider(provider) {}

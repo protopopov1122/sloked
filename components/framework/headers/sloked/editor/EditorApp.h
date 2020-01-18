@@ -66,6 +66,7 @@ namespace sloked {
         SlokedServiceDependencyProvider &GetServiceProvider();
         bool HasScreen() const;
         SlokedScreenServer &GetScreen() const;
+        KgrContextManager<KgrLocalContext> &GetContextManager();
 
      private:
         std::atomic<bool> running;
@@ -83,6 +84,7 @@ namespace sloked {
         std::unique_ptr<SlokedScreenServer> screen;
         SlokedCharWidth charWidth;
         std::vector<std::unique_ptr<SlokedDataHandle>> handles;
+        KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
     };
 
     class SlokedEditorAppContainer {
