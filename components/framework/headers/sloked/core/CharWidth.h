@@ -22,23 +22,28 @@
 #ifndef SLOKED_CORE_CHARWIDTH_H_
 #define SLOKED_CORE_CHARWIDTH_H_
 
-#include "sloked/Base.h"
 #include "sloked/core/Encoding.h"
+#include "sloked/core/Event.h"
 #include <cinttypes>
 
 namespace sloked {
 
     class SlokedCharWidth {
      public:
+        using Listener = SlokedEventEmitter<const SlokedCharWidth &>::Listener;
+        using Unbind = SlokedEventEmitter<const SlokedCharWidth &>::Unbind;
+
         SlokedCharWidth();
         std::size_t GetCharWidth(char32_t) const;
         std::pair<std::size_t, std::size_t> GetRealPosition(std::string_view, std::size_t, const Encoding &) const;
         std::string GetTab(const Encoding &) const;
+        Unbind Listen(Listener) const;
     
         void SetTabWidth(std::size_t);
      private:
         std::size_t tab_width;
         std::u32string tab;
+        mutable SlokedEventEmitter<const SlokedCharWidth &> events;
     };
 }
 

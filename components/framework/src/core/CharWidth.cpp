@@ -48,7 +48,12 @@ namespace sloked {
         return encoding.Encode(this->tab);
     }
 
+    SlokedCharWidth::Unbind SlokedCharWidth::Listen(Listener listener) const {
+        return this->events.Listen(std::move(listener));
+    }
+
     void SlokedCharWidth::SetTabWidth(std::size_t width) {
         this->tab_width = width;
+        this->events.Emit(*this);
     }
 }
