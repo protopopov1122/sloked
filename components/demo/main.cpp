@@ -288,7 +288,7 @@ int main(int argc, const char **argv) {
                                             {
                                                 "restrictAccess", KgrDictionary {
                                                     { "whitelist", true },
-                                                    { "content", KgrArray {"document::", "namespace::", "screen::"} }
+                                                    { "content", KgrArray {"document::", "namespace::", "screen::", "editor::"} }
                                                 }
                                             },
                                             {
@@ -333,13 +333,13 @@ int main(int argc, const char **argv) {
                 {
                     "restrictAccess", KgrDictionary {
                         { "whitelist", true },
-                        { "content", KgrArray {"document::", "namespace::", "screen::"} }
+                        { "content", KgrArray {"document::", "namespace::", "screen::", "editor::"} }
                     }
                 },
                 {
                     "restrictModification", KgrDictionary {
                         { "whitelist", true },
-                        { "content", KgrArray {"document::", "namespace::", "screen::"} }
+                        { "content", KgrArray {"document::", "namespace::", "screen::", "editor::"} }
                     }
                 },
                 {
@@ -352,7 +352,8 @@ int main(int argc, const char **argv) {
                                 "document::manager",
                                 "document::notify",
                                 "document::search",
-                                "namespace::root"
+                                "namespace::root",
+                                "editor::parameters"
                             }
                         }
                     }
@@ -413,6 +414,7 @@ int main(int argc, const char **argv) {
 
     // Screen
     auto &screenServer = secondaryEditor.GetScreen();
+    mainEditor.GetCharWidth().SetTabWidth(8);
 
 
     // Editor initialization
@@ -428,11 +430,11 @@ int main(int argc, const char **argv) {
     screenClient.Handle.NewMultiplexer("/");
     auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{screenServer.GetScreen().GetSize().GetSize().line, screenServer.GetScreen().GetSize().GetSize().column});
     screenSizeClient.Listen([&](const auto &size) {
-        if (screenServer.IsRunning() && mainWindow.has_value()) {
-            mainEditor.GetScheduler().Defer([&, size] {
+        mainEditor.GetScheduler().Defer([&, size] {
+            if (screenServer.IsRunning() && mainWindow.has_value()) {
                 screenClient.Multiplexer.ResizeWindow(mainWindow.value(), size);
-            });
-        }
+            }
+        });
     });
     screenClient.Handle.NewSplitter(mainWindow.value(), Splitter::Direction::Vertical);
     screenClient.Splitter.NewWindow(mainWindow.value(), Splitter::Constraints(1.0f));

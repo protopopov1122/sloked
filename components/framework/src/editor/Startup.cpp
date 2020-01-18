@@ -24,7 +24,7 @@
 namespace sloked {
 
     SlokedEditorStartup::Parameters::Parameters(SlokedLogger &logger, SlokedRootNamespaceFactory &root)
-        : logger(logger), root(root) {}
+        : logger(logger), root(root), taggers{nullptr}, editors{nullptr}, crypto{nullptr}, screenProviders{nullptr} {}
     
     SlokedEditorStartup::Parameters &SlokedEditorStartup::Parameters::SetTaggers(SlokedTextTaggerRegistry<int> &taggers) {
         this->taggers = std::addressof(taggers);

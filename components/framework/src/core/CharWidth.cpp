@@ -54,6 +54,7 @@ namespace sloked {
 
     void SlokedCharWidth::SetTabWidth(std::size_t width) {
         this->tab_width = width;
+        this->tab = std::u32string(this->tab_width, U' ');
         this->events.Emit(*this);
     }
 }

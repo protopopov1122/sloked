@@ -117,6 +117,9 @@ namespace sloked {
             this->contextManager.Start();
             if (this->server) {
                 this->server->Start();
+                if (this->server->IsRemote()) {
+                    this->charWidthUpdater = std::make_unique<SlokedCharWidthClient>(this->server->GetServer().Connect("editor::parameters"), this->charWidth);
+                }
             }
             if (this->screen) {
                 this->screen->Start(KgrNetConfig::ResponseTimeout);
@@ -133,6 +136,7 @@ namespace sloked {
                 this->closeables.Close();
                 this->screen = nullptr;
                 this->screenProvider = nullptr;
+                this->charWidthUpdater = nullptr;
                 this->server = nullptr;
                 this->serviceProvider = nullptr;
                 this->crypto = nullptr;

@@ -91,7 +91,9 @@ namespace sloked {
                     static_cast<TextPosition::Line>(sz.AsDictionary()["width"].AsInt())
                 };
             }
-            listener(this->currentSize.load());
+            if (this->pipe->GetStatus() == KgrPipe::Status::Open) {
+                listener(this->currentSize.load());
+            }
         });
     }
 

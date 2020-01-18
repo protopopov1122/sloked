@@ -32,6 +32,7 @@
 #include "sloked/facade/Services.h"
 #include "sloked/core/DataHandle.h"
 #include "sloked/editor/ScreenServer.h"
+#include "sloked/services/CharWidth.h"
 #include <atomic>
 #include <variant>
 #include <mutex>
@@ -79,6 +80,7 @@ namespace sloked {
         SlokedNetworkFacade network;
         std::unique_ptr<SlokedCryptoFacade> crypto;
         std::unique_ptr<SlokedServerFacade> server;
+        std::unique_ptr<SlokedCharWidthClient> charWidthUpdater;
         std::unique_ptr<SlokedServiceDependencyProvider> serviceProvider;
         std::unique_ptr<SlokedScreenProvider> screenProvider;
         std::unique_ptr<SlokedScreenServer> screen;

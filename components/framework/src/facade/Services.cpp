@@ -20,6 +20,7 @@
 */
 
 #include "sloked/facade/Services.h"
+#include "sloked/services/CharWidth.h"
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentNotify.h"
 #include "sloked/services/DocumentSet.h"
@@ -91,6 +92,9 @@ namespace sloked {
         });
         this->builders.emplace("namespace::root", [](SlokedServiceDependencyProvider &provider) {
             return std::make_unique<SlokedNamespaceService>(provider.GetNamespace(), provider.GetContextManager());
+        });
+        this->builders.emplace("editor::parameters", [](SlokedServiceDependencyProvider &provider) {
+            return std::make_unique<SlokedCharWidthService>(provider.GetCharWidth(), provider.GetContextManager());
         });
     }
 
