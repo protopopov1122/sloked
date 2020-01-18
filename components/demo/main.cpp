@@ -359,6 +359,11 @@ int main(int argc, const char **argv) {
                     }
                 }
             }
+        },
+        {
+            "parameters", KgrDictionary {
+                { "tabWidth", 2 }
+            }
         }
     };
     auto &mainEditor = startup.Spawn("main", mainEditorConfig);
@@ -414,7 +419,6 @@ int main(int argc, const char **argv) {
 
     // Screen
     auto &screenServer = secondaryEditor.GetScreen();
-    mainEditor.GetCharWidth().SetTabWidth(8);
 
 
     // Editor initialization

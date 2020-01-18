@@ -70,6 +70,13 @@ namespace sloked {
             this->SetupCrypto(editor, cryptoConfig);
         }
         this->SetupServer(editor, config["server"].AsDictionary());
+        if (config.Has("parameters")) {
+            const auto &parameters = config["parameters"].AsDictionary();
+            if (parameters.Has("tabWidth")) {
+                auto width = parameters["tabWidth"].AsInt();
+                editor.GetCharWidth().SetTabWidth(width);
+            }
+        }
     }
 
     bool SlokedEditorStartup::Has(const std::string &key) const {
