@@ -24,6 +24,8 @@
 
 #include "sloked/core/Error.h"
 #include "sloked/core/String.h"
+#include "sloked/namespace/Path.h"
+#include "sloked/kgr/Value.h"
 #include <variant>
 #include <string>
 #include <cinttypes>
@@ -48,51 +50,49 @@ namespace sloked {
     };
 
     class SlokedCLIValue {
-    	using ValueType = std::variant<int64_t, double, bool, std::string>;
-
 		template <typename T, typename E = void>
 		struct Conversion;
 
 		template <typename T>
-		struct Conversion<T, std::enable_if_t<std::is_integral_v<T>>> {
-			static T Apply(const ValueType &value) {
-				if (value.index() == 0) {
-					return static_cast<T>(std::get<0>(value));
+		struct Conversion<T, std::enable_if_t<!std::is_same_v<T, bool> && std::is_integral_v<T>>> {
+			static T Apply(const KgrValue &value) {
+				if (value.Is(KgrValueType::Integer)) {
+					return static_cast<T>(value.AsInt());
 				} else {
-					throw SlokedError("CLIValue: Error converting " + std::string(SlokedCLIValue::TypeToName(static_cast<Type>(value.index()))) + " to integer");
+					throw SlokedError("CLIValue: Error converting value to integer");
 				}
 			}
 		};
 
 		template <typename T>
 		struct Conversion<T, std::enable_if_t<std::is_floating_point_v<T>>> {
-			static T Apply(const ValueType &value) {
-				if (value.index() == 1) {
-					return static_cast<T>(std::get<1>(value));
+			static T Apply(const KgrValue &value) {
+				if (value.Is(KgrValueType::Number)) {
+					return static_cast<T>(value.AsNumber());
 				} else {
-					throw SlokedError("CLIValue: Error converting " + std::string(SlokedCLIValue::TypeToName(static_cast<Type>(value.index()))) + " to float");
+					throw SlokedError("CLIValue: Error converting value to float");
 				}
 			}
 		};
 
 		template <typename T>
 		struct Conversion<T, std::enable_if_t<std::is_same_v<T, bool>>> {
-			static T Apply(const ValueType &value) {
-				if (value.index() == 2) {
-					return std::get<2>(value);
+			static T Apply(const KgrValue &value) {
+				if (value.Is(KgrValueType::Boolean)) {
+					return value.AsBoolean();
 				} else {
-					throw SlokedError("CLIValue: Error converting " + std::string(SlokedCLIValue::TypeToName(static_cast<Type>(value.index()))) + " to boolean");
+					throw SlokedError("CLIValue: Error converting value to boolean");
 				}
 			}
 		};
 
 		template <typename T>
 		struct Conversion<T, std::enable_if_t<std::is_same_v<T, std::string>>> {
-			static const T &Apply(const ValueType &value) {
-				if (value.index() == 3) {
-					return std::get<3>(value);
+			static const T &Apply(const KgrValue &value) {
+				if (value.Is(KgrValueType::String)) {
+					return value.AsString();
 				} else {
-					throw SlokedError("CLIValue: Error converting " + std::string(SlokedCLIValue::TypeToName(static_cast<Type>(value.index()))) + " to string");
+					throw SlokedError("CLIValue: Error converting value to string");
 				}
 			}
 		};
@@ -110,42 +110,46 @@ namespace sloked {
         SlokedCLIValue(const char *);
 
         Type GetType() const;
+		const KgrValue &GetValue() const;
 
 		template <typename T>
 		auto As() const {
 			return Conversion<T>::Apply(this->value);
 		}
 
-		static constexpr const char *TypeToName(Type type) {
-			switch (type) {
-				case Type::Integer:
-					return "integer";
+		template <typename T>
+		static SlokedCLIValue Make(std::enable_if_t<!std::is_same_v<T, bool> && std::is_integral_v<T>, T> value) {
+			return SlokedCLIValue(static_cast<int64_t>(value));
+		}
 
-				case Type::Float:
-					return "float";
+		template <typename T>
+		static SlokedCLIValue Make(std::enable_if_t<std::is_floating_point_v<T>, T> value) {
+			return SlokedCLIValue(static_cast<double>(value));
+		}
 
-				case Type::Boolean:
-					return "boolean";
+		template <typename T>
+		static SlokedCLIValue Make(std::enable_if_t<std::is_same_v<T, bool>, T> value) {
+			return SlokedCLIValue(value);
+		}
 
-				case Type::String:
-					return "string";
-			}
-			return "";
+		template <typename T>
+		static SlokedCLIValue Make(std::enable_if_t<std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view> || std::is_same_v<std::remove_cv_t<T>, char *>, T> value) {
+			return SlokedCLIValue(std::move(value));
 		}
 
      private:
-        std::variant<int64_t, double, bool, std::string> value;
+        KgrValue value;
     };
 
     class SlokedCLIOption {
      public:
         SlokedCLIOption(SlokedCLIValue::Type);
-        SlokedCLIOption(SlokedCLIValue &&);
+        SlokedCLIOption(SlokedCLIValue);
 
         SlokedCLIValue::Type GetType() const;
         bool HasValue() const;
-        void SetValue(bool);
-        void SetValue(std::string_view);
+		void Map(const SlokedPath &);
+		bool Export(KgrValue &);
 
 		template <typename T>
 		auto As() const {
@@ -166,33 +170,28 @@ namespace sloked {
 		}
 
 		template <typename T>
-        void SetValue(std::enable_if_t<std::is_integral_v<T>, T> value) {
-			if (this->type == SlokedCLIValue::Type::Integer) {
-				this->value = SlokedCLIValue(static_cast<int64_t>(value));
+		SlokedCLIOption &SetValue(T &&nValue) {
+			auto newValue = SlokedCLIValue::Make<std::remove_cv_t<std::remove_reference_t<T>>>(std::forward<T>(nValue));
+			if (newValue.GetType() == this->type) {
+				this->value = newValue;
+				return *this;
 			} else {
-				throw SlokedError("CLIOption: Error assigning integer to " + std::string(SlokedCLIValue::TypeToName(this->type)));
+				throw SlokedError("CLIOption: Type conversion error");
 			}
 		}
 
 		template <typename T>
-        void SetValue(std::enable_if_t<std::is_floating_point_v<T>, T> value) {
-			if (this->type == SlokedCLIValue::Type::Float) {
-				this->value = SlokedCLIValue(static_cast<double>(value));
-			} else {
-				throw SlokedError("CLIOption: Error assigning float to " + std::string(SlokedCLIValue::TypeToName(this->type)));
-			}
-		}
-
-		template <typename T>
-		void SetFallback(T &&value) {
+		SlokedCLIOption &SetFallback(T &&value) {
 			if (!this->value.has_value()) {
 				this->SetValue(std::forward<T>(value));
 			}
+			return *this;
 		}
 
      private:
         SlokedCLIValue::Type type;
         std::optional<SlokedCLIValue> value;
+		std::optional<SlokedPath> path;
     };
 
     class SlokedCLI {
@@ -220,26 +219,29 @@ namespace sloked {
 		};
 
      public:
+		using Iterator = std::vector<std::string_view>::const_iterator;
         bool Has(const std::string &) const;
         bool Has(char) const;
-        std::size_t Size() const;
+        std::size_t Count() const;
         const SlokedCLIOption &operator[](const std::string &) const;
         const SlokedCLIOption &operator[](char) const;
         std::string_view At(std::size_t) const;
-		std::vector<std::string_view>::const_iterator begin() const;
-		std::vector<std::string_view>::const_iterator end() const;
+		Iterator begin() const;
+		Iterator end() const;
         void Parse(int, const char **);
+		KgrValue Export() const;
 
 		template <typename T>
-        void Define(const std::string &keys, T &&value, const std::string &description = "") {
+        SlokedCLIOption &Define(const std::string &keys, T &&value, const std::string &description = "") {
 			std::shared_ptr<SlokedCLIOption> option;
-			if constexpr (std::is_integral_v<T>) {
-				option = std::make_shared<SlokedCLIOption>(static_cast<int64_t>((value)));
-			} else {
+			if constexpr (std::is_same_v<T, SlokedCLIValue> || std::is_same_v<T, SlokedCLIValue::Type>) {
 				option = std::make_shared<SlokedCLIOption>(std::forward<T>(value));
+			} else {
+				option = std::make_shared<SlokedCLIOption>(this->Option(std::forward<T>(value)));
 			}
 			this->DefineImpl(keys, option);
 			this->descriptions.push_back(std::make_pair(OptionDescription{keys, description}, option));
+			return *option;
 		}
 
 		template <typename T>
@@ -257,8 +259,12 @@ namespace sloked {
 
 		template <typename T>
 		auto Option(T &&value) const {
-			if constexpr (std::is_integral_v<T>) {
+			if constexpr (std::is_same_v<T, bool>) {
+				return SlokedCLIValue(std::forward<T>(value));
+			} else if constexpr (std::is_integral_v<T>) {
 				return SlokedCLIValue(static_cast<int64_t>((value)));
+			} else if constexpr (std::is_floating_point_v<T>) {
+				return SlokedCLIValue(static_cast<double>((value)));
 			} else {
 				return SlokedCLIValue(std::forward<T>(value));
 			}

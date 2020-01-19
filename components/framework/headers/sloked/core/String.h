@@ -28,6 +28,7 @@
 namespace sloked {
 
     bool starts_with(std::string_view, std::string_view);
+    bool ends_with(std::string_view, std::string_view);
 }
 
 #endif

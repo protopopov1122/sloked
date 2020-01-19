@@ -69,6 +69,9 @@ namespace sloked {
         return this->value;
     }
 
+    SlokedPath::SlokedPath(String pathValue)
+        : SlokedPath(pathValue, Preset{std::string{"/"}}) {}
+
     SlokedPath::SlokedPath(String prefix, String pathValue, Preset preset)
         : preset(std::move(preset)), absolute{false}, literal("") {
         this->prefix = prefix;

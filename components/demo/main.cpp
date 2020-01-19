@@ -254,18 +254,18 @@ int main(int argc, const char **argv) {
     SlokedEditorStartup startup(std::move(startupPrms));
     closeables.Attach(startup);
 
-    // Configuration
+    // Configuration 
     SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
     SlokedCLI cli;
-    cli.Define("--encoding", cli.Option<std::string>());
-    cli.Define("--newline", mainConfig.Find("/newline").AsString());
+    cli.Define("--encoding", cli.Option<std::string>()).Map(SlokedPath{"/encoding"});
+    cli.Define("--newline", mainConfig.Find("/newline").AsString()).Map(SlokedPath{"/newline"});
     cli.Define("-o,--output", cli.Option<std::string>());
-    cli.Define("--net-port", mainConfig.Find("/network/port").AsInt());
-    cli.Define("--script", mainConfig.Find("/script/init").AsString());
-    cli.Define("--script-path", mainConfig.Find("/script/path").AsString());
+    cli.Define("--net-port", mainConfig.Find("/network/port").AsInt()).Map(SlokedPath{"/network{}/port"});
+    cli.Define("--script", mainConfig.Find("/script/init").AsString()).Map(SlokedPath{"/script{}/init"});
+    cli.Define("--script-path", mainConfig.Find("/script/path").AsString()).Map(SlokedPath{"/script{}/path"});
     cli.Parse(argc, argv);
     cli.Fallback("--encoding", mainConfig.Find("/encoding").AsString());
-    if (cli.Size() == 0) {
+    if (cli.Count() == 0) {
         std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
         return EXIT_FAILURE;
     }

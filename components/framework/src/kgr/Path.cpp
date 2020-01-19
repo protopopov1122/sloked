@@ -20,6 +20,8 @@
 */
 
 #include "sloked/kgr/Path.h"
+#include "sloked/core/Error.h"
+#include "sloked/core/String.h"
 
 namespace sloked {
 
@@ -27,13 +29,13 @@ namespace sloked {
         if (path.Components().empty()) {
             return root;
         }
-        auto front = path.Components().front();
-        if (front == "..") {
+        auto entry = path.Components().front();
+        if (entry == "..") {
             return {};
         }
-        if (front == ".") {
+        if (entry == ".") {
             if (path.Components().size() > 1) {
-                front = path.Components()[1];
+                entry = path.Components()[1];
             } else {
                 return root;
             }
@@ -43,7 +45,7 @@ namespace sloked {
             case KgrValueType::Array: {
                 std::size_t idx;
                 try {
-                    idx = std::stoull(front);
+                    idx = std::stoull(entry);
                 } catch (const std::invalid_argument &ex) {
                     return {};
                 }
@@ -53,8 +55,8 @@ namespace sloked {
             } break;
 
             case KgrValueType::Object:
-                if (root.AsDictionary().Has(front)) {
-                    return Traverse(root.AsDictionary()[front], tail);
+                if (root.AsDictionary().Has(entry)) {
+                    return Traverse(root.AsDictionary()[entry], tail);
                 }
                 break;
 
@@ -62,5 +64,80 @@ namespace sloked {
                 break;
         }
         return {};
+    }
+
+    void KgrPath::Assign(KgrValue &root, const SlokedPath &path, const KgrValue &value) {
+        if (path.Components().empty()) {
+            throw SlokedError("Path: Cannot assign to root");
+        }
+        auto entry = path.Components().front();
+        if (entry == "..") {
+            throw SlokedError("Path: Cannot assign to root");
+        }
+        if (entry == ".") {
+            if (path.Components().size() > 1) {
+                entry = path.Components()[1];
+            } else {
+                throw SlokedError("Path: Cannot assign to root");
+            }
+        }
+        auto tail = path.Tail(1);
+        if (tail.Components().empty()) {
+            if (root.Is(KgrValueType::Object)) {
+                root.AsDictionary().Put(entry, value);
+            } else if (root.Is(KgrValueType::Array)) {
+                if (entry == "end") {
+                    root.AsArray().Append(value);
+                } else if (starts_with(entry, "ins:")) {
+                    entry.erase(entry.begin(), std::next(entry.begin() + 3));
+                    root.AsArray().Insert(std::stoull(entry), value);
+                } else {
+                    root.AsArray().Replace(std::stoull(entry), value);
+                }
+            }
+        } else if (root.Is(KgrValueType::Object)) {
+            if (ends_with(entry, "[]")) {
+                entry.erase(std::prev(entry.end(), 2), entry.end());
+                if (!root.AsDictionary().Has(entry)) {
+                    root.AsDictionary().Put(entry, KgrArray{});
+                }
+            } else if (ends_with(entry, "{}")) {
+                entry.erase(std::prev(entry.end(), 2), entry.end());
+                if (!root.AsDictionary().Has(entry)) {
+                   root.AsDictionary().Put(entry, KgrDictionary{});
+                }
+            }
+            KgrPath::Assign(root.AsDictionary()[entry], tail, value);
+        } else if (root.Is(KgrValueType::Array)) {
+            std::size_t idx;
+            if (ends_with(entry, "[]")) {
+                entry.erase(std::prev(entry.end(), 2), entry.end());
+                if (entry == "end") {
+                    root.AsArray().Append(KgrArray{});
+                    idx = root.AsArray().Size() - 1;
+                } else if (starts_with(entry, "ins:")) {
+                    entry.erase(entry.begin(), std::next(entry.begin() + 3));
+                    idx = std::stoull(entry);
+                    root.AsArray().Insert(idx, KgrArray{});
+                } else {
+                    idx = std::stoull(entry);
+                }
+            } else if (ends_with(entry, "{}")) {
+                entry.erase(std::prev(entry.end(), 2), entry.end());
+                if (entry == "end") {
+                    root.AsArray().Append(KgrDictionary{});
+                    idx = root.AsArray().Size() - 1;
+                } else if (starts_with(entry, "ins:")) {
+                    entry.erase(entry.begin(), std::next(entry.begin() + 3));
+                    idx = std::stoull(entry);
+                    root.AsArray().Insert(idx, KgrDictionary{});
+                } else {
+                    idx = std::stoull(entry);
+                }
+            } else {
+                idx = std::stoull(entry);
+            }
+            KgrPath::Assign(root.AsArray()[idx], tail, value);
+        }
     }
 }

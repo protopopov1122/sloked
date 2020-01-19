@@ -35,4 +35,17 @@ namespace sloked {
             return false;
         }
     }
+
+    bool ends_with(std::string_view s1, std::string_view s2) {
+        if (s1.size() >= s2.size()) {
+            for (std::size_t i = 0; i < s2.size(); i++) {
+                if (s1[s1.size() - i - 1] != s2[s2.size() - i - 1]) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
 }

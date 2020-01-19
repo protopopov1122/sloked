@@ -30,6 +30,7 @@ namespace sloked {
     class KgrPath {
      public:
         static std::optional<KgrValue> Traverse(const KgrValue &, const SlokedPath &);
+        static void Assign(KgrValue &, const SlokedPath &, const KgrValue &);
     };
 }
 

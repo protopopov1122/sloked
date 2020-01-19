@@ -21,6 +21,8 @@
 
 #include "sloked/core/CLI.h"
 #include "sloked/core/String.h"
+#include "sloked/kgr/Path.h"
+#include <set>
 #include <cassert>
 
 namespace sloked {
@@ -43,31 +45,51 @@ namespace sloked {
 
     SlokedCLIValue::SlokedCLIValue(int64_t value)
         : value(value) {}
-
+        
     SlokedCLIValue::SlokedCLIValue(double value)
         : value(value) {}
-        
+
     SlokedCLIValue::SlokedCLIValue(bool value)
         : value(value) {}
 
     SlokedCLIValue::SlokedCLIValue(std::string_view value)
-        : value(std::string{value}) {}
-
-    SlokedCLIValue::SlokedCLIValue(const std::string &value)
         : value(value) {}
 
-    SlokedCLIValue::SlokedCLIValue(const char *value)
-        : value(std::string{value}) {}
+    SlokedCLIValue::SlokedCLIValue(const std::string & value)
+        : value(value) {}
+
+    SlokedCLIValue::SlokedCLIValue(const char * value)
+        : value(value) {}
 
     SlokedCLIValue::Type SlokedCLIValue::GetType() const {
-        return static_cast<Type>(this->value.index());
+        switch (this->value.GetType()) {
+            case KgrValueType::Integer:
+                return Type::Integer;
+            
+            case KgrValueType::Number:
+                return Type::Float;
+
+            case KgrValueType::Boolean:
+                return Type::Boolean;
+
+            case KgrValueType::String:
+                return Type::String;
+
+            default:
+                assert(false);
+                break;
+        }
+    }
+
+    const KgrValue &SlokedCLIValue::GetValue() const {
+        return this->value;
     }
 
     SlokedCLIOption::SlokedCLIOption(SlokedCLIValue::Type type)
         : type(type) {}
 
-    SlokedCLIOption::SlokedCLIOption(SlokedCLIValue &&value)
-        : type(value.GetType()), value(std::forward<SlokedCLIValue>(value)) {}
+    SlokedCLIOption::SlokedCLIOption(SlokedCLIValue value)
+        : type(value.GetType()), value(std::move(value)) {}
 
     SlokedCLIValue::Type SlokedCLIOption::GetType() const {
         return this->type;
@@ -77,19 +99,16 @@ namespace sloked {
         return this->value.has_value();
     }
 
-    void SlokedCLIOption::SetValue(bool value) {
-        if (this->type == SlokedCLIValue::Type::Boolean) {
-            this->value = SlokedCLIValue(value);
-        } else {
-            throw SlokedError("CLIOption: Error assigning boolean to " + std::string(SlokedCLIValue::TypeToName(this->type)));
-        }
+    void SlokedCLIOption::Map(const SlokedPath &path) {
+        this->path = path;
     }
 
-    void SlokedCLIOption::SetValue(std::string_view value) {
-        if (this->type == SlokedCLIValue::Type::String) {
-            this->value = SlokedCLIValue(value);
+    bool SlokedCLIOption::Export(KgrValue &root) {
+        if (this->path.has_value() && this->value.has_value()) {
+            KgrPath::Assign(root, this->path.value(), this->value.value().GetValue());
+            return true;
         } else {
-            throw SlokedError("CLIOption: Error assigning string to " + std::string(SlokedCLIValue::TypeToName(this->type)));
+            return false;
         }
     }
 
@@ -101,7 +120,7 @@ namespace sloked {
         return this->shortOptions.count(key) != 0 && this->shortOptions.at(key)->HasValue();
     }
 
-    std::size_t SlokedCLI::Size() const {
+    std::size_t SlokedCLI::Count() const {
         return this->arguments.size();
     }
 
@@ -160,6 +179,24 @@ namespace sloked {
         }
     }
 
+    KgrValue SlokedCLI::Export() const {
+        KgrValue root = KgrDictionary{};
+        std::set<SlokedCLIOption *> processed;
+        for (auto &kv : this->shortOptions) {   
+            if (processed.count(kv.second.get()) == 0) {
+                kv.second->Export(root);
+                processed.insert(kv.second.get());
+            }
+        }
+        for (auto &kv : this->options) {   
+            if (processed.count(kv.second.get()) == 0) {
+                kv.second->Export(root);
+                processed.insert(kv.second.get());
+            }
+        }
+        return root;
+    }
+
     static bool ParseOptionValue(SlokedCLIOption &option, std::string_view arg, SlokedCLIArgumentIterator &args) {
             switch (option.GetType()) {
                 case SlokedCLIValue::Type::Integer: {
@@ -170,7 +207,7 @@ namespace sloked {
                     } catch (const std::invalid_argument &ex) {
                         throw SlokedError("CLI: Error converting '" + value + "' to integer");
                     }
-                    option.SetValue<long long>(int_value);
+                    option.SetValue(int_value);
                 } break;
 
                 case SlokedCLIValue::Type::Float: {
@@ -181,7 +218,7 @@ namespace sloked {
                     } catch (const std::invalid_argument &ex) {
                         throw SlokedError("CLI: Error converting '" + value + "' to float");
                     }
-                    option.SetValue<double>(float_value);
+                    option.SetValue(float_value);
                 } break;
 
                 case SlokedCLIValue::Type::Boolean:

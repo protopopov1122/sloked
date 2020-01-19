@@ -60,8 +60,9 @@ namespace sloked {
             std::string_view value;
         };
 
+        SlokedPath(String);
         SlokedPath(String, String, Preset = Preset{std::string{"/"}});
-        SlokedPath(String, Preset = Preset{std::string{"/"}});
+        SlokedPath(String, Preset);
         SlokedPath(const SlokedPath &) = default;
         SlokedPath(SlokedPath &&) = default;
         virtual ~SlokedPath() = default;
