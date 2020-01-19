@@ -211,18 +211,12 @@ class SlokedDemoScreenFactory : public SlokedScreenProviderFactory {
     }
 };
 
-static const KgrDictionary DefaultConfiguration {
+static const KgrValue DefaultConfiguration = KgrDictionary {
     { "encoding", "system" },
     { "newline", "system" },
     {
         "network", KgrDictionary {
             { "port", 1234 },
-        }
-    },
-    {
-        "script", KgrDictionary {
-            { "init", "" },
-            { "path", "" }
         }
     }
 };
@@ -255,15 +249,16 @@ int main(int argc, const char **argv) {
     closeables.Attach(startup);
 
     // Configuration 
-    SlokedXdgConfiguration mainConfig("main", DefaultConfiguration);
     SlokedCLI cli;
     cli.Define("--encoding", cli.Option<std::string>()).Map(SlokedPath{"/encoding"});
-    cli.Define("--newline", mainConfig.Find("/newline").AsString()).Map(SlokedPath{"/newline"});
-    cli.Define("-o,--output", cli.Option<std::string>());
-    cli.Define("--net-port", mainConfig.Find("/network/port").AsInt()).Map(SlokedPath{"/network{}/port"});
-    cli.Define("--script", mainConfig.Find("/script/init").AsString()).Map(SlokedPath{"/script{}/init"});
-    cli.Define("--script-path", mainConfig.Find("/script/path").AsString()).Map(SlokedPath{"/script{}/path"});
+    cli.Define("--newline", cli.Option<std::string>()).Map(SlokedPath{"/newline"});
+    cli.Define("-o,--output", cli.Option<std::string>()).Map(SlokedPath{"/output"});
+    cli.Define("--net-port", cli.Option<int64_t>()).Map(SlokedPath{"/network{}/port"});
+    cli.Define("--script", cli.Option<std::string>()).Map(SlokedPath{"/script{}/init"});
+    cli.Define("--script-path", cli.Option<std::string>()).Map(SlokedPath{"/script{}/path"});
     cli.Parse(argc, argv);
+    SlokedXdgConfigurationLoader mainConfigLoader("main");
+    SlokedConfiguration mainConfig{cli.Export(), mainConfigLoader.Load(), DefaultConfiguration};
     cli.Fallback("--encoding", mainConfig.Find("/encoding").AsString());
     if (cli.Count() == 0) {
         std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
@@ -328,7 +323,7 @@ int main(int argc, const char **argv) {
                 {
                     "netServer", KgrDictionary {
                         { "host", "localhost" },
-                        { "port", cli["net-port"].As<int64_t>() }
+                        { "port", mainConfig.Find("/network/port").AsInt() }
                     }
                 },
                 {
@@ -377,7 +372,7 @@ int main(int argc, const char **argv) {
                         {
                             "address", KgrDictionary {
                                 { "host", "localhost" },
-                                { "port", cli["net-port"].As<int64_t>() }
+                                { "port", mainConfig.Find("/network/port").AsInt() }
                             }
                         }
                     }
@@ -416,7 +411,7 @@ int main(int argc, const char **argv) {
 
     auto &serviceProvider = mainEditor.GetServiceProvider();
     SlokedPath inputPath = serviceProvider.GetNamespace().GetResolver().Resolve(SlokedPath{cli.At(0)});
-    SlokedPath outputPath = serviceProvider.GetNamespace().GetResolver().Resolve(SlokedPath{cli["output"].As<std::string>()});
+    SlokedPath outputPath = serviceProvider.GetNamespace().GetResolver().Resolve(SlokedPath{mainConfig.Find("/output").AsString()});
 
     // Screen
     auto &screenServer = secondaryEditor.GetScreen();
@@ -429,7 +424,7 @@ int main(int argc, const char **argv) {
     SlokedScreenClient screenClient(secondaryServer.GetServer().Connect("screen::manager"), isScreenLocked);
     SlokedScreenSizeNotificationClient screenSizeClient(secondaryServer.GetServer().Connect("screen::size.notify"));
     SlokedDocumentSetClient documentClient(secondaryServer.GetServer().Connect("document::manager"));
-    documentClient.Open(inputPath.ToString(), cli["encoding"].As<std::string>(), cli["newline"].As<std::string>());
+    documentClient.Open(inputPath.ToString(), mainConfig.Find("/encoding").AsString(), mainConfig.Find("/newline").AsString());
 
     // Screen layout
     screenClient.Handle.NewMultiplexer("/");
@@ -478,10 +473,10 @@ int main(int argc, const char **argv) {
     // Scripting engine startup
     std::unique_ptr<SlokedScriptEngine> scriptEngine;
     if constexpr (SlokedScriptCompat::IsSupported()) {
-        scriptEngine = SlokedScriptCompat::GetEngine(startup, mainEditor.GetScheduler(), cli["script-path"].As<std::string>());
-        closeables.Attach(*scriptEngine);
-        if (cli.Has("script") && !cli["script"].As<std::string>().empty()) {
-            scriptEngine->Start(cli["script"].As<std::string>());
+        if (mainConfig.Has("/script/init")) {
+            scriptEngine = SlokedScriptCompat::GetEngine(startup, mainEditor.GetScheduler(), mainConfig.Find("/script/path").AsString());
+            closeables.Attach(*scriptEngine);
+            scriptEngine->Start(mainConfig.Find("/script/init").AsString());
         }
     }
     terminate.WaitAll();

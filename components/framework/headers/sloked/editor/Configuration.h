@@ -26,21 +26,30 @@
 
 namespace sloked {
 
-    class SlokedConfiguration {
+    class SlokedConfigurationLoader {
      public:
-        virtual ~SlokedConfiguration() = default;
-        virtual KgrValue Find(const std::string &) const = 0;
+        virtual ~SlokedConfigurationLoader() = default;
+        virtual KgrValue Load() const = 0;
         static KgrValue LoadFile(const std::string &);
     };
 
-    class SlokedXdgConfiguration : public SlokedConfiguration {
+    class SlokedXdgConfigurationLoader : public SlokedConfigurationLoader {
      public:
-        SlokedXdgConfiguration(const std::string &, const KgrValue &);
-        KgrValue Find(const std::string &) const override;
+        SlokedXdgConfigurationLoader(const std::string &);
+        KgrValue Load() const final;
 
      private:
-        KgrValue config;
-        KgrValue fallback;
+        std::string name;
+    };
+
+    class SlokedConfiguration {
+     public:
+        SlokedConfiguration(std::initializer_list<KgrValue>);
+        KgrValue Find(const std::string &) const;
+        bool Has(const std::string &) const;
+
+     private:
+        std::vector<KgrValue> layers;
     };
 }
 

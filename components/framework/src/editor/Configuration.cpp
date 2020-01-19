@@ -27,7 +27,7 @@
 
 namespace sloked {
 
-    KgrValue SlokedConfiguration::LoadFile(const std::string &path) {
+    KgrValue SlokedConfigurationLoader::LoadFile(const std::string &path) {
         KgrJsonSerializer serializer;
         std::ifstream is(path);
         if (is.good()) {
@@ -37,8 +37,10 @@ namespace sloked {
         }
     }
 
-    SlokedXdgConfiguration::SlokedXdgConfiguration(const std::string &configName, const KgrValue &fallback)
-        : fallback(fallback) {
+    SlokedXdgConfigurationLoader::SlokedXdgConfigurationLoader(const std::string &configName)
+        : name(configName) {}
+
+    KgrValue SlokedXdgConfigurationLoader::Load() const {
         const char *xdg_config_dir = getenv("XDG_CONFIG_DIR");
         std::string configFile;
         if (xdg_config_dir == nullptr) {
@@ -48,23 +50,31 @@ namespace sloked {
             configFile = xdg_config_dir;
         }
         configFile.append("/sloked/");
-        configFile.append(configName);
+        configFile.append(this->name);
         configFile.append(".json");
-
-        this->config = SlokedXdgConfiguration::LoadFile(configFile);
+        return SlokedConfigurationLoader::LoadFile(configFile);
     }
 
-    KgrValue SlokedXdgConfiguration::Find(const std::string &path) const {
-        auto result = KgrPath::Traverse(this->config, SlokedPath(path));
-        if (result.has_value()) {
-            return result.value();
-        } else {
-            result = KgrPath::Traverse(this->fallback, SlokedPath(path));
+    SlokedConfiguration::SlokedConfiguration(std::initializer_list<KgrValue> layers)
+        : layers(layers) {}
+
+    KgrValue SlokedConfiguration::Find(const std::string &query) const {
+        for (const auto &layer : this->layers) {
+            auto result = KgrPath::Traverse(layer, SlokedPath{query});
             if (result.has_value()) {
                 return result.value();
-            } else {
-                throw SlokedError("SlokedConfiguration: Not found '" + path + "'");
             }
         }
+        throw SlokedError("Configuration: \'" + query + "\' not found");
+    }
+
+    bool SlokedConfiguration::Has(const std::string &query) const {
+        for (const auto &layer : this->layers) {
+            auto result = KgrPath::Traverse(layer, SlokedPath{query});
+            if (result.has_value()) {
+                return true;
+            }
+        }
+        return false;
     }
 }
