@@ -252,7 +252,7 @@ int main(int argc, const char **argv) {
     SlokedCLI cli;
     cli.Define("--encoding", cli.Option<std::string>()).Map(SlokedPath{"/encoding"});
     cli.Define("--newline", cli.Option<std::string>()).Map(SlokedPath{"/newline"});
-    cli.Define("-o,--output", cli.Option<std::string>()).Map(SlokedPath{"/output"});
+    cli.Define("-o,--output", cli.Option<std::string>()).Mandatory().Map(SlokedPath{"/output"});
     cli.Define("--net-port", cli.Option<int64_t>()).Map(SlokedPath{"/network{}/port"});
     cli.Define("--script", cli.Option<std::string>()).Map(SlokedPath{"/script{}/init"});
     cli.Define("--script-path", cli.Option<std::string>()).Map(SlokedPath{"/script{}/path"});
@@ -260,7 +260,7 @@ int main(int argc, const char **argv) {
     SlokedXdgConfigurationLoader mainConfigLoader("main");
     SlokedConfiguration mainConfig{cli.Export(), mainConfigLoader.Load(), DefaultConfiguration};
     cli.Fallback("--encoding", mainConfig.Find("/encoding").AsString());
-    if (cli.Count() == 0) {
+    if (cli.ArgCount() == 0) {
         std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
         return EXIT_FAILURE;
     }
@@ -410,7 +410,7 @@ int main(int argc, const char **argv) {
     auto &secondaryServer = secondaryEditor.GetServer();
 
     auto &serviceProvider = mainEditor.GetServiceProvider();
-    SlokedPath inputPath = serviceProvider.GetNamespace().GetResolver().Resolve(SlokedPath{cli.At(0)});
+    SlokedPath inputPath = serviceProvider.GetNamespace().GetResolver().Resolve(SlokedPath{cli.Argument(0)});
     SlokedPath outputPath = serviceProvider.GetNamespace().GetResolver().Resolve(SlokedPath{mainConfig.Find("/output").AsString()});
 
     // Screen

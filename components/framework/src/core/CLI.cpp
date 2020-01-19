@@ -86,17 +86,17 @@ namespace sloked {
     }
 
     SlokedCLIOption::SlokedCLIOption(SlokedCLIValue::Type type)
-        : type(type) {}
+        : type(type), mandatory{false} {}
 
     SlokedCLIOption::SlokedCLIOption(SlokedCLIValue value)
-        : type(value.GetType()), value(std::move(value)) {}
+        : type(value.GetType()), value(std::move(value)), mandatory{false} {}
 
-    SlokedCLIValue::Type SlokedCLIOption::GetType() const {
+    SlokedCLIValue::Type SlokedCLIOption::Type() const {
         return this->type;
     }
 
-    bool SlokedCLIOption::HasValue() const {
-        return this->value.has_value();
+    bool SlokedCLIOption::Empty() const {
+        return !this->value.has_value();
     }
 
     void SlokedCLIOption::Map(const SlokedPath &path) {
@@ -112,20 +112,29 @@ namespace sloked {
         }
     }
 
+    bool SlokedCLIOption::IsMandatory() const {
+        return this->mandatory;
+    }
+
+    SlokedCLIOption &SlokedCLIOption::Mandatory(bool mandatory) {
+        this->mandatory = mandatory;
+        return *this;
+    }
+
     bool SlokedCLI::Has(const std::string &key) const {
-        return this->options.count(key) != 0 && this->options.at(key)->HasValue();
+        return this->options.count(key) != 0 && !this->options.at(key)->Empty();
     }
 
     bool SlokedCLI::Has(char key) const {
-        return this->shortOptions.count(key) != 0 && this->shortOptions.at(key)->HasValue();
+        return this->shortOptions.count(key) != 0 && !this->shortOptions.at(key)->Empty();
     }
 
-    std::size_t SlokedCLI::Count() const {
+    std::size_t SlokedCLI::ArgCount() const {
         return this->arguments.size();
     }
 
     const SlokedCLIOption &SlokedCLI::operator[](const std::string &key) const {
-        if (this->options.count(key) != 0 && this->options.at(key)->HasValue()) {
+        if (this->options.count(key) != 0 && !this->options.at(key)->Empty()) {
             return *this->options.at(key);
         } else if (this->options.count(key) == 0) {
             throw SlokedError("CLI: Undefined option '--" + key + "'");
@@ -135,7 +144,7 @@ namespace sloked {
     }
 
     const SlokedCLIOption &SlokedCLI::operator[](char key) const {
-        if (this->shortOptions.count(key) != 0 && this->shortOptions.at(key)->HasValue()) {
+        if (this->shortOptions.count(key) != 0 && !this->shortOptions.at(key)->Empty()) {
             return *this->shortOptions.at(key);
         } else if (this->shortOptions.count(key) == 0) {
             throw SlokedError("CLI: Undefined option '-" + std::string(1, key) + "'");
@@ -144,7 +153,7 @@ namespace sloked {
         }
     }
 
-    std::string_view SlokedCLI::At(std::size_t idx) const {
+    std::string_view SlokedCLI::Argument(std::size_t idx) const {
         if (idx < this->arguments.size()) {
             return this->arguments.at(idx);
         } else {
@@ -177,6 +186,17 @@ namespace sloked {
                 this->arguments.push_back(arg);
             }
         }
+        // Check mandatory options
+        for (auto &kv : this->options) {   
+            if (kv.second->IsMandatory() && kv.second->Empty()) {
+                throw SlokedError("CLI: Mandatory \'--" + kv.first + "\' is not defined");
+            }
+        }
+        for (auto &kv : this->shortOptions) {   
+            if (kv.second->IsMandatory() && kv.second->Empty()) {
+                throw SlokedError("CLI: Mandatory \'-" + std::string{1, kv.first} + "\' is not defined");
+            }
+        }
     }
 
     KgrValue SlokedCLI::Export() const {
@@ -198,7 +218,7 @@ namespace sloked {
     }
 
     static bool ParseOptionValue(SlokedCLIOption &option, std::string_view arg, SlokedCLIArgumentIterator &args) {
-            switch (option.GetType()) {
+            switch (option.Type()) {
                 case SlokedCLIValue::Type::Integer: {
                     std::string value{!arg.empty() ? arg : args.Next()};
                     long long int_value;
@@ -207,7 +227,7 @@ namespace sloked {
                     } catch (const std::invalid_argument &ex) {
                         throw SlokedError("CLI: Error converting '" + value + "' to integer");
                     }
-                    option.SetValue(int_value);
+                    option.Set(int_value);
                 } break;
 
                 case SlokedCLIValue::Type::Float: {
@@ -218,16 +238,16 @@ namespace sloked {
                     } catch (const std::invalid_argument &ex) {
                         throw SlokedError("CLI: Error converting '" + value + "' to float");
                     }
-                    option.SetValue(float_value);
+                    option.Set(float_value);
                 } break;
 
                 case SlokedCLIValue::Type::Boolean:
-                    option.SetValue(true);
+                    option.Set(true);
                     return true;
 
                 case SlokedCLIValue::Type::String: {
                     std::string value{!arg.empty() ? arg : args.Next()};
-                    option.SetValue(value);
+                    option.Set(value);
                     return false;
                 } break;
             }

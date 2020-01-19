@@ -146,10 +146,12 @@ namespace sloked {
         SlokedCLIOption(SlokedCLIValue::Type);
         SlokedCLIOption(SlokedCLIValue);
 
-        SlokedCLIValue::Type GetType() const;
-        bool HasValue() const;
+        SlokedCLIValue::Type Type() const;
+        bool Empty() const;
 		void Map(const SlokedPath &);
 		bool Export(KgrValue &);
+		bool IsMandatory() const;
+		SlokedCLIOption &Mandatory(bool = true);
 
 		template <typename T>
 		auto As() const {
@@ -170,7 +172,7 @@ namespace sloked {
 		}
 
 		template <typename T>
-		SlokedCLIOption &SetValue(T &&nValue) {
+		SlokedCLIOption &Set(T &&nValue) {
 			auto newValue = SlokedCLIValue::Make<std::remove_cv_t<std::remove_reference_t<T>>>(std::forward<T>(nValue));
 			if (newValue.GetType() == this->type) {
 				this->value = newValue;
@@ -181,9 +183,9 @@ namespace sloked {
 		}
 
 		template <typename T>
-		SlokedCLIOption &SetFallback(T &&value) {
+		SlokedCLIOption &Fallback(T &&value) {
 			if (!this->value.has_value()) {
-				this->SetValue(std::forward<T>(value));
+				this->Set(std::forward<T>(value));
 			}
 			return *this;
 		}
@@ -192,6 +194,7 @@ namespace sloked {
         SlokedCLIValue::Type type;
         std::optional<SlokedCLIValue> value;
 		std::optional<SlokedPath> path;
+		bool mandatory;
     };
 
     class SlokedCLI {
@@ -222,10 +225,10 @@ namespace sloked {
 		using Iterator = std::vector<std::string_view>::const_iterator;
         bool Has(const std::string &) const;
         bool Has(char) const;
-        std::size_t Count() const;
+        std::size_t ArgCount() const;
         const SlokedCLIOption &operator[](const std::string &) const;
         const SlokedCLIOption &operator[](char) const;
-        std::string_view At(std::size_t) const;
+        std::string_view Argument(std::size_t) const;
 		Iterator begin() const;
 		Iterator end() const;
         void Parse(int, const char **);
@@ -248,7 +251,7 @@ namespace sloked {
 		void Fallback(const std::string &keys, T &&value) {
 			auto options = this->FindKeys(keys);
 			for (auto &option : options) {
-				option->SetFallback<T>(std::forward<T>(value));
+				option->Fallback<T>(std::forward<T>(value));
 			}
 		}
 
@@ -262,9 +265,9 @@ namespace sloked {
 			if constexpr (std::is_same_v<T, bool>) {
 				return SlokedCLIValue(std::forward<T>(value));
 			} else if constexpr (std::is_integral_v<T>) {
-				return SlokedCLIValue(static_cast<int64_t>((value)));
+				return SlokedCLIValue(static_cast<int64_t>(value));
 			} else if constexpr (std::is_floating_point_v<T>) {
-				return SlokedCLIValue(static_cast<double>((value)));
+				return SlokedCLIValue(static_cast<double>(value));
 			} else {
 				return SlokedCLIValue(std::forward<T>(value));
 			}
