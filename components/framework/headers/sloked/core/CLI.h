@@ -202,7 +202,7 @@ namespace sloked {
 		struct TypeSwitcher;
 
 		template <typename T>
-		struct TypeSwitcher<T, std::enable_if_t<std::is_integral_v<T>>> {
+		struct TypeSwitcher<T, std::enable_if_t<!std::is_same_v<T, bool> && std::is_integral_v<T>>> {
 			static constexpr auto Type = SlokedCLIValue::Type::Integer;
 		};
 
@@ -233,11 +233,12 @@ namespace sloked {
 		Iterator end() const;
         void Parse(int, const char **);
 		KgrValue Export() const;
+		void Initialize(const KgrValue &);
 
 		template <typename T>
         SlokedCLIOption &Define(const std::string &keys, T &&value, const std::string &description = "") {
 			std::shared_ptr<SlokedCLIOption> option;
-			if constexpr (std::is_same_v<T, SlokedCLIValue> || std::is_same_v<T, SlokedCLIValue::Type>) {
+			if constexpr (std::is_same_v<T, SlokedCLIValue> || std::is_same_v<T, SlokedCLIValue::Type> || std::is_same_v<std::remove_reference_t<T>, SlokedCLIOption>) {
 				option = std::make_shared<SlokedCLIOption>(std::forward<T>(value));
 			} else {
 				option = std::make_shared<SlokedCLIOption>(this->Option(std::forward<T>(value)));

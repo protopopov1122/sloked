@@ -216,6 +216,58 @@ namespace sloked {
         }
         return root;
     }
+    
+    void SlokedCLI::Initialize(const KgrValue &config) {
+        const auto &options = config.AsArray();
+        for (const auto &option : options) {
+            const auto &list = option.AsDictionary()["options"].AsString();
+            auto value = ([&] {
+                if (option.AsDictionary().Has("value")) {
+                    const auto &val = option.AsDictionary()["value"];
+                    switch (val.GetType()) {
+                        case KgrValueType::Integer:
+                            return SlokedCLIOption{this->Option<int64_t>(val.AsInt())};
+
+                        case KgrValueType::Number:
+                            return SlokedCLIOption{this->Option<double>(val.AsNumber())};
+
+                        case KgrValueType::Boolean:
+                            return SlokedCLIOption{this->Option<bool>(val.AsBoolean())};
+
+                        case KgrValueType::String:
+                            return SlokedCLIOption{this->Option<std::string>(std::string{val.AsString()})};
+
+                        default:
+                            throw SlokedError("CLI: Unsupported default value of \'" + list + "\'");
+                    }
+                } else {
+                    const auto &strType = option.AsDictionary()["type"].AsString();
+                    if (strType == "int") {
+                        return SlokedCLIOption{this->Option<int64_t>()};
+                    } else if (strType == "number") {
+                        return SlokedCLIOption{this->Option<double>()};
+                    } else if (strType == "boolean") {
+                        return SlokedCLIOption{this->Option<bool>()};
+                    } else if (strType == "string") {
+                        return SlokedCLIOption{this->Option<std::string>()};
+                    } else {
+                        throw SlokedError("CLI: Unsupported option type \'" + list + "\'");   
+                    }
+                }
+            })();
+            std::string descr{};
+            if (option.AsDictionary().Has("description")) {
+                descr = option.AsDictionary()["description"].AsString();
+            }
+            auto &opt = this->Define(list, value, descr);
+            if (option.AsDictionary().Has("mandatory")) {
+                opt.Mandatory(option.AsDictionary()["mandatory"].AsBoolean());
+            }
+            if (option.AsDictionary().Has("map")) {
+                opt.Map(SlokedPath{option.AsDictionary()["map"].AsString()});
+            }
+        }
+    }
 
     static bool ParseOptionValue(SlokedCLIOption &option, std::string_view arg, SlokedCLIArgumentIterator &args) {
             switch (option.Type()) {

@@ -19,35 +19,35 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_EDITOR_STARTUP_H_
-#define SLOKED_EDITOR_STARTUP_H_
+#ifndef SLOKED_EDITOR_MANAGER_H_
+#define SLOKED_EDITOR_MANAGER_H_
 
 #include "sloked/editor/EditorApp.h"
 #include "sloked/namespace/Root.h"
 
 namespace sloked {
 
-    class SlokedEditorStartup : public SlokedCloseable, public SlokedEditorAppContainer {
+    class SlokedEditorManager : public SlokedCloseable, public SlokedEditorAppContainer {
      public:
         using EditorFactory = std::function<std::unique_ptr<SlokedEditorApp>()>;
         class Parameters {
          public:
             Parameters(SlokedLogger &, SlokedRootNamespaceFactory &);
             Parameters &SetTaggers(SlokedTextTaggerRegistry<int> &);
-            Parameters &SetEditors(SlokedEditorStartup::EditorFactory);
+            Parameters &SetEditors(SlokedEditorManager::EditorFactory);
             Parameters &SetCrypto(SlokedCrypto &);   
             Parameters &SetScreenProviders(SlokedScreenProviderFactory &);
 
-            friend class SlokedEditorStartup;
+            friend class SlokedEditorManager;
          private:
             SlokedLogger &logger;
             SlokedRootNamespaceFactory &root;
             SlokedTextTaggerRegistry<int> *taggers;
-            SlokedEditorStartup::EditorFactory editors;
+            SlokedEditorManager::EditorFactory editors;
             SlokedCrypto *crypto;
             SlokedScreenProviderFactory *screenProviders;
         };
-        SlokedEditorStartup(Parameters);
+        SlokedEditorManager(Parameters);
         void Spawn(const KgrValue &);
         void Close() final;
         void Setup(SlokedEditorApp &, const KgrValue &);

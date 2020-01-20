@@ -69,7 +69,7 @@
 #include "sloked/screen/terminal/TerminalSize.h"
 #include "sloked/editor/EditorApp.h"
 #include "sloked/facade/Services.h"
-#include "sloked/editor/Startup.h"
+#include "sloked/editor/Manager.h"
 #include "sloked/namespace/Root.h"
 #include "sloked/namespace/Empty.h"
 #include <chrono>
@@ -232,7 +232,7 @@ int main(int argc, const char **argv) {
     SlokedDemoRootNamespaceFactory nsFactory;
     SlokedDefaultTextTaggerRegistry<int> baseTaggers;
     baseTaggers.Bind("default", std::make_unique<TestFragmentFactory>());
-    SlokedEditorStartup::Parameters startupPrms(logger, nsFactory);
+    SlokedEditorManager::Parameters startupPrms(logger, nsFactory);
     startupPrms.SetTaggers(baseTaggers);
     if constexpr (SlokedCryptoCompat::IsSupported()) {
         startupPrms.SetCrypto(SlokedCryptoCompat::GetCrypto());
@@ -245,21 +245,47 @@ int main(int argc, const char **argv) {
     }
     SlokedDemoScreenFactory screenFactory;
     startupPrms.SetScreenProviders(screenFactory);
-    SlokedEditorStartup startup(std::move(startupPrms));
+    SlokedEditorManager startup(std::move(startupPrms));
     closeables.Attach(startup);
 
     // Configuration 
     SlokedCLI cli;
-    cli.Define("--encoding", cli.Option<std::string>()).Map(SlokedPath{"/encoding"});
-    cli.Define("--newline", cli.Option<std::string>()).Map(SlokedPath{"/newline"});
-    cli.Define("-o,--output", cli.Option<std::string>()).Mandatory().Map(SlokedPath{"/output"});
-    cli.Define("--net-port", cli.Option<int64_t>()).Map(SlokedPath{"/network{}/port"});
-    cli.Define("--script", cli.Option<std::string>()).Map(SlokedPath{"/script{}/init"});
-    cli.Define("--script-path", cli.Option<std::string>()).Map(SlokedPath{"/script{}/path"});
+    cli.Initialize(KgrArray {
+        KgrDictionary {
+            { "options", "--encoding" },
+            { "type", "string" },
+            { "map", "/encoding" }
+        },
+        KgrDictionary {
+            { "options", "--newline" },
+            { "type", "string" },
+            { "map", "/newline" }
+        },
+        KgrDictionary {
+            { "options", "-o,--output" },
+            { "type", "string" },
+            { "mandatory", true },
+            { "map", "/output" }
+        },
+        KgrDictionary {
+            { "options", "--net-port" },
+            { "type", "int" },
+            { "map", "/network{}/port" }
+        },
+        KgrDictionary {
+            { "options", "--script" },
+            { "type", "string" },
+            { "map", "/script{}/init" }
+        },
+        KgrDictionary {
+            { "options", "--script-path" },
+            { "type", "string" },
+            { "map", "/script{}/path" }
+        }
+    });
     cli.Parse(argc, argv);
     SlokedXdgConfigurationLoader mainConfigLoader("main");
     SlokedConfiguration mainConfig{cli.Export(), mainConfigLoader.Load(), DefaultConfiguration};
-    cli.Fallback("--encoding", mainConfig.Find("/encoding").AsString());
     if (cli.ArgCount() == 0) {
         std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
         return EXIT_FAILURE;
