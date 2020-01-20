@@ -19,29 +19,22 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_EDITOR_CONFIGURATION_H_
-#define SLOKED_EDITOR_CONFIGURATION_H_
-
-#include "sloked/kgr/Value.h"
+#include "sloked/editor/PosixConfiguration.h"
 
 namespace sloked {
 
-    class SlokedConfigurationLoader {
-     public:
-        virtual ~SlokedConfigurationLoader() = default;
-        virtual KgrValue Load(const std::string &) const = 0;
-        static KgrValue LoadFile(const std::string &);
-    };
-
-    class SlokedConfiguration {
-     public:
-        SlokedConfiguration(std::initializer_list<KgrValue>);
-        KgrValue Find(const std::string &) const;
-        bool Has(const std::string &) const;
-
-     private:
-        std::vector<KgrValue> layers;
-    };
+    KgrValue SlokedXdgConfigurationLoader::Load(const std::string &name) const {
+        const char *xdg_config_dir = getenv("XDG_CONFIG_DIR");
+        std::string configFile;
+        if (xdg_config_dir == nullptr) {
+            configFile = getenv("HOME");
+            configFile.append("/.config");
+        } else {
+            configFile = xdg_config_dir;
+        }
+        configFile.append("/sloked/");
+        configFile.append(name);
+        configFile.append(".json");
+        return SlokedConfigurationLoader::LoadFile(configFile);
+    }
 }
-
-#endif

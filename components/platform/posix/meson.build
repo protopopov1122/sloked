@@ -1,5 +1,6 @@
 posix_platform_src = [
   'src/core/awaitable/Posix.cpp',
+  'src/editor/PosixConfiguration.cpp',
   'src/filesystem/posix/File.cpp',
   'src/filesystem/posix/FileIO.cpp',
   'src/filesystem/posix/Reader.cpp',

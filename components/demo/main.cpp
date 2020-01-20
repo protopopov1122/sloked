@@ -72,6 +72,7 @@
 #include "sloked/editor/Manager.h"
 #include "sloked/namespace/Root.h"
 #include "sloked/namespace/Empty.h"
+#include "sloked/editor/configuration/Compat.h"
 #include <chrono>
 
 using namespace sloked;
@@ -284,8 +285,8 @@ int main(int argc, const char **argv) {
         }
     });
     cli.Parse(argc, argv);
-    SlokedXdgConfigurationLoader mainConfigLoader("main");
-    SlokedConfiguration mainConfig{cli.Export(), mainConfigLoader.Load(), DefaultConfiguration};
+    SlokedConfigurationLoader &mainConfigLoader = SlokedConfigurationLoaderCompat::GetLoader();
+    SlokedConfiguration mainConfig{cli.Export(), mainConfigLoader.Load("main"), DefaultConfiguration};
     if (cli.ArgCount() == 0) {
         std::cout << "Format: " << argv[0] << " source -o destination [options]" << std::endl;
         return EXIT_FAILURE;

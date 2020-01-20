@@ -37,24 +37,6 @@ namespace sloked {
         }
     }
 
-    SlokedXdgConfigurationLoader::SlokedXdgConfigurationLoader(const std::string &configName)
-        : name(configName) {}
-
-    KgrValue SlokedXdgConfigurationLoader::Load() const {
-        const char *xdg_config_dir = getenv("XDG_CONFIG_DIR");
-        std::string configFile;
-        if (xdg_config_dir == nullptr) {
-            configFile = getenv("HOME");
-            configFile.append("/.config");
-        } else {
-            configFile = xdg_config_dir;
-        }
-        configFile.append("/sloked/");
-        configFile.append(this->name);
-        configFile.append(".json");
-        return SlokedConfigurationLoader::LoadFile(configFile);
-    }
-
     SlokedConfiguration::SlokedConfiguration(std::initializer_list<KgrValue> layers)
         : layers(layers) {}
 

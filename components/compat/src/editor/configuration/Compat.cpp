@@ -19,29 +19,17 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_EDITOR_CONFIGURATION_H_
-#define SLOKED_EDITOR_CONFIGURATION_H_
+#include "sloked/editor/configuration/Compat.h"
 
-#include "sloked/kgr/Value.h"
+#ifdef SLOKED_PLATFORM_POSIX
+#include "sloked/editor/PosixConfiguration.h"
 
 namespace sloked {
 
-    class SlokedConfigurationLoader {
-     public:
-        virtual ~SlokedConfigurationLoader() = default;
-        virtual KgrValue Load(const std::string &) const = 0;
-        static KgrValue LoadFile(const std::string &);
-    };
-
-    class SlokedConfiguration {
-     public:
-        SlokedConfiguration(std::initializer_list<KgrValue>);
-        KgrValue Find(const std::string &) const;
-        bool Has(const std::string &) const;
-
-     private:
-        std::vector<KgrValue> layers;
-    };
+    SlokedConfigurationLoader &SlokedConfigurationLoaderCompat::GetLoader() {
+        static SlokedXdgConfigurationLoader loader;
+        return loader;
+    }
 }
 
 #endif
