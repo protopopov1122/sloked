@@ -135,7 +135,7 @@ class TestFragment : public SlokedTextTagger<int> {
 
 class TestFragmentFactory : public SlokedTextTaggerFactory<int> {
  public:
-    std::unique_ptr<SlokedTextTagger<int>> Create(const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth) const override {
+    std::unique_ptr<SlokedTextTagger<int>> Create(std::optional<std::string> externalUri, const TextBlockView &text, const Encoding &encoding) const final {
         return std::make_unique<TestFragment>(text, encoding);
     }
 };

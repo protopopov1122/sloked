@@ -37,6 +37,7 @@ namespace sloked {
         SlokedEditorDocument(const Encoding &, std::unique_ptr<NewLine>);
         SlokedEditorDocument(SlokedNamespace &, const SlokedPath &, const Encoding &, std::unique_ptr<NewLine>);
         std::optional<std::reference_wrapper<const SlokedPath>> GetUpstream() const;
+        std::optional<std::string> GetUpstreamURI() const;
         bool HasUpstream() const;
         TextBlock &GetText();
         const Encoding &GetEncoding();

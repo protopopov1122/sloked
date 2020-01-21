@@ -42,7 +42,7 @@ namespace sloked {
     class SlokedTextTaggerFactory {
      public:
         virtual ~SlokedTextTaggerFactory() = default;
-        virtual std::unique_ptr<SlokedTextTagger<T>> Create(const TextBlockView &, const Encoding &, const SlokedCharWidth &) const = 0;
+        virtual std::unique_ptr<SlokedTextTagger<T>> Create(std::optional<std::string>, const TextBlockView &, const Encoding &) const = 0;
     };
 
     template <typename T>
@@ -50,9 +50,8 @@ namespace sloked {
      public:
         virtual ~SlokedTextTaggerRegistry() = default;
         virtual bool Has(const std::string &id) const = 0;
-        virtual std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &, const TextBlockView &, const Encoding &, const SlokedCharWidth &) const = 0;
-        virtual std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &, const TextBlockView &, const Encoding &, const SlokedCharWidth &) const = 0;
-        virtual void Bind(const std::string &, std::unique_ptr<SlokedTextTaggerFactory<T>>) = 0;
+        virtual std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &, std::optional<std::string>, const TextBlockView &, const Encoding &) const = 0;
+        virtual std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &, std::optional<std::string>, const TextBlockView &, const Encoding &) const = 0;
     };
 
     template <typename T>
@@ -61,24 +60,24 @@ namespace sloked {
         SlokedDefaultTextTaggerRegistry(SlokedTextTaggerRegistry<T> *base = nullptr)
             : base(base) {}
 
-        bool Has(const std::string &id) const {
+        bool Has(const std::string &id) const final {
             return this->factories.count(id) != 0 ||    
                 (this->base != nullptr && this->base->Has(id));
         }
 
-        std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &id, const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth) const {
+        std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &id, std::optional<std::string> externalUri, const TextBlockView &text, const Encoding &encoding) const final {
             if (this->factories.count(id) != 0) {
-                return this->factories.at(id)->Create(text, encoding, charWidth);
+                return this->factories.at(id)->Create(std::move(externalUri), text, encoding);
             } else if (this->base != nullptr) {
-                return this->base->Create(id, text, encoding, charWidth);
+                return this->base->Create(id, std::move(externalUri), text, encoding);
             } else {
                 throw SlokedError("TextTaggerRegistry: Unknown tagger \'" + id + "\'");
             }
         }
 
-        std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &id, const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth) const {
+        std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &id, std::optional<std::string> externalUri, const TextBlockView &text, const Encoding &encoding) const final {
             if (this->Has(id)) {
-                return this->Create(id, text, encoding, charWidth);
+                return this->Create(id, std::move(externalUri), text, encoding);
             }  else {
                 return nullptr;
             }

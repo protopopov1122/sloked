@@ -22,7 +22,8 @@ namespace sloked {
         auto view = file->AsFile()->View();
         this->upstream = Upstream {
             std::move(file),
-            std::move(view)
+            std::move(view),
+            ns.GetHandle(path)->ToURI()
         };
         this->content = std::make_unique<TextDocument>(this->newline, TextView::Open(*this->upstream.value().fileView, this->newline, this->blockFactory));
     }
@@ -34,6 +35,14 @@ namespace sloked {
     std::optional<std::reference_wrapper<const SlokedPath>> SlokedDocumentUpstream::GetUpstream() const {
         if (this->upstream.has_value()) {
             return std::cref(this->upstream.value().file->GetPath());
+        } else {
+            return {};
+        }
+    }
+
+    std::optional<std::string> SlokedDocumentUpstream::GetUpstreamURI() const {
+        if (this->upstream.has_value()) {
+            return this->upstream.value().uri;
         } else {
             return {};
         }
@@ -78,7 +87,8 @@ namespace sloked {
         auto view = file->AsFile()->View();
         this->upstream = Upstream {
             std::move(file),
-            std::move(view)
+            std::move(view),
+            fileHandle->ToURI()
         };
         this->content->Rebuild(this->newline, TextView::Open(*this->upstream.value().fileView, this->newline, this->blockFactory));
     }

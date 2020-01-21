@@ -35,6 +35,10 @@ namespace sloked {
     std::optional<std::reference_wrapper<const SlokedPath>> SlokedEditorDocument::GetUpstream() const {
         return this->upstream.GetUpstream();
     }
+    
+    std::optional<std::string> SlokedEditorDocument::GetUpstreamURI() const {
+        return this->upstream.GetUpstreamURI();
+    }
 
     bool SlokedEditorDocument::HasUpstream() const {
         return this->upstream.HasUpstream();

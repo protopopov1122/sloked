@@ -72,9 +72,13 @@ namespace sloked {
             auto doc = this->documents.OpenDocument(static_cast<SlokedEditorDocumentSet::DocumentId>(params.AsDictionary()["document"].AsInt()));
             const auto &tagger = params.AsDictionary()["tagger"].AsString();
             if (doc.has_value()) {
+                std::optional<std::string> externalUri;
+                if (doc.value().Exists() && doc.value().GetObject().HasUpstream()) {
+                    externalUri = doc.value().GetObject().GetUpstreamURI();
+                }
                 this->handle = std::move(doc.value());
-                this->document = std::make_unique<DocumentContent>(this->handle.GetObject(), this->charWidth, this->taggers.TryCreate(tagger,
-                    this->handle.GetObject().GetText(), this->handle.GetObject().GetEncoding(), charWidth));
+                this->document = std::make_unique<DocumentContent>(this->handle.GetObject(), this->charWidth, this->taggers.TryCreate(tagger, std::move(externalUri),
+                    this->handle.GetObject().GetText(), this->handle.GetObject().GetEncoding()));
             }
         }
 
