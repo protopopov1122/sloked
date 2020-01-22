@@ -36,19 +36,18 @@ namespace sloked {
 
     class SlokedTextRenderService : public KgrService {
      public:
-        SlokedTextRenderService(SlokedEditorDocumentSet &, const SlokedCharWidth &, const SlokedTextTaggerRegistry<int> &, KgrContextManager<KgrLocalContext> &);
+        SlokedTextRenderService(SlokedEditorDocumentSet &, const SlokedCharWidth &, KgrContextManager<KgrLocalContext> &);
         void Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
         SlokedEditorDocumentSet &documents;
-        const SlokedTextTaggerRegistry<int> &taggers;
         const SlokedCharWidth &charWidth;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
 
     class SlokedTextRenderClient {
      public:
-        SlokedTextRenderClient(std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, const std::string & = "");
+        SlokedTextRenderClient(std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId);
         std::optional<KgrValue> Render(const TextPosition &, const TextPosition &);
 
      private:

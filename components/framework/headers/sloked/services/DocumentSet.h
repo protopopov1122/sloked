@@ -9,11 +9,12 @@ namespace sloked {
 
     class SlokedDocumentSetService : public KgrService {
      public:
-        SlokedDocumentSetService(SlokedEditorDocumentSet &, KgrContextManager<KgrLocalContext> &);
+        SlokedDocumentSetService(SlokedEditorDocumentSet &, const SlokedTextTaggerRegistry<SlokedEditorDocument::TagType> &, KgrContextManager<KgrLocalContext> &);
         void Attach(std::unique_ptr<KgrPipe>) override;
 
      private:
         SlokedEditorDocumentSet &documents;
+        const SlokedTextTaggerRegistry<SlokedEditorDocument::TagType> &taggers;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
 
@@ -21,7 +22,7 @@ namespace sloked {
      public:
         SlokedDocumentSetClient(std::unique_ptr<KgrPipe>);
         std::optional<SlokedEditorDocumentSet::DocumentId> New(const std::string &, const std::string &);
-        std::optional<SlokedEditorDocumentSet::DocumentId> Open(const std::string &, const std::string &, const std::string &);
+        std::optional<SlokedEditorDocumentSet::DocumentId> Open(const std::string &, const std::string &, const std::string &, const std::string & = "");
         bool Open(SlokedEditorDocumentSet::DocumentId);
         bool Save();
         bool Save(const std::string &);

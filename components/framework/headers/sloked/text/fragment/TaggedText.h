@@ -116,8 +116,8 @@ namespace sloked {
     template <typename T>
     class SlokedLazyTaggedText : public SlokedTaggedText<T> {
      public:
-        SlokedLazyTaggedText(std::unique_ptr<SlokedTextTagger<T>> tagger)
-            : tagger(std::move(tagger)), current{0, 0} {
+        SlokedLazyTaggedText(SlokedTextTagger<T> *tagger)
+            : tagger(tagger), current{0, 0} {
             this->NextFragment();
         }
 
@@ -151,7 +151,7 @@ namespace sloked {
             }
         }
 
-        std::unique_ptr<SlokedTextTagger<T>> tagger;
+        SlokedTextTagger<T> *tagger;
         TaggedFragmentMap<T> fragments;
         TextPosition current;
     };

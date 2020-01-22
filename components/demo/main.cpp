@@ -451,7 +451,7 @@ int main(int argc, const char **argv) {
     SlokedScreenClient screenClient(secondaryServer.GetServer().Connect("screen::manager"), isScreenLocked);
     SlokedScreenSizeNotificationClient screenSizeClient(secondaryServer.GetServer().Connect("screen::size.notify"));
     SlokedDocumentSetClient documentClient(secondaryServer.GetServer().Connect("document::manager"));
-    documentClient.Open(inputPath.ToString(), mainConfig.Find("/encoding").AsString(), mainConfig.Find("/newline").AsString());
+    documentClient.Open(inputPath.ToString(), mainConfig.Find("/encoding").AsString(), mainConfig.Find("/newline").AsString(), "default");
 
     // Screen layout
     screenClient.Handle.NewMultiplexer("/");

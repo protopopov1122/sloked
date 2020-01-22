@@ -76,13 +76,13 @@ namespace sloked {
         : SlokedAbstractServicesFacade(provider) {
         
         this->builders.emplace("document::render", [](SlokedServiceDependencyProvider &provider) {
-            return std::make_unique<SlokedTextRenderService>(provider.GetDocuments(), provider.GetCharWidth(), provider.GetTaggers(), provider.GetContextManager());
+            return std::make_unique<SlokedTextRenderService>(provider.GetDocuments(), provider.GetCharWidth(), provider.GetContextManager());
         });
         this->builders.emplace("document::cursor", [](SlokedServiceDependencyProvider &provider) {
             return std::make_unique<SlokedCursorService>(provider.GetDocuments(), provider.GetServer().GetConnector("document::render"), provider.GetContextManager());
         });
         this->builders.emplace("document::manager", [](SlokedServiceDependencyProvider &provider) {
-            return std::make_unique<SlokedDocumentSetService>(provider.GetDocuments(), provider.GetContextManager());
+            return std::make_unique<SlokedDocumentSetService>(provider.GetDocuments(), provider.GetTaggers(), provider.GetContextManager());
         });
         this->builders.emplace("document::notify", [](SlokedServiceDependencyProvider &provider) {
             return std::make_unique<SlokedDocumentNotifyService>(provider.GetDocuments(), provider.GetContextManager());

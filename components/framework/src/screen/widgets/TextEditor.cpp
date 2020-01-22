@@ -26,8 +26,8 @@
 namespace sloked {
 
     SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService, std::function<void(SlokedCursorClient &)> initClient,
-        std::unique_ptr<KgrPipe> renderService, SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger, SlokedBackgroundGraphics bg)
-        : conv(encoding, SlokedLocale::SystemEncoding()), cursorClient(std::move(cursorService)), notifyClient(std::move(renderService), docId), tagger(tagger), background(bg) {
+        std::unique_ptr<KgrPipe> notifyService, SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger, SlokedBackgroundGraphics bg)
+        : conv(encoding, SlokedLocale::SystemEncoding()), cursorClient(std::move(cursorService)), notifyClient(std::move(notifyService), docId), tagger(tagger), background(bg) {
         if (initClient) {
             initClient(this->cursorClient);
         }

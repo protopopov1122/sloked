@@ -25,8 +25,8 @@ namespace sloked {
 
     class SlokedDocumentSetContext : public SlokedServiceContext {
      public:
-        SlokedDocumentSetContext(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet &documents)
-            : SlokedServiceContext(std::move(pipe)), documents(documents), document(documents.Empty()) {
+        SlokedDocumentSetContext(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet &documents, const SlokedTextTaggerRegistry<SlokedEditorDocument::TagType> &taggers)
+            : SlokedServiceContext(std::move(pipe)), documents(documents), document(documents.Empty()), taggers(taggers) {
             
             this->BindMethod("new", &SlokedDocumentSetContext::New);
             this->BindMethod("open", &SlokedDocumentSetContext::Open);
@@ -57,6 +57,9 @@ namespace sloked {
             const Encoding &enc = Encoding::Get(encoding);
             auto nl = NewLine::Create(newline, enc);
             this->document = this->documents.OpenDocument(SlokedPath{path}, enc, std::move(nl));
+            if (prms.Has("tagger")) {
+                this->document.GetObject().AttachTagger(this->taggers.TryCreate(prms["tagger"].AsString(), this->document.GetObject()));
+            }
             rsp.Result(static_cast<int64_t>(this->document.GetKey()));
         }
 
@@ -118,13 +121,14 @@ namespace sloked {
      private:
         SlokedEditorDocumentSet &documents;
         SlokedEditorDocumentSet::Document document;
+        const SlokedTextTaggerRegistry<SlokedEditorDocument::TagType> &taggers;
     };
 
-    SlokedDocumentSetService::SlokedDocumentSetService(SlokedEditorDocumentSet &documents, KgrContextManager<KgrLocalContext> &contextManager)
-        : documents(documents), contextManager(contextManager) {}
+    SlokedDocumentSetService::SlokedDocumentSetService(SlokedEditorDocumentSet &documents, const SlokedTextTaggerRegistry<SlokedEditorDocument::TagType> &taggers, KgrContextManager<KgrLocalContext> &contextManager)
+        : documents(documents), taggers(taggers), contextManager(contextManager) {}
 
     void SlokedDocumentSetService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedDocumentSetContext>(std::move(pipe), this->documents);
+        auto ctx = std::make_unique<SlokedDocumentSetContext>(std::move(pipe), this->documents, this->taggers);
         this->contextManager.Attach(std::move(ctx));
     }
 
@@ -144,11 +148,12 @@ namespace sloked {
         }
     }
 
-    std::optional<SlokedEditorDocumentSet::DocumentId> SlokedDocumentSetClient::Open(const std::string &path, const std::string &encoding, const std::string &newline) {
+    std::optional<SlokedEditorDocumentSet::DocumentId> SlokedDocumentSetClient::Open(const std::string &path, const std::string &encoding, const std::string &newline, const std::string &tagger) {
         auto rsp = this->client.Invoke("open", KgrDictionary {
             { "path", path },
             { "encoding", encoding },
-            { "newline", newline }
+            { "newline", newline },
+            { "tagger", tagger }
         });
         auto res = rsp.Get();
         if (res.HasResult()) {

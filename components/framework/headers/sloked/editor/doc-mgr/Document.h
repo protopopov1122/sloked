@@ -35,6 +35,7 @@ namespace sloked {
 
     class SlokedEditorDocument : public SlokedTaggableDocument {
      public:
+        using TagType = int;
         SlokedEditorDocument(const Encoding &, std::unique_ptr<NewLine>);
         SlokedEditorDocument(SlokedNamespace &, const SlokedPath &, const Encoding &, std::unique_ptr<NewLine>);
         std::optional<SlokedPath> GetUpstream() const final;
@@ -45,6 +46,8 @@ namespace sloked {
         const Encoding &GetEncoding() const final;
         std::unique_ptr<SlokedTransactionStream> NewStream();
         SlokedTransactionListenerManager &GetTransactionListeners() final;
+        void AttachTagger(std::unique_ptr<SlokedTextTagger<TagType>>);
+        SlokedTextTagger<TagType> *GetTagger() const;
         void Save();
         void Save(SlokedNamespace &, const SlokedPath &);
 
@@ -54,6 +57,7 @@ namespace sloked {
         std::reference_wrapper<const Encoding> encoding;
         std::unique_ptr<NewLine> newline;
         TransactionStreamMultiplexer multiplexer;
+        std::unique_ptr<SlokedTextTagger<TagType>> tagger;
     };
 }
 

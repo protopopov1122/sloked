@@ -60,8 +60,8 @@ namespace sloked {
     class SlokedTextRenderContext : public SlokedServiceContext {
      public:
         SlokedTextRenderContext(std::unique_ptr<KgrPipe> pipe,
-            SlokedEditorDocumentSet &documents, const SlokedCharWidth &charWidth, const SlokedTextTaggerRegistry<int> &taggers)
-            : SlokedServiceContext(std::move(pipe)), documents(documents), charWidth(charWidth), taggers(taggers), handle(documents.Empty()), document(nullptr) {
+            SlokedEditorDocumentSet &documents, const SlokedCharWidth &charWidth)
+            : SlokedServiceContext(std::move(pipe)), documents(documents), charWidth(charWidth), handle(documents.Empty()), document(nullptr) {
                 
             this->BindMethod("attach", &SlokedTextRenderContext::Attach);
             this->BindMethod("render", &SlokedTextRenderContext::Render);
@@ -70,14 +70,13 @@ namespace sloked {
      protected:
         void Attach(const std::string &method, const KgrValue &params, Response &rsp) {
             auto doc = this->documents.OpenDocument(static_cast<SlokedEditorDocumentSet::DocumentId>(params.AsDictionary()["document"].AsInt()));
-            const auto &tagger = params.AsDictionary()["tagger"].AsString();
             if (doc.has_value()) {
                 std::optional<std::string> externalUri;
                 if (doc.value().Exists() && doc.value().GetObject().HasUpstream()) {
                     externalUri = doc.value().GetObject().GetUpstreamURI();
                 }
                 this->handle = std::move(doc.value());
-                this->document = std::make_unique<DocumentContent>(this->handle.GetObject(), this->charWidth, this->taggers.TryCreate(tagger, this->handle.GetObject()));
+                this->document = std::make_unique<DocumentContent>(this->handle.GetObject(), this->charWidth);
             }
         }
 
@@ -158,9 +157,9 @@ namespace sloked {
      private:
 
         struct DocumentContent {
-            DocumentContent(SlokedEditorDocument &document, const SlokedCharWidth &charWidth, std::unique_ptr<SlokedTextTagger<int>> tagger)
+            DocumentContent(SlokedEditorDocument &document, const SlokedCharWidth &charWidth)
                 : text(document.GetText()), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
-                  transactionListeners(document.GetTransactionListeners()), lazyTags(std::move(tagger)),
+                  transactionListeners(document.GetTransactionListeners()), lazyTags(document.GetTagger()),
                   tags(lazyTags), frame(document.GetText(), document.GetEncoding(), charWidth) {
 
                 this->fragmentUpdater = std::make_shared<SlokedFragmentUpdater<int>>(this->text, this->tags, this->conv.GetDestination(), charWidth);
@@ -185,27 +184,24 @@ namespace sloked {
 
         SlokedEditorDocumentSet &documents;
         const SlokedCharWidth &charWidth;
-        const SlokedTextTaggerRegistry<int> &taggers;
         SlokedEditorDocumentSet::Document handle;
         std::unique_ptr<DocumentContent> document;
         KgrArray rendered;
     };
 
 
-    SlokedTextRenderService::SlokedTextRenderService(SlokedEditorDocumentSet &documents, const SlokedCharWidth &charWidth, const SlokedTextTaggerRegistry<int> &taggers,
-        KgrContextManager<KgrLocalContext> &contextManager)
-        : documents(documents), taggers(taggers), charWidth(charWidth), contextManager(contextManager) {}
+    SlokedTextRenderService::SlokedTextRenderService(SlokedEditorDocumentSet &documents, const SlokedCharWidth &charWidth, KgrContextManager<KgrLocalContext> &contextManager)
+        : documents(documents), charWidth(charWidth), contextManager(contextManager) {}
 
     void SlokedTextRenderService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedTextRenderContext>(std::move(pipe), documents, this->charWidth, this->taggers);
+        auto ctx = std::make_unique<SlokedTextRenderContext>(std::move(pipe), documents, this->charWidth);
         this->contextManager.Attach(std::move(ctx));
     }
 
-    SlokedTextRenderClient::SlokedTextRenderClient(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger)
+    SlokedTextRenderClient::SlokedTextRenderClient(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet::DocumentId docId)
         : client(std::move(pipe)) {
         auto rsp = this->client.Invoke("attach", KgrDictionary {
-            { "document", static_cast<int64_t>(docId) },
-            { "tagger", tagger }
+            { "document", static_cast<int64_t>(docId) }
         });
     }
 
