@@ -32,6 +32,10 @@ namespace sloked {
         return *this->content;
     }
 
+    const TextBlockView &SlokedDocumentUpstream::GetText() const {
+        return *this->content;
+    }
+
     std::optional<std::reference_wrapper<const SlokedPath>> SlokedDocumentUpstream::GetUpstream() const {
         if (this->upstream.has_value()) {
             return std::cref(this->upstream.value().file->GetPath());

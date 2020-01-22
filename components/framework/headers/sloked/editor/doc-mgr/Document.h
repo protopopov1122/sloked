@@ -29,20 +29,22 @@
 #include "sloked/text/cursor/TransactionStreamMultiplexer.h"
 #include "sloked/namespace/Object.h"
 #include "sloked/editor/doc-mgr/DocumentUpstream.h"
+#include "sloked/text/fragment/TaggedText.h"
 
 namespace sloked {
 
-    class SlokedEditorDocument {
+    class SlokedEditorDocument : public SlokedTaggableDocument {
      public:
         SlokedEditorDocument(const Encoding &, std::unique_ptr<NewLine>);
         SlokedEditorDocument(SlokedNamespace &, const SlokedPath &, const Encoding &, std::unique_ptr<NewLine>);
-        std::optional<std::reference_wrapper<const SlokedPath>> GetUpstream() const;
-        std::optional<std::string> GetUpstreamURI() const;
-        bool HasUpstream() const;
+        std::optional<SlokedPath> GetUpstream() const final;
+        std::optional<std::string> GetUpstreamURI() const final;
+        bool HasUpstream() const final;
         TextBlock &GetText();
-        const Encoding &GetEncoding();
+        const TextBlockView &GetText() const final;
+        const Encoding &GetEncoding() const final;
         std::unique_ptr<SlokedTransactionStream> NewStream();
-        SlokedTransactionListenerManager &GetTransactionListeners();
+        SlokedTransactionListenerManager &GetTransactionListeners() final;
         void Save();
         void Save(SlokedNamespace &, const SlokedPath &);
 

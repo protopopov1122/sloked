@@ -77,8 +77,7 @@ namespace sloked {
                     externalUri = doc.value().GetObject().GetUpstreamURI();
                 }
                 this->handle = std::move(doc.value());
-                this->document = std::make_unique<DocumentContent>(this->handle.GetObject(), this->charWidth, this->taggers.TryCreate(tagger, std::move(externalUri),
-                    this->handle.GetObject().GetText(), this->handle.GetObject().GetEncoding()));
+                this->document = std::make_unique<DocumentContent>(this->handle.GetObject(), this->charWidth, this->taggers.TryCreate(tagger, this->handle.GetObject()));
             }
         }
 

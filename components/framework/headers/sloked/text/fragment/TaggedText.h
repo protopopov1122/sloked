@@ -22,10 +22,12 @@
 #ifndef SLOKED_TEXT_FRAGMENT_TAGGEDTEXT_H_
 #define SLOKED_TEXT_FRAGMENT_TAGGEDTEXT_H_
 
+#include "sloked/namespace/Path.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/text/TextBlock.h"
 #include "sloked/text/fragment/FragmentMap.h"
 #include "sloked/core/Error.h"
+#include "sloked/text/cursor/TransactionStream.h"
 
 namespace sloked {
 
@@ -38,11 +40,22 @@ namespace sloked {
         virtual const TextPosition &GetPosition() const = 0;
     };
 
+    class SlokedTaggableDocument {
+     public:
+        virtual ~SlokedTaggableDocument() = default;
+        virtual bool HasUpstream() const = 0;
+        virtual std::optional<SlokedPath> GetUpstream() const = 0;
+        virtual std::optional<std::string> GetUpstreamURI() const = 0;
+        virtual const TextBlockView &GetText() const = 0;
+        virtual const Encoding &GetEncoding() const = 0;
+        virtual SlokedTransactionListenerManager &GetTransactionListeners() = 0;
+    };
+
     template <typename T>
     class SlokedTextTaggerFactory {
      public:
         virtual ~SlokedTextTaggerFactory() = default;
-        virtual std::unique_ptr<SlokedTextTagger<T>> Create(std::optional<std::string>, const TextBlockView &, const Encoding &) const = 0;
+        virtual std::unique_ptr<SlokedTextTagger<T>> Create(SlokedTaggableDocument &) const = 0;
     };
 
     template <typename T>
@@ -50,8 +63,8 @@ namespace sloked {
      public:
         virtual ~SlokedTextTaggerRegistry() = default;
         virtual bool Has(const std::string &id) const = 0;
-        virtual std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &, std::optional<std::string>, const TextBlockView &, const Encoding &) const = 0;
-        virtual std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &, std::optional<std::string>, const TextBlockView &, const Encoding &) const = 0;
+        virtual std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &, SlokedTaggableDocument &) const = 0;
+        virtual std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &, SlokedTaggableDocument &) const = 0;
     };
 
     template <typename T>
@@ -65,19 +78,19 @@ namespace sloked {
                 (this->base != nullptr && this->base->Has(id));
         }
 
-        std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &id, std::optional<std::string> externalUri, const TextBlockView &text, const Encoding &encoding) const final {
+        std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &id, SlokedTaggableDocument &document) const final {
             if (this->factories.count(id) != 0) {
-                return this->factories.at(id)->Create(std::move(externalUri), text, encoding);
+                return this->factories.at(id)->Create(document);
             } else if (this->base != nullptr) {
-                return this->base->Create(id, std::move(externalUri), text, encoding);
+                return this->base->Create(id, document);
             } else {
                 throw SlokedError("TextTaggerRegistry: Unknown tagger \'" + id + "\'");
             }
         }
 
-        std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &id, std::optional<std::string> externalUri, const TextBlockView &text, const Encoding &encoding) const final {
+        std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &id, SlokedTaggableDocument &document) const final {
             if (this->Has(id)) {
-                return this->Create(id, std::move(externalUri), text, encoding);
+                return this->Create(id, document);
             }  else {
                 return nullptr;
             }

@@ -106,7 +106,7 @@ namespace sloked {
             if (this->document.Exists()) {
                 auto upstream = this->document.GetObject().GetUpstream();
                 if (upstream.has_value()) {
-                    rsp.Result(upstream.value().get().ToString());
+                    rsp.Result(upstream.value().ToString());
                 } else {
                     rsp.Result({});
                 }

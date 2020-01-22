@@ -32,7 +32,7 @@ namespace sloked {
         : blockFactory(*newline), upstream(ns, path, this->blockFactory, *newline),
           encoding(encoding), newline(std::move(newline)), multiplexer(this->upstream.GetText(), encoding) {}
 
-    std::optional<std::reference_wrapper<const SlokedPath>> SlokedEditorDocument::GetUpstream() const {
+    std::optional<SlokedPath> SlokedEditorDocument::GetUpstream() const {
         return this->upstream.GetUpstream();
     }
     
@@ -48,7 +48,11 @@ namespace sloked {
         return this->upstream.GetText();
     }
 
-    const Encoding &SlokedEditorDocument::GetEncoding() {
+    const TextBlockView &SlokedEditorDocument::GetText() const {
+        return this->upstream.GetText();
+    }
+
+    const Encoding &SlokedEditorDocument::GetEncoding() const {
         return this->encoding;
     }
 

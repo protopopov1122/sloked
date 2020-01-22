@@ -35,6 +35,7 @@ namespace sloked {
         SlokedDocumentUpstream(const TextBlockFactory &, const NewLine &);
         SlokedDocumentUpstream(SlokedNamespace &, const SlokedPath &, const TextBlockFactory &, const NewLine &);
         TextBlock &GetText();
+        const TextBlockView &GetText() const;
         std::optional<std::reference_wrapper<const SlokedPath>> GetUpstream() const;
         std::optional<std::string> GetUpstreamURI() const;
         bool HasUpstream() const;
