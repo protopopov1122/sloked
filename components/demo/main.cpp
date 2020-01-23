@@ -106,6 +106,10 @@ class TestFragment : public SlokedTextTagger<int> {
         return this->current;
     }
 
+    Unbind OnUpdate(std::function<void()>) final {
+        return nullptr;
+    }
+
  private:
     bool ParseLine() {
         if (this->current.line > this->text.GetLastLine()) {

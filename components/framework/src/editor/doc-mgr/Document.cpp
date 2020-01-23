@@ -65,11 +65,11 @@ namespace sloked {
     }
 
     void SlokedEditorDocument::AttachTagger(std::unique_ptr<SlokedTextTagger<TagType>> tagger) {
-        this->tagger = std::move(tagger);
+        this->tagger.ChangeTagger(std::move(tagger));
     }
 
-    SlokedTextTagger<SlokedEditorDocument::TagType> *SlokedEditorDocument::GetTagger() const {
-        return this->tagger.get();
+    SlokedTextTagger<SlokedEditorDocument::TagType> &SlokedEditorDocument::GetTagger() {
+        return this->tagger;
     }
 
     void SlokedEditorDocument::Save() {

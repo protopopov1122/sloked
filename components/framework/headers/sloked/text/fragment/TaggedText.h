@@ -28,16 +28,86 @@
 #include "sloked/text/fragment/FragmentMap.h"
 #include "sloked/core/Error.h"
 #include "sloked/text/cursor/TransactionStream.h"
+#include "sloked/core/Event.h"
 
 namespace sloked {
 
     template <typename T>
     class SlokedTextTagger {
      public:
+        using Unbind = std::function<void()>;
         virtual ~SlokedTextTagger() = default;
         virtual std::optional<TaggedTextFragment<T>> Next() = 0;
         virtual void Rewind(const TextPosition &) = 0;
         virtual const TextPosition &GetPosition() const = 0;
+        virtual Unbind OnUpdate(std::function<void()>) = 0;
+    };
+
+    template <typename T>
+    class SlokedTextProxyTagger : public SlokedTextTagger<T> {
+     public:
+        SlokedTextProxyTagger(std::unique_ptr<SlokedTextTagger<T>> tagger = nullptr)
+            : tagger(std::move(tagger)), unsubscribe{nullptr} {
+            if (this->tagger) {
+                this->unsubscribe = this->tagger->OnUpdate([this] {
+                    this->subscribers.Emit();
+                });
+            }
+        }
+
+        ~SlokedTextProxyTagger() {
+            if (this->unsubscribe) {
+                this->unsubscribe();
+            }
+        }
+
+        void ChangeTagger(std::unique_ptr<SlokedTextTagger<T>> tagger = nullptr) {
+            if (this->unsubscribe) {
+                this->unsubscribe();
+                this->unsubscribe = nullptr;
+            }
+            this->tagger = std::move(tagger);
+            if (this->tagger) {
+                this->unsubscribe = this->tagger->OnUpdate([this] {
+                    this->subscribers.Emit();
+                });
+            }
+        }
+
+        bool HasTagger() const {
+            return this->tagger != nullptr;
+        }
+
+        std::optional<TaggedTextFragment<T>> Next() final {
+            if (this->tagger) {
+                return this->tagger->Next();
+            } else {
+                return {};
+            }
+        }
+
+        void Rewind(const TextPosition &pos) final {
+            if (this->tagger) {
+                this->tagger->Rewind(pos);
+            }
+        }
+
+        const TextPosition &GetPosition() const final {
+            if (this->tagger) {
+                return this->tagger->GetPosition();
+            } else {
+                return TextPosition::Max;
+            }
+        }
+
+        typename SlokedTextTagger<T>::Unbind OnUpdate(std::function<void()> subscriber) final {
+            return this->subscribers.Listen(std::move(subscriber));
+        }
+
+     private:
+        std::unique_ptr<SlokedTextTagger<T>> tagger;
+        typename SlokedTextTagger<T>::Unbind unsubscribe;
+        SlokedEventEmitter<void> subscribers;
     };
 
     class SlokedTaggableDocument {

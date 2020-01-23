@@ -30,6 +30,7 @@
 #include "sloked/namespace/Object.h"
 #include "sloked/editor/doc-mgr/DocumentUpstream.h"
 #include "sloked/text/fragment/TaggedText.h"
+#include "sloked/core/Event.h"
 
 namespace sloked {
 
@@ -47,7 +48,7 @@ namespace sloked {
         std::unique_ptr<SlokedTransactionStream> NewStream();
         SlokedTransactionListenerManager &GetTransactionListeners() final;
         void AttachTagger(std::unique_ptr<SlokedTextTagger<TagType>>);
-        SlokedTextTagger<TagType> *GetTagger() const;
+        SlokedTextTagger<TagType> &GetTagger();
         void Save();
         void Save(SlokedNamespace &, const SlokedPath &);
 
@@ -57,7 +58,7 @@ namespace sloked {
         std::reference_wrapper<const Encoding> encoding;
         std::unique_ptr<NewLine> newline;
         TransactionStreamMultiplexer multiplexer;
-        std::unique_ptr<SlokedTextTagger<TagType>> tagger;
+        SlokedTextProxyTagger<TagType> tagger;
     };
 }
 

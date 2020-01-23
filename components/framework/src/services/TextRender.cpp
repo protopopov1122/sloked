@@ -159,7 +159,7 @@ namespace sloked {
         struct DocumentContent {
             DocumentContent(SlokedEditorDocument &document, const SlokedCharWidth &charWidth)
                 : text(document.GetText()), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
-                  transactionListeners(document.GetTransactionListeners()), lazyTags(document.GetTagger()),
+                  transactionListeners(document.GetTransactionListeners()), lazyTags(&document.GetTagger()),
                   tags(lazyTags), frame(document.GetText(), document.GetEncoding(), charWidth) {
 
                 this->fragmentUpdater = std::make_shared<SlokedFragmentUpdater<int>>(this->text, this->tags, this->conv.GetDestination(), charWidth);

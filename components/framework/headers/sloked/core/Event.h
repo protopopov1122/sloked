@@ -65,6 +65,43 @@ namespace sloked {
         uint64_t nextId;
         std::map<uint64_t, Listener> listeners;
     };
+
+    template <>
+    class SlokedEventEmitter<void> {
+     public:
+        using Listener = std::function<void()>;
+        using Unbind = std::function<void()>;
+
+        SlokedEventEmitter()
+            : nextId{0} {}
+
+        Unbind Listen(Listener listener) {
+            std::unique_lock lock(this->mtx);
+            auto id = this->nextId++;
+            this->listeners.emplace(id, std::move(listener));
+            return [this, id] {
+                std::unique_lock lock(this->mtx);
+                if (this->listeners.count(id) != 0) {
+                    this->listeners.erase(id);
+                }
+            };
+        }
+
+        void Emit() {
+            std::unique_lock lock(this->mtx);
+            for (auto it = this->listeners.begin(); it != this->listeners.end();) {
+                auto current = it++;
+                lock.unlock();
+                current->second();
+                lock.lock();
+            }
+        }
+
+     private:
+        std::mutex mtx;
+        uint64_t nextId;
+        std::map<uint64_t, Listener> listeners;
+    };
 }
 
 #endif
