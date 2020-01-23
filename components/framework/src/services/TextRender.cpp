@@ -90,7 +90,7 @@ namespace sloked {
                 }, TextPosition{
                     line,
                     column
-                }, this->document->updateListener->HasUpdates());
+                }, this->document->updateListener->HasUpdates() || this->document->taggersUpdated.exchange(false));
             this->document->updateListener->ResetUpdates();
 
             if (updated) {
@@ -160,16 +160,22 @@ namespace sloked {
             DocumentContent(SlokedEditorDocument &document, const SlokedCharWidth &charWidth)
                 : text(document.GetText()), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
                   transactionListeners(document.GetTransactionListeners()), lazyTags(&document.GetTagger()),
-                  tags(lazyTags), frame(document.GetText(), document.GetEncoding(), charWidth) {
+                  tags(lazyTags), frame(document.GetText(), document.GetEncoding(), charWidth), taggersUpdated{false} {
 
                 this->fragmentUpdater = std::make_shared<SlokedFragmentUpdater<int>>(this->text, this->tags, this->conv.GetDestination(), charWidth);
                 this->updateListener = std::make_shared<DocumentUpdateListener>();
                 this->transactionListeners.AddListener(this->fragmentUpdater);
                 this->transactionListeners.AddListener(this->updateListener);
+                this->unsubscribeTaggers = document.GetTagger().OnUpdate([this] {
+                    this->taggersUpdated = true;
+                });
             }
 
             ~DocumentContent() {
                 this->transactionListeners.RemoveListener(*this->fragmentUpdater);
+                if (this->unsubscribeTaggers) {
+                    this->unsubscribeTaggers();
+                }
             }
                 
             TextBlock &text;
@@ -180,6 +186,8 @@ namespace sloked {
             TextFrameView frame;
             std::shared_ptr<SlokedFragmentUpdater<int>> fragmentUpdater;
             std::shared_ptr<DocumentUpdateListener> updateListener;
+            SlokedTextTagger<SlokedEditorDocument::TagType>::Unbind unsubscribeTaggers;
+            std::atomic<bool> taggersUpdated;
         };
 
         SlokedEditorDocumentSet &documents;
