@@ -46,9 +46,11 @@ namespace sloked {
     class SlokedDocumentNotifyContext : public KgrLocalContext {
      public:
         SlokedDocumentNotifyContext(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet &documents)
-            : KgrLocalContext(std::move(pipe)), documents(documents) {
+            : KgrLocalContext(std::move(pipe)), documents(documents), taggerUnsubscribe{nullptr} {
             this->notifier = std::make_shared<SlokedDocumentNotifyListener>([this] {
-                this->pipe->Write({});
+                this->pipe->Write(KgrDictionary {
+                    { "source", "content" }
+                });
             });
         }
 
@@ -56,18 +58,33 @@ namespace sloked {
             if (this->document.has_value()) {
                 this->document.value().GetObject().GetTransactionListeners().RemoveListener(*this->notifier);
             }
+            if (this->taggerUnsubscribe) {
+                this->taggerUnsubscribe();
+            }
         }
 
         void Run() override {
             if (!this->pipe->Empty()) {
-                auto msg = this->pipe->Read();
-                auto docId = msg.AsInt();
+                auto msg = this->pipe->Read().AsDictionary();
+                auto docId = msg["document"].AsInt();
+                auto tagger = msg["tagger"].AsBoolean();
                 if (this->document.has_value()) {
                     this->document.value().GetObject().GetTransactionListeners().RemoveListener(*this->notifier);
+                }
+                if (this->taggerUnsubscribe) {
+                    this->taggerUnsubscribe();
+                    this->taggerUnsubscribe = nullptr;
                 }
                 this->document = this->documents.OpenDocument(docId);
                 if (this->document.has_value()) {
                     this->document.value().GetObject().GetTransactionListeners().AddListener(this->notifier);
+                    if (tagger) {
+                        this->taggerUnsubscribe = this->document.value().GetObject().GetTagger().OnUpdate([this] {
+                            this->pipe->Write(KgrDictionary {
+                                { "source", "tagger" }
+                            });
+                        });
+                    }
                 }
             }
         }
@@ -76,6 +93,7 @@ namespace sloked {
         SlokedEditorDocumentSet &documents;
         std::optional<SlokedEditorDocumentSet::Document> document;
         std::shared_ptr<SlokedDocumentNotifyListener> notifier;
+        SlokedTextTagger<SlokedEditorDocument::TagType>::Unbind taggerUnsubscribe;
     };
 
     SlokedDocumentNotifyService::SlokedDocumentNotifyService(SlokedEditorDocumentSet &documents, KgrContextManager<KgrLocalContext> &ctxManager)
@@ -86,9 +104,12 @@ namespace sloked {
         this->contextManager.Attach(std::move(ctx));
     }
 
-    SlokedDocumentNotifyClient::SlokedDocumentNotifyClient(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet::DocumentId docId)
+    SlokedDocumentNotifyClient::SlokedDocumentNotifyClient(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet::DocumentId docId, bool taggerNotifications)
         : pipe(std::move(pipe)) {
-        this->pipe->Write(static_cast<int64_t>(docId));
+        this->pipe->Write(KgrDictionary {
+            { "document", static_cast<int64_t>(docId) },
+            { "tagger", taggerNotifications }
+        });
     }
 
     void SlokedDocumentNotifyClient::OnUpdate(std::function<void()> listener) {

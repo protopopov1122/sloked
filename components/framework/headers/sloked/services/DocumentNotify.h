@@ -20,7 +20,7 @@ namespace sloked {
 
     class SlokedDocumentNotifyClient {
      public:
-        SlokedDocumentNotifyClient(std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId);
+        SlokedDocumentNotifyClient(std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, bool = false);
         void OnUpdate(std::function<void()>);
 
      private:

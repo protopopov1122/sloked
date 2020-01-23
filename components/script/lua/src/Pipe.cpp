@@ -238,7 +238,7 @@ namespace sloked {
                 }
             
             case LUA_TBOOLEAN:
-                return lua_toboolean(state, -1);
+                return static_cast<bool>(lua_toboolean(state, -1));
 
             case LUA_TSTRING:
                 return lua_tostring(state, -1);

@@ -29,7 +29,10 @@ async(function(await)
 
     if await_unwrap(cursor('connect', 1)) then
         local notifier = pipe:promisify(sloked.editors.main.server:connect('document::notify'))
-        await_unwrap(notifier:write(1))
+        await_unwrap(notifier:write({
+            document=1,
+            tagger=false
+        }))
         while true do
             await_unwrap(notifier:drop(1))
             await_unwrap(async(function(await)
