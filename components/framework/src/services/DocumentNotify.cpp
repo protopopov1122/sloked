@@ -79,9 +79,15 @@ namespace sloked {
                 if (this->document.has_value()) {
                     this->document.value().GetObject().GetTransactionListeners().AddListener(this->notifier);
                     if (tagger) {
-                        this->taggerUnsubscribe = this->document.value().GetObject().GetTagger().OnUpdate([this] {
+                        this->taggerUnsubscribe = this->document.value().GetObject().GetTagger().OnUpdate([this](const auto &pos) {
                             this->pipe->Write(KgrDictionary {
-                                { "source", "tagger" }
+                                { "source", "tagger" },
+                                {
+                                    "payload", KgrDictionary {
+                                        { "line", static_cast<int64_t>(pos.line) },
+                                        { "column", static_cast<int64_t>(pos.column) }
+                                    }
+                                }
                             });
                         });
                     }

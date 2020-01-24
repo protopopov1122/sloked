@@ -106,7 +106,7 @@ class TestFragment : public SlokedTextTagger<int> {
         return this->current;
     }
 
-    Unbind OnUpdate(std::function<void()> fn) final {
+    Unbind OnUpdate(std::function<void(const TextPosition &)> fn) final {
         return this->emitter.Listen(std::move(fn));
     }
 
@@ -135,7 +135,7 @@ class TestFragment : public SlokedTextTagger<int> {
     const Encoding &encoding;
     TextPosition current;
     std::queue<TaggedTextFragment<int>> cache;
-    SlokedEventEmitter<void> emitter;
+    SlokedEventEmitter<const TextPosition &> emitter;
 };
 
 class TestFragmentFactory : public SlokedTextTaggerFactory<int> {

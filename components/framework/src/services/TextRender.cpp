@@ -166,7 +166,7 @@ namespace sloked {
                 this->updateListener = std::make_shared<DocumentUpdateListener>();
                 this->transactionListeners.AddListener(this->fragmentUpdater);
                 this->transactionListeners.AddListener(this->updateListener);
-                this->unsubscribeTaggers = document.GetTagger().OnUpdate([this] {
+                this->unsubscribeTaggers = document.GetTagger().OnUpdate([this](const auto &) {
                     this->taggersUpdated = true;
                 });
             }

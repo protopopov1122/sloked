@@ -40,7 +40,7 @@ namespace sloked {
         virtual std::optional<TaggedTextFragment<T>> Next() = 0;
         virtual void Rewind(const TextPosition &) = 0;
         virtual const TextPosition &GetPosition() const = 0;
-        virtual Unbind OnUpdate(std::function<void()>) = 0;
+        virtual Unbind OnUpdate(std::function<void(const TextPosition &)>) = 0;
     };
 
     template <typename T>
@@ -49,8 +49,8 @@ namespace sloked {
         SlokedTextProxyTagger(std::unique_ptr<SlokedTextTagger<T>> tagger = nullptr)
             : tagger(std::move(tagger)), unsubscribe{nullptr} {
             if (this->tagger) {
-                this->unsubscribe = this->tagger->OnUpdate([this] {
-                    this->subscribers.Emit();
+                this->unsubscribe = this->tagger->OnUpdate([this](const auto &pos) {
+                    this->subscribers.Emit(pos);
                 });
             }
         }
@@ -68,8 +68,8 @@ namespace sloked {
             }
             this->tagger = std::move(tagger);
             if (this->tagger) {
-                this->unsubscribe = this->tagger->OnUpdate([this] {
-                    this->subscribers.Emit();
+                this->unsubscribe = this->tagger->OnUpdate([this](const auto &pos) {
+                    this->subscribers.Emit(pos);
                 });
             }
         }
@@ -100,14 +100,14 @@ namespace sloked {
             }
         }
 
-        typename SlokedTextTagger<T>::Unbind OnUpdate(std::function<void()> subscriber) final {
+        typename SlokedTextTagger<T>::Unbind OnUpdate(std::function<void(const TextPosition &)> subscriber) final {
             return this->subscribers.Listen(std::move(subscriber));
         }
 
      private:
         std::unique_ptr<SlokedTextTagger<T>> tagger;
         typename SlokedTextTagger<T>::Unbind unsubscribe;
-        SlokedEventEmitter<void> subscribers;
+        SlokedEventEmitter<const TextPosition &> subscribers;
     };
 
     class SlokedTaggableDocument {
