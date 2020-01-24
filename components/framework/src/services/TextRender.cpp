@@ -95,7 +95,7 @@ namespace sloked {
 
             if (updated) {
                 KgrArray fragments;
-                std::optional<std::pair<std::string, const TaggedTextFragment<int> *>> back;
+                std::optional<std::pair<std::string, std::optional<TaggedTextFragment<int>>>> back;
                 std::string newline = this->document->conv.Convert("\n");
                 this->document->frame.VisitSymbols([&](auto lineNumber, auto columnOffset, const auto &line) {
                     for (std::size_t column = 0; column < line.size(); column++) {
@@ -107,7 +107,7 @@ namespace sloked {
                             back = std::make_pair(line.at(column), tag);
                         } else if (back.value().second != tag) {
                             fragments.Append(KgrDictionary {
-                                { "tag", back.value().second != nullptr },
+                                { "tag", back.value().second.has_value() },
                                 { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
                             });
                             back = std::make_pair(line.at(column), tag);
@@ -118,13 +118,13 @@ namespace sloked {
                     
                     if (lineNumber + 1 < this->document->text.GetLastLine()) {
                         if (!back.has_value()) {
-                            back = std::make_pair(newline, nullptr);
-                        } else if (back.value().second != nullptr) {
+                            back = std::make_pair(newline, std::optional<TaggedTextFragment<int>>{});
+                        } else if (back.value().second.has_value()) {
                             fragments.Append(KgrDictionary {
-                                { "tag", back.value().second != nullptr },
+                                { "tag", back.value().second.has_value() },
                                 { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
                             });
-                            back = std::make_pair(newline, nullptr);
+                            back = std::make_pair(newline, std::optional<TaggedTextFragment<int>>{});
                         } else {
                             back.value().first.append(newline);
                         }
@@ -133,7 +133,7 @@ namespace sloked {
                 });
                 if (back.has_value()) {
                     fragments.Append(KgrDictionary {
-                        { "tag", back.value().second != nullptr },
+                        { "tag", back.value().second.has_value() },
                         { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
                     });
                 }
@@ -159,12 +159,10 @@ namespace sloked {
         struct DocumentContent {
             DocumentContent(SlokedEditorDocument &document, const SlokedCharWidth &charWidth)
                 : text(document.GetText()), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
-                  transactionListeners(document.GetTransactionListeners()), lazyTags(&document.GetTagger()),
-                  tags(lazyTags), frame(document.GetText(), document.GetEncoding(), charWidth), taggersUpdated{false} {
+                  transactionListeners(document.GetTransactionListeners()), tags(document.GetTagger()),
+                  frame(document.GetText(), document.GetEncoding(), charWidth), taggersUpdated{false} {
 
-                this->fragmentUpdater = std::make_shared<SlokedFragmentUpdater<int>>(this->text, this->tags, this->conv.GetDestination(), charWidth);
                 this->updateListener = std::make_shared<DocumentUpdateListener>();
-                this->transactionListeners.AddListener(this->fragmentUpdater);
                 this->transactionListeners.AddListener(this->updateListener);
                 this->unsubscribeTaggers = document.GetTagger().OnUpdate([this](const auto &) {
                     this->taggersUpdated = true;
@@ -172,7 +170,6 @@ namespace sloked {
             }
 
             ~DocumentContent() {
-                this->transactionListeners.RemoveListener(*this->fragmentUpdater);
                 if (this->unsubscribeTaggers) {
                     this->unsubscribeTaggers();
                 }
@@ -181,10 +178,8 @@ namespace sloked {
             TextBlock &text;
             EncodingConverter conv;
             SlokedTransactionListenerManager &transactionListeners;
-            SlokedLazyTaggedText<int> lazyTags;
-            SlokedCacheTaggedText<int> tags;
+            SlokedTextTagger<SlokedEditorDocument::TagType> &tags;
             TextFrameView frame;
-            std::shared_ptr<SlokedFragmentUpdater<int>> fragmentUpdater;
             std::shared_ptr<DocumentUpdateListener> updateListener;
             SlokedTextTagger<SlokedEditorDocument::TagType>::Unbind unsubscribeTaggers;
             std::atomic<bool> taggersUpdated;

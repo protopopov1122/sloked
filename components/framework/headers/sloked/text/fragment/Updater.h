@@ -30,8 +30,8 @@ namespace sloked {
     template <typename T>
     class SlokedFragmentUpdater : public SlokedTransactionStream::Listener {
     public:
-        SlokedFragmentUpdater(const TextBlockView &text, SlokedTaggedText<T> &tags, const Encoding &encoding, const SlokedCharWidth &charWidth)
-            : text(text), tags(tags), encoding(encoding), charWidth(charWidth) {}
+        SlokedFragmentUpdater(const TextBlockView &text, SlokedTextTagIterator<T> &tags, const Encoding &encoding)
+            : text(text), tags(tags), encoding(encoding) {}
 
         void OnCommit(const SlokedCursorTransaction &trans) override {
             auto realPos = trans.GetPosition();
@@ -53,9 +53,8 @@ namespace sloked {
 
     private:
         const TextBlockView &text;
-        SlokedTaggedText<T> &tags;
+        SlokedTextTagIterator<T> &tags;
         const Encoding &encoding;
-        const SlokedCharWidth &charWidth;
     };
 }
 

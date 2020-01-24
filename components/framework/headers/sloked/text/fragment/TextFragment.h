@@ -66,6 +66,17 @@ namespace sloked {
             return this->start < other.start;
         }
 
+        bool operator==(const TaggedTextFragment<T> &other) const {
+            return this->start == other.start &&
+                this->length == other.length &&
+                this->end == other.end &&
+                this->tag == other.tag;
+        }
+
+        bool operator!=(const TaggedTextFragment<T> &other) const {
+            return !this->operator==(other);
+        }
+
      private:
         TextPosition start;
         TextPosition length;

@@ -73,11 +73,12 @@
 #include "sloked/namespace/Root.h"
 #include "sloked/namespace/Empty.h"
 #include "sloked/editor/configuration/Compat.h"
+#include "sloked/text/fragment/Updater.h"
 #include <chrono>
 
 using namespace sloked;
 
-class TestFragment : public SlokedTextTagger<int> {
+class TestFragment : public SlokedTextTagIterator<int> {
  public:
     TestFragment(const TextBlockView &text, const Encoding &encoding)
         : text(text), encoding(encoding), current{0, 0} {}
@@ -99,6 +100,7 @@ class TestFragment : public SlokedTextTagger<int> {
         if (position < this->current) {
             this->current = position;
             this->cache = {};
+            this->emitter.Emit(position);
         }
     }
 
@@ -138,10 +140,37 @@ class TestFragment : public SlokedTextTagger<int> {
     SlokedEventEmitter<const TextPosition &> emitter;
 };
 
+class SlokedTestTagger : public SlokedTextTagger<int> {
+ public:
+    SlokedTestTagger(SlokedTaggableDocument &doc)
+        : doc(doc), iter(doc.GetText(), doc.GetEncoding()), updater(std::make_shared<SlokedFragmentUpdater<int>>(doc.GetText(), iter, doc.GetEncoding())), lazy(iter), cached(lazy) {
+        doc.GetTransactionListeners().AddListener(this->updater);
+    }
+
+    ~SlokedTestTagger() {
+        doc.GetTransactionListeners().RemoveListener(*this->updater);
+    }
+
+    std::optional<TaggedTextFragment<int>> Get(const TextPosition &pos) final {
+        return this->cached.Get(pos);
+    }
+
+    typename SlokedTextTagger<int>::Unbind OnUpdate(std::function<void(const TextPosition &)> callback) final {
+        return this->cached.OnUpdate(std::move(callback));
+    }
+
+ private:
+    SlokedTaggableDocument &doc;
+    TestFragment iter;
+    std::shared_ptr<SlokedFragmentUpdater<int>> updater;
+    SlokedLazyTaggedText<int> lazy;
+    SlokedCacheTaggedText<int> cached;
+};
+
 class TestFragmentFactory : public SlokedTextTaggerFactory<int> {
  public:
     std::unique_ptr<SlokedTextTagger<int>> Create(SlokedTaggableDocument &doc) const final {
-        return std::make_unique<TestFragment>(doc.GetText(), doc.GetEncoding());
+        return std::make_unique<SlokedTestTagger>(doc);
     }
 };
 
