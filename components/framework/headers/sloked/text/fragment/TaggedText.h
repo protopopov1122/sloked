@@ -42,17 +42,6 @@ namespace sloked {
     };
 
     template <typename T>
-    class SlokedTextTagIterator {
-     public:
-        using Unbind = std::function<void()>;
-        virtual ~SlokedTextTagIterator() = default;
-        virtual std::optional<TaggedTextFragment<T>> Next() = 0;
-        virtual void Rewind(const TextPosition &) = 0;
-        virtual const TextPosition &GetPosition() const = 0;
-        virtual Unbind OnUpdate(std::function<void(const TextPosition &)>) = 0;
-    };
-
-    template <typename T>
     class SlokedTextProxyTagger : public SlokedTextTagger<T> {
      public:
         SlokedTextProxyTagger(std::unique_ptr<SlokedTextTagger<T>> tagger = nullptr)
@@ -168,59 +157,6 @@ namespace sloked {
      private:
         SlokedTextTaggerRegistry<T> *base;
         std::map<std::string, std::unique_ptr<SlokedTextTaggerFactory<T>>> factories;
-    };
-
-    template <typename T>
-    class SlokedLazyTaggedText : public SlokedTextTagger<T> {
-     public:
-        SlokedLazyTaggedText(SlokedTextTagIterator<T> &tagger)
-            : tagger(tagger), current{0, 0} {
-            this->unsubscribe = this->tagger.OnUpdate([this](const auto &pos) {
-                this->fragments.Remove(pos);
-                this->current = std::min(pos, this->current);
-                this->emitter.Emit(pos);
-            });
-            this->NextFragment();
-        }
-
-        ~SlokedLazyTaggedText() {
-            if (this->unsubscribe) {
-                this->unsubscribe();
-            }
-        }
-
-        std::optional<TaggedTextFragment<T>> Get(const TextPosition &pos) final {
-            while (!(pos < this->current)) {
-                this->NextFragment();
-            }
-            auto fragment = this->fragments.Get(pos);
-            if (fragment) {
-                return *fragment;
-            } else {
-                return {};
-            }
-        }
-
-        typename SlokedTextTagger<T>::Unbind OnUpdate(std::function<void(const TextPosition &)> callback) final {
-            return this->emitter.Listen(std::move(callback));
-        }
-    
-     private:
-        void NextFragment() {
-            auto fragment = this->tagger.Next();
-            if (fragment.has_value()) {
-                this->current = fragment.value().GetEnd();
-                this->fragments.Insert(std::move(fragment.value()));
-            } else {
-                this->current = this->tagger.GetPosition();
-            }
-        }
-
-        SlokedTextTagIterator<T> &tagger;
-        TaggedFragmentMap<T> fragments;
-        TextPosition current;
-        typename SlokedTextTagger<T>::Unbind unsubscribe;
-        SlokedEventEmitter<const TextPosition &> emitter;
     };
 
     template <typename T>

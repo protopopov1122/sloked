@@ -23,7 +23,7 @@
 #define SLOKED_TEXT_FRAGMENT_UPDATER_H_
 
 #include "sloked/text/cursor/TransactionStream.h"
-#include "sloked/text/fragment/TaggedText.h"
+#include "sloked/text/fragment/Iterator.h"
 
 namespace sloked {
 
