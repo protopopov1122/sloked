@@ -29,6 +29,7 @@
 #include <memory>
 #include <string>
 #include <functional>
+#include <optional>
 
 namespace sloked {
 

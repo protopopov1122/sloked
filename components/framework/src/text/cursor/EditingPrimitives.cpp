@@ -20,6 +20,7 @@
 */
 
 #include "sloked/text/cursor/EditingPrimitives.h"
+#include <vector>
 
 namespace sloked {
 

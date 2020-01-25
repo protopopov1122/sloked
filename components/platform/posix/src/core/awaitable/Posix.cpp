@@ -22,6 +22,7 @@
 #include "sloked/core/awaitable/Posix.h"
 #include "sloked/core/Error.h"
 #include "sloked/core/posix/Time.h"
+#include <vector>
 
 namespace sloked {
 

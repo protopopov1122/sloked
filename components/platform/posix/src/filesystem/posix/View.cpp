@@ -30,7 +30,11 @@ namespace sloked {
         struct stat file_stats;
         fstat(fileno(this->file), &file_stats);
         this->length = file_stats.st_size;
+#ifdef SLOKED_PLATFORM_OS_LINUX
         this->data = mmap(nullptr, this->length, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fileno(this->file), 0);
+#elifdef SLOKED_PLATFORM_OS_UNIX
+	this->data = mmap(nullptr, this->length, PROT_READ, MAP_PRIVATE, fileno(this->file), 0);
+#endif
     }
     
     SlokedPosixFileView::~SlokedPosixFileView() {

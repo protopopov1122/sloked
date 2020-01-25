@@ -43,14 +43,17 @@ namespace sloked {
         EncodingConverter conv(this->encoding, SlokedLocale::SystemEncoding());
         str = conv.Convert(str);
         std::regex groupNum(R"(\$\{[0-9]+\})");
-        std::smatch match;
-        while (std::regex_search(str, match, groupNum)) {
-            std::size_t idx = std::stoull(match.str().substr(2));
-            std::string groupValue = idx < entry.groups.size()
-                ? conv.Convert(entry.groups.at(idx))
-                : "";
-            str.replace(match.position(), match.str().size(), groupValue);
-            match = {};
+        while (true) {
+            std::smatch match;
+            if (std::regex_search(str, match, groupNum)) {
+                std::size_t idx = std::stoull(match.str().substr(2));
+                std::string groupValue = idx < entry.groups.size()
+                    ? conv.Convert(entry.groups.at(idx))
+                    : "";
+                str.replace(match.position(), match.str().size(), groupValue);
+            } else {
+                break;
+            }
         }
         return str;
     }

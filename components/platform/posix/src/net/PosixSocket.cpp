@@ -28,6 +28,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
+#include <netinet/in.h>
 
 namespace sloked {
 
@@ -39,7 +40,7 @@ namespace sloked {
         : socket(fd) {
         
         int one = 1;
-        setsockopt(fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
+        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
     }
         
     SlokedPosixSocket::SlokedPosixSocket(SlokedPosixSocket &&socket) {

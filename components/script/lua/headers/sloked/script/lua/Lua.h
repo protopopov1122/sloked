@@ -28,12 +28,12 @@
 #include "sloked/sched/Scheduler.h"
 #include "sloked/core/Logger.h"
 #include "sloked/editor/EditorApp.h"
+#include "sloked/script/lua/Base.h"
 #include <string>
 #include <atomic>
 #include <thread>
 #include <mutex>
 #include <map>
-#include <lua.hpp>
 
 namespace sloked {
 

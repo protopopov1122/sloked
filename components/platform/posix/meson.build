@@ -12,7 +12,7 @@ posix_platform_src = [
   'src/screen/terminal/posix/PosixTerminal.cpp'
 ]
 
-ncurses = dependency('ncurses')
+ncurses = cpp.find_library('ncurses')
 sloked_posix_platform_flags = '-DSLOKED_PLATFORM_POSIX'
 sloked_posix_platform_lib = static_library('sloked_posix_platform', posix_platform_src,
   include_directories : include_directories('headers'),

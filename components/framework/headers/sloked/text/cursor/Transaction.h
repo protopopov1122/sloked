@@ -29,6 +29,7 @@
 #include "sloked/text/TextBlock.h"
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace sloked {
 
