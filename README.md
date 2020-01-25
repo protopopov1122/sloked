@@ -23,7 +23,7 @@ Some concepts which will be implemented later:
 The main goal is powerful text editing framework which provides high-level abstractions for text editing, sophisticated workspaces, syntax highlighting and hinting, as well as uniform protocols to work with editor subsystems. Exact UI and UX should be provided by external plugins which combine framework components. Networked nature of differect plugins (written in different languages) and even users (with strict permission control) is highly emphasized.
 
 ### Building
-Project is being built and tested on Linux x86_64, although most of the code is system agnostic (and should be easily portable across POSIX-compatible systems). Project uses `meson` for build system, C++17 as a language, external dependencies are ncurses, Lua 5.3 (optional), Botan (optional).
+Project is being built and tested on Linux x86_64 and ported to FreeBSD, although most of the code is system agnostic (and should be easily portable across POSIX-compatible systems). Project uses `meson` for build system, C++17 as a language, external dependencies are ncurses, Lua 5.3 (optional), Botan (optional).
 
 ### inb4
 
