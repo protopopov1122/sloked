@@ -8,7 +8,10 @@ lua_bindings_src = [
   'src/Server.cpp'
 ]
 
-lua = dependency('lua')
+lua = dependency('lua', required : false)
+if not lua.found()
+	lua = dependency('lua-5.3')
+endif
 sloked_lua_bindings_flags = ['-DSLOKED_FEATURE_SCRIPTING', '-DSLOKED_FEATURE_SCRIPTING_LUA']
 sloked_lua_bindings_lib = static_library('sloked_lua', lua_bindings_src,
   cpp_args : sloked_lua_bindings_flags,
