@@ -34,7 +34,7 @@ namespace sloked {
         virtual std::optional<TaggedTextFragment<T>> Next() = 0;
         virtual void Rewind(const TextPosition &) = 0;
         virtual const TextPosition &GetPosition() const = 0;
-        virtual Unbind OnUpdate(std::function<void(const TextPosition &)>) = 0;
+        virtual Unbind OnChange(std::function<void(const TextPositionRange &)>) = 0;
     };
 
     template <typename T>
@@ -42,9 +42,9 @@ namespace sloked {
      public:
         SlokedLazyTaggedText(SlokedTextTagIterator<T> &tagger)
             : tagger(tagger), current{0, 0} {
-            this->unsubscribe = this->tagger.OnUpdate([this](const auto &pos) {
-                this->fragments.Remove(pos);
-                this->current = std::min(pos, this->current);
+            this->unsubscribe = this->tagger.OnChange([this](const auto &pos) {
+                this->fragments.Remove(pos.start);
+                this->current = std::min(pos.start, this->current);
                 this->emitter.Emit(pos);
             });
             this->NextFragment();
@@ -68,7 +68,7 @@ namespace sloked {
             }
         }
 
-        typename SlokedTextTagger<T>::Unbind OnUpdate(std::function<void(const TextPosition &)> callback) final {
+        typename SlokedTextTagger<T>::Unbind OnChange(std::function<void(const TextPositionRange &)> callback) final {
             return this->emitter.Listen(std::move(callback));
         }
     
@@ -87,7 +87,7 @@ namespace sloked {
         TaggedFragmentMap<T> fragments;
         TextPosition current;
         typename SlokedTextTagger<T>::Unbind unsubscribe;
-        SlokedEventEmitter<const TextPosition &> emitter;
+        SlokedEventEmitter<const TextPositionRange &> emitter;
     };
 }
 

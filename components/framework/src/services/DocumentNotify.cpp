@@ -79,13 +79,23 @@ namespace sloked {
                 if (this->document.has_value()) {
                     this->document.value().GetObject().GetTransactionListeners().AddListener(this->notifier);
                     if (tagger) {
-                        this->taggerUnsubscribe = this->document.value().GetObject().GetTagger().OnUpdate([this](const auto &pos) {
+                        this->taggerUnsubscribe = this->document.value().GetObject().GetTagger().OnChange([this](const auto &pos) {
                             this->pipe->Write(KgrDictionary {
                                 { "source", "tagger" },
                                 {
                                     "payload", KgrDictionary {
-                                        { "line", static_cast<int64_t>(pos.line) },
-                                        { "column", static_cast<int64_t>(pos.column) }
+                                        {
+                                            "start", KgrDictionary {
+                                                { "line", static_cast<int64_t>(pos.start.line) },
+                                                { "column", static_cast<int64_t>(pos.start.column) }
+                                            }
+                                        },
+                                        {
+                                            "end", KgrDictionary {
+                                                { "line", static_cast<int64_t>(pos.end.line) },
+                                                { "column", static_cast<int64_t>(pos.end.column) }
+                                            }
+                                        }
                                     }
                                 }
                             });
@@ -118,10 +128,26 @@ namespace sloked {
         });
     }
 
-    void SlokedDocumentNotifyClient::OnUpdate(std::function<void()> listener) {
+    void SlokedDocumentNotifyClient::OnUpdate(std::function<void(const Notification &)> listener) {
         this->pipe->SetMessageListener([this, listener] {
-            this->pipe->DropAll();
-            listener();
+            while (!this->pipe->Empty()) {
+                auto msg = this->pipe->Read().AsDictionary();
+                if (msg["source"].AsString() == "content") {
+                    listener({});
+                } else if (msg["source"].AsString() == "tagger") {
+                    const auto &payload = msg["payload"].AsDictionary();
+                    listener(TextPositionRange {
+                        TextPosition {
+                            static_cast<TextPosition::Line>(payload["start"].AsDictionary()["line"].AsInt()),
+                            static_cast<TextPosition::Column>(payload["start"].AsDictionary()["column"].AsInt())
+                        },
+                        TextPosition {
+                            static_cast<TextPosition::Line>(payload["end"].AsDictionary()["line"].AsInt()),
+                            static_cast<TextPosition::Column>(payload["end"].AsDictionary()["column"].AsInt())
+                        }
+                    });
+                }
+            }
         });
     }
 }

@@ -57,6 +57,11 @@ namespace sloked {
 
         bool operator==(const TextPositionDelta &) const;
     };
+
+    struct TextPositionRange {
+        TextPosition start;
+        TextPosition end;
+    };
 }
 
 #endif

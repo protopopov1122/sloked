@@ -20,8 +20,9 @@ namespace sloked {
 
     class SlokedDocumentNotifyClient {
      public:
+        using Notification = std::optional<TextPositionRange>;
         SlokedDocumentNotifyClient(std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, bool = false);
-        void OnUpdate(std::function<void()>);
+        void OnUpdate(std::function<void(const Notification &)>);
 
      private:
         std::unique_ptr<KgrPipe> pipe;

@@ -31,7 +31,7 @@ namespace sloked {
         if (initClient) {
             initClient(this->cursorClient);
         }
-        notifyClient.OnUpdate([this] {
+        notifyClient.OnUpdate([this](const auto &evt) {
             if (this->updateListener) {
                 this->updateListener();
             }

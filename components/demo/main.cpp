@@ -100,7 +100,9 @@ class TestFragment : public SlokedTextTagIterator<int> {
         if (position < this->current) {
             this->current = position;
             this->cache = {};
-            this->emitter.Emit(position);
+            this->emitter.Emit(TextPositionRange {
+                position, TextPosition::Max
+            });
         }
     }
 
@@ -108,7 +110,7 @@ class TestFragment : public SlokedTextTagIterator<int> {
         return this->current;
     }
 
-    Unbind OnUpdate(std::function<void(const TextPosition &)> fn) final {
+    Unbind OnChange(std::function<void(const TextPositionRange &)> fn) final {
         return this->emitter.Listen(std::move(fn));
     }
 
@@ -137,7 +139,7 @@ class TestFragment : public SlokedTextTagIterator<int> {
     const Encoding &encoding;
     TextPosition current;
     std::queue<TaggedTextFragment<int>> cache;
-    SlokedEventEmitter<const TextPosition &> emitter;
+    SlokedEventEmitter<const TextPositionRange &> emitter;
 };
 
 class SlokedTestTagger : public SlokedTextTagger<int> {
@@ -155,8 +157,8 @@ class SlokedTestTagger : public SlokedTextTagger<int> {
         return this->cached.Get(pos);
     }
 
-    typename SlokedTextTagger<int>::Unbind OnUpdate(std::function<void(const TextPosition &)> callback) final {
-        return this->cached.OnUpdate(std::move(callback));
+    typename SlokedTextTagger<int>::Unbind OnChange(std::function<void(const TextPositionRange &)> callback) final {
+        return this->cached.OnChange(std::move(callback));
     }
 
  private:
