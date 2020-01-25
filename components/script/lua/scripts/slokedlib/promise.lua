@@ -6,6 +6,8 @@ local Pending = 0
 local Fulfilled = 1
 local Rejected = 2
 
+local unpack = unpack or table.unpack
+
 function Promise:new(process)
     local promise = {
         value=nil,

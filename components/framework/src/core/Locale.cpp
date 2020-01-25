@@ -32,12 +32,16 @@ namespace sloked {
     void SlokedLocale::Setup() {
         std::locale userLocale("");
         auto locale = userLocale.name();
-        auto separator = locale.find(".");
-        if (locale == "*" || separator == locale.npos) {
-            throw SlokedError("Locale: Unknown locale");
+        if (locale.empty()) {
+            SlokedLocale::encoding = std::cref(Encoding::Get("UTF-8"));
+	} else {
+            auto separator = locale.find(".");
+            if (locale == "*" || separator == locale.npos) {
+                throw SlokedError("Locale: Unknown locale \'" + locale + "\'");
+            }
+            auto encoding = locale.substr(separator + 1);
+            SlokedLocale::encoding = std::cref(Encoding::Get(encoding));
         }
-        auto encoding = locale.substr(separator + 1);
-        SlokedLocale::encoding = std::cref(Encoding::Get(encoding));
     }
 
     const Encoding &SlokedLocale::SystemEncoding() {

@@ -202,7 +202,7 @@ namespace sloked {
             auto res = listen(this->socket, MaxQueueLength);
             if (res != 0) {
                 this->Close();
-                throw SlokedError("PosixServerSocket: Error starting server");
+                throw SlokedError("PosixServerSocket: Error starting server \'" + std::to_string(errno) + "\'");
             }
         } else {
             throw SlokedError("PosixServerSocket: Invalid socket");
@@ -248,7 +248,17 @@ namespace sloked {
         const auto &port = addr.AsNetwork().port;
         // Resolve hostname
         struct addrinfo *result = nullptr;
-        int err = getaddrinfo(host.c_str(), nullptr, nullptr, &result);
+        struct addrinfo hints {
+            0,
+            AF_UNSPEC,
+            SOCK_STREAM,
+            IPPROTO_TCP,
+            0,
+            nullptr,
+            nullptr,
+            nullptr
+        };
+        int err = getaddrinfo(host.c_str(), nullptr, &hints, &result);
         if (err != 0 || result == nullptr) {
             throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; address resolution error: " + std::to_string(err));
         }
@@ -298,7 +308,17 @@ namespace sloked {
         const auto &port = addr.AsNetwork().port;
         // Resolve hostname
         struct addrinfo *result = nullptr;
-        int err = getaddrinfo(host.c_str(), nullptr, nullptr, &result);
+        struct addrinfo hints {
+            0,
+            AF_UNSPEC,
+            SOCK_STREAM,
+            IPPROTO_TCP,
+            0,
+            nullptr,
+            nullptr,
+            nullptr
+        };
+        int err = getaddrinfo(host.c_str(), nullptr, &hints, &result);
         if (err != 0 || result == nullptr) {
             throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; address resolution error: " + std::to_string(err));
         }
