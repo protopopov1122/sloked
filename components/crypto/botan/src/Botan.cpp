@@ -22,7 +22,7 @@
 #include "sloked/crypto/botan/Botan.h"
 #include "sloked/core/Error.h"
 #include <botan/pwdhash.h>
-#include <botan/block_cipher.h>
+#include <botan/cipher_mode.h>
 #include <botan/system_rng.h>
 
 namespace sloked {
@@ -43,15 +43,18 @@ namespace sloked {
 
     struct SlokedBotanCrypto::BotanCipher::Impl {
         Impl(const BotanKey &key)
-            : cipher(Botan::BlockCipher::create("AES-256")) {
-            if (this->cipher == nullptr) {
-                throw SlokedError("BotanCrypto: Cipher AES-256 not found");
+            : encryption(Botan::Cipher_Mode::create("AES-256/CBC/NoPadding", Botan::ENCRYPTION)),
+              decryption(Botan::Cipher_Mode::create("AES-256/CBC/NoPadding", Botan::DECRYPTION)) {
+            if (this->encryption == nullptr || this->decryption == nullptr) {
+                throw SlokedError("BotanCrypto: Cipher AES-256/CBC not found");
             } else {
-                this->cipher->set_key(key.Get());
+                this->encryption->set_key(key.Get());
+                this->decryption->set_key(key.Get());
             }
         }
 
-        std::unique_ptr<Botan::BlockCipher> cipher;
+        std::unique_ptr<Botan::Cipher_Mode> encryption;
+        std::unique_ptr<Botan::Cipher_Mode> decryption;
     };
 
     SlokedBotanCrypto::BotanCipher::BotanCipher(const BotanKey &key)
@@ -60,23 +63,38 @@ namespace sloked {
     SlokedBotanCrypto::BotanCipher::~BotanCipher() = default;
 
     SlokedCrypto::Data SlokedBotanCrypto::BotanCipher::Encrypt(const Data &input, const Data &iv) {
-        Data output = input;
-        this->impl->cipher->encrypt(output);
-        return output;
+        Botan::secure_vector<uint8_t> output(input.begin(), input.end());
+        if (iv.size() == this->impl->encryption->default_nonce_length()) {
+            this->impl->encryption->start(iv);
+        } else {
+            std::vector<uint8_t> emptyNonce(this->impl->encryption->default_nonce_length(), 0);
+            this->impl->encryption->start(emptyNonce);
+        }
+        this->impl->encryption->finish(output);
+        this->impl->encryption->reset();
+        return std::vector(output.begin(), output.end());
     }
 
     SlokedCrypto::Data SlokedBotanCrypto::BotanCipher::Decrypt(const Data &input, const Data &iv) {
-        Data output = input;
-        this->impl->cipher->decrypt(output);
-        return output;
+        Botan::secure_vector<uint8_t> output(input.begin(), input.end());
+        if (iv.size() == this->impl->decryption->default_nonce_length()) {
+            this->impl->decryption->start(iv);
+        } else {
+            std::vector<uint8_t> emptyNonce(this->impl->encryption->default_nonce_length(), 0);
+            this->impl->decryption->start(emptyNonce);
+        }
+        this->impl->decryption->finish(output);
+        this->impl->decryption->reset();
+        return std::vector(output.begin(), output.end());
     }
 
     std::size_t SlokedBotanCrypto::BotanCipher::BlockSize() const {
-        return this->impl->cipher->block_size();
+        constexpr std::size_t  AESBlockSize = 16;
+        return AESBlockSize;
     }
 
     std::size_t SlokedBotanCrypto::BotanCipher::IVSize() const {
-        return 0;
+        return this->impl->encryption->default_nonce_length();
     }
 
     SlokedBotanCrypto::BotanOwningCipher::BotanOwningCipher(std::unique_ptr<BotanKey> key)
