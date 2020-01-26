@@ -13,10 +13,15 @@ sloked_disable_crypto = true
 sloked_disable_scripting = true
 
 subdir('components/framework')
-if get_option('crypto_botan')
+if get_option('crypto') == 'botan'
   subdir('components/crypto/botan')
   sloked_crypto = sloked_botan_crypto
   sloked_crypto_flags = sloked_botan_crypto_flags
+  sloked_disable_crypto = false
+elif get_option('crypto') == 'openssl'
+  subdir('components/crypto/openssl')
+  sloked_crypto = sloked_openssl_crypto
+  sloked_crypto_flags = sloked_openssl_crypto_flags
   sloked_disable_crypto = false
 endif
 subdir('components/platform/posix')

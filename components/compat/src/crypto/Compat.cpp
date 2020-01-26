@@ -21,7 +21,7 @@
 
 #include "sloked/crypto/Compat.h"
 
-#if defined(SLOKED_FEATURE_CRYPTO) && !defined(SLOKED_FEATURE_CRYPTO_BOTAN)
+#if defined(SLOKED_FEATURE_CRYPTO) && !(defined(SLOKED_FEATURE_CRYPTO_BOTAN) || defined(SLOKED_FEATURE_CRYPTO_OPENSSL))
 #error "Build system error: crypto engine is not defined"
 #endif
 
@@ -32,6 +32,17 @@ namespace sloked {
 
     SlokedCrypto &SlokedCryptoCompat::GetCrypto() {
         static SlokedBotanCrypto crypto;
+        return crypto;
+    }
+}
+
+#elif defined(SLOKED_FEATURE_CRYPTO_OPENSSL)
+#include "sloked/crypto/openssl/OpenSSL.h"
+
+namespace sloked {
+
+    SlokedCrypto &SlokedCryptoCompat::GetCrypto() {
+        static SlokedOpenSSLCrypto crypto;
         return crypto;
     }
 }
