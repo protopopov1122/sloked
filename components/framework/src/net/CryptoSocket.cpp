@@ -27,8 +27,8 @@
 
 namespace sloked {
 
-    SlokedCryptoSocket::SlokedCryptoSocket(std::unique_ptr<SlokedSocket> socket, std::unique_ptr<SlokedCrypto::Cipher> cipher)
-        : socket(std::move(socket)), cipher(std::move(cipher)) {}
+    SlokedCryptoSocket::SlokedCryptoSocket(std::unique_ptr<SlokedSocket> socket, std::unique_ptr<SlokedCrypto::Cipher> cipher, std::unique_ptr<SlokedCrypto::Random> random)
+        : socket(std::move(socket)), cipher(std::move(cipher)), random(std::move(random)) {}
 
     SlokedCryptoSocket::SlokedCryptoSocket(SlokedCryptoSocket &&socket)
         : socket(std::move(socket.socket)), cipher(std::move(socket.cipher)), defaultCipher(std::move(socket.defaultCipher)),
@@ -153,7 +153,11 @@ namespace sloked {
         std::vector<uint8_t> raw(bytes, bytes + length);
         raw.insert(raw.end(), totalLength - length, 0);
         auto crc32 = SlokedCrc32::Calculate(raw.begin(), raw.end());
-        auto encrypted = this->cipher->Encrypt(raw);
+        SlokedCrypto::Data init_vector;
+        for (std::size_t i = 0; i < this->cipher->IVSize(); i++) {
+            init_vector.push_back(this->random->NextByte());
+        }
+        auto encrypted = this->cipher->Encrypt(raw, init_vector);
         std::vector<uint8_t> header {
             ByteAt(length, 0),
             ByteAt(length, 1),
@@ -164,12 +168,13 @@ namespace sloked {
             ByteAt(crc32, 2),
             ByteAt(crc32, 3)
         };
+        header.insert(header.end(), init_vector.begin(), init_vector.end());
         encrypted.insert(encrypted.begin(), header.begin(), header.end());
         this->socket->Write(SlokedSpan(encrypted.data(), encrypted.size()));
     }
 
     void SlokedCryptoSocket::Fetch(std::size_t sz) {
-        constexpr std::size_t EncryptedHeaderSize = 8;
+        const std::size_t EncryptedHeaderSize = 8 + this->cipher->IVSize();
         do {
             auto chunk = this->socket->Read(this->socket->Available());
             this->encryptedBuffer.insert(this->encryptedBuffer.end(), chunk.begin(), chunk.end());
@@ -193,9 +198,11 @@ namespace sloked {
                 continue;
             }
 
+            SlokedCrypto::Data init_vector;
+            init_vector.insert(init_vector.end(), this->encryptedBuffer.begin() + EncryptedHeaderSize - this->cipher->IVSize(), this->encryptedBuffer.begin() + EncryptedHeaderSize);
             std::vector<uint8_t> encrypted(this->encryptedBuffer.begin() + EncryptedHeaderSize, this->encryptedBuffer.begin() + EncryptedHeaderSize + totalLength);
             this->encryptedBuffer.erase(this->encryptedBuffer.begin(), this->encryptedBuffer.begin() + EncryptedHeaderSize + totalLength);
-            auto raw = this->cipher->Decrypt(encrypted);
+            auto raw = this->cipher->Decrypt(encrypted, init_vector);
             auto actualCrc32 = SlokedCrc32::Calculate(raw.begin(), raw.end());
             if (actualCrc32 != crc32) {
                 throw SlokedError("CryptoSocket: Actual CRC32 doesn't equal to expected");
@@ -233,7 +240,7 @@ namespace sloked {
         if (this->Valid()) {
             auto rawSocket = this->serverSocket->Accept(timeout);
             if (rawSocket) {
-                return std::make_unique<SlokedCryptoSocket>(std::move(rawSocket), this->crypto.NewCipher(this->key));
+                return std::make_unique<SlokedCryptoSocket>(std::move(rawSocket), this->crypto.NewCipher(this->key), this->crypto.NewRandom());
             } else {
                 return nullptr;
             }
@@ -255,7 +262,7 @@ namespace sloked {
     std::unique_ptr<SlokedSocket> SlokedCryptoSocketFactory::Connect(const SlokedSocketAddress &addr) {
         auto rawSocket = this->socketFactory.Connect(addr);
         if (rawSocket) {
-            return std::make_unique<SlokedCryptoSocket>(std::move(rawSocket), this->crypto.NewCipher(this->key));
+            return std::make_unique<SlokedCryptoSocket>(std::move(rawSocket), this->crypto.NewCipher(this->key), this->crypto.NewRandom());
         } else {
             return nullptr;
         }

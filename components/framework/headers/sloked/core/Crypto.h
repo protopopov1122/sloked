@@ -49,9 +49,10 @@ namespace sloked {
         class Cipher {
          public:
             virtual ~Cipher() = default;
-            virtual Data Encrypt(const Data &) = 0;
-            virtual Data Decrypt(const Data &) = 0;
+            virtual Data Encrypt(const Data &, const Data & = {}) = 0;
+            virtual Data Decrypt(const Data &, const Data & = {}) = 0;
             virtual std::size_t BlockSize() const = 0;
+            virtual std::size_t IVSize() const = 0;
 
             const EngineId Engine;
          protected:

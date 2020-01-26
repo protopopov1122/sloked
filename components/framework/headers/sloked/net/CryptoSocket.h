@@ -31,7 +31,7 @@ namespace sloked {
      public:
         using CipherGenerator = std::function<std::unique_ptr<SlokedCrypto::Cipher>(const std::string &)>;
 
-        SlokedCryptoSocket(std::unique_ptr<SlokedSocket>, std::unique_ptr<SlokedCrypto::Cipher>);
+        SlokedCryptoSocket(std::unique_ptr<SlokedSocket>, std::unique_ptr<SlokedCrypto::Cipher>, std::unique_ptr<SlokedCrypto::Random>);
         SlokedCryptoSocket(const SlokedCryptoSocket &) = delete;
         SlokedCryptoSocket(SlokedCryptoSocket &&);
         SlokedCryptoSocket &operator=(const SlokedCryptoSocket &) = delete;
@@ -58,6 +58,7 @@ namespace sloked {
         std::unique_ptr<SlokedSocket> socket;
         std::unique_ptr<SlokedCrypto::Cipher> cipher;
         std::unique_ptr<SlokedCrypto::Cipher> defaultCipher;
+        std::unique_ptr<SlokedCrypto::Random> random;
         std::vector<uint8_t> encryptedBuffer;
         std::vector<uint8_t> buffer;
     };

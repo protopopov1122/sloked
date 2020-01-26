@@ -59,13 +59,13 @@ namespace sloked {
 
     SlokedBotanCrypto::BotanCipher::~BotanCipher() = default;
 
-    SlokedCrypto::Data SlokedBotanCrypto::BotanCipher::Encrypt(const Data &input) {
+    SlokedCrypto::Data SlokedBotanCrypto::BotanCipher::Encrypt(const Data &input, const Data &iv) {
         Data output = input;
         this->impl->cipher->encrypt(output);
         return output;
     }
 
-    SlokedCrypto::Data SlokedBotanCrypto::BotanCipher::Decrypt(const Data &input) {
+    SlokedCrypto::Data SlokedBotanCrypto::BotanCipher::Decrypt(const Data &input, const Data &iv) {
         Data output = input;
         this->impl->cipher->decrypt(output);
         return output;
@@ -73,6 +73,10 @@ namespace sloked {
 
     std::size_t SlokedBotanCrypto::BotanCipher::BlockSize() const {
         return this->impl->cipher->block_size();
+    }
+
+    std::size_t SlokedBotanCrypto::BotanCipher::IVSize() const {
+        return 0;
     }
 
     SlokedBotanCrypto::BotanOwningCipher::BotanOwningCipher(std::unique_ptr<BotanKey> key)

@@ -44,9 +44,10 @@ namespace sloked {
          public:
             OpenSSLCipher(const OpenSSLKey &);
             virtual ~OpenSSLCipher();
-            Data Encrypt(const Data &) final;
-            Data Decrypt(const Data &) final;
+            Data Encrypt(const Data &, const Data & = {}) final;
+            Data Decrypt(const Data &, const Data & = {}) final;
             std::size_t BlockSize() const final;
+            std::size_t IVSize() const final;
 
             struct Impl;
          private:

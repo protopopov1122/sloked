@@ -62,14 +62,18 @@ namespace sloked {
         EVP_CIPHER_CTX_free(this->impl->cipher);
     }
 
-    SlokedCrypto::Data SlokedOpenSSLCrypto::OpenSSLCipher::Encrypt(const Data &data) {
+    SlokedCrypto::Data SlokedOpenSSLCrypto::OpenSSLCipher::Encrypt(const Data &data, const Data &ivdata) {
         std::unique_lock lock(this->mtx);
         auto cipher = this->impl->cipher;
-        CheckErrors(EVP_CipherInit_ex(cipher, EVP_aes_256_cbc(), nullptr, this->impl->key.Get().data(), nullptr, true), "cipher initialization");
+        const unsigned char *iv = nullptr;
+        if (ivdata.size() == this->IVSize()) {
+            iv = ivdata.data();
+        }
+        CheckErrors(EVP_CipherInit_ex(cipher, EVP_aes_256_cbc(), nullptr, this->impl->key.Get().data(), iv, true), "cipher initialization");
         CheckErrors(EVP_CIPHER_CTX_set_padding(cipher, false), "cipher initialization");
+        const int BlockSize = EVP_CIPHER_CTX_block_size(cipher);
         Data output;
         output.insert(output.end(), data.size(), 0);
-        const int BlockSize = EVP_CIPHER_CTX_block_size(cipher);
         int outsize;
         for (std::size_t i = 0; i < data.size() / BlockSize; i++) {
             CheckErrors(EVP_CipherUpdate(cipher, output.data() + i * BlockSize, &outsize, data.data() + i * BlockSize, BlockSize), "encryption");
@@ -78,10 +82,14 @@ namespace sloked {
         return output;
     }
 
-    SlokedCrypto::Data SlokedOpenSSLCrypto::OpenSSLCipher::Decrypt(const Data &data) {
+    SlokedCrypto::Data SlokedOpenSSLCrypto::OpenSSLCipher::Decrypt(const Data &data, const Data &ivdata) {
         std::unique_lock lock(this->mtx);
         auto cipher = this->impl->cipher;
-        CheckErrors(EVP_CipherInit_ex(cipher, EVP_aes_256_cbc(), nullptr, this->impl->key.Get().data(), nullptr, false), "cipher initialization");
+        const unsigned char *iv = nullptr;
+        if (ivdata.size() == this->IVSize()) {
+            iv = ivdata.data();
+        }
+        CheckErrors(EVP_CipherInit_ex(cipher, EVP_aes_256_cbc(), nullptr, this->impl->key.Get().data(), iv, false), "cipher initialization");
         CheckErrors(EVP_CIPHER_CTX_set_padding(cipher, false), "cipher initialization");
         Data output;
         output.insert(output.end(), data.size(), 0);
@@ -100,6 +108,10 @@ namespace sloked {
         auto size = EVP_CIPHER_CTX_block_size(this->impl->cipher);
         CheckErrors(EVP_CIPHER_CTX_reset(this->impl->cipher), "cipher reset");
         return size;
+    }
+
+    std::size_t SlokedOpenSSLCrypto::OpenSSLCipher::IVSize() const {
+        return EVP_CIPHER_iv_length(EVP_aes_256_cbc());
     }
 
     SlokedOpenSSLCrypto::OpenSSLOwningCipher::OpenSSLOwningCipher(std::unique_ptr<OpenSSLKey> key)
