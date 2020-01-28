@@ -79,6 +79,22 @@ namespace sloked {
         }
     }
 
+    bool SlokedEditorManager::HasBaseTaggers() const {
+        return this->baseTaggers != nullptr;
+    }
+
+    bool SlokedEditorManager::HasEditorFactory() const {
+        return this->editorFactory != nullptr;
+    }
+
+    bool SlokedEditorManager::HasCrypto() const {
+        return this->cryptoEngine != nullptr;
+    }
+
+    bool SlokedEditorManager::HasScreen() const {
+        return this->screenProviders != nullptr;
+    }
+
     bool SlokedEditorManager::Has(const std::string &key) const {
         return this->editors.count(key) != 0;
     }

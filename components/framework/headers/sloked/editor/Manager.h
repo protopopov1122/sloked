@@ -52,6 +52,11 @@ namespace sloked {
         void Close() final;
         void Setup(SlokedEditorInstance &, const KgrValue &);
 
+        bool HasBaseTaggers() const;
+        bool HasEditorFactory() const;
+        bool HasCrypto() const;
+        bool HasScreen() const;
+
         bool Has(const std::string &) const final;
         SlokedEditorInstance &Get(const std::string &) const final;
         void Enumerate(std::function<void(const std::string, SlokedEditorInstance &)>) const final;

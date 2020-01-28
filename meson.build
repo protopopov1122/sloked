@@ -36,4 +36,4 @@ sloked_platform = sloked_posix_platform
 sloked_platform_flags = sloked_posix_platform_flags
 subdir('components/compat')
 
-subdir('components/demo')
+subdir('components/frontend')

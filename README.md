@@ -9,7 +9,7 @@ This repo contains components for extensible programming-oriented text editor wr
 * Message-based service system, which exposes editor functionality through indirect service calls and interconnects editor subsystems. Message system is trasparently available through the network, thus allowing editor components (user  interface, core library, plugins, remote users) to run on different hosts. The increases flexibility and extensibility, e.g. remote development, collaborative editing, remote plugin execution, plugins on different programming languages. Network channels can be encrypted and support per-user encryption and permission model.
 * Bindings to Lua which make use of messaging mechanism and provide base for asynchronous Lua plugins.
 * Utility code for CLI argument, configuration file and generic JSON parsing, logging, networking, multi-threaded helpers and infrastructure for asynchronous code execution.
-* Demo-editor `components/demo` which incorporates above-mentioned features into a simplified program used for demonstration and testing purposes.
+* Demo-editor `components/frontend` which incorporates above-mentioned features into a simplified program used for demonstration and testing purposes.
 
 Some concepts which will be implemented later:
 * Implement LSP client and integrate it into existing text fragmentation mechanisms.
