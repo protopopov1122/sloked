@@ -19,8 +19,8 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_EDITOR_EDITORAPP_H_
-#define SLOKED_EDITOR_EDITORAPP_H_
+#ifndef SLOKED_EDITOR_EDITORINSTANCE_H_
+#define SLOKED_EDITOR_EDITORINSTANCE_H_
 
 #include "sloked/core/Closeable.h"
 #include "sloked/core/awaitable/Poll.h"
@@ -40,9 +40,9 @@
 
 namespace sloked {
     
-    class SlokedEditorApp : public SlokedCloseable {
+    class SlokedEditorInstance : public SlokedCloseable {
      public:
-        SlokedEditorApp(std::unique_ptr<SlokedIOPoll>, SlokedSocketFactory &);
+        SlokedEditorInstance(std::unique_ptr<SlokedIOPoll>, SlokedSocketFactory &);
         SlokedCryptoFacade &InitializeCrypto(SlokedCrypto &);
         SlokedServerFacade &InitializeServer();
         SlokedServerFacade &InitializeServer(std::unique_ptr<SlokedSocket>);
@@ -89,13 +89,13 @@ namespace sloked {
         KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
     };
 
-    class SlokedEditorAppContainer {
+    class SlokedEditorInstanceContainer {
      public:
-        virtual ~SlokedEditorAppContainer() = default;
+        virtual ~SlokedEditorInstanceContainer() = default;
         virtual bool Has(const std::string &) const = 0;
-        virtual SlokedEditorApp &Get(const std::string &) const = 0;
-        virtual void Enumerate(std::function<void(const std::string, SlokedEditorApp &)>) const = 0;
-        virtual SlokedEditorApp &Spawn(const std::string &, const KgrValue &) = 0;
+        virtual SlokedEditorInstance &Get(const std::string &) const = 0;
+        virtual void Enumerate(std::function<void(const std::string, SlokedEditorInstance &)>) const = 0;
+        virtual SlokedEditorInstance &Spawn(const std::string &, const KgrValue &) = 0;
         virtual void Shutdown(const std::string &) = 0;
     };
 }

@@ -63,7 +63,7 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorManager::Setup(SlokedEditorApp &editor, const KgrValue &rawConfig) {
+    void SlokedEditorManager::Setup(SlokedEditorInstance &editor, const KgrValue &rawConfig) {
         const auto &config = rawConfig.AsDictionary();
         if (config.Has("crypto") && this->cryptoEngine) {
             const auto &cryptoConfig = config["crypto"].AsDictionary();
@@ -83,7 +83,7 @@ namespace sloked {
         return this->editors.count(key) != 0;
     }
 
-    SlokedEditorApp &SlokedEditorManager::Get(const std::string &key) const {
+    SlokedEditorInstance &SlokedEditorManager::Get(const std::string &key) const {
         if (this->editors.count(key) != 0) {
             return *this->editors.at(key);
         } else {
@@ -91,13 +91,13 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorManager::Enumerate(std::function<void(const std::string, SlokedEditorApp &)> callback) const {
+    void SlokedEditorManager::Enumerate(std::function<void(const std::string, SlokedEditorInstance &)> callback) const {
         for (const auto &kv : this->editors) {
             callback(kv.first, *kv.second);
         }
     }
 
-    SlokedEditorApp &SlokedEditorManager::Spawn(const std::string &key, const KgrValue &config) {
+    SlokedEditorInstance &SlokedEditorManager::Spawn(const std::string &key, const KgrValue &config) {
         if (this->editorFactory == nullptr) {
             throw SlokedError("EditorStartup: editor factory not defined");
         }
@@ -122,7 +122,7 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorManager::SetupCrypto(SlokedEditorApp &editor, const KgrDictionary &cryptoConfig) {
+    void SlokedEditorManager::SetupCrypto(SlokedEditorInstance &editor, const KgrDictionary &cryptoConfig) {
         std::unique_ptr<SlokedCrypto::Key> masterKey;
         editor.InitializeCrypto(*this->cryptoEngine);
         masterKey = editor.GetCrypto().GetEngine().DeriveKey(cryptoConfig["masterPassword"].AsString(), cryptoConfig["salt"].AsString());
@@ -153,7 +153,7 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorManager::SetupMasterAuth(SlokedEditorApp &editor, const KgrDictionary &masterConfig, const std::string &salt) {
+    void SlokedEditorManager::SetupMasterAuth(SlokedEditorInstance &editor, const KgrDictionary &masterConfig, const std::string &salt) {
         auto masterKey = editor.GetCrypto().GetEngine().DeriveKey(masterConfig["masterPassword"].AsString(), masterConfig["salt"].AsString());
         auto &authMaster = editor.GetCrypto().SetupCredentialMaster(*masterKey);
         editor.Attach(SlokedTypedDataHandle<SlokedCrypto::Key>::Wrap(std::move(masterKey)));
@@ -184,7 +184,7 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorManager::SetupSlaveAuth(SlokedEditorApp &editor, const KgrDictionary &slaveConfig, const std::string &salt) {
+    void SlokedEditorManager::SetupSlaveAuth(SlokedEditorInstance &editor, const KgrDictionary &slaveConfig, const std::string &salt) {
         auto &authSlave = editor.GetCrypto().SetupCredentialSlave();
         editor.GetCrypto().SetupAuthenticator(salt);
         if (slaveConfig.Has("users")) {
@@ -202,7 +202,7 @@ namespace sloked {
         };
     }
 
-    void SlokedEditorManager::SetupServer(SlokedEditorApp &editor, const KgrDictionary &serverConfig) {
+    void SlokedEditorManager::SetupServer(SlokedEditorInstance &editor, const KgrDictionary &serverConfig) {
         if (serverConfig.Has("slave")) {
             const auto &slaveConfig = serverConfig["slave"].AsDictionary();
             auto socket = editor.GetNetwork().GetEngine().Connect(KgrToSocketAddress(slaveConfig["address"].AsDictionary()));

@@ -30,7 +30,7 @@
 
 namespace sloked {
 
-    SlokedLuaEngine::SlokedLuaEngine(SlokedEditorAppContainer &apps, SlokedSchedulerThread &sched, const std::string &path)
+    SlokedLuaEngine::SlokedLuaEngine(SlokedEditorInstanceContainer &apps, SlokedSchedulerThread &sched, const std::string &path)
         : state{nullptr}, work{false}, apps(apps), sched(sched), path{path}, logger(SlokedLoggerTag) {
         this->eventLoop.Notify([this] {
             this->activity.Notify();
@@ -99,7 +99,7 @@ namespace sloked {
         }
         try {
             std::string key(lua_tostring(state, 2));
-            SlokedEditorAppContainer &apps = *reinterpret_cast<SlokedEditorAppContainer *>(lua_touserdata(state, lua_upvalueindex(1)));
+            SlokedEditorInstanceContainer &apps = *reinterpret_cast<SlokedEditorInstanceContainer *>(lua_touserdata(state, lua_upvalueindex(1)));
             SlokedEventLoop &eventLoop = *reinterpret_cast<SlokedEventLoop *>(lua_touserdata(state, lua_upvalueindex(2)));
             auto &app = apps.Get(key);
             SlokedEditorToLua(eventLoop, state, app);

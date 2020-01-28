@@ -24,7 +24,7 @@
 
 #include "sloked/script/ScriptEngine.h"
 #include "sloked/sched/Scheduler.h"
-#include "sloked/editor/EditorApp.h"
+#include "sloked/editor/EditorInstance.h"
 
 namespace sloked {
 
@@ -38,7 +38,7 @@ namespace sloked {
 #endif
         }
 
-        static std::unique_ptr<SlokedScriptEngine> GetEngine(SlokedEditorAppContainer &, SlokedSchedulerThread &, const std::string &);
+        static std::unique_ptr<SlokedScriptEngine> GetEngine(SlokedEditorInstanceContainer &, SlokedSchedulerThread &, const std::string &);
     };
 }
 

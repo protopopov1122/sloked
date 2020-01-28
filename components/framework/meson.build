@@ -20,7 +20,7 @@ sloked_src = [
   'src/core/encoding/Utf32LE.cpp',
   'src/core/awaitable/Poll.cpp',
   'src/editor/Configuration.cpp',
-  'src/editor/EditorApp.cpp',
+  'src/editor/EditorInstance.cpp',
   'src/editor/EditorServer.cpp',
   'src/editor/Manager.cpp',
   'src/editor/ScreenServer.cpp',

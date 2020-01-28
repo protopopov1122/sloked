@@ -67,7 +67,7 @@
 #include "sloked/namespace/Compat.h"
 #include "sloked/screen/terminal/TerminalResize.h"
 #include "sloked/screen/terminal/TerminalSize.h"
-#include "sloked/editor/EditorApp.h"
+#include "sloked/editor/EditorInstance.h"
 #include "sloked/facade/Services.h"
 #include "sloked/editor/Manager.h"
 #include "sloked/namespace/Root.h"
@@ -275,7 +275,7 @@ int main(int argc, const char **argv) {
         startupPrms.SetCrypto(SlokedCryptoCompat::GetCrypto());
     }
     startupPrms.SetEditors([] {
-        return std::make_unique<SlokedEditorApp>(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
+        return std::make_unique<SlokedEditorInstance>(SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
     });
     if constexpr (!SlokedTerminalCompat::HasSystemTerminal()) {
         throw SlokedError("Demo: system terminal is required");

@@ -19,14 +19,14 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/editor/EditorApp.h"
+#include "sloked/editor/EditorInstance.h"
 #include "sloked/core/Error.h"
 #include "sloked/kgr/net/Config.h"
 #include "sloked/net/CryptoSocket.h"
 
 namespace sloked {
 
-    SlokedEditorApp::SlokedEditorApp(std::unique_ptr<SlokedIOPoll> ioPoll, SlokedSocketFactory &network)
+    SlokedEditorInstance::SlokedEditorInstance(std::unique_ptr<SlokedIOPoll> ioPoll, SlokedSocketFactory &network)
         : running{false}, ioPoll(std::move(ioPoll)), network(network) {
         this->ioPoller = std::make_unique<SlokedDefaultIOPollThread>(*this->ioPoll);
         this->closeables.Attach(*this->ioPoller);
@@ -34,22 +34,22 @@ namespace sloked {
         this->closeables.Attach(this->contextManager);
     }
 
-    SlokedCryptoFacade &SlokedEditorApp::InitializeCrypto(SlokedCrypto &crypto) {
+    SlokedCryptoFacade &SlokedEditorInstance::InitializeCrypto(SlokedCrypto &crypto) {
         if (this->running.load()) {
-            throw SlokedError("EditorApp: Already running");
+            throw SlokedError("EditorInstance: Already running");
         } else if (this->crypto != nullptr) {
-            throw SlokedError("EditorApp: Crypto already initialized");
+            throw SlokedError("EditorInstance: Crypto already initialized");
         } else {
             this->crypto = std::make_unique<SlokedCryptoFacade>(crypto);
             return *this->crypto;
         }
     }
 
-    SlokedServerFacade &SlokedEditorApp::InitializeServer() {
+    SlokedServerFacade &SlokedEditorInstance::InitializeServer() {
         if (this->running.load()) {
-            throw SlokedError("EditorApp: Already running");
+            throw SlokedError("EditorInstance: Already running");
         } else if (this->server != nullptr) {
-            throw SlokedError("EditorApp: Server already initialized");
+            throw SlokedError("EditorInstance: Server already initialized");
         } else {
             this->server = std::make_unique<SlokedServerFacade>(std::make_unique<SlokedLocalEditorServer>());
             this->closeables.Attach(*this->server);
@@ -57,11 +57,11 @@ namespace sloked {
         }
     }
 
-    SlokedServerFacade &SlokedEditorApp::InitializeServer(std::unique_ptr<SlokedSocket> socket) {
+    SlokedServerFacade &SlokedEditorInstance::InitializeServer(std::unique_ptr<SlokedSocket> socket) {
         if (this->running.load()) {
-            throw SlokedError("EditorApp: Already running");
+            throw SlokedError("EditorInstance: Already running");
         } else if (this->server != nullptr) {
-            throw SlokedError("EditorApp: Server already initialized");
+            throw SlokedError("EditorInstance: Server already initialized");
         } else {
             SlokedAuthenticatorFactory *auth{nullptr};
             if (this->crypto && this->crypto->HasAuthenticator()) {
@@ -73,11 +73,11 @@ namespace sloked {
         }
     }
 
-    SlokedServiceDependencyProvider &SlokedEditorApp::InitializeServiceProvider(std::unique_ptr<SlokedServiceDependencyProvider> provider) {
+    SlokedServiceDependencyProvider &SlokedEditorInstance::InitializeServiceProvider(std::unique_ptr<SlokedServiceDependencyProvider> provider) {
         if (this->running.load()) {
-            throw SlokedError("EditorApp: Already running");
+            throw SlokedError("EditorInstance: Already running");
         } else if (this->serviceProvider != nullptr) {
-            throw SlokedError("EditorApp: Service provider already initialized");
+            throw SlokedError("EditorInstance: Service provider already initialized");
         } else {
             this->serviceProvider = std::move(provider);
             this->closeables.Attach(*this->serviceProvider);
@@ -85,11 +85,11 @@ namespace sloked {
         }
     }
 
-    SlokedScreenServer &SlokedEditorApp::InitializeScreen(SlokedScreenProviderFactory &providers, const SlokedUri &uri) {
+    SlokedScreenServer &SlokedEditorInstance::InitializeScreen(SlokedScreenProviderFactory &providers, const SlokedUri &uri) {
         if (this->running.load()) {
-            throw SlokedError("EditorApp: Already running");
+            throw SlokedError("EditorInstance: Already running");
         } else if (this->screen != nullptr) {
-            throw SlokedError("EditorApp: Screen already initialized");
+            throw SlokedError("EditorInstance: Screen already initialized");
         } else {
             this->screenProvider = providers.Make(uri, this->GetCharWidth());
             this->screen = std::make_unique<SlokedScreenServer>(this->GetServer().GetServer(), *this->screenProvider, this->GetContextManager());
@@ -98,19 +98,19 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorApp::Attach(SlokedCloseable &closeable) {
+    void SlokedEditorInstance::Attach(SlokedCloseable &closeable) {
         this->closeables.Attach(closeable);
     }
 
-    void SlokedEditorApp::Attach(std::unique_ptr<SlokedDataHandle> handle) {
+    void SlokedEditorInstance::Attach(std::unique_ptr<SlokedDataHandle> handle) {
         this->handles.emplace_back(std::move(handle));
     }
 
-    bool SlokedEditorApp::IsRunning() const {
+    bool SlokedEditorInstance::IsRunning() const {
         return this->running.load();
     }
 
-    void SlokedEditorApp::Start() {
+    void SlokedEditorInstance::Start() {
         if (!this->running.exchange(true)) {
             this->ioPoller->Start(KgrNetConfig::RequestTimeout);
             this->sched.Start();
@@ -125,11 +125,11 @@ namespace sloked {
                 this->screen->Start(KgrNetConfig::ResponseTimeout);
             }
         } else {
-            throw SlokedError("EditorApp: Already running");
+            throw SlokedError("EditorInstance: Already running");
         }
     }
 
-    void SlokedEditorApp::Stop() {
+    void SlokedEditorInstance::Stop() {
         if (this->running.load()) {
             std::thread([this] {
                 std::unique_lock lock(this->termination_mtx);
@@ -145,79 +145,79 @@ namespace sloked {
                 this->termination_cv.notify_all();
             }).detach();
         } else {
-            throw SlokedError("EditorApp: Not running");
+            throw SlokedError("EditorInstance: Not running");
         }
     }
 
-    void SlokedEditorApp::Wait() {
+    void SlokedEditorInstance::Wait() {
         std::unique_lock lock(this->termination_mtx);
         while (this->running.load()) {
             this->termination_cv.wait(lock);
         }
     }
 
-    void SlokedEditorApp::Close() {
+    void SlokedEditorInstance::Close() {
         this->Stop();
         this->Wait();
     }
 
-    SlokedCharWidth &SlokedEditorApp::GetCharWidth() {
+    SlokedCharWidth &SlokedEditorInstance::GetCharWidth() {
         return this->charWidth;
     }
 
-    SlokedSchedulerThread &SlokedEditorApp::GetScheduler() {
+    SlokedSchedulerThread &SlokedEditorInstance::GetScheduler() {
         return this->sched;
     }
 
-    SlokedIOPoller &SlokedEditorApp::GetIO() {
+    SlokedIOPoller &SlokedEditorInstance::GetIO() {
         return *this->ioPoller;
     }
 
-    SlokedNetworkFacade &SlokedEditorApp::GetNetwork() {
+    SlokedNetworkFacade &SlokedEditorInstance::GetNetwork() {
         return this->network;
     }
     
-    bool SlokedEditorApp::HasCrypto() const {
+    bool SlokedEditorInstance::HasCrypto() const {
         return this->crypto != nullptr;
     }
 
-    SlokedCryptoFacade &SlokedEditorApp::GetCrypto() {
+    SlokedCryptoFacade &SlokedEditorInstance::GetCrypto() {
         if (this->crypto) {
             return *this->crypto;
         } else {
-            throw SlokedError("EditorApp: Crypto not defined");
+            throw SlokedError("EditorInstance: Crypto not defined");
         }
     }
 
-    SlokedServerFacade &SlokedEditorApp::GetServer() {
+    SlokedServerFacade &SlokedEditorInstance::GetServer() {
         if (this->server) {
             return *this->server;
         } else {
-            throw SlokedError("EditorApp: Server not defined");
+            throw SlokedError("EditorInstance: Server not defined");
         }
     }
 
-    SlokedServiceDependencyProvider &SlokedEditorApp::GetServiceProvider() {
+    SlokedServiceDependencyProvider &SlokedEditorInstance::GetServiceProvider() {
         if (this->serviceProvider) {
             return *this->serviceProvider;
         } else {
-            throw SlokedError("EditorApp: Service provider not defined");
+            throw SlokedError("EditorInstance: Service provider not defined");
         }
     }
 
-    bool SlokedEditorApp::HasScreen() const {
+    bool SlokedEditorInstance::HasScreen() const {
         return this->screen != nullptr;
     }
 
-    SlokedScreenServer &SlokedEditorApp::GetScreen() const {
+    SlokedScreenServer &SlokedEditorInstance::GetScreen() const {
         if (this->screen) {
             return *this->screen;
         } else {
-            throw SlokedError("EditorApp: Screen not defined");
+            throw SlokedError("EditorInstance: Screen not defined");
         }
     }
 
-    KgrContextManager<KgrLocalContext> &SlokedEditorApp::GetContextManager() {
+    KgrContextManager<KgrLocalContext> &SlokedEditorInstance::GetContextManager() {
         return this->contextManager.GetManager();
     }
 }

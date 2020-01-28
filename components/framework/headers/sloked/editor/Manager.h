@@ -22,14 +22,14 @@
 #ifndef SLOKED_EDITOR_MANAGER_H_
 #define SLOKED_EDITOR_MANAGER_H_
 
-#include "sloked/editor/EditorApp.h"
+#include "sloked/editor/EditorInstance.h"
 #include "sloked/namespace/Root.h"
 
 namespace sloked {
 
-    class SlokedEditorManager : public SlokedCloseable, public SlokedEditorAppContainer {
+    class SlokedEditorManager : public SlokedCloseable, public SlokedEditorInstanceContainer {
      public:
-        using EditorFactory = std::function<std::unique_ptr<SlokedEditorApp>()>;
+        using EditorFactory = std::function<std::unique_ptr<SlokedEditorInstance>()>;
         class Parameters {
          public:
             Parameters(SlokedLogger &, SlokedRootNamespaceFactory &);
@@ -50,21 +50,21 @@ namespace sloked {
         SlokedEditorManager(Parameters);
         void Spawn(const KgrValue &);
         void Close() final;
-        void Setup(SlokedEditorApp &, const KgrValue &);
+        void Setup(SlokedEditorInstance &, const KgrValue &);
 
         bool Has(const std::string &) const final;
-        SlokedEditorApp &Get(const std::string &) const final;
-        void Enumerate(std::function<void(const std::string, SlokedEditorApp &)>) const final;
-        SlokedEditorApp &Spawn(const std::string &, const KgrValue &) final;
+        SlokedEditorInstance &Get(const std::string &) const final;
+        void Enumerate(std::function<void(const std::string, SlokedEditorInstance &)>) const final;
+        SlokedEditorInstance &Spawn(const std::string &, const KgrValue &) final;
         void Shutdown(const std::string &) final;
 
      private:
-        void SetupCrypto(SlokedEditorApp &, const KgrDictionary &);
-        void SetupMasterAuth(SlokedEditorApp &, const KgrDictionary &, const std::string &);
-        void SetupSlaveAuth(SlokedEditorApp &, const KgrDictionary &, const std::string &);
-        void SetupServer(SlokedEditorApp &, const KgrDictionary &);
+        void SetupCrypto(SlokedEditorInstance &, const KgrDictionary &);
+        void SetupMasterAuth(SlokedEditorInstance &, const KgrDictionary &, const std::string &);
+        void SetupSlaveAuth(SlokedEditorInstance &, const KgrDictionary &, const std::string &);
+        void SetupServer(SlokedEditorInstance &, const KgrDictionary &);
         
-        std::map<std::string, std::unique_ptr<SlokedEditorApp>> editors;
+        std::map<std::string, std::unique_ptr<SlokedEditorInstance>> editors;
         SlokedLogger &logger;
         SlokedRootNamespaceFactory &namespaceFactory;
         SlokedTextTaggerRegistry<int> *baseTaggers;
