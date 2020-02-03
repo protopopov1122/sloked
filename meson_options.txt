@@ -1,2 +1,3 @@
 option('crypto', type: 'string', value: 'openssl')
 option('scripting_lua', type: 'boolean', value: 'true')
+option('terminal', type: 'string', value: 'sdl')
