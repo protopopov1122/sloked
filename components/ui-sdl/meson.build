@@ -1,6 +1,8 @@
 sloked_ui_sdl_src = [
-    'src/screen/terminal/SDL.cpp',
-    'src/screen/ui/SDL.cpp'
+    'src/screen/sdl/Surface.cpp',
+    'src/screen/sdl/Texture.cpp',
+    'src/screen/sdl/Window.cpp',
+    'src/screen/terminal/SDL.cpp'
 ]
 
 sdl2 = dependency('sdl2')

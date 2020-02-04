@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/screen/ui/SDL.h"
+#include "sloked/screen/sdl/Window.h"
 #include "sloked/core/Error.h"
 
 namespace sloked {
@@ -57,10 +57,10 @@ namespace sloked {
         return this->running.load();
     }
 
-    void SlokedSDLWindow::Open(Dimension width, Dimension height) {
+    void SlokedSDLWindow::Open(SDL_Point dim) {
         if (!this->running.exchange(true)) {
             try {
-                this->Init(width, height);
+                this->Init(std::move(dim));
                 this->worker = std::thread([this] {
                     this->Run();
                 });
@@ -92,9 +92,9 @@ namespace sloked {
         if (!this->running.load()) {
             throw SlokedError("SDLWindow: Can't get size of closed window");
         }
-        Dimension width, height;
-        SDL_GetWindowSize(this->nativeContext->window, &width, &height);
-        return {width, height};
+        SDL_Point dim;
+        SDL_GetWindowSize(this->nativeContext->window, &dim.x, &dim.y);
+        return dim;
     }
 
     void SlokedSDLWindow::Resize(SDL_Point dim) {
@@ -118,9 +118,9 @@ namespace sloked {
         SDL_SetWindowTitle(this->nativeContext->window, title.c_str());
     }
 
-    void SlokedSDLWindow::Init(Dimension width, Dimension height) {
+    void SlokedSDLWindow::Init(SDL_Point dim) {
         this->nativeContext = std::make_unique<Context>();
-        SDL_CreateWindowAndRenderer(width, height, 0, &this->nativeContext->window, &this->nativeContext->renderer);
+        SDL_CreateWindowAndRenderer(dim.x, dim.y, 0, &this->nativeContext->window, &this->nativeContext->renderer);
         
         if (this->nativeContext->window == nullptr || this->nativeContext->renderer == nullptr) {
             this->nativeContext.reset();
@@ -138,100 +138,5 @@ namespace sloked {
             SDL_RenderPresent(this->nativeContext->renderer);
             this->cond.wait_for(lock, this->repaint_delay);
         }
-    }
-
-    SlokedSDLSurface::SlokedSDLSurface(SDL_Surface *surface)
-        : surface(surface) {}
-
-    SlokedSDLSurface::SlokedSDLSurface(SDL_Point dim) {
-        this->surface = SDL_CreateRGBSurface(0, dim.x, dim.y, 32, 0, 0, 0, 0);
-    }
-
-    SlokedSDLSurface::SlokedSDLSurface(SlokedSDLSurface &&surface)
-        : surface(surface.surface) {
-        surface.surface = nullptr;
-    }
-
-    SlokedSDLSurface::~SlokedSDLSurface() {
-        if (this->surface != nullptr) {
-            SDL_FreeSurface(this->surface);
-        }
-    }
-
-    SlokedSDLSurface &SlokedSDLSurface::operator=(SlokedSDLSurface &&surface) {
-        if (this->surface != nullptr) {
-            SDL_FreeSurface(this->surface);
-        }
-        this->surface = surface.surface;
-        surface.surface = nullptr;
-        return *this;
-    }
-
-    SDL_Surface *SlokedSDLSurface::GetSurface() const {
-        return this->surface;
-    }
-
-    SDL_Point SlokedSDLSurface::Size() const {
-        if (this->surface != nullptr) {
-            return {this->surface->w, this->surface->h};
-        } else {
-            throw SlokedError("SDLSurface: No surface defined");
-        }
-    }
-
-    SlokedSDLColor::Value SlokedSDLSurface::MapColor(SlokedSDLColor color) const {
-        if (this->surface != nullptr) {
-            return SDL_MapRGBA(this->surface->format, color.red, color.green, color.blue, color.alpha);
-        } else {
-            throw SlokedError("SDLSurface: No surface defined");
-        }
-    }
-
-    SlokedSDLColor SlokedSDLSurface::MapColor(SlokedSDLColor::Value value) const {
-        if (this->surface != nullptr) {
-            SlokedSDLColor color;
-            SDL_GetRGBA(value, this->surface->format, &color.red, &color.green, &color.blue, &color.alpha);
-            return color;
-        } else {
-            throw SlokedError("SDLSurface: No surface defined");
-        }
-    }
-
-    void SlokedSDLSurface::Fill(SDL_Rect rect, SlokedSDLColor color) const {
-        if (this->surface != nullptr) {
-            SDL_FillRect(this->surface, &rect, this->MapColor(std::move(color)));
-        } else {
-            throw SlokedError("SDLSurface: No surface defined");
-        }
-    }
-
-    SlokedSDLTexture::SlokedSDLTexture(SDL_Texture *texture)
-        : texture(texture) {}
-
-    SlokedSDLTexture::SlokedSDLTexture(SDL_Renderer *renderer, const SlokedSDLSurface &surface)
-        : texture(SDL_CreateTextureFromSurface(renderer, surface.GetSurface())) {}
-        
-    SlokedSDLTexture::SlokedSDLTexture(SlokedSDLTexture &&texture)
-        : texture(texture.texture) {
-        texture.texture = nullptr;
-    }
-
-    SlokedSDLTexture::~SlokedSDLTexture() {
-        if (this->texture != nullptr) {
-            SDL_DestroyTexture(this->texture);
-        }
-    }
-
-    SlokedSDLTexture &SlokedSDLTexture::operator=(SlokedSDLTexture &&texture) {
-        if (this->texture != nullptr) {
-            SDL_DestroyTexture(this->texture);
-        }
-        this->texture = texture.texture;
-        texture.texture = nullptr;
-        return *this;
-    }
-
-    SDL_Texture *SlokedSDLTexture::GetTexture() const {
-        return this->texture;
     }
 }

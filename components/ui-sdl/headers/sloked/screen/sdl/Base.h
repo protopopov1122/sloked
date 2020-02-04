@@ -19,28 +19,10 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_TERMINAL_SDL_H_
-#define SLOKED_SCREEN_TERMINAL_SDL_H_
+#ifndef SLOKED_SCREEN_SDL_BASE_H_
+#define SLOKED_SCREEN_SDL_BASE_H_
 
-#include "sloked/screen/terminal/Terminal.h"
-#include "sloked/screen/sdl/SDL.h"
-#include <mutex>
-#include <memory>
-
-namespace sloked {
-
-    class SlokedSDLTerminal {
-     public:
-        SlokedSDLTerminal(std::unique_ptr<SlokedSDLWindow>);
-
-     private:
-        void Render();
-        void RenderSurface(SDL_Window *, SDL_Renderer *);
-
-        std::unique_ptr<SlokedSDLWindow> window;
-        std::mutex mainSurfaceMtx;
-        std::unique_ptr<SlokedSDLSurface> mainSurface;
-    };
-}
+#include "sloked/Base.h"
+#include <SDL2/SDL.h>
 
 #endif
