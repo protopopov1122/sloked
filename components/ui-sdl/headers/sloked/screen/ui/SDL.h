@@ -29,29 +29,34 @@
 #include <condition_variable>
 #include <functional>
 #include <queue>
+#include <chrono>
 #include <SDL2/SDL.h>
 
 namespace sloked {
 
+    using SlokedSDLDimension = int;
+
     class SlokedSDLWindow {
      public:
-        using Dimension = int;
+        using Dimension = SlokedSDLDimension;
         using Renderer = std::function<void(SDL_Window *, SDL_Renderer *)>;
 
         SlokedSDLWindow(Renderer = nullptr);
         ~SlokedSDLWindow();
 
         bool IsOpen() const;
-        void Open(const std::string &, Dimension, Dimension);
+        void Open(Dimension, Dimension);
         void Close();
         void SetRenderer(Renderer);
         void Repaint();
-        std::pair<Dimension, Dimension> Size() const;
-        void Resize(Dimension, Dimension);
+        SDL_Point Size() const;
+        void Resize(SDL_Point);
+        std::string_view Title() const;
+        void Title(const std::string &);
 
      private:
         struct Context;
-        void Init(const std::string &, Dimension, Dimension);
+        void Init(Dimension, Dimension);
         void Run();
         
         std::atomic<bool> running;
@@ -59,7 +64,56 @@ namespace sloked {
         std::unique_ptr<Context> nativeContext;
         std::mutex mtx;
         std::condition_variable cond;
+        std::chrono::system_clock::duration repaint_delay;
         Renderer renderer;
+    };
+
+    struct SlokedSDLColor {
+        using Value = Uint32;
+        using Component = Uint8;
+
+        Component red;
+        Component green;
+        Component blue;
+        Component alpha{0};
+    };
+
+    class SlokedSDLSurface {
+     public:
+        SlokedSDLSurface(SDL_Surface * = nullptr);
+        SlokedSDLSurface(SDL_Point);
+        SlokedSDLSurface(const SlokedSDLSurface &) = delete;
+        SlokedSDLSurface(SlokedSDLSurface &&);
+        ~SlokedSDLSurface();
+
+        SlokedSDLSurface &operator=(const SlokedSDLSurface &) = delete;
+        SlokedSDLSurface &operator=(SlokedSDLSurface &&);
+
+        SDL_Surface *GetSurface() const;
+        SDL_Point Size() const;
+        SlokedSDLColor::Value MapColor(SlokedSDLColor) const;
+        SlokedSDLColor MapColor(SlokedSDLColor::Value) const;
+        void Fill(SDL_Rect, SlokedSDLColor) const;
+
+     private:
+        SDL_Surface *surface;
+    };
+
+    class SlokedSDLTexture {
+     public:
+        SlokedSDLTexture(SDL_Texture *);
+        SlokedSDLTexture(SDL_Renderer *, const SlokedSDLSurface &);
+        SlokedSDLTexture(const SlokedSDLTexture &) = delete;
+        SlokedSDLTexture(SlokedSDLTexture &&);
+        ~SlokedSDLTexture();
+
+        SlokedSDLTexture &operator=(const SlokedSDLTexture &) = delete;
+        SlokedSDLTexture &operator=(SlokedSDLTexture &&);
+
+        SDL_Texture *GetTexture() const;
+
+     private:
+        SDL_Texture *texture;
     };
 }
 

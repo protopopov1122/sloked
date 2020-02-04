@@ -1,4 +1,5 @@
 sloked_ui_sdl_src = [
+    'src/screen/terminal/SDL.cpp',
     'src/screen/ui/SDL.cpp'
 ]
 
