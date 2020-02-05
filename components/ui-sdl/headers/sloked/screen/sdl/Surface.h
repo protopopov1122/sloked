@@ -22,7 +22,7 @@
 #ifndef SLOKED_SCREEN_SDL_SURFACE_H_
 #define SLOKED_SCREEN_SDL_SURFACE_H_
 
-#include "sloked/screen/sdl/Color.h"
+#include "sloked/screen/sdl/Base.h"
 
 namespace sloked {
 
@@ -39,9 +39,9 @@ namespace sloked {
 
         SDL_Surface *GetSurface() const;
         SDL_Point Size() const;
-        SlokedSDLColor::Value MapColor(SlokedSDLColor) const;
-        SlokedSDLColor MapColor(SlokedSDLColor::Value) const;
-        void Fill(SDL_Rect, SlokedSDLColor) const;
+        Uint32 MapColor(SDL_Color) const;
+        SDL_Color MapColor(Uint32) const;
+        void Fill(SDL_Rect, SDL_Color) const;
 
      private:
         SDL_Surface *surface;

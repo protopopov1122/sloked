@@ -22,8 +22,8 @@
 #ifndef SLOKED_SCREEN_SDL_SDL_H_
 #define SLOKED_SCREEN_SDL_SDL_H_
 
+#include "sloked/screen/sdl/Font.h"
 #include "sloked/screen/sdl/Window.h"
-#include "sloked/screen/sdl/Color.h"
 #include "sloked/screen/sdl/Surface.h"
 #include "sloked/screen/sdl/Texture.h"
 

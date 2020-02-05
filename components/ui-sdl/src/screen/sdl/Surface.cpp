@@ -63,25 +63,25 @@ namespace sloked {
         }
     }
 
-    SlokedSDLColor::Value SlokedSDLSurface::MapColor(SlokedSDLColor color) const {
+    Uint32 SlokedSDLSurface::MapColor(SDL_Color color) const {
         if (this->surface != nullptr) {
-            return SDL_MapRGBA(this->surface->format, color.red, color.green, color.blue, color.alpha);
+            return SDL_MapRGBA(this->surface->format, color.r, color.g, color.b, color.a);
         } else {
             throw SlokedError("SDLSurface: No surface defined");
         }
     }
 
-    SlokedSDLColor SlokedSDLSurface::MapColor(SlokedSDLColor::Value value) const {
+    SDL_Color SlokedSDLSurface::MapColor(Uint32 value) const {
         if (this->surface != nullptr) {
-            SlokedSDLColor color;
-            SDL_GetRGBA(value, this->surface->format, &color.red, &color.green, &color.blue, &color.alpha);
+            SDL_Color color;
+            SDL_GetRGBA(value, this->surface->format, &color.r, &color.g, &color.b, &color.a);
             return color;
         } else {
             throw SlokedError("SDLSurface: No surface defined");
         }
     }
 
-    void SlokedSDLSurface::Fill(SDL_Rect rect, SlokedSDLColor color) const {
+    void SlokedSDLSurface::Fill(SDL_Rect rect, SDL_Color color) const {
         if (this->surface != nullptr) {
             SDL_FillRect(this->surface, &rect, this->MapColor(std::move(color)));
         } else {

@@ -35,7 +35,10 @@ namespace sloked {
         if (this->mainSurface == nullptr) {
             auto winSize = this->window->Size();
             this->mainSurface = std::make_unique<SlokedSDLSurface>(winSize);
-            this->mainSurface->Fill({0, 0, winSize.x, winSize.y}, {255, 255, 255});
+            this->mainSurface->Fill({0, 0, winSize.x, winSize.y}, {255, 255, 255, 0});
+            static SlokedSDLFont font("/usr/share/fonts/TTF/DejaVuSansMono.ttf", 12);
+            SlokedSDLSurface text = font.RenderShaded("Hello, world!", {0, 0, 0, 0}, {255, 255, 255, 0});
+            SDL_BlitSurface(text.GetSurface(), nullptr, this->mainSurface->GetSurface(), nullptr);
         }
     }
     
