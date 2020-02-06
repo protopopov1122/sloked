@@ -74,6 +74,7 @@ namespace sloked {
     void SlokedSDLWindow::Close() {
         if (this->running.exchange(false)) {
             this->worker.join();
+            this->events.reset();
             this->nativeContext.reset();
         }
     }
@@ -118,6 +119,13 @@ namespace sloked {
         SDL_SetWindowTitle(this->nativeContext->window, title.c_str());
     }
 
+    SlokedSDLEventQueue &SlokedSDLWindow::Events() const {
+        if (!this->running.load()) {
+            throw SlokedError("SDLWindow: Can't get events of closed window");
+        }
+        return *this->events;
+    }
+
     void SlokedSDLWindow::Init(SDL_Point dim) {
         this->nativeContext = std::make_unique<Context>();
         SDL_CreateWindowAndRenderer(dim.x, dim.y, 0, &this->nativeContext->window, &this->nativeContext->renderer);
@@ -126,6 +134,7 @@ namespace sloked {
             this->nativeContext.reset();
             throw SlokedError("SDLWindow: Error initializing SDL window");
         }
+        this->events = SlokedSDLEventBroker::Global().Subscribe(SDL_GetWindowID(this->nativeContext->window));
     }
 
     void SlokedSDLWindow::Run() {

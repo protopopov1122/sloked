@@ -40,6 +40,7 @@ namespace sloked {
         std::unique_ptr<SlokedSDLWindow> window;
         std::mutex mainSurfaceMtx;
         std::unique_ptr<SlokedSDLSurface> mainSurface;
+        std::string text;
     };
 }
 

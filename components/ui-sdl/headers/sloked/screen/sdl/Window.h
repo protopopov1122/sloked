@@ -22,7 +22,7 @@
 #ifndef SLOKED_SCREEN_SDL_WINDOW_H_
 #define SLOKED_SCREEN_SDL_WINDOW_H_
 
-#include "sloked/screen/sdl/Base.h"
+#include "sloked/screen/sdl/Event.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -50,6 +50,7 @@ namespace sloked {
         void Resize(SDL_Point);
         std::string_view Title() const;
         void Title(const std::string &);
+        SlokedSDLEventQueue &Events() const;
 
      private:
         struct Context;
@@ -63,6 +64,7 @@ namespace sloked {
         std::condition_variable cond;
         std::chrono::system_clock::duration repaint_delay;
         Renderer renderer;
+        std::unique_ptr<SlokedSDLEventQueue> events;
     };
 }
 

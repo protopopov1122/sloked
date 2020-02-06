@@ -24,7 +24,7 @@
 namespace sloked {
 
     SlokedSDLTerminal::SlokedSDLTerminal(std::unique_ptr<SlokedSDLWindow> window)
-        : window(std::move(window)) {
+        : window(std::move(window)), text{} {
         this->window->SetRenderer([this](SDL_Window *window, SDL_Renderer *renderer) {
             this->RenderSurface(window, renderer);
         });
@@ -32,12 +32,19 @@ namespace sloked {
 
     void SlokedSDLTerminal::Render() {
         std::unique_lock lock(this->mainSurfaceMtx);
+        while (this->window->Events().HasEvents()) {
+            auto event = this->window->Events().NextEvent();
+            if (event.type == SDL_TEXTINPUT) {
+                this->text.append(event.text.text);
+                this->mainSurface.reset();
+            }
+        }
         if (this->mainSurface == nullptr) {
             auto winSize = this->window->Size();
             this->mainSurface = std::make_unique<SlokedSDLSurface>(winSize);
             this->mainSurface->Fill({0, 0, winSize.x, winSize.y}, {255, 255, 255, 0});
             static SlokedSDLFont font("/usr/share/fonts/TTF/DejaVuSansMono.ttf", 12);
-            SlokedSDLSurface text = font.RenderShaded("Hello, world!", {0, 0, 0, 0}, {255, 255, 255, 0});
+            SlokedSDLSurface text = font.RenderShaded(this->text.c_str(), {0, 0, 0, 0}, {255, 255, 255, 0});
             SDL_BlitSurface(text.GetSurface(), nullptr, this->mainSurface->GetSurface(), nullptr);
         }
     }

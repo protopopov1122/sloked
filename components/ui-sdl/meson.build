@@ -1,4 +1,5 @@
 sloked_ui_sdl_src = [
+  'src/screen/sdl/Event.cpp',
   'src/screen/sdl/Font.cpp',
   'src/screen/sdl/Surface.cpp',
   'src/screen/sdl/Texture.cpp',
