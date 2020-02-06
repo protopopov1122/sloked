@@ -48,6 +48,8 @@ namespace sloked {
         void SetOutline(int) const;
         int GetHinting() const;
         void SetHinting(int) const;
+        bool GetKerning() const;
+        void SetKerning(bool) const;
 
      private:
         TTF_Font *font;

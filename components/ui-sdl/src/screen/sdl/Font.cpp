@@ -142,4 +142,20 @@ namespace sloked {
             throw SlokedError("SDLFont: Font not defined");
         }
     }
+
+    bool SlokedSDLFont::GetKerning() const {
+        if (this->font != nullptr) {
+            return TTF_GetFontKerning(this->font);
+        } else {
+            throw SlokedError("SDLFont: Font not defined");
+        }
+    }
+
+    void SlokedSDLFont::SetKerning(bool value) const {
+        if (this->font != nullptr) {
+            TTF_SetFontKerning(this->font, value);
+        } else {
+            throw SlokedError("SDLFont: Font not defined");
+        }
+    }
 }
