@@ -74,6 +74,7 @@
 #include "sloked/namespace/Empty.h"
 #include "sloked/editor/configuration/Compat.h"
 #include "sloked/text/fragment/Updater.h"
+#include "sloked/screen/terminal/SDL.h"
 #include <chrono>
 
 using namespace sloked;
@@ -210,10 +211,10 @@ class SlokedDemoRootNamespaceFactory : public SlokedRootNamespaceFactory {
 
 class SlokedDemoScreenBasis : public SlokedScreenProvider {
  public:
-    SlokedDemoScreenBasis(const SlokedCharWidth &charWidth)
+    SlokedDemoScreenBasis(const SlokedCharPreset &charPreset)
         : terminal(*SlokedTerminalCompat::GetSystemTerminal()),
-          console(terminal, Encoding::Get("system"), charWidth),
-          provider(console, Encoding::Get("system"), charWidth, terminal) {}
+          console(terminal, Encoding::Get("system"), charPreset),
+          provider(console, Encoding::Get("system"), charPreset, terminal) {}
         
     void Render(std::function<void(SlokedScreenComponent &)> fn) final {
         this->provider.Render(std::move(fn));
@@ -243,8 +244,8 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
 
 class SlokedDemoScreenFactory : public SlokedScreenProviderFactory {
  public:
-    std::unique_ptr<SlokedScreenProvider> Make(const SlokedUri &, const SlokedCharWidth &charWidth) final {
-        return std::make_unique<SlokedDemoScreenBasis>(charWidth);
+    std::unique_ptr<SlokedScreenProvider> Make(const SlokedUri &, const SlokedCharPreset &charPreset) final {
+        return std::make_unique<SlokedDemoScreenBasis>(charPreset);
     }
 };
 
@@ -259,6 +260,10 @@ static const KgrValue DefaultConfiguration = KgrDictionary {
 };
 
 int main(int argc, const char **argv) {
+    SlokedSDLGlobalEventQueue::Get().EnableText();
+    auto sdlWin = std::make_unique<SlokedSDLWindow>();
+    sdlWin->Open({640, 480});
+    SlokedSDLTerminal sdlTerminal(std::move(sdlWin));
     // Initialize globals
     SlokedFailure::SetupHandler();
     SlokedLocale::Setup();

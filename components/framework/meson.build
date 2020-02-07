@@ -1,6 +1,6 @@
 sloked_src = [
   'src/core/Base64.cpp',
-  'src/core/CharWidth.cpp',
+  'src/core/CharPreset.cpp',
   'src/core/CLI.cpp',
   'src/core/Closeable.cpp',
   'src/core/DynamicBitset.cpp',
@@ -80,7 +80,7 @@ sloked_src = [
   'src/security/Slave.cpp',
   'src/services/ScreenInput.cpp',
   'src/services/ScreenSize.cpp',
-  'src/services/CharWidth.cpp',
+  'src/services/CharPreset.cpp',
   'src/services/Cursor.cpp',
   'src/services/DocumentNotify.cpp',
   'src/services/DocumentSet.cpp',

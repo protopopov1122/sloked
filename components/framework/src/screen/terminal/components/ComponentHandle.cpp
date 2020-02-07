@@ -27,8 +27,8 @@
 
 namespace sloked {
 
-    TerminalComponentHandle::TerminalComponentHandle(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : SlokedComponentHandle(Type::Handle), terminal(term), encoding(encoding), charWidth(charWidth), component(nullptr) {}
+    TerminalComponentHandle::TerminalComponentHandle(SlokedTerminal &term, const Encoding &encoding, const SlokedCharPreset &charPreset)
+        : SlokedComponentHandle(Type::Handle), terminal(term), encoding(encoding), charPreset(charPreset), component(nullptr) {}
 
     bool TerminalComponentHandle::HasComponent() const {
         return this->component != nullptr;
@@ -54,7 +54,7 @@ namespace sloked {
     }
 
     SlokedSplitterComponent &TerminalComponentHandle::NewSplitter(Splitter::Direction dir) {
-        auto component = std::make_unique<TerminalSplitterComponent>(this->terminal, dir, this->encoding, this->charWidth);
+        auto component = std::make_unique<TerminalSplitterComponent>(this->terminal, dir, this->encoding, this->charPreset);
         TerminalSplitterComponent &ref = *component;
         this->component = std::move(component);
         this->component->OnUpdate(this->updateListener);
@@ -65,7 +65,7 @@ namespace sloked {
     }
 
     SlokedTabberComponent &TerminalComponentHandle::NewTabber() {
-        auto component = std::make_unique<TerminalTabberComponent>(this->terminal, this->encoding, this->charWidth);
+        auto component = std::make_unique<TerminalTabberComponent>(this->terminal, this->encoding, this->charPreset);
         TerminalTabberComponent &ref = *component;
         this->component = std::move(component);
         this->component->OnUpdate(this->updateListener);
@@ -76,7 +76,7 @@ namespace sloked {
     }
 
     SlokedMultiplexerComponent &TerminalComponentHandle::NewMultiplexer() {
-        auto component = std::make_unique<TerminalMultiplexerComponent>(this->terminal, this->encoding, this->charWidth);
+        auto component = std::make_unique<TerminalMultiplexerComponent>(this->terminal, this->encoding, this->charPreset);
         TerminalMultiplexerComponent &ref = *component;
         this->component = std::move(component);
         this->component->OnUpdate(this->updateListener);

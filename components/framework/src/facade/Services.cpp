@@ -20,7 +20,7 @@
 */
 
 #include "sloked/facade/Services.h"
-#include "sloked/services/CharWidth.h"
+#include "sloked/services/CharPreset.h"
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentNotify.h"
 #include "sloked/services/DocumentSet.h"
@@ -31,8 +31,8 @@
 namespace sloked {
 
     SlokedServiceDependencyDefaultProvider::SlokedServiceDependencyDefaultProvider(SlokedLogger &logger, std::unique_ptr<SlokedRootNamespace> rootNamespace,
-        const SlokedCharWidth &charWidth, KgrNamedServer &server, KgrContextManager<KgrLocalContext> &contextManager, SlokedTextTaggerRegistry<int> *baseTaggers)
-        : logger(logger), rootNamespace(std::move(rootNamespace)), charWidth(charWidth), server(server),
+        const SlokedCharPreset &charPreset, KgrNamedServer &server, KgrContextManager<KgrLocalContext> &contextManager, SlokedTextTaggerRegistry<int> *baseTaggers)
+        : logger(logger), rootNamespace(std::move(rootNamespace)), charPreset(charPreset), server(server),
           documents(this->rootNamespace->GetRoot()), contextManager(contextManager), taggers(baseTaggers) {}
 
     KgrContextManager<KgrLocalContext> &SlokedServiceDependencyDefaultProvider::GetContextManager() {
@@ -51,8 +51,8 @@ namespace sloked {
         return *this->rootNamespace;
     }
 
-    const SlokedCharWidth &SlokedServiceDependencyDefaultProvider::GetCharWidth() {
-        return this->charWidth;
+    const SlokedCharPreset &SlokedServiceDependencyDefaultProvider::GetCharWidth() {
+        return this->charPreset;
     }
 
     KgrNamedServer &SlokedServiceDependencyDefaultProvider::GetServer() {
@@ -94,7 +94,7 @@ namespace sloked {
             return std::make_unique<SlokedNamespaceService>(provider.GetNamespace(), provider.GetContextManager());
         });
         this->builders.emplace("editor::parameters", [](SlokedServiceDependencyProvider &provider) {
-            return std::make_unique<SlokedCharWidthService>(provider.GetCharWidth(), provider.GetContextManager());
+            return std::make_unique<SlokedCharPresetService>(provider.GetCharWidth(), provider.GetContextManager());
         });
     }
 

@@ -19,14 +19,14 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/core/CharWidth.h"
+#include "sloked/core/CharPreset.h"
 
 namespace sloked {
 
-    SlokedCharWidth::SlokedCharWidth()
+    SlokedCharPreset::SlokedCharPreset()
         : tab_width(4), tab(tab_width, U' ') {}
 
-    std::size_t SlokedCharWidth::GetCharWidth(char32_t chr) const {
+    std::size_t SlokedCharPreset::GetCharWidth(char32_t chr) const {
         if (chr != '\t') {
             return 1;
         } else {
@@ -34,7 +34,7 @@ namespace sloked {
         }
     }
     
-    std::pair<std::size_t, std::size_t> SlokedCharWidth::GetRealPosition(std::string_view str, std::size_t idx, const Encoding &encoding) const {
+    std::pair<std::size_t, std::size_t> SlokedCharPreset::GetRealPosition(std::string_view str, std::size_t idx, const Encoding &encoding) const {
         std::pair<std::size_t, std::size_t> res{0, 0};
         encoding.IterateCodepoints(str, [&](auto start, auto length, auto value) {
             res.first = res.second;
@@ -44,15 +44,15 @@ namespace sloked {
         return res;
     }
 
-    std::string SlokedCharWidth::GetTab(const Encoding &encoding) const {
+    std::string SlokedCharPreset::GetTab(const Encoding &encoding) const {
         return encoding.Encode(this->tab);
     }
 
-    SlokedCharWidth::Unbind SlokedCharWidth::Listen(Listener listener) const {
+    SlokedCharPreset::Unbind SlokedCharPreset::Listen(Listener listener) const {
         return this->events.Listen(std::move(listener));
     }
 
-    void SlokedCharWidth::SetTabWidth(std::size_t width) {
+    void SlokedCharPreset::SetTabWidth(std::size_t width) {
         this->tab_width = width;
         this->tab = std::u32string(this->tab_width, U' ');
         this->events.Emit(*this);

@@ -24,7 +24,7 @@
 
 #include "sloked/core/Closeable.h"
 #include "sloked/core/awaitable/Poll.h"
-#include "sloked/core/CharWidth.h"
+#include "sloked/core/CharPreset.h"
 #include "sloked/sched/Scheduler.h"
 #include "sloked/facade/Crypto.h"
 #include "sloked/facade/Network.h"
@@ -32,7 +32,7 @@
 #include "sloked/facade/Services.h"
 #include "sloked/core/DataHandle.h"
 #include "sloked/editor/ScreenServer.h"
-#include "sloked/services/CharWidth.h"
+#include "sloked/services/CharPreset.h"
 #include <atomic>
 #include <variant>
 #include <mutex>
@@ -57,7 +57,7 @@ namespace sloked {
         void Wait();
         void Close() final;
 
-        SlokedCharWidth &GetCharWidth();
+        SlokedCharPreset &GetCharWidth();
         SlokedSchedulerThread &GetScheduler();
         SlokedIOPoller &GetIO();
         SlokedNetworkFacade &GetNetwork();
@@ -80,11 +80,11 @@ namespace sloked {
         SlokedNetworkFacade network;
         std::unique_ptr<SlokedCryptoFacade> crypto;
         std::unique_ptr<SlokedServerFacade> server;
-        std::unique_ptr<SlokedCharWidthClient> charWidthUpdater;
+        std::unique_ptr<SlokedCharPresetClient> charPresetUpdater;
         std::unique_ptr<SlokedServiceDependencyProvider> serviceProvider;
         std::unique_ptr<SlokedScreenProvider> screenProvider;
         std::unique_ptr<SlokedScreenServer> screen;
-        SlokedCharWidth charWidth;
+        SlokedCharPreset charPreset;
         std::vector<std::unique_ptr<SlokedDataHandle>> handles;
         KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
     };

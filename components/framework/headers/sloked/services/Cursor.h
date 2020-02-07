@@ -23,7 +23,7 @@
 #define SLOKED_SERVICES_CURSOR_H_
 
 #include "sloked/core/Encoding.h"
-#include "sloked/core/CharWidth.h"
+#include "sloked/core/CharPreset.h"
 #include "sloked/kgr/Service.h"
 #include "sloked/kgr/ContextManager.h"
 #include "sloked/text/TextBlock.h"

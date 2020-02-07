@@ -128,8 +128,8 @@ namespace sloked {
         }
     }
 
-    TerminalSplitterComponent::TerminalSplitterComponent(SlokedTerminal &term, Splitter::Direction dir, const Encoding &enc, const SlokedCharWidth &chWidth)
-        : SlokedSplitterComponent(Type::Splitter), splitter(term, dir, enc, chWidth), encoding(enc), charWidth(chWidth), focus(0) {}
+    TerminalSplitterComponent::TerminalSplitterComponent(SlokedTerminal &term, Splitter::Direction dir, const Encoding &enc, const SlokedCharPreset &chWidth)
+        : SlokedSplitterComponent(Type::Splitter), splitter(term, dir, enc, chWidth), encoding(enc), charPreset(chWidth), focus(0) {}
 
     std::shared_ptr<TerminalSplitterComponent::Window> TerminalSplitterComponent::GetFocus() const {
         if (this->focus < this->components.size()) {
@@ -153,7 +153,7 @@ namespace sloked {
 
     std::shared_ptr<TerminalSplitterComponent::Window> TerminalSplitterComponent::NewWindow(const Splitter::Constraints &constraints) {
         auto term = this->splitter.NewTerminal(constraints);
-        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
+        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charPreset);
         auto window = std::make_shared<TerminalSplitterWindow>(term.index, std::move(component), *this);
         window->GetComponent().OnUpdate(this->updateListener);
         this->components.push_back(window);
@@ -165,7 +165,7 @@ namespace sloked {
 
     std::shared_ptr<TerminalSplitterComponent::Window> TerminalSplitterComponent::NewWindow(Window::Id idx, const Splitter::Constraints &constraints) {
         auto term = this->splitter.NewTerminal(idx, constraints);
-        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
+        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charPreset);
         auto window = std::make_shared<TerminalSplitterWindow>(term.index, std::move(component), *this);
         window->GetComponent().OnUpdate(this->updateListener);
         this->components.insert(this->components.begin() + idx, window);

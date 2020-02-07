@@ -26,7 +26,7 @@
 #include "sloked/core/Indexed.h"
 #include "sloked/screen/Splitter.h"
 #include "sloked/screen/terminal/Terminal.h"
-#include "sloked/core/CharWidth.h"
+#include "sloked/core/CharPreset.h"
 #include "sloked/screen/terminal/multiplexer/TerminalWindow.h"
 #include <vector>
 #include <memory>
@@ -39,7 +39,7 @@ namespace sloked {
      public:
         using WinId = std::size_t;
 
-        TerminalSplitter(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharWidth &);
+        TerminalSplitter(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharPreset &);
 
         SlokedTerminal &GetTerminal(WinId) const;
         WinId GetTerminalCount() const;
@@ -61,7 +61,7 @@ namespace sloked {
         SlokedTerminal &term;
         Splitter::Direction direction;
         const Encoding &encoding;
-        const SlokedCharWidth &charWidth;
+        const SlokedCharPreset &charPreset;
         std::vector<Window> windows;
     };
 }

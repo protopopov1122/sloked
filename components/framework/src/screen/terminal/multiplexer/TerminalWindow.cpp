@@ -21,13 +21,13 @@
 
 #include "sloked/screen/terminal/multiplexer/TerminalWindow.h"
 #include "sloked/core/Encoding.h"
-#include "sloked/core/CharWidth.h"
+#include "sloked/core/CharPreset.h"
 #include <iostream>
 
 namespace sloked {
 
-    TerminalWindow::TerminalWindow(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth, const TextPosition &offset, const TextPosition &size)
-        : term(term), encoding(encoding), charWidth(charWidth), offset(offset), size(size), line(0), col(0) {}
+    TerminalWindow::TerminalWindow(SlokedTerminal &term, const Encoding &encoding, const SlokedCharPreset &charPreset, const TextPosition &offset, const TextPosition &size)
+        : term(term), encoding(encoding), charPreset(charPreset), offset(offset), size(size), line(0), col(0) {}
 
     void TerminalWindow::Move(const TextPosition &position) {
         this->offset = position;
@@ -42,7 +42,7 @@ namespace sloked {
     }
 
     TerminalWindow TerminalWindow::SubWindow(const TextPosition &offset, const TextPosition &size) const {
-        return TerminalWindow(this->term, this->encoding, this->charWidth,
+        return TerminalWindow(this->term, this->encoding, this->charPreset,
             TextPosition{this->offset.line + offset.line, this->offset.column + offset.column},
             size);
     }
@@ -123,7 +123,7 @@ namespace sloked {
                     this->SetPosition(this->line + 1, 0);
                 }
             } else {
-                auto curWidth = this->charWidth.GetCharWidth(codepoint);
+                auto curWidth = this->charPreset.GetCharWidth(codepoint);
                 if (this->col + curWidth < this->size.column) {
                     buffer.append(view.substr(start, length));
                     this->col += curWidth;

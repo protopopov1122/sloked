@@ -62,8 +62,8 @@ namespace sloked {
             this->foreground == g.foreground;
     }
 
-    BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : term(term), encoding(encoding), charWidth(charWidth), cls(false), show_cursor(true), buffer(nullptr), line(0), col(0), width(0), height(0) {
+    BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding, const SlokedCharPreset &charPreset)
+        : term(term), encoding(encoding), charPreset(charPreset), cls(false), show_cursor(true), buffer(nullptr), line(0), col(0), width(0), height(0) {
         this->UpdateDimensions();
         this->buffer = std::unique_ptr<Character[]>(new Character[this->width * this->height]);
     }
@@ -151,7 +151,7 @@ namespace sloked {
                 }
                 this->SetPosition(this->line + 1, 0);
             } else if (codepoint == U'\t') {
-                this->Write(this->charWidth.GetTab(this->encoding));
+                this->Write(this->charPreset.GetTab(this->encoding));
             } else if (this->col < this->width) {
                 Character &chr = this->buffer[this->line * this->width + this->col];
                 chr.value = codepoint;

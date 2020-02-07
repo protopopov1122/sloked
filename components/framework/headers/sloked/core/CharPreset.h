@@ -19,8 +19,8 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CORE_CHARWIDTH_H_
-#define SLOKED_CORE_CHARWIDTH_H_
+#ifndef SLOKED_CORE_CHARPRESET_H_
+#define SLOKED_CORE_CHARPRESET_H_
 
 #include "sloked/core/Encoding.h"
 #include "sloked/core/Event.h"
@@ -28,12 +28,12 @@
 
 namespace sloked {
 
-    class SlokedCharWidth {
+    class SlokedCharPreset {
      public:
-        using Listener = SlokedEventEmitter<const SlokedCharWidth &>::Listener;
-        using Unbind = SlokedEventEmitter<const SlokedCharWidth &>::Unbind;
+        using Listener = SlokedEventEmitter<const SlokedCharPreset &>::Listener;
+        using Unbind = SlokedEventEmitter<const SlokedCharPreset &>::Unbind;
 
-        SlokedCharWidth();
+        SlokedCharPreset();
         std::size_t GetCharWidth(char32_t) const;
         std::pair<std::size_t, std::size_t> GetRealPosition(std::string_view, std::size_t, const Encoding &) const;
         std::string GetTab(const Encoding &) const;
@@ -43,7 +43,7 @@ namespace sloked {
      private:
         std::size_t tab_width;
         std::u32string tab;
-        mutable SlokedEventEmitter<const SlokedCharWidth &> events;
+        mutable SlokedEventEmitter<const SlokedCharPreset &> events;
     };
 }
 

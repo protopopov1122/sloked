@@ -118,7 +118,7 @@ namespace sloked {
             if (this->server) {
                 this->server->Start();
                 if (this->server->IsRemote()) {
-                    this->charWidthUpdater = std::make_unique<SlokedCharWidthClient>(this->server->GetServer().Connect("editor::parameters"), this->charWidth);
+                    this->charPresetUpdater = std::make_unique<SlokedCharPresetClient>(this->server->GetServer().Connect("editor::parameters"), this->charPreset);
                 }
             }
             if (this->screen) {
@@ -136,7 +136,7 @@ namespace sloked {
                 this->closeables.Close();
                 this->screen = nullptr;
                 this->screenProvider = nullptr;
-                this->charWidthUpdater = nullptr;
+                this->charPresetUpdater = nullptr;
                 this->server = nullptr;
                 this->serviceProvider = nullptr;
                 this->crypto = nullptr;
@@ -161,8 +161,8 @@ namespace sloked {
         this->Wait();
     }
 
-    SlokedCharWidth &SlokedEditorInstance::GetCharWidth() {
-        return this->charWidth;
+    SlokedCharPreset &SlokedEditorInstance::GetCharWidth() {
+        return this->charPreset;
     }
 
     SlokedSchedulerThread &SlokedEditorInstance::GetScheduler() {

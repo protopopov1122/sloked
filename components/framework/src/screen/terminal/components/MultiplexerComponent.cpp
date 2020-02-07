@@ -123,8 +123,8 @@ namespace sloked {
         }
     }
 
-    TerminalMultiplexerComponent::TerminalMultiplexerComponent(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : SlokedMultiplexerComponent(Type::Multiplexer), terminal(term), encoding(encoding), charWidth(charWidth), focus(0), nextId(0) {}
+    TerminalMultiplexerComponent::TerminalMultiplexerComponent(SlokedTerminal &term, const Encoding &encoding, const SlokedCharPreset &charPreset)
+        : SlokedMultiplexerComponent(Type::Multiplexer), terminal(term), encoding(encoding), charPreset(charPreset), focus(0), nextId(0) {}
     
     TerminalMultiplexerComponent::~TerminalMultiplexerComponent() {
         for (auto it = this->windows.begin(); it != this->windows.end();) {
@@ -156,8 +156,8 @@ namespace sloked {
     }
 
     std::shared_ptr<TerminalMultiplexerComponent::Window> TerminalMultiplexerComponent::NewWindow(const TextPosition &pos, const TextPosition &dim) {
-        auto terminal = std::make_unique<TerminalWindow>(this->terminal, this->encoding, this->charWidth, pos, dim);
-        auto handle = std::make_unique<TerminalComponentHandle>(*terminal, this->encoding, this->charWidth);
+        auto terminal = std::make_unique<TerminalWindow>(this->terminal, this->encoding, this->charPreset, pos, dim);
+        auto handle = std::make_unique<TerminalComponentHandle>(*terminal, this->encoding, this->charPreset);
         auto id = this->nextId++;
         auto window = std::make_shared<TerminalMultiplexerWindow>(id, std::move(handle), std::move(terminal), *this);
         window->GetComponent().OnUpdate(this->updateListener);

@@ -26,8 +26,8 @@
 
 namespace sloked {
 
-    TextFrameView::TextFrameView(const TextBlockView &text, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : text(text), encoding(encoding), charWidth(charWidth), offset{0, 0}, size{0, 0}, buffer{} {}
+    TextFrameView::TextFrameView(const TextBlockView &text, const Encoding &encoding, const SlokedCharPreset &charPreset)
+        : text(text), encoding(encoding), charPreset(charPreset), offset{0, 0}, size{0, 0}, buffer{} {}
 
     std::size_t TextFrameView::TextFrameView::GetLastLine() const {
         return std::min(static_cast<std::size_t>(this->offset.line + this->size.line), this->text.GetLastLine()) - this->offset.line;
@@ -66,7 +66,7 @@ namespace sloked {
             this->offset.line = cursor.line;
         }
 
-        auto realColumn = this->charWidth.GetRealPosition(std::string {this->text.GetLine(cursor.line)}, cursor.column, this->encoding).first;
+        auto realColumn = this->charPreset.GetRealPosition(std::string {this->text.GetLine(cursor.line)}, cursor.column, this->encoding).first;
         if (this->offset.column + dim.column - 1 < realColumn) {
             this->offset.column = realColumn - dim.column + 1;
         }
@@ -158,7 +158,7 @@ namespace sloked {
         std::list<std::string_view> content;
         auto result = std::make_unique<Line>(Line {
             {},
-            std::string{this->charWidth.GetTab(this->encoding)},
+            std::string{this->charPreset.GetTab(this->encoding)},
             "",
             0
         });

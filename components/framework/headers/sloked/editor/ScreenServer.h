@@ -32,7 +32,7 @@
 #include "sloked/screen/Size.h"
 #include "sloked/kgr/ctx-manager/RunnableContextManager.h"
 #include "sloked/core/URI.h"
-#include "sloked/core/CharWidth.h"
+#include "sloked/core/CharPreset.h"
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -74,7 +74,7 @@ namespace sloked {
     class SlokedScreenProviderFactory {
      public:
         virtual ~SlokedScreenProviderFactory() = default;
-        virtual std::unique_ptr<SlokedScreenProvider> Make(const SlokedUri &, const SlokedCharWidth &) = 0;
+        virtual std::unique_ptr<SlokedScreenProvider> Make(const SlokedUri &, const SlokedCharPreset &) = 0;
     };
 }
 

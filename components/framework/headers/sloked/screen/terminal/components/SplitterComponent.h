@@ -22,7 +22,7 @@
 #ifndef SLOKED_SCREEN_TERMINAL_COMPONENTS_SPLITTERCOMPONENT_H_
 #define SLOKED_SCREEN_TERMINAL_COMPONENTS_SPLITTERCOMPONENT_H_
 
-#include "sloked/core/CharWidth.h"
+#include "sloked/core/CharPreset.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/components/SplitterComponent.h"
 #include "sloked/screen/terminal/Terminal.h"
@@ -35,7 +35,7 @@ namespace sloked {
 
     class TerminalSplitterComponent : public SlokedSplitterComponent {
     public:
-      TerminalSplitterComponent(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharWidth &);
+      TerminalSplitterComponent(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharPreset &);
 
       std::shared_ptr<Window> GetFocus() const override;
       std::shared_ptr<Window> GetWindow(Window::Id) const override;
@@ -81,7 +81,7 @@ namespace sloked {
 
       TerminalSplitter splitter;
       const Encoding &encoding;
-      const SlokedCharWidth &charWidth;
+      const SlokedCharPreset &charPreset;
       std::vector<std::shared_ptr<TerminalSplitterWindow>> components;
       Window::Id focus;
       std::function<void()> updateListener;

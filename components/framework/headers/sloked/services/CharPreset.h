@@ -19,39 +19,35 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SERVICES_TEXTRENDER_H_
-#define SLOKED_SERVICES_TEXTRENDER_H_
+#ifndef SLOKED_SERVICES_CHARPRESET_H_
+#define SLOKED_SERVICES_CHARPRESET_H_
 
-#include "sloked/core/Encoding.h"
 #include "sloked/core/CharPreset.h"
+#include "sloked/core/Closeable.h"
 #include "sloked/kgr/Service.h"
 #include "sloked/kgr/ContextManager.h"
-#include "sloked/text/TextBlock.h"
-#include "sloked/text/cursor/TransactionStream.h"
-#include "sloked/text/fragment/TaggedText.h"
-#include "sloked/services/Service.h"
-#include "sloked/editor/doc-mgr/DocumentSet.h"
+#include "sloked/kgr/local/Context.h"
 
 namespace sloked {
 
-    class SlokedTextRenderService : public KgrService {
+    class SlokedCharPresetService : public KgrService {
      public:
-        SlokedTextRenderService(SlokedEditorDocumentSet &, const SlokedCharPreset &, KgrContextManager<KgrLocalContext> &);
-        void Attach(std::unique_ptr<KgrPipe>) override;
-    
+        SlokedCharPresetService(const SlokedCharPreset &, KgrContextManager<KgrLocalContext> &);
+        void Attach(std::unique_ptr<KgrPipe>) final;
+
      private:
-        SlokedEditorDocumentSet &documents;
         const SlokedCharPreset &charPreset;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
 
-    class SlokedTextRenderClient {
+    class SlokedCharPresetClient : public SlokedCloseable {
      public:
-        SlokedTextRenderClient(std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId);
-        std::optional<KgrValue> Render(const TextPosition &, const TextPosition &);
+        SlokedCharPresetClient(std::unique_ptr<KgrPipe>, SlokedCharPreset &);
+        void Close() final;
 
      private:
-        SlokedServiceClient client;
+        std::unique_ptr<KgrPipe> pipe;
+        SlokedCharPreset &charPreset;
     };
 }
 

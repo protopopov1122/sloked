@@ -50,8 +50,8 @@ namespace sloked {
         float fraction;
     };
 
-    TerminalSplitter::TerminalSplitter(SlokedTerminal &term, Splitter::Direction dir, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : term(term), direction(dir), encoding(encoding), charWidth(charWidth) {}
+    TerminalSplitter::TerminalSplitter(SlokedTerminal &term, Splitter::Direction dir, const Encoding &encoding, const SlokedCharPreset &charPreset)
+        : term(term), direction(dir), encoding(encoding), charPreset(charPreset) {}
 
     unsigned int TerminalSplitter::GetMinimum() const {
         unsigned int min = 0;
@@ -87,7 +87,7 @@ namespace sloked {
 
     SlokedIndexed<SlokedTerminal &, TerminalSplitter::WinId> TerminalSplitter::NewTerminal(const Splitter::Constraints &constraints) {
         TextPosition zero{0, 0};
-        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charWidth, zero, zero);
+        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charPreset, zero, zero);
         this->windows.push_back(std::make_pair(win, constraints));
         this->Update();
         return {this->windows.size() - 1, *win};
@@ -98,7 +98,7 @@ namespace sloked {
             throw SlokedError("Incorrect window index " + std::to_string(idx));
         }
         TextPosition zero{0, 0};
-        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charWidth, zero, zero);
+        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charPreset, zero, zero);
         this->windows.insert(this->windows.begin() + idx, std::make_pair(win, constraints));
         this->Update();
         return {idx, *win};

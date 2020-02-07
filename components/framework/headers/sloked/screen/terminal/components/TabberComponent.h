@@ -22,7 +22,7 @@
 #ifndef SLOKED_SCREEN_TERMINAL_COMPONENTS_TABBERCOMPONENT_H_
 #define SLOKED_SCREEN_TERMINAL_COMPONENTS_TABBERCOMPONENT_H_
 
-#include "sloked/core/CharWidth.h"
+#include "sloked/core/CharPreset.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/components/TabberComponent.h"
 #include "sloked/screen/terminal/Terminal.h"
@@ -35,7 +35,7 @@ namespace sloked {
 
     class TerminalTabberComponent : public SlokedTabberComponent {
      public:
-        TerminalTabberComponent(SlokedTerminal &, const Encoding &, const SlokedCharWidth &);
+        TerminalTabberComponent(SlokedTerminal &, const Encoding &, const SlokedCharPreset &);
 
         std::size_t GetWindowCount() const override;
         std::shared_ptr<Window> GetFocus() const override;
@@ -80,7 +80,7 @@ namespace sloked {
 
         TerminalTabber tabber;
         const Encoding &encoding;
-        const SlokedCharWidth &charWidth;
+        const SlokedCharPreset &charPreset;
         std::vector<std::shared_ptr<TerminalTabberWindow>> components;
         std::function<void()> updateListener;
     };

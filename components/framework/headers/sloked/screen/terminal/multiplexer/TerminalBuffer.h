@@ -24,7 +24,7 @@
 
 #include "sloked/core/Position.h"
 #include "sloked/core/Encoding.h"
-#include "sloked/core/CharWidth.h"
+#include "sloked/core/CharPreset.h"
 #include "sloked/screen/terminal/Terminal.h"
 #include "sloked/screen/terminal/multiplexer/BufferedGraphics.h"
 #include <memory>
@@ -34,7 +34,7 @@ namespace sloked {
 
     class BufferedTerminal : public SlokedTerminal {
      public:
-        BufferedTerminal(SlokedTerminal &, const Encoding &, const SlokedCharWidth &);
+        BufferedTerminal(SlokedTerminal &, const Encoding &, const SlokedCharPreset &);
 
         void UpdateSize();
     
@@ -70,7 +70,7 @@ namespace sloked {
 
         SlokedTerminal &term;
         const Encoding &encoding;
-        const SlokedCharWidth &charWidth;
+        const SlokedCharPreset &charPreset;
         bool cls;
         bool show_cursor;
         std::unique_ptr<Character[]> buffer;

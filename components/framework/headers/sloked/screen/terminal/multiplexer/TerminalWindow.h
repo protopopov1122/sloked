@@ -24,7 +24,7 @@
 
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/terminal/Terminal.h"
-#include "sloked/core/CharWidth.h"
+#include "sloked/core/CharPreset.h"
 #include "sloked/screen/terminal/multiplexer/BufferedGraphics.h"
 #include <functional>
 
@@ -32,7 +32,7 @@ namespace sloked {
 
     class TerminalWindow : public SlokedTerminal {
      public:
-        TerminalWindow(SlokedTerminal &, const Encoding &, const SlokedCharWidth &, const TextPosition &, const TextPosition &);
+        TerminalWindow(SlokedTerminal &, const Encoding &, const SlokedCharPreset &, const TextPosition &, const TextPosition &);
 
         void Move(const TextPosition &);
         void Resize(const TextPosition &);
@@ -63,7 +63,7 @@ namespace sloked {
      private:
         SlokedTerminal &term;
         const Encoding &encoding;
-        const SlokedCharWidth &charWidth;
+        const SlokedCharPreset &charPreset;
         TextPosition offset;
         TextPosition size;
         Line line;

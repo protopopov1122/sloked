@@ -60,8 +60,8 @@ namespace sloked {
     class SlokedTextRenderContext : public SlokedServiceContext {
      public:
         SlokedTextRenderContext(std::unique_ptr<KgrPipe> pipe,
-            SlokedEditorDocumentSet &documents, const SlokedCharWidth &charWidth)
-            : SlokedServiceContext(std::move(pipe)), documents(documents), charWidth(charWidth), handle(documents.Empty()), document(nullptr) {
+            SlokedEditorDocumentSet &documents, const SlokedCharPreset &charPreset)
+            : SlokedServiceContext(std::move(pipe)), documents(documents), charPreset(charPreset), handle(documents.Empty()), document(nullptr) {
                 
             this->BindMethod("attach", &SlokedTextRenderContext::Attach);
             this->BindMethod("render", &SlokedTextRenderContext::Render);
@@ -76,7 +76,7 @@ namespace sloked {
                     externalUri = doc.value().GetObject().GetUpstreamURI();
                 }
                 this->handle = std::move(doc.value());
-                this->document = std::make_unique<DocumentContent>(this->handle.GetObject(), this->charWidth);
+                this->document = std::make_unique<DocumentContent>(this->handle.GetObject(), this->charPreset);
             }
         }
 
@@ -141,7 +141,7 @@ namespace sloked {
             }
             
             auto realLine = this->document->text.GetLine(line);
-            auto realPos = this->charWidth.GetRealPosition(realLine, column, this->document->conv.GetDestination());
+            auto realPos = this->charPreset.GetRealPosition(realLine, column, this->document->conv.GetDestination());
             auto realColumn = column < this->document->conv.GetDestination().CodepointCount(realLine) ? realPos.first : realPos.second;
             const auto &offset = this->document->frame.GetOffset();
             KgrDictionary cursor {
@@ -157,10 +157,10 @@ namespace sloked {
      private:
 
         struct DocumentContent {
-            DocumentContent(SlokedEditorDocument &document, const SlokedCharWidth &charWidth)
+            DocumentContent(SlokedEditorDocument &document, const SlokedCharPreset &charPreset)
                 : text(document.GetText()), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
                   transactionListeners(document.GetTransactionListeners()), tags(document.GetTagger()),
-                  frame(document.GetText(), document.GetEncoding(), charWidth), taggersUpdated{false} {
+                  frame(document.GetText(), document.GetEncoding(), charPreset), taggersUpdated{false} {
 
                 this->updateListener = std::make_shared<DocumentUpdateListener>();
                 this->transactionListeners.AddListener(this->updateListener);
@@ -186,18 +186,18 @@ namespace sloked {
         };
 
         SlokedEditorDocumentSet &documents;
-        const SlokedCharWidth &charWidth;
+        const SlokedCharPreset &charPreset;
         SlokedEditorDocumentSet::Document handle;
         std::unique_ptr<DocumentContent> document;
         KgrArray rendered;
     };
 
 
-    SlokedTextRenderService::SlokedTextRenderService(SlokedEditorDocumentSet &documents, const SlokedCharWidth &charWidth, KgrContextManager<KgrLocalContext> &contextManager)
-        : documents(documents), charWidth(charWidth), contextManager(contextManager) {}
+    SlokedTextRenderService::SlokedTextRenderService(SlokedEditorDocumentSet &documents, const SlokedCharPreset &charPreset, KgrContextManager<KgrLocalContext> &contextManager)
+        : documents(documents), charPreset(charPreset), contextManager(contextManager) {}
 
     void SlokedTextRenderService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedTextRenderContext>(std::move(pipe), documents, this->charWidth);
+        auto ctx = std::make_unique<SlokedTextRenderContext>(std::move(pipe), documents, this->charPreset);
         this->contextManager.Attach(std::move(ctx));
     }
 

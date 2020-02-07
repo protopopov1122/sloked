@@ -117,8 +117,8 @@ namespace sloked {
         }
     }
 
-    TerminalTabberComponent::TerminalTabberComponent(SlokedTerminal &term, const Encoding &encoding, const SlokedCharWidth &charWidth)
-        : SlokedTabberComponent(Type::Tabber), tabber(term), encoding(encoding), charWidth(charWidth) {}
+    TerminalTabberComponent::TerminalTabberComponent(SlokedTerminal &term, const Encoding &encoding, const SlokedCharPreset &charPreset)
+        : SlokedTabberComponent(Type::Tabber), tabber(term), encoding(encoding), charPreset(charPreset) {}
 
     std::size_t TerminalTabberComponent::GetWindowCount() const {
         return this->components.size();
@@ -143,7 +143,7 @@ namespace sloked {
 
     std::shared_ptr<TerminalTabberComponent::Window> TerminalTabberComponent::NewWindow() {
         auto term = this->tabber.NewTab();
-        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
+        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charPreset);
         auto window = std::make_shared<TerminalTabberWindow>(term.index, std::move(component), *this);
         window->GetComponent().OnUpdate(this->updateListener);
         this->components.push_back(window);
@@ -155,7 +155,7 @@ namespace sloked {
 
     std::shared_ptr<TerminalTabberComponent::Window> TerminalTabberComponent::NewWindow(Window::Id idx) {
         auto term = this->tabber.NewTab(idx);
-        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charWidth);
+        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charPreset);
         auto window = std::make_shared<TerminalTabberWindow>(term.index, std::move(component), *this);
         window->GetComponent().OnUpdate(this->updateListener);
         this->components.insert(this->components.begin() + idx, window);

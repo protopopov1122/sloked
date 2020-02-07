@@ -32,8 +32,8 @@ namespace sloked {
     template <typename ResizeListener>
     class SlokedTerminalScreenProvider : public SlokedScreenProvider {
      public:
-        SlokedTerminalScreenProvider(SlokedTerminal &terminal, const Encoding &encoding, const SlokedCharWidth &charWidth, SlokedTerminalInputSource &inputSource)
-            : terminal(terminal), encoding(encoding), rootComponent(terminal, encoding, charWidth), screen(rootComponent), inputSource(inputSource), size(terminal) {}
+        SlokedTerminalScreenProvider(SlokedTerminal &terminal, const Encoding &encoding, const SlokedCharPreset &charPreset, SlokedTerminalInputSource &inputSource)
+            : terminal(terminal), encoding(encoding), rootComponent(terminal, encoding, charPreset), screen(rootComponent), inputSource(inputSource), size(terminal) {}
 
         void Render(std::function<void(SlokedScreenComponent &)> render) final {
             this->screen.Lock([&](auto &screen) {

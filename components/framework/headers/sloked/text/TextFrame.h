@@ -24,7 +24,7 @@
 
 #include "sloked/core/Encoding.h"
 #include "sloked/core/Position.h"
-#include "sloked/core/CharWidth.h"
+#include "sloked/core/CharPreset.h"
 #include "sloked/text/TextBlock.h"
 #include <vector>
 
@@ -32,7 +32,7 @@ namespace sloked {
 
     class TextFrameView : public TextBlockView {
      public:
-        TextFrameView(const TextBlockView &, const Encoding &, const SlokedCharWidth &);
+        TextFrameView(const TextBlockView &, const Encoding &, const SlokedCharPreset &);
 
         std::size_t GetLastLine() const override;
         std::size_t GetTotalLength() const override;
@@ -62,7 +62,7 @@ namespace sloked {
 
         const TextBlockView &text;
         const Encoding &encoding;
-        const SlokedCharWidth &charWidth;
+        const SlokedCharPreset &charPreset;
         TextPosition offset;
         TextPosition size;
         std::vector<std::unique_ptr<Line>> buffer;
