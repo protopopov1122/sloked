@@ -22,6 +22,7 @@
 #include "sloked/services/TextPane.h"
 #include "sloked/screen/components/ComponentTree.h"
 #include "sloked/core/Locale.h"
+#include "sloked/screen/components/TextPane.h"
 #include <set>
 
 namespace sloked {
@@ -41,7 +42,7 @@ namespace sloked {
         SetBackgroundGraphics
     };
 
-    class SlokedTextPaneComponent : public SlokedTextPaneWidget {
+    class SlokedTextPaneImpl : public SlokedTextPaneWidget {
      public:
         class Frame {
          public:
@@ -112,7 +113,7 @@ namespace sloked {
             std::function<void()> listener;
         };
 
-        SlokedTextPaneComponent(Frame &frame)
+        SlokedTextPaneImpl(Frame &frame)
             : frame(frame) {}
 
         
@@ -129,28 +130,28 @@ namespace sloked {
                 RenderCommand command = static_cast<RenderCommand>(cmd.AsDictionary()["command"].AsInt());
                 switch (command) {
                     case RenderCommand::SetPosition:
-                        pane.SetPosition(static_cast<TextPosition::Line>(cmd.AsDictionary()["line"].AsInt()),
-                            static_cast<TextPosition::Column>(cmd.AsDictionary()["column"].AsInt()));
+                        pane.SetPosition(static_cast<SlokedGraphicsPoint::Coordinate>(cmd.AsDictionary()["line"].AsInt()),
+                            static_cast<SlokedGraphicsPoint::Coordinate>(cmd.AsDictionary()["column"].AsInt()));
                         break;
 
                     case RenderCommand::MoveUp:
-                        pane.MoveUp(static_cast<TextPosition::Line>(cmd.AsDictionary()["line"].AsInt()));
+                        pane.MoveUp(static_cast<SlokedGraphicsPoint::Coordinate>(cmd.AsDictionary()["line"].AsInt()));
                         break;
 
                     case RenderCommand::MoveDown:
-                        pane.MoveDown(static_cast<TextPosition::Line>(cmd.AsDictionary()["line"].AsInt()));
+                        pane.MoveDown(static_cast<SlokedGraphicsPoint::Coordinate>(cmd.AsDictionary()["line"].AsInt()));
                         break;
 
                     case RenderCommand::MoveBackward:
-                        pane.MoveBackward(static_cast<TextPosition::Column>(cmd.AsDictionary()["column"].AsInt()));
+                        pane.MoveBackward(static_cast<SlokedGraphicsPoint::Coordinate>(cmd.AsDictionary()["column"].AsInt()));
                         break;
 
                     case RenderCommand::MoveForward:
-                        pane.MoveForward(static_cast<TextPosition::Column>(cmd.AsDictionary()["column"].AsInt()));
+                        pane.MoveForward(static_cast<SlokedGraphicsPoint::Coordinate>(cmd.AsDictionary()["column"].AsInt()));
                         break;
 
                     case RenderCommand::ShowCursor:
-                        pane.ShowCursor(static_cast<TextPosition::Column>(cmd.AsDictionary()["show"].AsBoolean()));
+                        pane.ShowCursor(cmd.AsDictionary()["show"].AsBoolean());
                         break;
 
                     case RenderCommand::ClearScreen:
@@ -158,7 +159,8 @@ namespace sloked {
                         break;
 
                     case RenderCommand::ClearChars:
-                        pane.ClearChars(static_cast<TextPosition::Column>(cmd.AsDictionary()["columns"].AsInt()));
+                        pane.ClearArea({static_cast<SlokedGraphicsPoint::Coordinate>(cmd.AsDictionary()["line"].AsInt()),
+                            static_cast<SlokedGraphicsPoint::Coordinate>(cmd.AsDictionary()["column"].AsInt())});
                         break;
 
                     case RenderCommand::Write:
@@ -195,8 +197,10 @@ namespace sloked {
             
             this->BindMethod("connect", &SlokedTextPaneContext::Connect);
             this->BindMethod("close", &SlokedTextPaneContext::Close);
-            this->BindMethod("getWidth", &SlokedTextPaneContext::GetWidth);
+            this->BindMethod("getMaxWidth", &SlokedTextPaneContext::GetMaxWidth);
             this->BindMethod("getHeight", &SlokedTextPaneContext::GetHeight);
+            this->BindMethod("getCharWidth", &SlokedTextPaneContext::GetCharWidth);
+            this->BindMethod("getCharHeight", &SlokedTextPaneContext::GetCharHeight);
             this->BindMethod("render", &SlokedTextPaneContext::Render);
             this->BindMethod("getInput", &SlokedTextPaneContext::GetInput);
         }
@@ -229,7 +233,7 @@ namespace sloked {
                         SlokedComponentTree::Traverse(component, this->path.value()).AsHandle().Close();
                     }
                     this->frame.Reset();
-                    SlokedComponentTree::Traverse(component, path).AsHandle().NewTextPane(std::make_unique<SlokedTextPaneComponent>(frame));
+                    SlokedComponentTree::Traverse(component, path).AsHandle().NewTextPane(std::make_unique<SlokedTextPaneImpl>(frame));
                     this->path = path;
                     this->frame.SubscribeOnText(params.AsDictionary()["text"].AsBoolean());
                     const auto &keys = params.AsDictionary()["keys"].AsArray();
@@ -245,7 +249,7 @@ namespace sloked {
             });
         }
 
-        void GetWidth(const std::string &method, const KgrValue &params, Response &rsp) {
+        void GetMaxWidth(const std::string &method, const KgrValue &params, Response &rsp) {
             if (this->path.has_value()) {
                 RootLock([this, params, rsp = std::move(rsp)](auto &component) mutable {
                     auto &cmp = SlokedComponentTree::Traverse(component, this->path.value());
@@ -259,6 +263,25 @@ namespace sloked {
                 RootLock([this, rsp = std::move(rsp)](auto &component) mutable {
                     auto &cmp = SlokedComponentTree::Traverse(component, this->path.value());
                     rsp.Result(static_cast<int64_t>(cmp.GetDimensions().line));
+                });
+            }
+        }
+
+        void GetCharWidth(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->path.has_value()) {
+                RootLock([this, params, rsp = std::move(rsp)](auto &component) mutable {
+                    auto &cmp = SlokedComponentTree::Traverse(component, this->path.value());
+                    char32_t value = params.AsInt();
+                    rsp.Result(static_cast<int64_t>(cmp.AsHandle().GetComponent().AsTextPane().GetCharPreset().GetWidth(value)));
+                });
+            }
+        }
+
+        void GetCharHeight(const std::string &method, const KgrValue &params, Response &rsp) {
+            if (this->path.has_value()) {
+                RootLock([this, rsp = std::move(rsp)](auto &component) mutable {
+                    auto &cmp = SlokedComponentTree::Traverse(component, this->path.value());
+                    rsp.Result(static_cast<int64_t>(cmp.AsHandle().GetComponent().AsTextPane().GetCharPreset().GetHeight()));
                 });
             }
         }
@@ -302,7 +325,7 @@ namespace sloked {
 
         SlokedMonitor<SlokedScreenComponent &> &root;
         const Encoding &encoding;
-        SlokedTextPaneComponent::Frame frame;
+        SlokedTextPaneImpl::Frame frame;
         std::optional<SlokedPath> path;
     };
 
@@ -316,10 +339,39 @@ namespace sloked {
 
     class SlokedTextPaneClient::SlokedTextPaneRender : public SlokedTextPaneClient::Render {
      public:
-        SlokedTextPaneRender(SlokedServiceClient &client)
-            : client(client) {}
+        class VisualPreset : public SlokedCharacterVisualPreset {
+         public:
+            VisualPreset(SlokedServiceClient &client)
+                : client(client) {}
+            
+            SlokedGraphicsPoint::Coordinate GetWidth(char32_t value) const final {
+                auto rsp = this->client.Invoke("getCharWidth", static_cast<int64_t>(value));
+                auto res = rsp.Get();
+                if (res.HasResult() && res.GetResult().Is(KgrValueType::Integer)) {
+                    return static_cast<SlokedGraphicsPoint::Coordinate>(res.GetResult().AsInt());
+                } else {
+                    return 0;
+                }
+            }
+            
+            SlokedGraphicsPoint::Coordinate GetHeight() const final {
+                auto rsp = this->client.Invoke("getCharHeight", {});
+                auto res = rsp.Get();
+                if (res.HasResult() && res.GetResult().Is(KgrValueType::Integer)) {
+                    return static_cast<SlokedGraphicsPoint::Coordinate>(res.GetResult().AsInt());
+                } else {
+                    return 0;
+                }
+            }
 
-        void SetPosition(Line line, Column column) override {
+         private:
+            SlokedServiceClient &client;
+        };
+
+        SlokedTextPaneRender(SlokedServiceClient &client)
+            : client(client), visualPreset(client) {}
+
+        void SetPosition(TextPosition::Line line, TextPosition::Column column) override {
             this->renderCommands.Append(KgrDictionary {
                 { "command", static_cast<int64_t>(RenderCommand::SetPosition) },
                 { "line", static_cast<int64_t>(line) },
@@ -327,28 +379,28 @@ namespace sloked {
             });
         }
 
-        void MoveUp(Line line) override {
+        void MoveUp(TextPosition::Line line) override {
             this->renderCommands.Append(KgrDictionary {
                 { "command", static_cast<int64_t>(RenderCommand::MoveUp) },
                 { "line", static_cast<int64_t>(line) }
             });
         }
 
-        void MoveDown(Line line) override {
+        void MoveDown(TextPosition::Line line) override {
             this->renderCommands.Append(KgrDictionary {
                 { "command", static_cast<int64_t>(RenderCommand::MoveDown) },
                 { "line", static_cast<int64_t>(line) }
             });
         }
 
-        void MoveBackward(Column column) override {
+        void MoveBackward(TextPosition::Column column) override {
             this->renderCommands.Append(KgrDictionary {
                 { "command", static_cast<int64_t>(RenderCommand::MoveBackward) },
                 { "column", static_cast<int64_t>(column) }
             });
         }
 
-        void MoveForward(Column column) override {
+        void MoveForward(TextPosition::Column column) override {
             this->renderCommands.Append(KgrDictionary {
                 { "command", static_cast<int64_t>(RenderCommand::MoveForward) },
                 { "column", static_cast<int64_t>(column) }
@@ -368,31 +420,36 @@ namespace sloked {
             });
         }
 
-        void ClearChars(Column columns) override {
+        void ClearArea(TextPosition range) override {
             this->renderCommands.Append(KgrDictionary {
                 { "command", static_cast<int64_t>(RenderCommand::ClearChars) },
-                { "columns", static_cast<int64_t>(columns) }
+                { "line", static_cast<int64_t>(range.line) },
+                { "column", static_cast<int64_t>(range.column) }
             });
         }
 
-        Column GetWidth() override {
-            auto rsp = this->client.Invoke("getWidth", {});
+        SlokedGraphicsPoint::Coordinate GetMaxWidth() override {
+            auto rsp = this->client.Invoke("getMaxWidth", {});
             auto res = rsp.Get();
             if (res.HasResult() && res.GetResult().Is(KgrValueType::Integer)) {
-                return static_cast<Column>(res.GetResult().AsInt());
+                return static_cast<SlokedGraphicsPoint::Coordinate>(res.GetResult().AsInt());
             } else {
                 return 0;
             }
         }
 
-        Line GetHeight() override {
+        SlokedGraphicsPoint::Coordinate GetHeight() override {
             auto rsp = this->client.Invoke("getHeight", {});
             auto res = rsp.Get();
             if (res.HasResult() && res.GetResult().Is(KgrValueType::Integer)) {
-                return static_cast<Column>(res.GetResult().AsInt());
+                return static_cast<SlokedGraphicsPoint::Coordinate>(res.GetResult().AsInt());
             } else {
                 return 0;
             }
+        }
+
+        const SlokedCharacterVisualPreset &GetCharPreset() const override {
+            return this->visualPreset;
         }
 
         void Write(const std::string &text) override {
@@ -435,6 +492,7 @@ namespace sloked {
      private:
         SlokedServiceClient &client;
         KgrArray renderCommands;
+        VisualPreset visualPreset;
     };
 
     SlokedTextPaneClient::SlokedTextPaneClient(std::unique_ptr<KgrPipe> pipe, std::function<bool()> holdsLock)

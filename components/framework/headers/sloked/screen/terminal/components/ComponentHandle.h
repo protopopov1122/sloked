@@ -42,7 +42,7 @@ namespace sloked {
         
         bool HasComponent() const override;
         SlokedScreenComponent &GetComponent() const override;
-        SlokedScreenComponent &NewTextPane(std::unique_ptr<SlokedTextPaneWidget>) override;
+        SlokedTextPaneComponent &NewTextPane(std::unique_ptr<SlokedTextPaneWidget>) override;
         SlokedSplitterComponent &NewSplitter(Splitter::Direction) override;
         SlokedTabberComponent &NewTabber() override;
         SlokedMultiplexerComponent &NewMultiplexer() override;

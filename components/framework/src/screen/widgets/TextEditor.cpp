@@ -103,7 +103,7 @@ namespace sloked {
     void SlokedTextEditor::Render(SlokedTextPane &pane) {
         auto renderRes = this->cursorClient.Render(TextPosition {
             pane.GetHeight(),
-            pane.GetWidth() - 1
+            pane.GetMaxWidth() - 1
         }, this->tagger);
         if (!renderRes.has_value()) {
             return;

@@ -74,7 +74,6 @@
 #include "sloked/namespace/Empty.h"
 #include "sloked/editor/configuration/Compat.h"
 #include "sloked/text/fragment/Updater.h"
-#include "sloked/screen/terminal/SDL.h"
 #include <chrono>
 
 using namespace sloked;
@@ -259,11 +258,18 @@ static const KgrValue DefaultConfiguration = KgrDictionary {
     }
 };
 
+class SlokedTestCharVisualPreset : public SlokedCharacterVisualPreset {
+ public:
+    SlokedGraphicsPoint::Coordinate GetHeight() const final {
+        return 1;
+    }
+
+    SlokedGraphicsPoint::Coordinate GetWidth(char32_t chr) const final {
+        return chr == U' ' ? 2 : 1;
+    }
+};
+
 int main(int argc, const char **argv) {
-    SlokedSDLGlobalEventQueue::Get().EnableText();
-    auto sdlWin = std::make_unique<SlokedSDLWindow>();
-    sdlWin->Open({640, 480});
-    SlokedSDLTerminal sdlTerminal(std::move(sdlWin));
     // Initialize globals
     SlokedFailure::SetupHandler();
     SlokedLocale::Setup();
@@ -520,8 +526,8 @@ int main(int argc, const char **argv) {
     int i = 0;
     auto renderStatus = [&] {
         render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
-        render.ClearScreen();
         render.SetPosition(0, 0);
+        render.ClearArea(TextPosition{1, 10});
         render.Write(std::to_string(i++));
         render.Flush();
     };

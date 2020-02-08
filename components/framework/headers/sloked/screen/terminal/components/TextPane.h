@@ -25,33 +25,39 @@
 #include "sloked/Base.h"
 #include "sloked/screen/widgets/TextPane.h"
 #include "sloked/screen/terminal/Terminal.h"
+#include <memory>
 
 namespace sloked {
 
     class TerminalTextPane : public SlokedTextPane {
      public:
         TerminalTextPane(SlokedTerminal &);
+        ~TerminalTextPane();
     
-        void SetPosition(Line, Column) override;
-        void MoveUp(Line) override;
-        void MoveDown(Line) override;
-        void MoveBackward(Column) override;
-        void MoveForward(Column) override;
+        void SetPosition(TextPosition::Line, TextPosition::Column) final;
+        void MoveUp(TextPosition::Line) final;
+        void MoveDown(TextPosition::Line) final;
+        void MoveBackward(TextPosition::Column) final;
+        void MoveForward(TextPosition::Column) final;
 
-        void ShowCursor(bool) override;
-        void ClearScreen() override;
-        void ClearChars(Column) override;
-        Column GetWidth() override;
-        Line GetHeight() override;
+        void ShowCursor(bool) final;
+        void ClearScreen() final;
+        void ClearArea(TextPosition) final;
+        SlokedGraphicsPoint::Coordinate GetMaxWidth() final;
+        TextPosition::Line GetHeight() final;
+        const SlokedCharacterVisualPreset &GetCharPreset() const final;
 
-        void Write(const std::string &) override;
+        void Write(const std::string &) final;
 
-        void SetGraphicsMode(SlokedTextGraphics) override;
-        void SetGraphicsMode(SlokedBackgroundGraphics) override;
-        void SetGraphicsMode(SlokedForegroundGraphics) override;
+        void SetGraphicsMode(SlokedTextGraphics) final;
+        void SetGraphicsMode(SlokedBackgroundGraphics) final;
+        void SetGraphicsMode(SlokedForegroundGraphics) final;
         
      private:
+        class TerminalVisualPreset;
+
         SlokedTerminal &term;
+        std::unique_ptr<TerminalVisualPreset> visualPreset;
     };
 }
 

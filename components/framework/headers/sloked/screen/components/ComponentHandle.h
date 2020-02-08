@@ -32,12 +32,13 @@ namespace sloked {
     class SlokedSplitterComponent;
     class SlokedTabberComponent;
     class SlokedMultiplexerComponent;
+    class SlokedTextPaneComponent;
 
     class SlokedComponentHandle : public SlokedScreenComponent {
      public:
         virtual bool HasComponent() const = 0;
         virtual SlokedScreenComponent &GetComponent() const = 0;
-        virtual SlokedScreenComponent &NewTextPane(std::unique_ptr<SlokedTextPaneWidget>) = 0;
+        virtual SlokedTextPaneComponent &NewTextPane(std::unique_ptr<SlokedTextPaneWidget>) = 0;
         virtual SlokedSplitterComponent &NewSplitter(Splitter::Direction) = 0;
         virtual SlokedTabberComponent &NewTabber() = 0;
         virtual SlokedMultiplexerComponent &NewMultiplexer() = 0;

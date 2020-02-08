@@ -127,10 +127,9 @@ namespace sloked {
         std::size_t idx = this->line * this->width + this->col;
         while (max--) {
             Character &chr = this->buffer[idx++];
-            if (chr.value != U' ') {
-                chr.value = ' ';
-                chr.updated = true;
-            }
+            chr.value = ' ';
+            chr.updated = true;
+            chr.graphics = this->graphics;
         }
     }
 

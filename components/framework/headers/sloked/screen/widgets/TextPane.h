@@ -22,8 +22,8 @@
 #ifndef SLOKED_SCREEN_WIDGETS_TEXTPANE_H_
 #define SLOKED_SCREEN_WIDGETS_TEXTPANE_H_
 
-#include "sloked/Base.h"
-#include "sloked/core/Position.h"
+#include "sloked/screen/Character.h"
+#include "sloked/screen/Point.h"
 #include "sloked/screen/Component.h"
 #include "sloked/screen/Graphics.h"
 
@@ -31,22 +31,21 @@ namespace sloked {
 
     class SlokedTextPane {
      public:
-        using Line = TextPosition::Line;
-        using Column = TextPosition::Column;
 
         virtual ~SlokedTextPane() = default;
     
-        virtual void SetPosition(Line, Column) = 0;
-        virtual void MoveUp(Line) = 0;
-        virtual void MoveDown(Line) = 0;
-        virtual void MoveBackward(Column) = 0;
-        virtual void MoveForward(Column) = 0;
+        virtual void SetPosition(TextPosition::Line, TextPosition::Column) = 0;
+        virtual void MoveUp(TextPosition::Line) = 0;
+        virtual void MoveDown(TextPosition::Line) = 0;
+        virtual void MoveBackward(TextPosition::Column) = 0;
+        virtual void MoveForward(TextPosition::Column) = 0;
 
         virtual void ShowCursor(bool) = 0;
         virtual void ClearScreen() = 0;
-        virtual void ClearChars(Column) = 0;
-        virtual Column GetWidth() = 0;
-        virtual Line GetHeight() = 0;
+        virtual void ClearArea(TextPosition) = 0;
+        virtual SlokedGraphicsPoint::Coordinate GetMaxWidth() = 0;
+        virtual TextPosition::Line GetHeight() = 0;
+        virtual const SlokedCharacterVisualPreset &GetCharPreset() const = 0;
 
         virtual void Write(const std::string &) = 0;
 

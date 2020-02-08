@@ -23,27 +23,40 @@
 
 namespace sloked {
 
+    class TerminalTextPane::TerminalVisualPreset : public SlokedCharacterVisualPreset {
+     public:
+        SlokedGraphicsPoint::Coordinate GetWidth(char32_t) const final {
+            return 1;
+        }
+
+        SlokedGraphicsPoint::Coordinate GetHeight() const final {
+            return 1;
+        }
+    };
+
     TerminalTextPane::TerminalTextPane(SlokedTerminal &term)
-        : term(term) {}
+        : term(term), visualPreset(std::make_unique<TerminalVisualPreset>()) {}
 
-    void TerminalTextPane::SetPosition(Line l, Column c) {
-        this->term.SetPosition(l, c);
+    TerminalTextPane::~TerminalTextPane() = default;
+
+    void TerminalTextPane::SetPosition(TextPosition::Line line, TextPosition::Column column) {
+        this->term.SetPosition(line, column);
     }
 
-    void TerminalTextPane::MoveUp(Line l) {
-        this->term.MoveUp(l);
+    void TerminalTextPane::MoveUp(TextPosition::Line line) {
+        this->term.MoveUp(line);
     }
 
-    void TerminalTextPane::MoveDown(Line l) {
-        this->term.MoveDown(l);
+    void TerminalTextPane::MoveDown(TextPosition::Line line) {
+        this->term.MoveDown(line);
     }
 
-    void TerminalTextPane::MoveBackward(Column c) {
-        this->term.MoveBackward(c);
+    void TerminalTextPane::MoveBackward(TextPosition::Column column) {
+        this->term.MoveBackward(column);
     }
 
-    void TerminalTextPane::MoveForward(Column c) {
-        this->term.MoveForward(c);
+    void TerminalTextPane::MoveForward(TextPosition::Column column) {
+        this->term.MoveForward(column);
     }
 
     void TerminalTextPane::ShowCursor(bool s) {
@@ -54,16 +67,24 @@ namespace sloked {
         this->term.ClearScreen();
     }
 
-    void TerminalTextPane::ClearChars(Column c) {
-        this->term.ClearChars(c);
+    void TerminalTextPane::ClearArea(TextPosition range) {
+        for (SlokedGraphicsPoint::Coordinate line = 0; line < range.line; line++) {
+            this->term.MoveDown(1);
+            this->term.ClearChars(range.column);
+        }
+        this->term.MoveUp(range.line);
     }
 
-    TextPosition::Column TerminalTextPane::GetWidth() {
+    SlokedGraphicsPoint::Coordinate TerminalTextPane::GetMaxWidth() {
         return this->term.GetWidth();
     }
 
     TextPosition::Line TerminalTextPane::GetHeight() {
         return this->term.GetHeight();
+    }
+
+    const SlokedCharacterVisualPreset &TerminalTextPane::GetCharPreset() const {
+        return *this->visualPreset;
     }
 
     void TerminalTextPane::Write(const std::string &s) {

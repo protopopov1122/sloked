@@ -34,6 +34,7 @@ namespace sloked {
     class SlokedSplitterComponent;
     class SlokedTabberComponent;
     class SlokedScreenComponent;
+    class SlokedTextPaneComponent;
 
     class SlokedComponentListener {
      private:
@@ -63,6 +64,7 @@ namespace sloked {
         SlokedMultiplexerComponent &AsMultiplexer();
         SlokedSplitterComponent &AsSplitter();
         SlokedTabberComponent &AsTabber();
+        SlokedTextPaneComponent &AsTextPane();
 
         void ProcessInput(const SlokedKeyboardInput &);
         SlokedComponentListener AttachInputHandler(InputHandler);

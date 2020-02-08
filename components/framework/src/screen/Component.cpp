@@ -24,6 +24,7 @@
 #include "sloked/screen/components/MultiplexerComponent.h"
 #include "sloked/screen/components/SplitterComponent.h"
 #include "sloked/screen/components/TabberComponent.h"
+#include "sloked/screen/components/TextPane.h"
 #include "sloked/core/Error.h"
 
 namespace sloked {
@@ -64,6 +65,14 @@ namespace sloked {
             return *static_cast<SlokedTabberComponent *>(this);
         } else {
             throw SlokedError("Component: Not a tabber");
+        }
+    }
+
+    SlokedTextPaneComponent &SlokedScreenComponent::AsTextPane() {
+        if (this->type == Type::TextPane) {
+            return *static_cast<SlokedTextPaneComponent *>(this);
+        } else {
+            throw SlokedError("Component: Not a text pane");
         }
     }
     

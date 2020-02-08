@@ -24,11 +24,13 @@
 
 #include "sloked/screen/terminal/Terminal.h"
 #include "sloked/screen/widgets/TextPaneWidget.h"
+#include "sloked/screen/components/TextPane.h"
+#include "sloked/screen/terminal/components/TextPane.h"
 #include <memory>
 
 namespace sloked {
 
-    class TerminalTextPaneComponent : public SlokedScreenComponent {
+    class TerminalTextPaneComponent : public SlokedTextPaneComponent {
      public:
         TerminalTextPaneComponent(SlokedTerminal &, std::unique_ptr<SlokedTextPaneWidget>);
         
@@ -36,14 +38,17 @@ namespace sloked {
         void UpdateDimensions() override;
         TextPosition GetDimensions() override;
         void OnUpdate(std::function<void()>) override;
+        const SlokedCharacterVisualPreset &GetCharPreset() const override;
+
         
      protected:
-        using SlokedScreenComponent::SlokedScreenComponent;
+        using SlokedTextPaneComponent::SlokedTextPaneComponent;
         void ProcessComponentInput(const SlokedKeyboardInput &) override;
 
      private:
         SlokedTerminal &term;
         std::unique_ptr<SlokedTextPaneWidget> widget;
+        TerminalTextPane screen;
     };
 }
 
