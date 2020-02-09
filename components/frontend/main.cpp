@@ -258,7 +258,7 @@ static const KgrValue DefaultConfiguration = KgrDictionary {
     }
 };
 
-class SlokedTestCharVisualPreset : public SlokedCharacterVisualPreset {
+class SlokedTestCharVisualPreset : public SlokedFontProperties {
  public:
     SlokedGraphicsPoint::Coordinate GetHeight() const final {
         return 1;

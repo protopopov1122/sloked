@@ -34,7 +34,7 @@ namespace sloked {
      public:
         SlokedCursorContext(std::unique_ptr<KgrPipe> pipe, KgrServer::Connector renderConnector,
             SlokedEditorDocumentSet &documents)
-            : SlokedServiceContext(std::move(pipe)), documents(documents), renderConnector(std::move(renderConnector)), handle(documents.Empty()), document(nullptr), renderClient(nullptr) {
+            : SlokedServiceContext(std::move(pipe)), documents(documents), handle(documents.Empty()), document(nullptr) {
             
             this->BindMethod("connect", &SlokedCursorContext::Connect);
             this->BindMethod("insert", &SlokedCursorContext::Insert);
@@ -48,7 +48,6 @@ namespace sloked {
             this->BindMethod("undo", &SlokedCursorContext::Undo);
             this->BindMethod("redo", &SlokedCursorContext::Redo);
             this->BindMethod("getPosition", &SlokedCursorContext::GetPosition);
-            this->BindMethod("render", &SlokedCursorContext::Render);
         }
 
      protected:
@@ -135,53 +134,6 @@ namespace sloked {
             }
         }
 
-        void Render(const std::string &method, const KgrValue &params, Response &rsp) {
-            if (this->document != nullptr) {
-                TextPosition dim {
-                    static_cast<TextPosition::Line>(params.AsDictionary()["height"].AsInt()),
-                    static_cast<TextPosition::Column>(params.AsDictionary()["width"].AsInt())
-                };
-                if (this->renderClient == nullptr) {
-                    const std::string &tagger = params.AsDictionary()["tagger"].AsString();
-                    this->renderClient = std::make_shared<SlokedServiceClient>(this->renderConnector());
-                    renderClient->Invoke("attach", KgrDictionary {
-                        { "document", static_cast<int64_t>(this->document->documentId) },
-                        { "tagger", tagger }
-                    });
-                }
-                auto renderResponse = std::make_shared<SlokedServiceClient::ResponseHandle>(this->renderClient->Invoke("render", KgrDictionary {
-                    { "height", static_cast<int64_t>(dim.line) },
-                    { "width", static_cast<int64_t>(dim.column) },
-                    { "line", static_cast<int64_t>(this->document->cursor.GetLine()) },
-                    { "column", static_cast<int64_t>(this->document->cursor.GetColumn()) }
-                }));
-
-                this->Defer(std::make_unique<SlokedDynamicDeferredTask>([this, renderClient = this->renderClient, response = std::move(rsp), renderResponse](Callback cb) mutable {
-                    renderResponse->Notify(cb);
-                    return [this, renderClient, response = std::move(response), renderResponse]() mutable {
-                        auto res = renderResponse->GetOptional();
-                        if (res.has_value() && res.value().HasResult()) {
-                            response.Result(KgrDictionary {
-                                { "render", res.value().GetResult() },
-                                {
-                                    "cursor",
-                                    KgrDictionary {
-                                        { "line", static_cast<int64_t>(this->document->cursor.GetLine()) },
-                                        { "column", static_cast<int64_t>(this->document->cursor.GetColumn()) }
-                                    }
-                                }
-                            });
-                        } else {
-                            response.Result({});
-                        }
-                        return false;
-                    };
-                }));
-            } else {
-                rsp.Result({});
-            }
-        }
-
      private:
         struct DocumentContent {
             DocumentContent(SlokedEditorDocument &document, SlokedEditorDocumentSet::DocumentId id)
@@ -196,10 +148,8 @@ namespace sloked {
         };
 
         SlokedEditorDocumentSet &documents;
-        KgrServer::Connector renderConnector;
         SlokedEditorDocumentSet::Document handle;
         std::unique_ptr<DocumentContent> document;
-        std::shared_ptr<SlokedServiceClient> renderClient;
     };
 
 
@@ -305,25 +255,6 @@ namespace sloked {
                 static_cast<TextPosition::Line>(cursor["line"].AsInt()),
                 static_cast<TextPosition::Column>(cursor["column"].AsInt())
             };
-        }
-    }
-
-    std::optional<std::pair<KgrValue, TextPosition>> SlokedCursorClient::Render(const TextPosition &dim, const std::string &tagger) {
-        auto rsp = this->client.Invoke("render", KgrDictionary {
-            { "height", static_cast<int64_t>(dim.line) },
-            { "width", static_cast<int64_t>(dim.column) },
-            { "tagger", tagger }
-        });
-        auto clientRes = rsp.Get();
-        if (clientRes.HasResult()) {
-            const auto &cursor = clientRes.GetResult().AsDictionary()["cursor"].AsDictionary();
-            TextPosition pos {
-                static_cast<TextPosition::Line>(cursor["line"].AsInt()),
-                static_cast<TextPosition::Column>(cursor["column"].AsInt())
-            };
-            return std::make_pair(clientRes.GetResult().AsDictionary()["render"], pos);
-        } else {
-            return {};
         }
     }
 }

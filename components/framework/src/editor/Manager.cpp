@@ -58,8 +58,8 @@ namespace sloked {
     }
 
     void SlokedEditorManager::Close() {
-        for (auto &editor : this->editors) {
-            editor.second->Close();
+        for (auto it = this->editors.rbegin(); it != this->editors.rend(); ++it) {
+            it->second->Close();
         }
     }
 

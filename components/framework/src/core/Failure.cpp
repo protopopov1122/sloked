@@ -82,12 +82,18 @@ namespace sloked {
         std::set_terminate(SlokedTerminateHandler);
         std::signal(SIGSEGV, SlokedSignalHandler);
         std::signal(SIGTERM, SlokedSignalHandler);
+#ifdef SIGPIPE
+        std::signal(SIGPIPE, SIG_IGN);
+#endif
     }
 }
 #else
 namespace sloked {
 
     void SlokedFailure::SetupHandler() {
+#ifdef SIGPIPE
+        std::signal(SIGPIPE, SIG_IGN);
+#endif
     }
 }
 #endif

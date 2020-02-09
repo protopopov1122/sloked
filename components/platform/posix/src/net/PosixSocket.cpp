@@ -145,6 +145,7 @@ namespace sloked {
             if (!data.Empty()) {
                 auto res = write(this->socket, data.Data(), data.Size());
                 if (res == -1) {
+                    std::terminate();
                     this->Close();
                     throw SlokedError("PosixSocket: Write error");
                 }

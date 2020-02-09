@@ -38,7 +38,7 @@ namespace sloked {
         void UpdateDimensions() override;
         TextPosition GetDimensions() override;
         void OnUpdate(std::function<void()>) override;
-        const SlokedCharacterVisualPreset &GetCharPreset() const override;
+        const SlokedFontProperties &GetFontProperties() const override;
 
         
      protected:

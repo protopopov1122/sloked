@@ -45,7 +45,7 @@ namespace sloked {
         void ClearArea(TextPosition) final;
         SlokedGraphicsPoint::Coordinate GetMaxWidth() final;
         TextPosition::Line GetHeight() final;
-        const SlokedCharacterVisualPreset &GetCharPreset() const final;
+        const SlokedFontProperties &GetFontProperties() const final;
 
         void Write(const std::string &) final;
 
@@ -57,7 +57,7 @@ namespace sloked {
         class TerminalVisualPreset;
 
         SlokedTerminal &term;
-        std::unique_ptr<TerminalVisualPreset> visualPreset;
+        std::unique_ptr<TerminalVisualPreset> fontProperties;
     };
 }
 

@@ -45,8 +45,8 @@ namespace sloked {
         this->widget->OnUpdate(std::move(listener));
     }
     
-    const SlokedCharacterVisualPreset &TerminalTextPaneComponent::GetCharPreset() const {
-        return this->screen.GetCharPreset();
+    const SlokedFontProperties &TerminalTextPaneComponent::GetFontProperties() const {
+        return this->screen.GetFontProperties();
     }
     
     void TerminalTextPaneComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {

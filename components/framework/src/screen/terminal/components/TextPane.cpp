@@ -23,7 +23,7 @@
 
 namespace sloked {
 
-    class TerminalTextPane::TerminalVisualPreset : public SlokedCharacterVisualPreset {
+    class TerminalTextPane::TerminalVisualPreset : public SlokedFontProperties {
      public:
         SlokedGraphicsPoint::Coordinate GetWidth(char32_t) const final {
             return 1;
@@ -35,7 +35,7 @@ namespace sloked {
     };
 
     TerminalTextPane::TerminalTextPane(SlokedTerminal &term)
-        : term(term), visualPreset(std::make_unique<TerminalVisualPreset>()) {}
+        : term(term), fontProperties(std::make_unique<TerminalVisualPreset>()) {}
 
     TerminalTextPane::~TerminalTextPane() = default;
 
@@ -83,8 +83,8 @@ namespace sloked {
         return this->term.GetHeight();
     }
 
-    const SlokedCharacterVisualPreset &TerminalTextPane::GetCharPreset() const {
-        return *this->visualPreset;
+    const SlokedFontProperties &TerminalTextPane::GetFontProperties() const {
+        return *this->fontProperties;
     }
 
     void TerminalTextPane::Write(const std::string &s) {

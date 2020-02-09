@@ -134,7 +134,9 @@ namespace sloked {
                         this->subscribes.emplace(std::make_pair(code, alt));
                     }
                 }
-                this->pipe->Write({});
+                if (this->pipe->GetStatus() == KgrPipe::Status::Open) {
+                    this->pipe->Write({});
+                }
             });
         }
 
@@ -151,7 +153,9 @@ namespace sloked {
         }
 
         void SendInput(const SlokedKeyboardInput &evt) {
-            this->pipe->Write(EventToKgr(this->encoding, evt));
+            if (this->pipe->GetStatus() == KgrPipe::Status::Open) {
+                this->pipe->Write(EventToKgr(this->encoding, evt));
+            }
         }
 
         SlokedMonitor<SlokedScreenComponent &> &root;

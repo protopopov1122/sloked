@@ -61,7 +61,6 @@ namespace sloked {
         void Undo();
         void Redo();
         std::optional<TextPosition> GetPosition();
-        std::optional<std::pair<KgrValue, TextPosition>> Render(const TextPosition &, const std::string &);
 
      private:
         SlokedServiceClient client;

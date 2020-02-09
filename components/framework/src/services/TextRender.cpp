@@ -64,6 +64,7 @@ namespace sloked {
             : SlokedServiceContext(std::move(pipe)), documents(documents), charPreset(charPreset), handle(documents.Empty()), document(nullptr) {
                 
             this->BindMethod("attach", &SlokedTextRenderContext::Attach);
+            this->BindMethod("realPosition", &SlokedTextRenderContext::RealPosition);
             this->BindMethod("render", &SlokedTextRenderContext::Render);
         }
 
@@ -80,56 +81,50 @@ namespace sloked {
             }
         }
 
+        void RealPosition(const std::string &method, const KgrValue &params, Response &rsp) {
+            TextPosition::Line line = params.AsDictionary()["line"].AsInt();
+            TextPosition::Column column = params.AsDictionary()["column"].AsInt();
+            auto realLine = this->document->text.GetLine(line);
+            auto realColumnPos = this->charPreset.GetRealPosition(realLine, column, this->document->encoding);
+            auto realColumn = column < this->document->encoding.CodepointCount(realLine) ?
+                realColumnPos.first : realColumnPos.second;
+            rsp.Result(KgrDictionary {
+                { "line", static_cast<int64_t>(line) },
+                { "column", static_cast<int64_t>(realColumn) }
+            });
+        }
+
         void Render(const std::string &method, const KgrValue &params, Response &rsp) {
             const auto &dim = params.AsDictionary();
-            auto line = static_cast<TextPosition::Line>(dim["line"].AsInt());
-            auto column = static_cast<TextPosition::Column>(dim["column"].AsInt());
-            auto updated = this->document->frame.Update(TextPosition{
-                    static_cast<TextPosition::Line>(dim["height"].AsInt()),
-                    static_cast<TextPosition::Column>(dim["width"].AsInt())
-                }, TextPosition{
-                    line,
-                    column
-                }, this->document->updateListener->HasUpdates() || this->document->taggersUpdated.exchange(false));
-            this->document->updateListener->ResetUpdates();
+            auto lineNumber = static_cast<TextPosition::Line>(dim["line"].AsInt());
+            auto height = static_cast<TextPosition::Line>(dim["height"].AsInt());
+            const std::string tab = this->charPreset.GetTab(this->document->encoding);
 
-            if (updated) {
-                KgrArray fragments;
+            KgrArray lines;
+            auto lineIdx = lineNumber;
+            this->document->text.Visit(lineNumber, std::min(height,  static_cast<TextPosition::Line>(this->document->text.GetLastLine() - lineNumber + 1)), [&](auto line) {
                 std::optional<std::pair<std::string, std::optional<TaggedTextFragment<int>>>> back;
-                std::string newline = this->document->conv.Convert("\n");
-                this->document->frame.VisitSymbols([&](auto lineNumber, auto columnOffset, const auto &line) {
-                    for (std::size_t column = 0; column < line.size(); column++) {
-                        auto tag = this->document->tags.Get(TextPosition {
-                            static_cast<TextPosition::Line>(lineNumber),
-                            static_cast<TextPosition::Column>(columnOffset + column)
+                KgrArray fragments;
+                TextPosition::Column columnIdx{0};
+                this->document->encoding.IterateCodepoints(line, [&](auto start, auto length, auto chr) {
+                    std::string_view fragment = chr != U'\t' ? line.substr(start, length) : tab;
+                    auto tag = this->document->tags.Get(TextPosition {
+                        static_cast<TextPosition::Line>(lineIdx),
+                        static_cast<TextPosition::Column>(columnIdx)
+                    });
+                    if (!back.has_value()) {
+                        back = std::make_pair(fragment, tag);
+                    } else if (back.value().second != tag) {
+                        fragments.Append(KgrDictionary {
+                            { "tag", back.value().second.has_value() },
+                            { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
                         });
-                        if (!back.has_value()) {
-                            back = std::make_pair(line.at(column), tag);
-                        } else if (back.value().second != tag) {
-                            fragments.Append(KgrDictionary {
-                                { "tag", back.value().second.has_value() },
-                                { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
-                            });
-                            back = std::make_pair(line.at(column), tag);
-                        } else {
-                            back.value().first.append(line.at(column));
-                        }
+                        back = std::make_pair(fragment, tag);
+                    } else {
+                        back.value().first.append(fragment);
                     }
-                    
-                    if (lineNumber + 1 < this->document->text.GetLastLine()) {
-                        if (!back.has_value()) {
-                            back = std::make_pair(newline, std::optional<TaggedTextFragment<int>>{});
-                        } else if (back.value().second.has_value()) {
-                            fragments.Append(KgrDictionary {
-                                { "tag", back.value().second.has_value() },
-                                { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
-                            });
-                            back = std::make_pair(newline, std::optional<TaggedTextFragment<int>>{});
-                        } else {
-                            back.value().first.append(newline);
-                        }
-                    }
-
+                    columnIdx++;
+                    return true;
                 });
                 if (back.has_value()) {
                     fragments.Append(KgrDictionary {
@@ -137,28 +132,17 @@ namespace sloked {
                         { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
                     });
                 }
-                this->rendered = std::move(fragments);
-            }
-            
-            auto realLine = this->document->text.GetLine(line);
-            auto realPos = this->charPreset.GetRealPosition(realLine, column, this->document->conv.GetDestination());
-            auto realColumn = column < this->document->conv.GetDestination().CodepointCount(realLine) ? realPos.first : realPos.second;
-            const auto &offset = this->document->frame.GetOffset();
-            KgrDictionary cursor {
-                { "line", static_cast<int64_t>(line - offset.line) },
-                { "column", static_cast<int64_t>(realColumn - offset.column) }
-            };
-            rsp.Result(KgrDictionary {
-                { "cursor", std::move(cursor) },
-                { "content", this->rendered }
+                lineIdx++;
+                lines.Append(std::move(fragments));
             });
+            rsp.Result(std::move(lines));
         }
 
      private:
 
         struct DocumentContent {
             DocumentContent(SlokedEditorDocument &document, const SlokedCharPreset &charPreset)
-                : text(document.GetText()), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
+                : text(document.GetText()), encoding(document.GetEncoding()), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
                   transactionListeners(document.GetTransactionListeners()), tags(document.GetTagger()),
                   frame(document.GetText(), document.GetEncoding(), charPreset), taggersUpdated{false} {
 
@@ -176,6 +160,7 @@ namespace sloked {
             }
                 
             TextBlock &text;
+            const Encoding &encoding;
             EncodingConverter conv;
             SlokedTransactionListenerManager &transactionListeners;
             SlokedTextTagger<SlokedEditorDocument::TagType> &tags;
@@ -208,12 +193,25 @@ namespace sloked {
         });
     }
 
-    std::optional<KgrValue> SlokedTextRenderClient::Render(const TextPosition &pos, const TextPosition &dim) {
+    std::optional<TextPosition> SlokedTextRenderClient::RealPosition(TextPosition src) {
+        auto rsp = this->client.Invoke("realPosition", KgrDictionary {
+            { "line", static_cast<int64_t>(src.line) },
+            { "column", static_cast<int64_t>(src.column) }
+        });
+        auto renderRes = rsp.Get();
+        if (!renderRes.HasResult()) {
+            return {};
+        }
+        return TextPosition {
+            static_cast<TextPosition::Line>(renderRes.GetResult().AsDictionary()["line"].AsInt()),
+            static_cast<TextPosition::Column>(renderRes.GetResult().AsDictionary()["column"].AsInt())
+        };
+    }
+
+    std::optional<KgrValue> SlokedTextRenderClient::Render(TextPosition::Line line, TextPosition::Line height) {
         auto rsp = this->client.Invoke("render", KgrDictionary {
-            { "height", static_cast<int64_t>(dim.line) },
-            { "width", static_cast<int64_t>(dim.column) },
-            { "line", static_cast<int64_t>(pos.line) },
-            { "column", static_cast<int64_t>(pos.column) }
+            { "height", static_cast<int64_t>(height) },
+            { "line", static_cast<int64_t>(line) }
         });
         auto renderRes = rsp.Get();
         if (!renderRes.HasResult()) {

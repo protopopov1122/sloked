@@ -20,6 +20,7 @@
 */
 
 #include "sloked/services/Service.h"
+#include "sloked/kgr/net/Config.h"
 
 namespace sloked {
 
@@ -335,14 +336,19 @@ namespace sloked {
     }
 
     SlokedServiceClient::Response SlokedServiceClient::Get(int64_t id) {
-        while (!this->Has(id)) {
+        if (!this->Has(id)) {
             std::unique_lock lock(*this->mtx);
-            this->cv->wait(lock);
+            this->cv->wait_for(lock, KgrNetConfig::ResponseTimeout);
         }
         std::unique_lock lock(*this->mtx);
-        auto rsp = std::move(this->pending.at(id).front());
-        this->pending.at(id).pop();
-        return rsp;
+        if (this->pending.count(id) != 0 &&
+            !this->pending.at(id).empty()) {
+            auto rsp = std::move(this->pending.at(id).front());
+            this->pending.at(id).pop();
+            return rsp;
+        } else {
+            return Response(false, {});
+        }
     }
     
     void SlokedServiceClient::Drop(int64_t id) {

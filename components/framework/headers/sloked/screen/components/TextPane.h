@@ -8,7 +8,7 @@ namespace sloked {
 
     class SlokedTextPaneComponent : public SlokedScreenComponent {
      public:
-        virtual const SlokedCharacterVisualPreset &GetCharPreset() const = 0;
+        virtual const SlokedFontProperties &GetFontProperties() const = 0;
 
      protected:
         using SlokedScreenComponent::SlokedScreenComponent;

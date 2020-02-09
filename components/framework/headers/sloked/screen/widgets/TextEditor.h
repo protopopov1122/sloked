@@ -28,12 +28,13 @@
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentNotify.h"
+#include "sloked/services/TextRender.h"
 
 namespace sloked {
 
     class SlokedTextEditor : public SlokedTextPaneWidget {
      public:
-        SlokedTextEditor(const Encoding &, std::unique_ptr<KgrPipe>, std::function<void(SlokedCursorClient &)>, std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, const std::string &, SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black);
+        SlokedTextEditor(const Encoding &, std::unique_ptr<KgrPipe>, std::function<void(SlokedCursorClient &)>, std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, const std::string &, SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black);
 
         bool ProcessInput(const SlokedKeyboardInput &) override;
         void Render(SlokedTextPane &) override;
@@ -42,10 +43,12 @@ namespace sloked {
      private:
         EncodingConverter conv;
         SlokedCursorClient cursorClient;
+        SlokedTextRenderClient renderClient;
         SlokedDocumentNotifyClient notifyClient;
         std::string tagger;
         SlokedBackgroundGraphics background;
         std::function<void()> updateListener;
+        TextPosition cursorOffset;
     };
 }
 

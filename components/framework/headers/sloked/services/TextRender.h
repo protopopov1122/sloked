@@ -48,7 +48,8 @@ namespace sloked {
     class SlokedTextRenderClient {
      public:
         SlokedTextRenderClient(std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId);
-        std::optional<KgrValue> Render(const TextPosition &, const TextPosition &);
+        std::optional<TextPosition> RealPosition(TextPosition);
+        std::optional<KgrValue> Render(TextPosition::Line, TextPosition::Line);
 
      private:
         SlokedServiceClient client;

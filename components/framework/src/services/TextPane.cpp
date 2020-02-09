@@ -272,7 +272,7 @@ namespace sloked {
                 RootLock([this, params, rsp = std::move(rsp)](auto &component) mutable {
                     auto &cmp = SlokedComponentTree::Traverse(component, this->path.value());
                     char32_t value = params.AsInt();
-                    rsp.Result(static_cast<int64_t>(cmp.AsHandle().GetComponent().AsTextPane().GetCharPreset().GetWidth(value)));
+                    rsp.Result(static_cast<int64_t>(cmp.AsHandle().GetComponent().AsTextPane().GetFontProperties().GetWidth(value)));
                 });
             }
         }
@@ -281,7 +281,7 @@ namespace sloked {
             if (this->path.has_value()) {
                 RootLock([this, rsp = std::move(rsp)](auto &component) mutable {
                     auto &cmp = SlokedComponentTree::Traverse(component, this->path.value());
-                    rsp.Result(static_cast<int64_t>(cmp.AsHandle().GetComponent().AsTextPane().GetCharPreset().GetHeight()));
+                    rsp.Result(static_cast<int64_t>(cmp.AsHandle().GetComponent().AsTextPane().GetFontProperties().GetHeight()));
                 });
             }
         }
@@ -339,7 +339,7 @@ namespace sloked {
 
     class SlokedTextPaneClient::SlokedTextPaneRender : public SlokedTextPaneClient::Render {
      public:
-        class VisualPreset : public SlokedCharacterVisualPreset {
+        class VisualPreset : public SlokedFontProperties {
          public:
             VisualPreset(SlokedServiceClient &client)
                 : client(client) {}
@@ -369,7 +369,7 @@ namespace sloked {
         };
 
         SlokedTextPaneRender(SlokedServiceClient &client)
-            : client(client), visualPreset(client) {}
+            : client(client), fontProperties(client) {}
 
         void SetPosition(TextPosition::Line line, TextPosition::Column column) override {
             this->renderCommands.Append(KgrDictionary {
@@ -448,8 +448,8 @@ namespace sloked {
             }
         }
 
-        const SlokedCharacterVisualPreset &GetCharPreset() const override {
-            return this->visualPreset;
+        const SlokedFontProperties &GetFontProperties() const override {
+            return this->fontProperties;
         }
 
         void Write(const std::string &text) override {
@@ -492,7 +492,7 @@ namespace sloked {
      private:
         SlokedServiceClient &client;
         KgrArray renderCommands;
-        VisualPreset visualPreset;
+        VisualPreset fontProperties;
     };
 
     SlokedTextPaneClient::SlokedTextPaneClient(std::unique_ptr<KgrPipe> pipe, std::function<bool()> holdsLock)

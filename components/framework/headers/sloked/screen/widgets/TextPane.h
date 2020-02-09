@@ -45,7 +45,7 @@ namespace sloked {
         virtual void ClearArea(TextPosition) = 0;
         virtual SlokedGraphicsPoint::Coordinate GetMaxWidth() = 0;
         virtual TextPosition::Line GetHeight() = 0;
-        virtual const SlokedCharacterVisualPreset &GetCharPreset() const = 0;
+        virtual const SlokedFontProperties &GetFontProperties() const = 0;
 
         virtual void Write(const std::string &) = 0;
 

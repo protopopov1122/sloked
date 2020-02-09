@@ -36,13 +36,14 @@ namespace sloked {
 
     class SlokedScreenService : public KgrService {
      public:
-        SlokedScreenService(SlokedMonitor<SlokedScreenComponent &> &, const Encoding &, KgrServer::Connector, KgrServer::Connector, KgrContextManager<KgrLocalContext> &);
+        SlokedScreenService(SlokedMonitor<SlokedScreenComponent &> &, const Encoding &, KgrServer::Connector, KgrServer::Connector, KgrServer::Connector, KgrContextManager<KgrLocalContext> &);
         void Attach(std::unique_ptr<KgrPipe>) override;
     
      private:
         SlokedMonitor<SlokedScreenComponent &> &root;
         const Encoding &encoding;
         KgrServer::Connector cursorService;
+        KgrServer::Connector renderService;
         KgrServer::Connector notifyService;
         KgrContextManager<KgrLocalContext> &contextManager;
     };

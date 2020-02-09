@@ -26,9 +26,9 @@
 
 namespace sloked {
 
-    class SlokedCharacterVisualPreset {
+    class SlokedFontProperties {
      public:
-        virtual ~SlokedCharacterVisualPreset() = default;
+        virtual ~SlokedFontProperties() = default;
         virtual SlokedGraphicsPoint::Coordinate GetHeight() const = 0;
         virtual SlokedGraphicsPoint::Coordinate GetWidth(char32_t) const = 0;
     };
