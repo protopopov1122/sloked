@@ -24,7 +24,6 @@
 #include "sloked/core/Locale.h"
 #include "sloked/text/cursor/TransactionJournal.h"
 #include "sloked/text/fragment/Updater.h"
-#include "sloked/text/TextFrame.h"
 
 namespace sloked {
 
@@ -144,7 +143,7 @@ namespace sloked {
             DocumentContent(SlokedEditorDocument &document, const SlokedCharPreset &charPreset)
                 : text(document.GetText()), encoding(document.GetEncoding()), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
                   transactionListeners(document.GetTransactionListeners()), tags(document.GetTagger()),
-                  frame(document.GetText(), document.GetEncoding(), charPreset), taggersUpdated{false} {
+                  taggersUpdated{false} {
 
                 this->updateListener = std::make_shared<DocumentUpdateListener>();
                 this->transactionListeners.AddListener(this->updateListener);
@@ -164,7 +163,6 @@ namespace sloked {
             EncodingConverter conv;
             SlokedTransactionListenerManager &transactionListeners;
             SlokedTextTagger<SlokedEditorDocument::TagType> &tags;
-            TextFrameView frame;
             std::shared_ptr<DocumentUpdateListener> updateListener;
             SlokedTextTagger<SlokedEditorDocument::TagType>::Unbind unsubscribeTaggers;
             std::atomic<bool> taggersUpdated;

@@ -95,7 +95,6 @@ sloked_src = [
   'src/text/TextBlockHandle.cpp',
   'src/text/TextChunk.cpp',
   'src/text/TextDocument.cpp',
-  'src/text/TextFrame.cpp',
   'src/text/TextRegion.cpp',
   'src/text/TextView.cpp',
   'src/text/cursor/Cursor.cpp',

@@ -25,7 +25,6 @@
 #include "sloked/text/cursor/TransactionCursor.h"
 #include "sloked/text/cursor/TransactionJournal.h"
 #include "sloked/text/fragment/Updater.h"
-#include "sloked/text/TextFrame.h"
 #include "sloked/services/TextRender.h"
 
 namespace sloked {
