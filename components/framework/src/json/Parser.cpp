@@ -26,7 +26,7 @@
 namespace sloked {
 
     JsonDefaultParser::JsonDefaultParser(JsonLexemStream &lexer)
-        : lexer(lexer) {
+        : lexer(lexer), buffer_offset{0}, buffer_size{0} {
         this->Shift();
     }
     
@@ -202,22 +202,22 @@ namespace sloked {
     }
 
     void JsonDefaultParser::Shift() {
-        constexpr std::size_t BufferSize = 1024;
-        if (this->buffer.empty()) {
-            while (this->buffer.size() < BufferSize) {
+        if (this->buffer_offset == this->buffer_size) {
+            this->buffer_offset = 0;
+            this->buffer_size = 0;
+            while (this->buffer_size < BufferSize) {
                 auto lexem = this->lexer.Next();
                 if (lexem.has_value()) {
-                    this->buffer.push(std::move(lexem.value()));
+                    this->buffer[this->buffer_size++] = std::move(lexem.value());
                 } else {
                     break;
                 }
             }
         }
-        if (!this->buffer.empty()) {
-            this->lexem = std::move(this->buffer.front());
-            this->buffer.pop();
+        if (this->buffer_offset < this->buffer.size()) {
+            this->lexem.emplace(std::move(this->buffer[this->buffer_offset++]));
         } else {
-            this->lexem = {};
+            this->lexem.reset();
         }
     }
 

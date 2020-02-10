@@ -38,7 +38,7 @@ namespace sloked {
      public:
         struct TaggedFragment {
             Tag tag;
-            std::string content;
+            std::string_view content;
         };
 
         struct TaggedLine {
@@ -61,7 +61,7 @@ namespace sloked {
                 auto [processed, processedWidth, processedLength] = this->Process(fragment.content, currentOffset < offset ? offset - currentOffset : 0, width - currentWidth);
                 if (processedWidth > 0) {
                     currentWidth += processedWidth;
-                    result.fragments.push_back({fragment.tag, std::string(processed)});
+                    result.fragments.push_back({fragment.tag, processed});
                 }
                 currentOffset += fragmentLength;
             }

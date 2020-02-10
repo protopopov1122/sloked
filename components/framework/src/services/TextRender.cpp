@@ -29,31 +29,39 @@ namespace sloked {
 
     class DocumentUpdateListener : public SlokedTransactionStreamListener {
      public:
-        DocumentUpdateListener(bool init = true)
-            : updated(init) {}
+        DocumentUpdateListener()
+            : lastUpdate{{0, 0}} {}
 
-        bool HasUpdates() const {
-            return this->updated;
+        bool HasUpdates() {
+            std::unique_lock lock(this->mtx);
+            return this->lastUpdate.has_value();
         }
 
-        void ResetUpdates() {
-            this->updated = false;
+        std::optional<TextPosition> GetUpdate() {
+            std::unique_lock lock(this->mtx);
+            auto res = std::move(this->lastUpdate);
+            this->lastUpdate = {};
+            return res;
         }
 
-        void OnCommit(const SlokedCursorTransaction &) override {
-            this->updated = true;
+        void OnCommit(const SlokedCursorTransaction &trans) final {
+            std::unique_lock lock(this->mtx);
+            this->lastUpdate = trans.GetPosition();
         }
 
-        void OnRollback(const SlokedCursorTransaction &) override {
-            this->updated = true;
+        void OnRollback(const SlokedCursorTransaction &trans) final {
+            std::unique_lock lock(this->mtx);
+            this->lastUpdate = trans.GetPosition();
         }
 
-        void OnRevert(const SlokedCursorTransaction &) override {
-            this->updated = true;
+        void OnRevert(const SlokedCursorTransaction &trans) final {
+            std::unique_lock lock(this->mtx);
+            this->lastUpdate = trans.GetPosition();
         }
 
      private:
-        bool updated;
+        std::mutex mtx;
+        std::optional<TextPosition> lastUpdate;
     };
 
     class SlokedTextRenderContext : public SlokedServiceContext {
@@ -99,9 +107,19 @@ namespace sloked {
             auto height = static_cast<TextPosition::Line>(dim["height"].AsInt());
             const std::string tab = this->charPreset.GetTab(this->document->encoding);
 
+            auto lastUpdate = this->document->updateListener->GetUpdate();
+            if (lastUpdate.has_value()) {
+                this->cache.erase(this->cache.lower_bound(lastUpdate.value().line), this->cache.end());
+            }
+
             KgrArray lines;
             auto lineIdx = lineNumber;
             this->document->text.Visit(lineNumber, std::min(height,  static_cast<TextPosition::Line>(this->document->text.GetLastLine() - lineNumber + 1)), [&](auto line) {
+                if (this->cache.count(lineIdx) != 0) {
+                    lines.Append(this->cache.at(lineIdx++));
+                    return;
+                }
+
                 std::optional<std::pair<std::string, std::optional<TaggedTextFragment<int>>>> back;
                 KgrArray fragments;
                 TextPosition::Column columnIdx{0};
@@ -131,7 +149,7 @@ namespace sloked {
                         { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
                     });
                 }
-                lineIdx++;
+                this->cache.emplace(lineIdx++, fragments);
                 lines.Append(std::move(fragments));
             });
             rsp.Result(std::move(lines));
@@ -172,7 +190,7 @@ namespace sloked {
         const SlokedCharPreset &charPreset;
         SlokedEditorDocumentSet::Document handle;
         std::unique_ptr<DocumentContent> document;
-        KgrArray rendered;
+        std::map<TextPosition::Line, KgrValue> cache;
     };
 
 

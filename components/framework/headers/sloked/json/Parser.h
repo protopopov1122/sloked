@@ -59,9 +59,13 @@ namespace sloked {
         bool IsSymbol(JsonLexem::Symbol) const;
         [[noreturn]] void ThrowError(std::string_view) const;
 
+        static constexpr std::size_t BufferSize = 32;
+
         JsonLexemStream &lexer;
         std::optional<JsonLexem> lexem;
-        std::queue<JsonLexem> buffer;
+        std::size_t buffer_offset;
+        std::size_t buffer_size;
+        std::array<JsonLexem, BufferSize> buffer;
     };
 }
 

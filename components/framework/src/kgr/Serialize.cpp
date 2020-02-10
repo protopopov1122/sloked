@@ -29,6 +29,7 @@ namespace sloked {
     static const JsonSourcePosition DefaultPosition{"", 0, 0};
 
     static void unescape(std::string_view src, std::string &dst) {
+        dst.reserve(src.size());
         while (!src.empty()) {
             if (src[0] == '\\') {
                 if (src.size() == 1) {
@@ -73,6 +74,7 @@ namespace sloked {
     }    
 
     static void escape(std::string_view src, std::string &dst) {
+        dst.reserve(src.size());
         while (!src.empty()) {
             switch (src[0]) {
                 case '\"':
