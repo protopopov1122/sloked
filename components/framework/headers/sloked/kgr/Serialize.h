@@ -25,13 +25,14 @@
 #include "sloked/core/Encoding.h"
 #include "sloked/kgr/Value.h"
 #include "sloked/json/AST.h"
+#include "sloked/core/Base64.h"
 #include <vector>
 
 namespace sloked {
 
     class KgrSerializer {
      public:
-        using Blob = std::vector<char>;
+        using Blob = std::string;
 
         virtual ~KgrSerializer() = default;
         virtual Blob Serialize(const KgrValue &) const = 0;
@@ -49,6 +50,22 @@ namespace sloked {
      private:
         std::unique_ptr<JsonASTNode> SerializeValue(const KgrValue &) const;
         KgrValue DeserializeValue(const JsonASTNode &) const;
+
+        const Encoding &encoding;
+    };
+
+    class KgrBinarySerializer : public KgrSerializer {
+     public:
+        enum class Tag;
+        KgrBinarySerializer(const Encoding & = Encoding::Utf8);
+        KgrSerializer::Blob Serialize(const KgrValue &) const final;
+        KgrValue Deserialize(const KgrSerializer::Blob &) const final;
+        KgrValue Deserialize(std::istream &) const final;
+
+     private:
+        class ByteIter;
+        void SerializeValue(KgrSerializer::Blob &, const KgrValue &) const;
+        KgrValue DeserializeValue(ByteIter &) const;
 
         const Encoding &encoding;
     };

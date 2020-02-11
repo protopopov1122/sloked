@@ -29,6 +29,8 @@ using namespace std::chrono_literals;
 
 namespace sloked {
 
+    using DefaultSerializer = KgrBinarySerializer;
+
     KgrNetInterface::Response::Response(const KgrValue &value, bool success)
         : content(value), result(success) {}
 
@@ -124,14 +126,13 @@ namespace sloked {
 
     void KgrNetInterface::Receive() {
         if (this->socket->Available() > 0) {
-            KgrJsonSerializer serializer;
+            DefaultSerializer serializer;
             auto data = this->socket->Read(socket->Available());
             this->buffer.insert(this->buffer.end(), data.begin(), data.end());
             std::size_t start = 0;
             std::size_t end;
             while (!this->buffer.empty() && (end = this->buffer.find('\0')) != std::string::npos) {
-                auto msg = this->buffer.substr(start, end);
-                KgrSerializer::Blob message{msg.begin(), msg.end()};
+                KgrSerializer::Blob message = this->buffer.substr(start, end);
                 this->buffer.erase(start, end + 1 - start);
                 try {
                     this->incoming.push(serializer.Deserialize(message));
@@ -204,11 +205,10 @@ namespace sloked {
     }
 
     void KgrNetInterface::Write(const KgrValue &msg) {
-        KgrJsonSerializer serializer;
+        DefaultSerializer serializer;
         auto raw = serializer.Serialize(msg);
-        raw.emplace_back('\0');
         std::unique_lock lock(this->write_mtx);
-        this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(raw.data()), raw.size()));
+        this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(raw.data()), raw.size() + 1));
     }
 
     void KgrNetInterface::ActionInvoke(const KgrValue &msg) {
