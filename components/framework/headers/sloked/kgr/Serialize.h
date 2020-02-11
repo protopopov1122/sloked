@@ -22,6 +22,7 @@
 #ifndef SLOKED_KGR_SERIALIZE_H_
 #define SLOKED_KGR_SERIALIZE_H_
 
+#include "sloked/core/Encoding.h"
 #include "sloked/kgr/Value.h"
 #include "sloked/json/AST.h"
 #include <vector>
@@ -30,7 +31,7 @@ namespace sloked {
 
     class KgrSerializer {
      public:
-        using Blob = std::string;
+        using Blob = std::vector<char>;
 
         virtual ~KgrSerializer() = default;
         virtual Blob Serialize(const KgrValue &) const = 0;
@@ -40,6 +41,7 @@ namespace sloked {
 
     class KgrJsonSerializer : public KgrSerializer {
      public:
+        KgrJsonSerializer(const Encoding & = Encoding::Utf8);
         Blob Serialize(const KgrValue &) const override;
         KgrValue Deserialize(const Blob &) const override;
         KgrValue Deserialize(std::istream &) const override;
@@ -47,6 +49,8 @@ namespace sloked {
      private:
         std::unique_ptr<JsonASTNode> SerializeValue(const KgrValue &) const;
         KgrValue DeserializeValue(const JsonASTNode &) const;
+
+        const Encoding &encoding;
     };
 }
 

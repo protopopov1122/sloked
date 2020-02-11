@@ -125,16 +125,16 @@ namespace sloked {
     void KgrNetInterface::Receive() {
         if (this->socket->Available() > 0) {
             KgrJsonSerializer serializer;
-            EncodingConverter conv(Encoding::Utf8, SlokedLocale::SystemEncoding());
             auto data = this->socket->Read(socket->Available());
             this->buffer.insert(this->buffer.end(), data.begin(), data.end());
             std::size_t start = 0;
             std::size_t end;
             while (!this->buffer.empty() && (end = this->buffer.find('\0')) != std::string::npos) {
-                std::string message = this->buffer.substr(start, end);
+                auto msg = this->buffer.substr(start, end);
+                KgrSerializer::Blob message{msg.begin(), msg.end()};
                 this->buffer.erase(start, end + 1 - start);
                 try {
-                    this->incoming.push(serializer.Deserialize(conv.Convert(message)));
+                    this->incoming.push(serializer.Deserialize(message));
                 } catch (const SlokedError &err) {
                     throw SlokedError("KgrNetInterface: Malformed request");
                 }
@@ -205,10 +205,10 @@ namespace sloked {
 
     void KgrNetInterface::Write(const KgrValue &msg) {
         KgrJsonSerializer serializer;
-        EncodingConverter conv(SlokedLocale::SystemEncoding(), Encoding::Utf8);
-        auto raw = conv.Convert(serializer.Serialize(msg));
+        auto raw = serializer.Serialize(msg);
+        raw.emplace_back('\0');
         std::unique_lock lock(this->write_mtx);
-        this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(raw.c_str()), raw.size() + 1));
+        this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(raw.data()), raw.size()));
     }
 
     void KgrNetInterface::ActionInvoke(const KgrValue &msg) {

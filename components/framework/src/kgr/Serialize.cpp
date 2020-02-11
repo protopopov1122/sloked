@@ -22,6 +22,8 @@
 #include "sloked/kgr/Serialize.h"
 #include "sloked/json/Parser.h"
 #include "sloked/core/Error.h"
+#include "sloked/core/Encoding.h"
+#include "sloked/core/Locale.h"
 #include <sstream>
 
 namespace sloked {
@@ -159,15 +161,31 @@ namespace sloked {
         }
     };
 
+    KgrJsonSerializer::KgrJsonSerializer(const Encoding &encoding)
+        : encoding(encoding) {}
+
     KgrJsonSerializer::Blob KgrJsonSerializer::Serialize(const KgrValue &value) const {
         std::stringstream ss;
         auto node = this->SerializeValue(value);
         ss << *node;
-        return ss.str();
+        if (SlokedLocale::SystemEncoding() != this->encoding) {
+            EncodingConverter conv(SlokedLocale::SystemEncoding(), this->encoding);
+            auto raw = conv.Convert(ss.str());
+            return Blob{raw.begin(), raw.end()};
+        } else {
+            auto raw = ss.str();
+            return Blob{raw.begin(), raw.end()};
+        }
     }
 
     KgrValue KgrJsonSerializer::Deserialize(const Blob &blob) const {
-        std::stringstream ss(blob);
+        std::stringstream ss;
+        if (SlokedLocale::SystemEncoding() != this->encoding) {
+            EncodingConverter conv(this->encoding, SlokedLocale::SystemEncoding());
+            ss.str(conv.Convert(std::string_view{blob.data(), blob.size()}));
+        } else {
+            ss.str(std::string(blob.begin(), blob.end()));
+        }
         JsonDefaultLexemStream lexer(ss);
         JsonDefaultParser parser(lexer);
         auto node = parser.Parse();

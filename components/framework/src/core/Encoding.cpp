@@ -39,6 +39,10 @@ namespace sloked {
         return this == &other;
     }
 
+    bool Encoding::operator!=(const Encoding &other) const {
+        return !this->operator==(other);
+    }
+
     std::u32string Encoding::Decode(std::string_view view) const {
         std::u32string res;
         this->IterateCodepoints(view, [&](auto start, auto length, auto chr) {
