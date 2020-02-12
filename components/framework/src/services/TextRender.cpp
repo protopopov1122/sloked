@@ -108,8 +108,14 @@ namespace sloked {
             const std::string tab = this->charPreset.GetTab(this->document->encoding);
 
             auto lastUpdate = this->document->updateListener->GetUpdate();
-            if (lastUpdate.has_value()) {
-                this->cache.erase(this->cache.lower_bound(lastUpdate.value().line), this->cache.end());
+            if (this->document->taggersUpdated) {
+                this->cache.clear();
+            } else if (lastUpdate.has_value()) {
+                if (lastUpdate.value().line > 0) {
+                    this->cache.erase(this->cache.lower_bound(lastUpdate.value().line - 1), this->cache.end());
+                } else {
+                    this->cache.clear();
+                }
             }
 
             KgrArray lines;

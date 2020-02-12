@@ -108,6 +108,7 @@ namespace sloked {
 
     void TerminalWindow::Write(const std::string &str) {
         std::string buffer;
+        buffer.reserve(str.size());
         std::string_view view = str;
         this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto codepoint) {
             if (this->line >= this->size.line || this->line + this->offset.line >= this->term.GetHeight()) {
