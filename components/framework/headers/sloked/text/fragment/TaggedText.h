@@ -194,59 +194,6 @@ namespace sloked {
         typename SlokedTextTagger<T>::Unbind unsubscribe;
         SlokedEventEmitter<const TextPositionRange &> emitter;
     };
-
-    template <typename T>
-    class SlokedTaggedTextView : public SlokedTextTagger<T> {
-     public:
-        SlokedTaggedTextView(SlokedTextTagger<T> &tags, const TextPosition &offset, const TextPosition &size)
-            : tags(tags), offset(offset) {
-            this->end = offset + size;
-        }
-
-        std::optional<TaggedTextFragment<T>> Get(const TextPosition &position) final {
-            const TaggedTextFragment<T> *fragment = this->mapped.Get(position);
-            if (fragment != nullptr) {
-                return *fragment;
-            }
-            TextPosition realPosition = position + this->offset;
-            if (!(realPosition < this->end)) {
-                return {};
-            }
-            auto realFragment = this->tags.Get(realPosition);
-            if (realFragment) {
-                const auto &realStart = realFragment->GetStart();
-                const auto &realEnd = realFragment->GetEnd();
-                TextPosition fragmentStart{std::max(realStart.line, this->offset.line) - this->offset.line, std::max(realStart.column, this->offset.column) - this->offset.column};
-                TextPosition fragmentEnd{std::min(realEnd.line, this->end.line) - this->offset.line, std::min(realEnd.column, this->end.column) - this->offset.column};
-                this->mapped.Insert(fragmentStart, fragmentEnd - fragmentStart, T{realFragment->GetTag()});
-                fragment = this->mapped.Get(position);
-                if (fragment != nullptr) {
-                    return *fragment;
-                }
-            }
-            return {};
-        }
-
-        typename SlokedTextTagger<T>::Unbind OnChange(std::function<void(const TextPositionRange &)> callback) final {
-            return this->tags.OnChange(std::move(callback));
-        }
-
-        void Update(const TextPosition &offset, const TextPosition &size) {
-            this->offset = offset;
-            this->end = offset + size;
-            this->mapped.Clear();
-        }
-
-        void Reset() {
-            this->mapped.Clear();
-        }
-
-     private:
-        SlokedTextTagger<T> &tags;
-        TaggedFragmentMap<T> mapped;
-        TextPosition offset;
-        TextPosition end;
-    };
 }
 
 #endif

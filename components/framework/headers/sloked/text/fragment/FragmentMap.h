@@ -72,19 +72,6 @@ namespace sloked {
             return res;
         }
 
-        std::optional<TextPosition> NearestLeast(const TextPosition &pos) const {
-            std::optional<TextPosition> res;
-            if (this->content.has_value() && this->content.value().GetStart() < pos) {
-                return this->content.value().GetStart();
-            } else if (!res.has_value() && this->begin) {
-                res = this->begin->NearestLeast(pos);
-            } else if (!res.has_value() && this->end) {
-                res = this->end->NearestLeast(pos);
-            }
-
-            return res;
-        }
-
         const TaggedTextFragment<T> *Get(const TextPosition &pos) {
             const TaggedTextFragment<T> *fragment = nullptr;
             if (this->content.has_value() && this->content.value().Includes(pos)) {
@@ -228,14 +215,6 @@ namespace sloked {
      public:
         TaggedFragmentMap()
             : root(nullptr) {}
-
-        std::optional<TextPosition> NearestLeast(const TextPosition &pos) const {
-            if (this->root) {
-                return this->root->NearestLeast(pos);
-            } else {
-                return {};
-            }
-        }
     
         const TaggedTextFragment<T> *Get(const TextPosition &pos) {
             if (this->root) {
