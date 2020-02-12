@@ -129,11 +129,16 @@ namespace sloked {
             DefaultSerializer serializer;
             auto data = this->socket->Read(socket->Available());
             this->buffer.insert(this->buffer.end(), data.begin(), data.end());
-            std::size_t start = 0;
-            std::size_t end;
-            while (!this->buffer.empty() && (end = this->buffer.find('\0')) != std::string::npos) {
-                KgrSerializer::Blob message = this->buffer.substr(start, end);
-                this->buffer.erase(start, end + 1 - start);
+            while (this->buffer.size() >= 4) {
+                std::size_t length = this->buffer.at(0) |
+                    (this->buffer.at(1) << 8) |
+                    (this->buffer.at(2) << 16) |
+                    (this->buffer.at(3) << 24);
+                if (this->buffer.size() < length + 4) {
+                    break;
+                }
+                KgrSerializer::Blob message{this->buffer.begin() + 4, this->buffer.begin() + length + 4};
+                this->buffer.erase(this->buffer.begin(), this->buffer.begin() + length + 4);
                 try {
                     this->incoming.push(serializer.Deserialize(message));
                 } catch (const SlokedError &err) {
@@ -207,8 +212,15 @@ namespace sloked {
     void KgrNetInterface::Write(const KgrValue &msg) {
         DefaultSerializer serializer;
         auto raw = serializer.Serialize(msg);
+        std::array<uint8_t, 4> length {
+            static_cast<uint8_t>(raw.size() & 0xff),
+            static_cast<uint8_t>((raw.size() >> 8) & 0xff),
+            static_cast<uint8_t>((raw.size() >> 16) & 0xff),
+            static_cast<uint8_t>((raw.size() >> 24) & 0xff),
+        };
         std::unique_lock lock(this->write_mtx);
-        this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(raw.data()), raw.size() + 1));
+        this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(length.data()), length.size()));
+        this->socket->Write(SlokedSpan(reinterpret_cast<const uint8_t *>(raw.data()), raw.size()));
     }
 
     void KgrNetInterface::ActionInvoke(const KgrValue &msg) {

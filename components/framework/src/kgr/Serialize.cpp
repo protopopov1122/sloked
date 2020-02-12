@@ -24,7 +24,6 @@
 #include "sloked/core/Error.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/core/Locale.h"
-#include "sloked/core/Base64.h"
 #include <limits>
 #include <sstream>
 
@@ -172,9 +171,10 @@ namespace sloked {
         ss << *node;
         if (SlokedLocale::SystemEncoding() != this->encoding) {
             EncodingConverter conv(SlokedLocale::SystemEncoding(), this->encoding);
-            return conv.Convert(ss.str());
+            auto raw = conv.Convert(ss.str());
+            return Blob{raw.begin(), raw.end()};
         } else {
-            return ss.str();
+            return Blob{ss.str().begin(), ss.str().end()};
         }
     }
 
@@ -182,9 +182,9 @@ namespace sloked {
         std::stringstream ss;
         if (SlokedLocale::SystemEncoding() != this->encoding) {
             EncodingConverter conv(this->encoding, SlokedLocale::SystemEncoding());
-            ss.str(conv.Convert(blob));
+            ss.str(conv.Convert(std::string_view{reinterpret_cast<const char *>(blob.data()), blob.size()}));
         } else {
-            ss.str(blob);
+            ss.str(std::string{blob.begin(), blob.end()});
         }
         JsonDefaultLexemStream lexer(ss);
         JsonDefaultParser parser(lexer);
@@ -280,38 +280,17 @@ namespace sloked {
     KgrSerializer::Blob KgrBinarySerializer::Serialize(const KgrValue &value) const {
         KgrSerializer::Blob blob{};
         this->SerializeValue(blob, value);
-        auto result = SlokedBase64::Encode(blob.data(), blob.data() + blob.size());
-        if (SlokedLocale::SystemEncoding() != this->encoding) {
-            EncodingConverter conv(SlokedLocale::SystemEncoding(), this->encoding);
-            return conv.Convert(result);
-        } else {
-            return result;
-        }
+        return blob;
     }
 
     KgrValue KgrBinarySerializer::Deserialize(const KgrSerializer::Blob &blob) const {
-        if (SlokedLocale::SystemEncoding() != this->encoding) {
-            EncodingConverter conv(this->encoding, SlokedLocale::SystemEncoding());
-            auto converted = conv.Convert(blob);
-            auto decoded = SlokedBase64::Decode(converted);
-            ByteIter iter(decoded.begin(), decoded.end());
-            return this->DeserializeValue(iter);
-        } else {
-            auto decoded = SlokedBase64::Decode(blob);
-            ByteIter iter(decoded.begin(), decoded.end());
-            return this->DeserializeValue(iter);
-        }
+        ByteIter iter(blob.begin(), blob.end());
+        return this->DeserializeValue(iter);
     }
 
     KgrValue KgrBinarySerializer::Deserialize(std::istream &is) const {
-        std::string blob(std::istreambuf_iterator<char>(is), {});
-        auto decoded = SlokedBase64::Decode(blob);
-        if (SlokedLocale::SystemEncoding() != this->encoding) {
-            EncodingConverter conv(this->encoding, SlokedLocale::SystemEncoding());
-            auto converted = conv.Convert(std::string_view{reinterpret_cast<char *>(decoded.data()), decoded.size()});
-            decoded = std::vector<SlokedBase64::Byte>{converted.begin(), converted.end()};
-        }
-        ByteIter iter(decoded.begin(), decoded.end());
+        std::vector<uint8_t> blob(std::istreambuf_iterator<char>(is), {});
+        ByteIter iter(blob.begin(), blob.end());
         return this->DeserializeValue(iter);
     }
 

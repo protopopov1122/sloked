@@ -100,7 +100,7 @@ namespace sloked {
         void ActionClose(const KgrValue &);
 
         std::unique_ptr<SlokedSocket> socket;
-        std::string buffer;
+        std::vector<uint8_t> buffer;
         int64_t nextId;
         std::queue<KgrValue> incoming;
         std::map<int64_t, std::queue<Response>> responses;

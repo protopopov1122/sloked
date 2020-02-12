@@ -32,7 +32,7 @@ namespace sloked {
 
     class KgrSerializer {
      public:
-        using Blob = std::string;
+        using Blob = std::vector<uint8_t>;
 
         virtual ~KgrSerializer() = default;
         virtual Blob Serialize(const KgrValue &) const = 0;
