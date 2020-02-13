@@ -68,6 +68,15 @@ namespace sloked {
             }
         }
 
+        std::vector<TaggedTextFragment<T>> Get(TextPosition::Line line) final {
+            while (this->current.line <= line) {
+                this->NextFragment();
+            }
+            std::vector<TaggedTextFragment<T>> tags;
+            this->fragments.GetLine(line, std::back_inserter(tags));
+            return tags;
+        }
+
         typename SlokedTextTagger<T>::Unbind OnChange(std::function<void(const TextPositionRange &)> callback) final {
             return this->emitter.Listen(std::move(callback));
         }

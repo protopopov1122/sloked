@@ -68,6 +68,7 @@ namespace sloked {
         TextPosition size;
         Line line;
         Column col;
+        std::string buffer;
     };
 }
 

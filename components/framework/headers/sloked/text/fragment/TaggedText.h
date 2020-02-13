@@ -39,6 +39,7 @@ namespace sloked {
         using Unbind = std::function<void()>;
         virtual ~SlokedTextTagger() = default;
         virtual std::optional<TaggedTextFragment<T>> Get(const TextPosition &) = 0;
+        virtual std::vector<TaggedTextFragment<T>> Get(TextPosition::Line) = 0;
         virtual Unbind OnChange(ChangeListener) = 0;
     };
 
@@ -80,6 +81,14 @@ namespace sloked {
         std::optional<TaggedTextFragment<T>> Get(const TextPosition &pos) final {
             if (this->tagger) {
                 return this->tagger->Get(pos);
+            } else {
+                return {};
+            }
+        }
+
+        std::vector<TaggedTextFragment<T>> Get(TextPosition::Line line) final {
+            if (this->tagger) {
+                return this->tagger->Get(line);
             } else {
                 return {};
             }
@@ -182,6 +191,10 @@ namespace sloked {
                 this->fragment = this->tags.Get(position);
             }
             return this->fragment;
+        }
+
+        std::vector<TaggedTextFragment<T>> Get(TextPosition::Line line) final {
+            return this->tags.Get(line);
         }
 
         typename SlokedTextTagger<T>::Unbind OnChange(std::function<void(const TextPositionRange &)> callback) final {

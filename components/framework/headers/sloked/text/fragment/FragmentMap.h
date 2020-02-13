@@ -85,7 +85,7 @@ namespace sloked {
                         fragment = this->end->Get(pos);
                     }
                 } else {
-                    if (fragment == nullptr && this->begin) {
+                    if (this->begin) {
                         fragment = this->begin->Get(pos);
                     }
                     if (fragment == nullptr && this->end) {
@@ -94,6 +94,20 @@ namespace sloked {
                 }
             }
             return fragment;
+        }
+
+        template <typename I>
+        I GetLine(TextPosition::Line line, I iter) {
+            if (this->begin && (!this->content.has_value() || this->content.value().GetStart().line >= line)) {
+                iter = this->begin->GetLine(line, std::move(iter));
+            }
+            if (this->content.has_value() && this->content.value().Includes(line)) {
+                iter++ = this->content.value();
+            }
+            if (this->end && (!this->content.has_value() || this->content.value().GetStart().line <= line)) {
+                iter = this->end->GetLine(line, std::move(iter));
+            }
+            return iter;
         }
 
         void Insert(TaggedTextFragment<T> &&fragment) {
@@ -219,6 +233,21 @@ namespace sloked {
         const TaggedTextFragment<T> *Get(const TextPosition &pos) {
             if (this->root) {
                 return this->root->Get(pos);
+            } else {
+                return nullptr;
+            }
+        }
+
+        template <typename I>
+        void GetLine(TextPosition::Line line, I iter) {
+            if (this->root) {
+                this->root->GetLine(line, std::move(iter));
+            }
+        }
+    
+        const TaggedTextFragment<T> *Next(const TextPosition &pos) {
+            if (this->root) {
+                return this->root->Next(pos);
             } else {
                 return nullptr;
             }

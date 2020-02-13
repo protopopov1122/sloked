@@ -27,7 +27,9 @@
 namespace sloked {
 
     TerminalWindow::TerminalWindow(SlokedTerminal &term, const Encoding &encoding, const SlokedCharPreset &charPreset, const TextPosition &offset, const TextPosition &size)
-        : term(term), encoding(encoding), charPreset(charPreset), offset(offset), size(size), line(0), col(0) {}
+        : term(term), encoding(encoding), charPreset(charPreset), offset(offset), size(size), line(0), col(0) {
+        this->buffer.reserve(size.column);
+    }
 
     void TerminalWindow::Move(const TextPosition &position) {
         this->offset = position;
@@ -35,6 +37,7 @@ namespace sloked {
 
     void TerminalWindow::Resize(const TextPosition &size) {
         this->size = size;
+        this->buffer.reserve(size.column);
     }
 
     const TextPosition &TerminalWindow::GetOffset() const {
@@ -82,14 +85,9 @@ namespace sloked {
     }
 
     void TerminalWindow::ClearScreen() {
-        std::string cl;
-        auto spaceSym = this->encoding.Encode(U' ');
-        for (std::size_t i = 0; i < this->size.column; i++) {
-            cl.append(spaceSym);
-        }
         for (std::size_t y = this->offset.line; y < this->offset.line + this->size.line; y++) {
             this->term.SetPosition(y, this->offset.column);
-            this->term.Write(cl);
+            this->term.ClearChars(this->size.column);
         }
     }
 
@@ -107,16 +105,15 @@ namespace sloked {
     }
 
     void TerminalWindow::Write(const std::string &str) {
-        std::string buffer;
-        buffer.reserve(str.size());
+        this->buffer.clear();
         std::string_view view = str;
         this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto codepoint) {
             if (this->line >= this->size.line || this->line + this->offset.line >= this->term.GetHeight()) {
                 return false;
             }
             if (codepoint == U'\n') {
-                this->term.Write(buffer);
-                buffer.clear();
+                this->term.Write(this->buffer);
+                this->buffer.clear();
                 this->ClearChars(this->size.column - this->col - 1);
                 if (this->line + 1 >= this->size.line || this->line + this->offset.line >= this->term.GetHeight()) {
                     return false;
@@ -126,14 +123,14 @@ namespace sloked {
             } else {
                 auto curWidth = this->charPreset.GetCharWidth(codepoint);
                 if (this->col + curWidth < this->size.column) {
-                    buffer.append(view.substr(start, length));
+                    this->buffer.append(view.substr(start, length));
                     this->col += curWidth;
                 }
             }
             return true;
         });
-        if (!buffer.empty()) {
-            this->term.Write(buffer);
+        if (!this->buffer.empty()) {
+            this->term.Write(this->buffer);
         }
     }
 

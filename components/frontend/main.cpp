@@ -157,6 +157,10 @@ class SlokedTestTagger : public SlokedTextTagger<int> {
         return this->cached.Get(pos);
     }
 
+    std::vector<TaggedTextFragment<int>> Get(TextPosition::Line line) final {
+        return this->cached.Get(line);
+    }
+
     typename SlokedTextTagger<int>::Unbind OnChange(std::function<void(const TextPositionRange &)> callback) final {
         return this->cached.OnChange(std::move(callback));
     }

@@ -55,6 +55,10 @@ namespace sloked {
                 pos < this->end;
         }
 
+        bool Includes(TextPosition::Line line) const {
+            return this->start.line <= line && line <= this->end.line;
+        }
+
         bool Overlaps(const TaggedTextFragment<T> &other) const {
             const TextPosition &selfEnd = this->GetEnd();
             const TextPosition &otherEnd = other.GetEnd();

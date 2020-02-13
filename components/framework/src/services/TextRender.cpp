@@ -129,34 +129,74 @@ namespace sloked {
                 std::optional<std::pair<std::string, std::optional<TaggedTextFragment<int>>>> back;
                 KgrArray fragments;
                 TextPosition::Column columnIdx{0};
+                auto lineTags = this->document->tags.Get(lineIdx);
+                std::string buffer{};
+                buffer.reserve(line.size());
+                const TaggedTextFragment<int> *current{nullptr};
+                auto iter = lineTags.begin();
                 this->document->encoding.IterateCodepoints(line, [&](auto start, auto length, auto chr) {
-                    std::string_view fragment = chr != U'\t' ? line.substr(start, length) : tab;
-                    auto tag = this->document->tags.Get(TextPosition {
-                        static_cast<TextPosition::Line>(lineIdx),
-                        static_cast<TextPosition::Column>(columnIdx)
-                    });
-                    if (!back.has_value()) {
-                        back = std::make_pair(fragment, tag);
-                    } else if (back.value().second != tag) {
-                        fragments.Append(KgrDictionary {
-                            { "tag", back.value().second.has_value() },
-                            { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
-                        });
-                        back = std::make_pair(fragment, tag);
-                    } else {
-                        back.value().first.append(fragment);
+                    if (current != nullptr && current->GetEnd().column <= columnIdx ) {
+                        if (!buffer.empty()) {
+                            fragments.Append(KgrDictionary {
+                                { "tag", current != nullptr },
+                                { "content", buffer }
+                            });
+                            buffer.clear();
+                        }
+                        current = nullptr;
                     }
+                    if (iter != lineTags.end() && iter->GetStart().column == columnIdx) {
+                        if (!buffer.empty()) {
+                            fragments.Append(KgrDictionary {
+                                { "tag", current != nullptr },
+                                { "content", buffer }
+                            });
+                            buffer.clear();
+                        }
+                        current = std::addressof(*iter);
+                        ++iter;
+                    }
+                    std::string_view fragment = chr != U'\t' ? line.substr(start, length) : tab;
+                    buffer.append(fragment);
                     columnIdx++;
                     return true;
                 });
-                if (back.has_value()) {
+                if (!buffer.empty()) {
                     fragments.Append(KgrDictionary {
-                        { "tag", back.value().second.has_value() },
-                        { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
+                        { "tag", current != nullptr },
+                        { "content", buffer }
                     });
                 }
                 this->cache.emplace(lineIdx++, fragments);
                 lines.Append(std::move(fragments));
+
+
+                // this->document->encoding.IterateCodepoints(line, [&](auto start, auto length, auto chr) {
+                //     std::string_view fragment = chr != U'\t' ? line.substr(start, length) : tab;
+                //     auto tag = this->document->tags.Get(TextPosition {
+                //         static_cast<TextPosition::Line>(lineIdx),
+                //         static_cast<TextPosition::Column>(columnIdx)
+                //     });
+                //     if (!back.has_value()) {
+                //         back = std::make_pair(fragment, tag);
+                //     } else if (back.value().second != tag) {
+                //         fragments.Append(KgrDictionary {
+                //             { "tag", back.value().second.has_value() },
+                //             { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
+                //         });
+                //         back = std::make_pair(fragment, tag);
+                //     } else {
+                //         back.value().first.append(fragment);
+                //     }
+                //     columnIdx++;
+                //     return true;
+                // });
+                // if (back.has_value()) {
+                //     fragments.Append(KgrDictionary {
+                //         { "tag", back.value().second.has_value() },
+                //         { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
+                //     });
+                // }
             });
             rsp.Result(std::move(lines));
         }
