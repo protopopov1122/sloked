@@ -36,6 +36,13 @@ namespace sloked {
         return this->socket;
     }
 
+    SlokedPosixAwaitablePoll::SlokedPosixAwaitablePoll()
+        : max_socket{0} {
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        this->descriptors.store(rfds);
+    }
+
     SlokedPosixAwaitable::SystemId SlokedPosixAwaitable::GetSystemId() const {
         return SlokedPosixAwaitable::PosixIOSystemId;
     }
@@ -52,41 +59,42 @@ namespace sloked {
         auto socket = static_cast<SlokedPosixAwaitable *>(awaitable.get())->GetSocket();
         std::unique_lock lock(this->mtx);
         this->sockets.emplace(socket, std::move(callback));
+        auto rfds = this->descriptors.load();
+        FD_SET(socket, &rfds);
+        this->descriptors.store(rfds);
+        if (socket > this->max_socket.load()) {
+            this->max_socket.store(socket);
+        }
+        this->callbacks.reserve(this->sockets.size());
         return [this, socket] {
             std::unique_lock lock(this->mtx);
             if (this->sockets.count(socket) != 0) {
                 this->sockets.erase(socket);
+                auto rfds = this->descriptors.load();
+                FD_CLR(socket, &rfds);
+                this->descriptors.store(rfds);
+                this->max_socket = std::numeric_limits<int>::min();
+                for (const auto &kv : this->sockets) {
+                    if (kv.first > this->max_socket.load()) {
+                        max_socket.store(kv.first);
+                    }
+                }
             }
         };
     }
 
     void SlokedPosixAwaitablePoll::Await(std::chrono::system_clock::duration timeout) {
         struct timeval tv;
-        fd_set rfds;
-        FD_ZERO(&rfds);
+        auto rfds = this->descriptors.load();
         DurationToTimeval(timeout, tv);
 
-        int max_socket = std::numeric_limits<int>::min();
-        std::unique_lock lock(this->mtx);
-        if (this->sockets.empty()) {
-            return;
-        }
-
-        for (const auto &kv : this->sockets) {
-            FD_SET(kv.first, &rfds);
-            if (kv.first > max_socket) {
-                max_socket = kv.first;
-            }
-        }
-        lock.unlock();
-
-        int res = select(max_socket + 1, &rfds, nullptr, nullptr, timeout > std::chrono::system_clock::duration::zero() ? &tv : nullptr);
+        int res = select(this->max_socket.load() + 1, &rfds, nullptr, nullptr, timeout > std::chrono::system_clock::duration::zero() ? &tv : nullptr);
         if (res > 0) {
-            std::vector<std::function<void()>> callbacks;
-            lock.lock();
+            std::unique_lock lock(this->mtx);
+            callbacks.clear();
             for (const auto &kv : this->sockets) {
                 if (FD_ISSET(kv.first, &rfds)) {
-                    callbacks.push_back(kv.second);
+                    callbacks.emplace_back(kv.second);
                 }
             }
             lock.unlock();

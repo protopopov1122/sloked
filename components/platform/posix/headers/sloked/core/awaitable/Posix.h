@@ -23,6 +23,7 @@
 #define SLOKED_CORE_AWAITABLE_POSIX_H_
 
 #include "sloked/core/awaitable/Awaitable.h"
+#include <atomic>
 #include <mutex>
 #include <map>
 
@@ -41,13 +42,17 @@ namespace sloked {
 
     class SlokedPosixAwaitablePoll : public SlokedIOPoll {
      public:
+        SlokedPosixAwaitablePoll();
         SlokedIOAwaitable::SystemId GetSystemId() const final;
         std::function<void()> Attach(std::unique_ptr<SlokedIOAwaitable>, std::function<void()>) final;
         void Await(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
 
      private:
         std::mutex mtx;
+        std::atomic<int> max_socket;
+        std::atomic<fd_set> descriptors;
         std::map<int, std::function<void()>> sockets;
+        std::vector<std::function<void()>> callbacks;
     };
 }
 
