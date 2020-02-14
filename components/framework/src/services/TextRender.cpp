@@ -139,7 +139,7 @@ namespace sloked {
                         if (!buffer.empty()) {
                             fragments.Append(KgrDictionary {
                                 { "tag", current != nullptr },
-                                { "content", buffer }
+                                { "content", this->document->conv.ReverseConvert(buffer) }
                             });
                             buffer.clear();
                         }
@@ -149,7 +149,7 @@ namespace sloked {
                         if (!buffer.empty()) {
                             fragments.Append(KgrDictionary {
                                 { "tag", current != nullptr },
-                                { "content", buffer }
+                                { "content", this->document->conv.ReverseConvert(buffer) }
                             });
                             buffer.clear();
                         }
@@ -164,7 +164,7 @@ namespace sloked {
                 if (!buffer.empty()) {
                     fragments.Append(KgrDictionary {
                         { "tag", current != nullptr },
-                        { "content", buffer }
+                        { "content", this->document->conv.ReverseConvert(buffer) }
                     });
                 }
                 this->cache.emplace(lineIdx++, fragments);
