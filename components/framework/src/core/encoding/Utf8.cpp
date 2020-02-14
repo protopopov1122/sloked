@@ -132,19 +132,19 @@ namespace sloked {
                             } \
                         } while (false)
             char32_t result;
-            std::size_t width;
+            uint_fast8_t width;
             for (std::size_t i = 0; i < string_len;) {
-                char current = str[i];
-                if ((current & 0xc0) != 0xc0){
+                uint_fast8_t current = str[i];
+                if ((current & 0xc0) ^ 0xc0){
                     width = 1;
                     ASSERT_WIDTH(width);
                     result = current;
-                } else if ((current & 0xe0) != 0xe0) {
+                } else if ((current & 0xe0) ^ 0xe0) {
                     width = 2;
                     ASSERT_WIDTH(width);
                     result = ((current & 0x1f) << 6)
                         | (str[i + 1] & 0x3f);
-                } else if ((current & 0xf0) != 0xf0) {
+                } else if ((current & 0xf0) ^ 0xf0) {
                     width = 3;
                     ASSERT_WIDTH(width);
                     result = ((current & 0xf) << 12)
