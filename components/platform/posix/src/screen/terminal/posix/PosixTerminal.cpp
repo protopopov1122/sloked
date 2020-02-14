@@ -288,12 +288,13 @@ namespace sloked {
     }
 
     void PosixTerminal::ClearChars(Column cols) {
-        std::string cl(cols, ' ');
-        if (!this->disable_flush) {
-            fprintf(this->state->fd, "%s", cl.c_str());
-            fflush(this->state->fd);
-        } else {
-            this->buffer << cl;
+        while (cols--) {
+            if (!this->disable_flush) {
+                fprintf(this->state->fd, " ");
+                fflush(this->state->fd);
+            } else {
+                this->buffer << ' ';
+            }
         }
         this->MoveBackward(cols);
     }
@@ -306,9 +307,9 @@ namespace sloked {
         return this->height;
     }
 
-    void PosixTerminal::Write(const std::string &str) {
+    void PosixTerminal::Write(std::string_view str) {
         if (!this->disable_flush) {
-            fprintf(this->state->fd, "%s", str.c_str());
+            fprintf(this->state->fd, "%*s", static_cast<int>(str.size()), str.data());
             fflush(this->state->fd);
         } else {
             this->buffer << str;

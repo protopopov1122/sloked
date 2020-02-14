@@ -141,7 +141,7 @@ namespace sloked {
         return this->height;
     }
 
-    void BufferedTerminal::Write(const std::string &str) {
+    void BufferedTerminal::Write(std::string_view str) {
         this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto codepoint) {
             if (codepoint == U'\n') {
                 this->ClearChars(this->width - this->col);

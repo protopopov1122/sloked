@@ -50,7 +50,7 @@ namespace sloked {
         Column GetWidth() override;
         Line GetHeight() override;
 
-        void Write(const std::string &) override;
+        void Write(std::string_view) override;
 
         void SetGraphicsMode(SlokedTextGraphics) override;
         void SetGraphicsMode(SlokedBackgroundGraphics) override;

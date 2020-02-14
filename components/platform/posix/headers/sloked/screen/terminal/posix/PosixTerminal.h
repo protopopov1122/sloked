@@ -50,7 +50,7 @@ namespace sloked {
         Column GetWidth() override;
         Line GetHeight() override;
 
-        void Write(const std::string &) override;
+        void Write(std::string_view) override;
         bool WaitInput(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) override;
         std::vector<SlokedKeyboardInput> GetInput() override;
 

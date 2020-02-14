@@ -73,7 +73,7 @@ namespace sloked {
         virtual Column GetWidth() = 0;
         virtual Line GetHeight() = 0;
 
-        virtual void Write(const std::string &) = 0;
+        virtual void Write(std::string_view) = 0;
 
         virtual void SetGraphicsMode(SlokedTextGraphics) = 0;
         virtual void SetGraphicsMode(SlokedBackgroundGraphics) = 0;

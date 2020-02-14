@@ -86,7 +86,7 @@ namespace sloked {
             return this->term.GetHeight();
         }
 
-        void Write(const std::string &str) override {
+        void Write(std::string_view str) override {
             if (this->is_current(this)) {
                 this->term.Write(str);
             }
