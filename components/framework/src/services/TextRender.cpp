@@ -24,6 +24,7 @@
 #include "sloked/core/Locale.h"
 #include "sloked/text/cursor/TransactionJournal.h"
 #include "sloked/text/fragment/Updater.h"
+#include "sloked/core/Cache.h"
 
 namespace sloked {
 
@@ -68,7 +69,8 @@ namespace sloked {
      public:
         SlokedTextRenderContext(std::unique_ptr<KgrPipe> pipe,
             SlokedEditorDocumentSet &documents, const SlokedCharPreset &charPreset)
-            : SlokedServiceContext(std::move(pipe)), documents(documents), charPreset(charPreset), handle(documents.Empty()), document(nullptr) {
+            : SlokedServiceContext(std::move(pipe)), documents(documents), charPreset(charPreset), handle(documents.Empty()), document(nullptr),
+              cache([this](const auto &begin, const auto &end) { return this->RenderLines(begin, end); }) {
                 
             this->BindMethod("attach", &SlokedTextRenderContext::Attach);
             this->BindMethod("realPosition", &SlokedTextRenderContext::RealPosition);
@@ -105,27 +107,33 @@ namespace sloked {
             const auto &dim = params.AsDictionary();
             auto lineNumber = static_cast<TextPosition::Line>(dim["line"].AsInt());
             auto height = static_cast<TextPosition::Line>(dim["height"].AsInt());
-            const std::string tab = this->charPreset.GetTab(this->document->encoding);
 
             auto lastUpdate = this->document->updateListener->GetUpdate();
-            if (this->document->taggersUpdated) {
-                this->cache.clear();
+            if (this->document->taggersUpdated.exchange(false)) {
+                this->cache.Clear();
             } else if (lastUpdate.has_value()) {
                 if (lastUpdate.value().line > 0) {
-                    this->cache.erase(this->cache.lower_bound(lastUpdate.value().line - 1), this->cache.end());
+                    this->cache.Drop(lastUpdate.value().line - 1, TextPosition::Max.line);
                 } else {
-                    this->cache.clear();
+                    this->cache.Clear();
                 }
             }
 
             KgrArray lines;
-            auto lineIdx = lineNumber;
-            this->document->text.Visit(lineNumber, std::min(height,  static_cast<TextPosition::Line>(this->document->text.GetLastLine() - lineNumber + 1)), [&](auto line) {
-                if (this->cache.count(lineIdx) != 0) {
-                    lines.Append(this->cache.at(lineIdx++));
-                    return;
-                }
+            auto [begin, end] = this->cache.Fetch(lineNumber, std::min(lineNumber + height, static_cast<TextPosition::Line>(this->document->text.GetLastLine())));
+            for (auto it = begin; it != end; ++it) {
+                lines.Append(it->second);
+            }
+            
+            rsp.Result(std::move(lines));
+        }
 
+     private:
+        std::vector<KgrValue> RenderLines(const TextPosition::Line &begin, const TextPosition::Line &end) {
+            std::vector<KgrValue> result;
+            auto lineIdx = begin;
+            const std::string tab = this->charPreset.GetTab(this->document->encoding);
+            this->document->text.Visit(begin, std::min(end - begin + 1,  static_cast<TextPosition::Line>(this->document->text.GetLastLine() - begin + 1)), [&](auto line) {
                 std::optional<std::pair<std::string, std::optional<TaggedTextFragment<int>>>> back;
                 KgrArray fragments;
                 TextPosition::Column columnIdx{0};
@@ -166,41 +174,11 @@ namespace sloked {
                         { "content", this->document->conv.ReverseConvert(buffer) }
                     });
                 }
-                this->cache.emplace(lineIdx++, fragments);
-                lines.Append(std::move(fragments));
-
-
-                // this->document->encoding.IterateCodepoints(line, [&](auto start, auto length, auto chr) {
-                //     std::string_view fragment = chr != U'\t' ? line.substr(start, length) : tab;
-                //     auto tag = this->document->tags.Get(TextPosition {
-                //         static_cast<TextPosition::Line>(lineIdx),
-                //         static_cast<TextPosition::Column>(columnIdx)
-                //     });
-                //     if (!back.has_value()) {
-                //         back = std::make_pair(fragment, tag);
-                //     } else if (back.value().second != tag) {
-                //         fragments.Append(KgrDictionary {
-                //             { "tag", back.value().second.has_value() },
-                //             { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
-                //         });
-                //         back = std::make_pair(fragment, tag);
-                //     } else {
-                //         back.value().first.append(fragment);
-                //     }
-                //     columnIdx++;
-                //     return true;
-                // });
-                // if (back.has_value()) {
-                //     fragments.Append(KgrDictionary {
-                //         { "tag", back.value().second.has_value() },
-                //         { "content", KgrValue(this->document->conv.ReverseConvert(std::move(back.value().first))) }
-                //     });
-                // }
+                lineIdx++;
+                result.emplace_back(std::move(fragments));
             });
-            rsp.Result(std::move(lines));
+            return result;
         }
-
-     private:
 
         struct DocumentContent {
             DocumentContent(SlokedEditorDocument &document, const SlokedCharPreset &charPreset)
@@ -235,7 +213,7 @@ namespace sloked {
         const SlokedCharPreset &charPreset;
         SlokedEditorDocumentSet::Document handle;
         std::unique_ptr<DocumentContent> document;
-        std::map<TextPosition::Line, KgrValue> cache;
+        SlokedOrderedCache<TextPosition::Line, KgrValue> cache;
     };
 
 
