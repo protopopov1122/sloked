@@ -142,24 +142,23 @@ namespace sloked {
     }
 
     void BufferedTerminal::Write(std::string_view str) {
-        this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto codepoint) {
-            if (codepoint == U'\n') {
+        for (Encoding::Iterator it{str}; (it = this->encoding.Iterate(it)).value != U'\0';) {
+            if (it.value == U'\n') {
                 this->ClearChars(this->width - this->col);
                 if (this->line + 1 == this->height) {
-                    return false;
+                    break;
                 }
                 this->SetPosition(this->line + 1, 0);
-            } else if (codepoint == U'\t') {
+            } else if (it.value == U'\t') {
                 this->Write(this->charPreset.GetTab(this->encoding));
             } else if (this->col < this->width) {
                 Character &chr = this->buffer[this->line * this->width + this->col];
-                chr.value = codepoint;
+                chr.value = it.value;
                 chr.updated = true;
                 chr.graphics = this->graphics;
                 this->col++;
             }
-            return true;
-        });
+        }
     }
 
     void BufferedTerminal::SetGraphicsMode(SlokedTextGraphics mode) {
