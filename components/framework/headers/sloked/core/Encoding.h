@@ -32,6 +32,15 @@ namespace sloked {
 
    class Encoding {
     public:
+      struct Iterator {
+          Iterator(std::string_view);
+          std::size_t start;
+          uint_fast8_t length;
+          char32_t value;
+          std::string_view string;
+          std::size_t string_length;
+      };
+
       Encoding(const Encoding &) = delete;
       Encoding(Encoding &&) = delete;
       virtual ~Encoding() = default;
@@ -46,6 +55,7 @@ namespace sloked {
       virtual std::pair<std::size_t, std::size_t> GetCodepoint(std::string_view, std::size_t) const = 0;
       virtual std::optional<std::size_t> GetCodepointByOffset(std::string_view, std::size_t) const = 0;
       virtual bool IterateCodepoints(std::string_view, std::function<bool(std::size_t, std::size_t, char32_t)>) const = 0;
+      virtual Iterator Iterate(Iterator) const { return Iterator{""}; }
       virtual std::string Encode(char32_t) const = 0;
       virtual std::string Encode(std::u32string_view) const = 0;
       virtual std::u32string Decode(std::string_view) const;

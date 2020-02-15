@@ -134,7 +134,7 @@ namespace sloked {
                 buffer.reserve(line.size());
                 const TaggedTextFragment<int> *current{nullptr};
                 auto iter = lineTags.begin();
-                this->document->encoding.IterateCodepoints(line, [&](auto start, auto length, auto chr) {
+                for (Encoding::Iterator it{line}; (it = this->document->encoding.Iterate(it)).value != U'\0';) {
                     if (current != nullptr && current->GetEnd().column <= columnIdx ) {
                         if (!buffer.empty()) {
                             fragments.Append(KgrDictionary {
@@ -156,11 +156,10 @@ namespace sloked {
                         current = std::addressof(*iter);
                         ++iter;
                     }
-                    std::string_view fragment = chr != U'\t' ? line.substr(start, length) : tab;
-                    buffer.append(fragment);
+                    std::string_view fragment = it.value != U'\t' ? line.substr(it.start, it.length) : tab;
+                    buffer += fragment;
                     columnIdx++;
-                    return true;
-                });
+                }
                 if (!buffer.empty()) {
                     fragments.Append(KgrDictionary {
                         { "tag", current != nullptr },

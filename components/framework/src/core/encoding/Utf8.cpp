@@ -167,6 +167,46 @@ namespace sloked {
             return res;
         }
 
+        Iterator Iterate(Iterator iter) const override {
+            if (iter.length > 0) {
+                iter.start += iter.length;
+            }
+            if (iter.start == iter.string_length) {
+                return Iterator{""};
+            }
+#define ASSERT_WIDTH(x) do { \
+                            if (iter.start + (x) > iter.string_length) { \
+                                return Iterator{""}; \
+                            } \
+                        } while (false)
+            uint_fast8_t current = iter.string[iter.start];
+            if ((current & 0xc0) ^ 0xc0){
+                iter.length = 1;
+                ASSERT_WIDTH(iter.length);
+                iter.value = current;
+            } else if ((current & 0xe0) ^ 0xe0) {
+                iter.length = 2;
+                ASSERT_WIDTH(iter.length);
+                iter.value = ((current & 0x1f) << 6)
+                    | (iter.string[iter.start + 1] & 0x3f);
+            } else if ((current & 0xf0) ^ 0xf0) {
+                iter.length = 3;
+                ASSERT_WIDTH(iter.length);
+                iter.value = ((current & 0xf) << 12)
+                    | ((iter.string[iter.start + 1] & 0x3f) << 6)
+                    | (iter.string[iter.start + 2] & 0x3f);
+            } else {
+                iter.length = 4;
+                ASSERT_WIDTH(iter.length);
+                iter.value = ((current & 0x7) << 18)
+                    | ((iter.string[iter.start + 1] & 0x3f) << 12)
+                    | ((iter.string[iter.start + 2] & 0x3f) << 6)
+                    | (iter.string[iter.start + 3] & 0x3f);
+            }
+#undef ASSERT_WIDTH
+            return iter;
+        }
+
         std::string Encode(char32_t chr) const override {
             char buffer[5] {0};
             Char32ToUtf8(buffer, chr);

@@ -35,6 +35,9 @@ namespace sloked {
         { EncodingIdentifiers::Utf32LE, Encoding::Utf32LE }
     };
 
+    Encoding::Iterator::Iterator(std::string_view string)
+        : start{0}, length{0}, value{U'\0'}, string{string}, string_length{string.size()} {}
+
     bool Encoding::operator==(const Encoding &other) const {
         return this == &other;
     }

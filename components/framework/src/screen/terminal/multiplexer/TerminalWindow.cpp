@@ -101,26 +101,33 @@ namespace sloked {
     }
 
     void TerminalWindow::Write(std::string_view str) {
-        this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto codepoint) {
+        std::size_t lineStart{0};
+        std::size_t lineLength{0};
+        for (Encoding::Iterator it{str}; (it = this->encoding.Iterate(it)).value != U'\0';) {
             if (this->line >= this->size.line || this->line + this->offset.line >= this->term.GetHeight()) {
-                return false;
+                break;
             }
-            if (codepoint == U'\n') {
+            if (it.value == U'\n') {
+                this->term.Write(str.substr(lineStart, lineLength));
+                lineStart = it.start + it.length;
+                lineLength = 0;
                 this->ClearChars(this->size.column - this->col - 1);
                 if (this->line + 1 >= this->size.line || this->line + this->offset.line >= this->term.GetHeight()) {
-                    return false;
+                    break;
                 } else {
                     this->SetPosition(this->line + 1, 0);
                 }
             } else {
-                auto curWidth = this->charPreset.GetCharWidth(codepoint);
+                auto curWidth = this->charPreset.GetCharWidth(it.value);
                 if (this->col + curWidth < this->size.column) {
-                    this->term.Write(str.substr(start, length));
+                    lineLength += it.length;
                     this->col += curWidth;
                 }
             }
-            return true;
-        });
+        }
+        if (lineLength > 0) {
+            this->term.Write(str.substr(lineStart, lineLength));
+        }
     }
 
     void TerminalWindow::SetGraphicsMode(SlokedTextGraphics mode) {

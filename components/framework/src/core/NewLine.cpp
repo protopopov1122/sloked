@@ -41,13 +41,13 @@ namespace sloked {
         }
         
         void Iterate(std::string_view str, Iterator iter) const override {
-            this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto chr) {
-                if (chr == U'\n') {
-                    iter(start, length);
+            for (Encoding::Iterator it{str}; (it = this->encoding.Iterate(it)).value != U'\0';) {
+                if (it.value == U'\n') {
+                    iter(it.start, it.length);
                 }
-                return true;
-            });
+            }
         }
+
         std::size_t Count(std::string_view str) const override {
             std::size_t count = 1;
             this->encoding.IterateCodepoints(str, [&](auto start, auto length, auto chr) {
