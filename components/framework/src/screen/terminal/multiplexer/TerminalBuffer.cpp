@@ -142,7 +142,8 @@ namespace sloked {
     }
 
     void BufferedTerminal::Write(std::string_view str) {
-        for (Encoding::Iterator it{str}; (it = this->encoding.Iterate(it)).value != U'\0';) {
+        const auto length = str.size();
+        for (Encoding::Iterator it{}; (it = this->encoding.Iterate(it, str, length)).value != U'\0';) {
             if (it.value == U'\n') {
                 this->ClearChars(this->width - this->col);
                 if (this->line + 1 == this->height) {

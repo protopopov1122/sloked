@@ -226,6 +226,11 @@ namespace sloked {
         return *this;
     }
 
+    KgrDictionary &KgrDictionary::Put(const std::string &key, KgrValue &&value) {
+        this->content.emplace(key, std::forward<KgrValue>(value));
+        return *this;
+    }
+
     KgrDictionary &KgrDictionary::Remove(const std::string &key) {
         if (this->Has(key)) {
             this->content.erase(key);

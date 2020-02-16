@@ -103,23 +103,27 @@ namespace sloked {
     void TerminalWindow::Write(std::string_view str) {
         std::size_t lineStart{0};
         std::size_t lineLength{0};
-        for (Encoding::Iterator it{str}; (it = this->encoding.Iterate(it)).value != U'\0';) {
-            if (this->line >= this->size.line || this->line + this->offset.line >= this->term.GetHeight()) {
+        const auto length = str.size();
+        const auto terminal_height = this->term.GetHeight();
+        const auto offset = this->offset;
+        const auto size = this->size;
+        for (Encoding::Iterator it{}; (it = this->encoding.Iterate(it, str, length)).value != U'\0';) {
+            if (this->line >= size.line || this->line + offset.line >= terminal_height) {
                 break;
             }
             if (it.value == U'\n') {
                 this->term.Write(str.substr(lineStart, lineLength));
                 lineStart = it.start + it.length;
                 lineLength = 0;
-                this->ClearChars(this->size.column - this->col - 1);
-                if (this->line + 1 >= this->size.line || this->line + this->offset.line >= this->term.GetHeight()) {
+                this->ClearChars(size.column - this->col - 1);
+                if (this->line + 1 >= size.line || this->line + offset.line >= this->term.GetHeight()) {
                     break;
                 } else {
                     this->SetPosition(this->line + 1, 0);
                 }
             } else {
                 auto curWidth = this->charPreset.GetCharWidth(it.value);
-                if (this->col + curWidth < this->size.column) {
+                if (this->col + curWidth < size.column) {
                     lineLength += it.length;
                     this->col += curWidth;
                 }

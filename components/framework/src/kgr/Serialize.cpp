@@ -432,6 +432,7 @@ namespace sloked {
             case Tag::UnicodeString: {
                 std::size_t length = DeserializeScalar<uint32_t>(iter);
                 std::string value;
+                value.reserve(length);
                 while (length--) {
                     value.push_back(iter.Next());
                 }
@@ -444,20 +445,23 @@ namespace sloked {
             }
 
             case Tag::Array: {
-                KgrArray array;
                 std::size_t length = DeserializeScalar<uint32_t>(iter);
+                std::vector<KgrValue> raw;
+                raw.reserve(length);
                 while (length--) {
-                    array.Append(this->DeserializeValue(iter));
+                    raw.emplace_back(this->DeserializeValue(iter));
                 }
-                return array;
+                return KgrArray{std::move(raw)};
             }
 
             case Tag::Object: {
                 KgrDictionary object;
                 std::size_t length = DeserializeScalar<uint32_t>(iter);
+                std::string key;
                 while (length--) {
                     std::size_t keyLength = DeserializeScalar<uint32_t>(iter);
-                    std::string key;
+                    key.clear();
+                    key.reserve(keyLength);
                     while (keyLength--) {
                         key.push_back(iter.Next());
                     }

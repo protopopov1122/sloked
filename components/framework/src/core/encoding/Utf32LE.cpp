@@ -71,22 +71,22 @@ namespace sloked {
             return res;
         }
 
-        Iterator Iterate(Iterator iter) const override {
-            if (iter.string_length % 4 != 0) {
+        Iterator Iterate(Iterator iter, std::string_view string, std::size_t length) const override {
+            if (length % 4 != 0) {
                 throw SlokedError("UTF-32LE: Invalid length");
             }
             if (iter.length > 0) {
                 iter.start += iter.length;
             }
-            if (iter.start == iter.string_length) {
-                return Iterator{""};
+            if (iter.start == length) {
+                return Iterator{};
             }
 
             iter.length = 4;
-            iter.value = iter.string[iter.start]
-                | (iter.string[iter.start + 1] << 8)
-                | (iter.string[iter.start + 2] << 16)
-                | (iter.string[iter.start + 3] << 24);
+            iter.value = string[iter.start]
+                | (string[iter.start + 1] << 8)
+                | (string[iter.start + 2] << 16)
+                | (string[iter.start + 3] << 24);
             return iter;
         }
 

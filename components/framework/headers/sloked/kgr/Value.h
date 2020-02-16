@@ -113,6 +113,7 @@ namespace sloked {
         ConstReverseIterator rend() const;
 
         KgrDictionary &Put(const std::string &, const KgrValue &);
+        KgrDictionary &Put(const std::string &, KgrValue &&);
         KgrDictionary &Remove(const std::string &);
 
      private:

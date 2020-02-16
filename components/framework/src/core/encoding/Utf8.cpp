@@ -167,19 +167,20 @@ namespace sloked {
             return res;
         }
 
-        Iterator Iterate(Iterator iter) const override {
+        Iterator Iterate(Iterator iter, std::string_view string, std::size_t length) const override {
             if (iter.length > 0) {
                 iter.start += iter.length;
             }
-            if (iter.start == iter.string_length) {
-                return Iterator{""};
+            if (iter.start == length) {
+                return Iterator{};
             }
 #define ASSERT_WIDTH(x) do { \
-                            if (iter.start + (x) > iter.string_length) { \
-                                return Iterator{""}; \
+                            if (iter.start + (x) > length) { \
+                                return Iterator{}; \
                             } \
                         } while (false)
-            uint_fast8_t current = iter.string[iter.start];
+            auto string_data = string.data();
+            uint_fast8_t current = string_data[iter.start];
             if ((current & 0xc0) ^ 0xc0){
                 iter.length = 1;
                 ASSERT_WIDTH(iter.length);
@@ -188,20 +189,20 @@ namespace sloked {
                 iter.length = 2;
                 ASSERT_WIDTH(iter.length);
                 iter.value = ((current & 0x1f) << 6)
-                    | (iter.string[iter.start + 1] & 0x3f);
+                    | (string_data[iter.start + 1] & 0x3f);
             } else if ((current & 0xf0) ^ 0xf0) {
                 iter.length = 3;
                 ASSERT_WIDTH(iter.length);
                 iter.value = ((current & 0xf) << 12)
-                    | ((iter.string[iter.start + 1] & 0x3f) << 6)
-                    | (iter.string[iter.start + 2] & 0x3f);
+                    | ((string_data[iter.start + 1] & 0x3f) << 6)
+                    | (string_data[iter.start + 2] & 0x3f);
             } else {
                 iter.length = 4;
                 ASSERT_WIDTH(iter.length);
                 iter.value = ((current & 0x7) << 18)
-                    | ((iter.string[iter.start + 1] & 0x3f) << 12)
-                    | ((iter.string[iter.start + 2] & 0x3f) << 6)
-                    | (iter.string[iter.start + 3] & 0x3f);
+                    | ((string_data[iter.start + 1] & 0x3f) << 12)
+                    | ((string_data[iter.start + 2] & 0x3f) << 6)
+                    | (string_data[iter.start + 3] & 0x3f);
             }
 #undef ASSERT_WIDTH
             return iter;

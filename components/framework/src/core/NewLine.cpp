@@ -41,7 +41,8 @@ namespace sloked {
         }
         
         void Iterate(std::string_view str, Iterator iter) const override {
-            for (Encoding::Iterator it{str}; (it = this->encoding.Iterate(it)).value != U'\0';) {
+            const auto length = str.size();
+            for (Encoding::Iterator it{}; (it = this->encoding.Iterate(it, str, length)).value != U'\0';) {
                 if (it.value == U'\n') {
                     iter(it.start, it.length);
                 }
