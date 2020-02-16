@@ -118,6 +118,7 @@ namespace sloked {
                     this->col += curWidth;
                 }
             } else {
+                this->term.Write(str.substr(lineStart, lineLength));
                 lineStart = it.start + it.length;
                 lineLength = 0;
                 this->ClearChars(size.column - this->col - 1);
