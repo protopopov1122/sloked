@@ -29,6 +29,7 @@
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentNotify.h"
 #include "sloked/services/TextRender.h"
+#include "sloked/core/Cache.h"
 
 namespace sloked {
 
@@ -49,6 +50,7 @@ namespace sloked {
         SlokedBackgroundGraphics background;
         std::function<void()> updateListener;
         TextPosition cursorOffset;
+        SlokedOrderedCache<TextPosition::Line, KgrValue> renderCache;
     };
 }
 

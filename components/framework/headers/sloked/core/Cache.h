@@ -108,12 +108,60 @@ namespace sloked {
             return {this->cache.find(begin), std::next(rangeIt)};
         }
 
+        std::vector<std::pair<Key, Iterator>> FetchUpdated(const Key &begin, const Key &end) {
+            if (!this->traits.Less(begin, end) && this->traits.Distance(begin, end) > 0) {
+                throw SlokedError("OrderedCache: Reversed order of requested range");
+            }
+            std::vector<std::pair<Key, Iterator>> result;
+            bool countingRange{false};
+            std::pair<Key, Key> fetchRange;
+            auto rangeIt = this->cache.end();
+            for (auto key = begin; !traits.Less(end, key); key = traits.Next(key)) {
+                rangeIt = this->cache.find(key);
+                if (rangeIt == this->cache.end()) {
+                    if (countingRange) {
+                        fetchRange.second = key;
+                    } else {
+                        countingRange = true;
+                        fetchRange = {key, key};
+                    }
+                } else if (countingRange) {
+                    countingRange = false;
+                    auto values = this->supplier(fetchRange.first, fetchRange.second);
+                    auto distance = this->traits.Distance(fetchRange.first, fetchRange.second);
+                    if (values.size() != distance + 1) {
+                        throw SlokedError("OrderedCache: Supplied value range does not correspond to requested keys");
+                    }
+                    for (auto current = fetchRange.first, it = values.begin(); !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
+                        result.emplace_back(std::make_pair(current, this->cache.emplace(current, std::move(*it)).first));
+                    }
+                }
+            }
+            if (countingRange) {
+                auto values = this->supplier(fetchRange.first, fetchRange.second);
+                if (values.size() != this->traits.Distance(fetchRange.first, fetchRange.second) + 1) {
+                    throw SlokedError("OrderedCache: Supplied value range does not correspond to requested keys");
+                }
+                for (auto current = fetchRange.first, it = values.begin(); !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
+                    result.emplace_back(std::make_pair(current, this->cache.emplace(current, std::move(*it)).first));
+                }
+            }
+            return result;
+        }
+
         void Drop(const Key &begin, const Key &end) {
             this->cache.erase(this->cache.lower_bound(begin), this->cache.upper_bound(end));
         }
 
         void Clear() {
             this->cache.clear();
+        }
+
+        template <typename I>
+        void Insert(const I &begin, const I &end) {
+            for (auto it = begin; it != end; ++it) {
+                cache.insert_or_assign(it->first, it->second);
+            }
         }
 
     

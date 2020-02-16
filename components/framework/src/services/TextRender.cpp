@@ -119,13 +119,34 @@ namespace sloked {
                 }
             }
 
-            KgrArray lines;
-            auto [begin, end] = this->cache.Fetch(lineNumber, std::min(lineNumber + height, static_cast<TextPosition::Line>(this->document->text.GetLastLine())));
-            for (auto it = begin; it != end; ++it) {
-                lines.Append(it->second);
+            auto maxLineNumber = std::min(lineNumber + height, static_cast<TextPosition::Line>(this->document->text.GetLastLine()));
+            bool partial_render = params.AsDictionary().Has("partial") && params.AsDictionary()["partial"].AsBoolean();
+            if (!partial_render) {
+                KgrArray lines;
+                auto [begin, end] = this->cache.Fetch(lineNumber, maxLineNumber);
+                for (auto it = begin; it != end; ++it) {
+                    lines.Append(it->second);
+                }
+                rsp.Result(KgrDictionary {
+                    { "start", static_cast<int64_t>(lineNumber) },
+                    { "end", static_cast<int64_t>(maxLineNumber) },
+                    { "content", std::move(lines) }
+                });
+            } else {
+                auto updated = this->cache.FetchUpdated(lineNumber, maxLineNumber);
+                KgrArray lines;
+                for (auto &it : updated) {
+                    lines.Append(KgrDictionary {
+                        { "line", static_cast<int64_t>(it.first) },
+                        { "content", it.second->second }
+                    });
+                }
+                rsp.Result(KgrDictionary {
+                    { "start", static_cast<int64_t>(lineNumber) },
+                    { "end", static_cast<int64_t>(maxLineNumber) },
+                    { "content", std::move(lines) }
+                });
             }
-            
-            rsp.Result(std::move(lines));
         }
 
      private:
@@ -248,15 +269,31 @@ namespace sloked {
         };
     }
 
-    std::optional<KgrValue> SlokedTextRenderClient::Render(TextPosition::Line line, TextPosition::Line height) {
+    std::tuple<TextPosition::Line, TextPosition::Line, KgrValue> SlokedTextRenderClient::Render(TextPosition::Line line, TextPosition::Line height) {
         auto rsp = this->client.Invoke("render", KgrDictionary {
             { "height", static_cast<int64_t>(height) },
             { "line", static_cast<int64_t>(line) }
         });
         auto renderRes = rsp.Get();
+        const auto &result = renderRes.GetResult().AsDictionary();
+        return {result["start"].AsInt(), result["end"].AsInt(), result["content"]};
+    }
+
+    std::tuple<TextPosition::Line, TextPosition::Line, std::vector<std::pair<TextPosition::Line, KgrValue>>> SlokedTextRenderClient::PartialRender(TextPosition::Line line, TextPosition::Line height) {
+        auto rsp = this->client.Invoke("render", KgrDictionary {
+            { "height", static_cast<int64_t>(height) },
+            { "line", static_cast<int64_t>(line) },
+            { "partial", true }
+        });
+        auto renderRes = rsp.Get();
         if (!renderRes.HasResult()) {
             return {};
         }
-        return std::move(renderRes.GetResult());
+        const auto &res = renderRes.GetResult().AsDictionary();
+        std::vector<std::pair<TextPosition::Line, KgrValue>> result;
+        for (const auto &line : res["content"].AsArray()) {
+            result.emplace_back(std::make_pair(line.AsDictionary()["line"].AsInt(), line.AsDictionary()["content"]));
+        }
+        return {res["start"].AsInt(), res["end"].AsInt(), std::move(result)};
     }
 }

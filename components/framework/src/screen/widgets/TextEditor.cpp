@@ -29,7 +29,7 @@ namespace sloked {
     SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService, std::function<void(SlokedCursorClient &)> initClient,
         std::unique_ptr<KgrPipe> renderService, std::unique_ptr<KgrPipe> notifyService, SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger, SlokedBackgroundGraphics bg)
         : conv(encoding, SlokedLocale::SystemEncoding()), cursorClient(std::move(cursorService)), renderClient(std::move(renderService), docId), notifyClient(std::move(notifyService), docId), tagger(tagger), background(bg),
-          cursorOffset{0, 0} {
+          cursorOffset{0, 0}, renderCache([](const auto &, const auto &)->std::vector<KgrValue> { throw SlokedError("TextEditor: Unexpected cache miss"); }) {
         if (initClient) {
             initClient(this->cursorClient);
         }
@@ -115,16 +115,14 @@ namespace sloked {
             this->cursorOffset.line = cursor.line;
         }
 
-        auto renderRsp = this->renderClient.Render(this->cursorOffset.line, pane.GetHeight() - 1);
-        if (!renderRsp.has_value()) {
-            return;
-        }
-        const auto &render = renderRsp.value();
+        auto [firstLine, lastLine, partialRender] = this->renderClient.PartialRender(this->cursorOffset.line, pane.GetHeight() - 1);
+        this->renderCache.Insert(partialRender.begin(), partialRender.end());
+        const auto &render = this->renderCache.Fetch(firstLine, lastLine);
         std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> lines;
         lines.reserve(pane.GetHeight());
-        for (const auto &line : render.AsArray()) {
+        for (auto it = render.first; it != render.second; ++it) {
             SlokedTaggedTextFrame<bool>::TaggedLine taggedLine;
-            const auto &fragments = line.AsArray();
+            const auto &fragments = it->second.AsArray();
             for (const auto &fragment : fragments) {
                 auto tag = fragment.AsDictionary()["tag"].AsBoolean();
                 const auto &text = fragment.AsDictionary()["content"].AsString();
