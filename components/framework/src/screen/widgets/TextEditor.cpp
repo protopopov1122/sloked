@@ -115,7 +115,7 @@ namespace sloked {
             this->cursorOffset.line = cursor.line;
         }
 
-        auto renderRsp = this->renderClient.Render(this->cursorOffset.line, pane.GetHeight());
+        auto renderRsp = this->renderClient.Render(this->cursorOffset.line, pane.GetHeight() - 1);
         if (!renderRsp.has_value()) {
             return;
         }
