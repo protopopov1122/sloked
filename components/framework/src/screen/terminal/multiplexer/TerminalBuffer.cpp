@@ -119,11 +119,13 @@ namespace sloked {
     void BufferedTerminal::ClearScreen() {
         this->cls = true;
         auto gfx = this->graphics;
-        auto area = this->width * this->height;
-        for (std::size_t i = 0; i < area; i++) {
-            this->buffer[i].value = U' ';
-            this->buffer[i].updated = false;
-            this->buffer[i].graphics = gfx;
+        auto buffer = this->buffer.get();
+        uint_fast32_t area = this->width * this->height;
+        for (uint_fast32_t i = 0; i < area; i++) {
+            auto &chr = buffer[i];
+            chr.value = U' ';
+            chr.updated = false;
+            chr.graphics = gfx;
         }
     }
 
@@ -199,33 +201,35 @@ namespace sloked {
         this->term.Flush(false);
         this->term.ShowCursor(false);
         const auto fullSize = this->width * this->height;
-        char32_t *buffer = this->renderBuffer.get();
-        std::size_t buffer_ptr = 0;
-        std::size_t buffer_start = 0;
+        char32_t *render_base = this->renderBuffer.get();
+        char32_t *render_end = render_base;
+        std::size_t offset = 0;
+        auto buffer = this->buffer.get();
 
         BufferedGraphicsMode prev_g;
         for (std::size_t i = 0; i < fullSize; i++) {
-            Character &chr = this->buffer[i];
-            if (chr.graphics.has_value() && !(chr.graphics.value() == prev_g)) {
-                this->dump_buffer(std::u32string_view(buffer, buffer_ptr), buffer_start);
-                buffer_ptr = 0;
+            Character &chr = buffer[i];
+            auto chr_gfx = chr.graphics;
+            if (chr_gfx.has_value() && !(chr_gfx.value() == prev_g)) {
+                this->dump_buffer(std::u32string_view(render_base, static_cast<ptrdiff_t>(render_end - render_base)), offset);
+                render_end = render_base;
                 chr.graphics.value().apply(term);
                 prev_g = chr.graphics.value();
             }
             if (chr.value != U'\0' && (chr.updated || this->cls)) {
-                if (!buffer_ptr) {
-                    buffer_start = i;
+                if (render_base == render_end) {
+                    offset = i;
                 }
-                buffer[buffer_ptr++] = chr.value;
+                *(render_end++) = chr.value;
             } else {
-                this->dump_buffer(std::u32string_view(buffer, buffer_ptr), buffer_start);
-                buffer_ptr = 0;
+                this->dump_buffer(std::u32string_view(render_base, static_cast<ptrdiff_t>(render_end - render_base)), offset);
+                render_base = render_base;
             }
             chr.updated = false;
             chr.graphics.reset();
         }
         this->cls = false;
-        this->dump_buffer(std::u32string_view(buffer, buffer_ptr), buffer_start);
+        this->dump_buffer(std::u32string_view(render_base, static_cast<ptrdiff_t>(render_end - render_base)), offset);
         this->term.SetPosition(this->line, this->col);
         this->term.ShowCursor(this->show_cursor);
         this->term.Flush(true);
