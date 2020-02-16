@@ -74,6 +74,7 @@ namespace sloked {
         bool cls;
         bool show_cursor;
         std::unique_ptr<Character[]> buffer;
+        std::unique_ptr<char32_t[]> renderBuffer;
         BufferedGraphicsMode graphics;
         Line line;
         Column col;

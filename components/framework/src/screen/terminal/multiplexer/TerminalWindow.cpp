@@ -111,8 +111,13 @@ namespace sloked {
             if (this->line >= size.line || this->line + offset.line >= terminal_height) {
                 break;
             }
-            if (it.value == U'\n') {
-                this->term.Write(str.substr(lineStart, lineLength));
+            if (it.value ^ U'\n') {
+                auto curWidth = this->charPreset.GetCharWidth(it.value);
+                if (this->col + curWidth < size.column) {
+                    lineLength += it.length;
+                    this->col += curWidth;
+                }
+            } else {
                 lineStart = it.start + it.length;
                 lineLength = 0;
                 this->ClearChars(size.column - this->col - 1);
@@ -120,12 +125,6 @@ namespace sloked {
                     break;
                 } else {
                     this->SetPosition(this->line + 1, 0);
-                }
-            } else {
-                auto curWidth = this->charPreset.GetCharWidth(it.value);
-                if (this->col + curWidth < size.column) {
-                    lineLength += it.length;
-                    this->col += curWidth;
                 }
             }
         }

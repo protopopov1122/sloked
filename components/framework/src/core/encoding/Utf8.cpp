@@ -168,9 +168,7 @@ namespace sloked {
         }
 
         Iterator Iterate(Iterator iter, std::string_view string, std::size_t length) const override {
-            if (iter.length > 0) {
-                iter.start += iter.length;
-            }
+            iter.start += iter.length;
             if (iter.start == length) {
                 return Iterator{};
             }
@@ -185,17 +183,20 @@ namespace sloked {
                 iter.length = 1;
                 ASSERT_WIDTH(iter.length);
                 iter.value = current;
+                return iter;
             } else if ((current & 0xe0) ^ 0xe0) {
                 iter.length = 2;
                 ASSERT_WIDTH(iter.length);
                 iter.value = ((current & 0x1f) << 6)
                     | (string_data[iter.start + 1] & 0x3f);
+                return iter;
             } else if ((current & 0xf0) ^ 0xf0) {
                 iter.length = 3;
                 ASSERT_WIDTH(iter.length);
                 iter.value = ((current & 0xf) << 12)
                     | ((string_data[iter.start + 1] & 0x3f) << 6)
                     | (string_data[iter.start + 2] & 0x3f);
+                return iter;
             } else {
                 iter.length = 4;
                 ASSERT_WIDTH(iter.length);
@@ -203,9 +204,9 @@ namespace sloked {
                     | ((string_data[iter.start + 1] & 0x3f) << 12)
                     | ((string_data[iter.start + 2] & 0x3f) << 6)
                     | (string_data[iter.start + 3] & 0x3f);
+                return iter;
             }
 #undef ASSERT_WIDTH
-            return iter;
         }
 
         std::string Encode(char32_t chr) const override {
