@@ -28,43 +28,6 @@
 
 namespace sloked {
 
-    class DocumentUpdateListener : public SlokedTransactionStreamListener {
-     public:
-        DocumentUpdateListener()
-            : lastUpdate{{0, 0}} {}
-
-        bool HasUpdates() {
-            std::unique_lock lock(this->mtx);
-            return this->lastUpdate.has_value();
-        }
-
-        std::optional<TextPosition> GetUpdate() {
-            std::unique_lock lock(this->mtx);
-            auto res = std::move(this->lastUpdate);
-            this->lastUpdate = {};
-            return res;
-        }
-
-        void OnCommit(const SlokedCursorTransaction &trans) final {
-            std::unique_lock lock(this->mtx);
-            this->lastUpdate = trans.GetPosition();
-        }
-
-        void OnRollback(const SlokedCursorTransaction &trans) final {
-            std::unique_lock lock(this->mtx);
-            this->lastUpdate = trans.GetPosition();
-        }
-
-        void OnRevert(const SlokedCursorTransaction &trans) final {
-            std::unique_lock lock(this->mtx);
-            this->lastUpdate = trans.GetPosition();
-        }
-
-     private:
-        std::mutex mtx;
-        std::optional<TextPosition> lastUpdate;
-    };
-
     class SlokedTextRenderContext : public SlokedServiceContext {
      public:
         SlokedTextRenderContext(std::unique_ptr<KgrPipe> pipe,
@@ -108,16 +71,12 @@ namespace sloked {
             auto lineNumber = static_cast<TextPosition::Line>(dim["line"].AsInt());
             auto height = static_cast<TextPosition::Line>(dim["height"].AsInt());
 
-            auto lastUpdate = this->document->updateListener->GetUpdate();
-            if (this->document->taggersUpdated.exchange(false)) {
-                this->cache.Clear();
-            } else if (lastUpdate.has_value()) {
-                if (lastUpdate.value().line > 0) {
-                    this->cache.Drop(lastUpdate.value().line - 1, TextPosition::Max.line);
-                } else {
-                    this->cache.Clear();
-                }
+            std::unique_lock lock(this->document->mtx);
+            for (auto &range : this->document->invalidated) {
+                this->cache.Drop(range.start.line, range.end.line);
             }
+            this->document->invalidated.clear();
+            lock.unlock();
 
             auto maxLineNumber = std::min(lineNumber + height, static_cast<TextPosition::Line>(this->document->text.GetLastLine()));
             bool partial_render = params.AsDictionary().Has("partial") && params.AsDictionary()["partial"].AsBoolean();
@@ -205,13 +164,11 @@ namespace sloked {
         struct DocumentContent {
             DocumentContent(SlokedEditorDocument &document, const SlokedCharPreset &charPreset)
                 : text(document.GetText()), encoding(document.GetEncoding()), conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
-                  transactionListeners(document.GetTransactionListeners()), tags(document.GetTagger()),
-                  taggersUpdated{false} {
+                  transactionListeners(document.GetTransactionListeners()), tags(document.GetTagger()) {
 
-                this->updateListener = std::make_shared<DocumentUpdateListener>();
-                this->transactionListeners.AddListener(this->updateListener);
-                this->unsubscribeTaggers = document.GetTagger().OnChange([this](const auto &) {
-                    this->taggersUpdated = true;
+                this->unsubscribeTaggers = document.GetTagger().OnChange([this](const auto &range) {
+                    std::unique_lock lock(this->mtx);
+                    this->invalidated.push_back(range);
                 });
             }
 
@@ -226,9 +183,9 @@ namespace sloked {
             EncodingConverter conv;
             SlokedTransactionListenerManager &transactionListeners;
             SlokedTextTagger<SlokedEditorDocument::TagType> &tags;
-            std::shared_ptr<DocumentUpdateListener> updateListener;
             SlokedTextTagger<SlokedEditorDocument::TagType>::Unbind unsubscribeTaggers;
-            std::atomic<bool> taggersUpdated;
+            std::mutex mtx;
+            std::vector<TextPositionRange> invalidated;
         };
 
         SlokedEditorDocumentSet &documents;

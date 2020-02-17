@@ -79,9 +79,45 @@
 using namespace sloked;
 
 class TestFragment : public SlokedTextTagIterator<int> {
+    class DocumentListener : public SlokedTransactionStreamListener {
+     public:
+        DocumentListener(SlokedEventEmitter<const TextPositionRange &> &emitter)
+            : emitter(emitter) {}
+
+        void OnCommit(const SlokedCursorTransaction &transaction) final {
+            this->Emit(transaction.GetPosition().line);
+        }
+
+        void OnRollback(const SlokedCursorTransaction &transaction) final {
+            this->Emit(transaction.GetPosition().line);
+        }
+
+        void OnRevert(const SlokedCursorTransaction &transaction) final {
+            this->Emit(transaction.GetPosition().line);
+        }
+
+     private:
+        void Emit(TextPosition::Line line) {
+            if (line > 0) {
+                emitter.Emit({TextPosition{line - 1, 0}, TextPosition::Max});
+            } else {
+                emitter.Emit({TextPosition{0, 0}, TextPosition::Max});
+            }
+        }
+        
+        SlokedEventEmitter<const TextPositionRange &> &emitter;
+    };
+
  public:
-    TestFragment(const TextBlockView &text, const Encoding &encoding)
-        : text(text), encoding(encoding), current{0, 0} {}
+    TestFragment(const TextBlockView &text, const Encoding &encoding, SlokedTransactionListenerManager &listeners)
+        : text(text), encoding(encoding), current{0, 0}, listeners(listeners) {
+        this->listener = std::make_shared<DocumentListener>(this->emitter);
+        this->listeners.AddListener(this->listener);
+    }
+
+    ~TestFragment() {
+        this->listeners.RemoveListener(*this->listener);
+    }
 
     std::optional<TaggedTextFragment<int>> Next() override {
         if (this->cache.empty()) {
@@ -140,12 +176,14 @@ class TestFragment : public SlokedTextTagIterator<int> {
     TextPosition current;
     std::queue<TaggedTextFragment<int>> cache;
     SlokedEventEmitter<const TextPositionRange &> emitter;
+    SlokedTransactionListenerManager &listeners;
+    std::shared_ptr<DocumentListener> listener;
 };
 
 class SlokedTestTagger : public SlokedTextTagger<int> {
  public:
     SlokedTestTagger(SlokedTaggableDocument &doc)
-        : doc(doc), iter(doc.GetText(), doc.GetEncoding()), updater(std::make_shared<SlokedFragmentUpdater<int>>(doc.GetText(), iter, doc.GetEncoding())), lazy(iter), cached(lazy) {
+        : doc(doc), iter(doc.GetText(), doc.GetEncoding(), doc.GetTransactionListeners()), updater(std::make_shared<SlokedFragmentUpdater<int>>(doc.GetText(), iter, doc.GetEncoding())), lazy(iter), cached(lazy) {
         doc.GetTransactionListeners().AddListener(this->updater);
     }
 
