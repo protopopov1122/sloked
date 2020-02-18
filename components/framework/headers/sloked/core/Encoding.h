@@ -34,7 +34,7 @@ namespace sloked {
     public:
       struct Iterator {
           Iterator();
-          std::size_t start;
+          uint_fast32_t start;
           uint_fast8_t length;
           char32_t value;
       };
@@ -53,7 +53,7 @@ namespace sloked {
       virtual std::pair<std::size_t, std::size_t> GetCodepoint(std::string_view, std::size_t) const = 0;
       virtual std::optional<std::size_t> GetCodepointByOffset(std::string_view, std::size_t) const = 0;
       virtual bool IterateCodepoints(std::string_view, std::function<bool(std::size_t, std::size_t, char32_t)>) const = 0;
-      virtual Iterator Iterate(Iterator, std::string_view, std::size_t) const { return Iterator{}; }
+      virtual bool Iterate(Iterator &, std::string_view, std::size_t) const = 0;
       virtual std::string Encode(char32_t) const = 0;
       virtual std::string Encode(std::u32string_view) const = 0;
       virtual std::u32string Decode(std::string_view) const;

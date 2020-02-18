@@ -39,9 +39,10 @@ namespace sloked {
         bool operator==(const BufferedGraphicsMode &) const;
 
      private:
-        std::bitset<static_cast<int>(SlokedTextGraphics::Count)> text;
-        uint32_t background = None;
-        uint32_t foreground = None;
+        static constexpr auto TextSize = static_cast<int>(SlokedTextGraphics::Count);
+        std::bitset<TextSize> text;
+        uint_fast32_t background = None;
+        uint_fast32_t foreground = None;
 
         static constexpr std::size_t None = std::numeric_limits<uint32_t>::max();
     };

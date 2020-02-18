@@ -107,7 +107,7 @@ namespace sloked {
         const auto terminal_height = this->term.GetHeight();
         const auto offset = this->offset;
         const auto size = this->size;
-        for (Encoding::Iterator it{}; (it = this->encoding.Iterate(it, str, length)).value != U'\0';) {
+        for (Encoding::Iterator it{}; this->encoding.Iterate(it, str, length);) {
             if (this->line >= size.line || this->line + offset.line >= terminal_height) {
                 break;
             }

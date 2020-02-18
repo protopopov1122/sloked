@@ -71,7 +71,7 @@ namespace sloked {
             return res;
         }
 
-        Iterator Iterate(Iterator iter, std::string_view string, std::size_t length) const override {
+        bool Iterate(Iterator &iter, std::string_view string, std::size_t length) const override {
             if (length % 4 != 0) {
                 throw SlokedError("UTF-32LE: Invalid length");
             }
@@ -79,7 +79,7 @@ namespace sloked {
                 iter.start += iter.length;
             }
             if (iter.start == length) {
-                return Iterator{};
+                return false;
             }
 
             iter.length = 4;
@@ -87,7 +87,7 @@ namespace sloked {
                 | (string[iter.start + 1] << 8)
                 | (string[iter.start + 2] << 16)
                 | (string[iter.start + 3] << 24);
-            return iter;
+            return true;
         }
 
         std::string Encode(char32_t chr) const override {

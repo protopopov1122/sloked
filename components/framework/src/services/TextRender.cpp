@@ -123,7 +123,7 @@ namespace sloked {
                 const TaggedTextFragment<int> *current{nullptr};
                 auto iter = lineTags.begin();
                 const auto length = line.size();
-                for (Encoding::Iterator it{}; (it = this->document->encoding.Iterate(it, line, length)).value != U'\0';) {
+                for (Encoding::Iterator it{}; this->document->encoding.Iterate(it, line, length);) {
                     if (current != nullptr && current->GetEnd().column <= columnIdx ) {
                         if (!buffer.empty()) {
                             fragments.Append(KgrDictionary {

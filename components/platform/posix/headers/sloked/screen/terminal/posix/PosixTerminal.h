@@ -28,6 +28,7 @@
 #include <memory>
 #include <sstream>
 #include <chrono>
+#include <map>
 
 namespace sloked {
     
@@ -68,9 +69,10 @@ namespace sloked {
         std::unique_ptr<State> state;
         std::unique_ptr<Termcap> termcap;
         bool disable_flush;
-        std::stringstream buffer;
+        std::string buffer;
         Column width;
         Line height;
+        std::map<std::pair<Line, Column>, std::string> cursorMotionCache;
     };
 }
 

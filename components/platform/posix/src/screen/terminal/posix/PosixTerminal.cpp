@@ -119,12 +119,19 @@ namespace sloked {
         }
 
         const char *GetString(const std::string &key) {
-            char *data = this->buffer.data();
-            return tgetstr(key.c_str(), &data);
+            if (cache.count(key)) {
+                return cache.at(key).c_str();
+            } else {
+                char *data = this->buffer.data();
+                auto result = tgetstr(key.c_str(), &data);
+                cache.emplace(key, std::string{result});
+                return result;
+            }
         }
 
      private:
         std::array<char, 2048> buffer;
+        std::map<std::string, std::string> cache;
     };
 
     std::optional<SlokedControlKey> collectControlKey(PosixTerminal::Termcap &termcap, std::string &input, bool &altPressed) {
@@ -201,11 +208,19 @@ namespace sloked {
     }
 
     void PosixTerminal::SetPosition(Line l, Column c) {
+        std::pair<Line, Column> base{l, c};
+        const char *basePos;
+        if (this->cursorMotionCache.count(base) > 0) {
+            basePos = this->cursorMotionCache.at(base).c_str();
+        } else {
+            basePos = tgoto(this->termcap->GetString("cm"), c, l);
+            this->cursorMotionCache.emplace(base, std::string(basePos));
+        }
         if (!this->disable_flush) {
-            fprintf(this->state->fd, "%s", tgoto(this->termcap->GetString("cm"), c, l));
+            fprintf(this->state->fd, "%s", basePos);
             fflush(this->state->fd);
         } else {
-            this->buffer << tgoto(this->termcap->GetString("cm"), c, l);
+            this->buffer.append(basePos);
         }
     }
 
@@ -217,7 +232,7 @@ namespace sloked {
             fflush(this->state->fd);
         } else {
             while (l--) {
-                this->buffer << this->termcap->GetString("up");
+                this->buffer.append(this->termcap->GetString("up"));
             }
         }
     }
@@ -230,7 +245,7 @@ namespace sloked {
             fflush(this->state->fd);
         } else {
             while (l--) {
-                this->buffer << this->termcap->GetString("do");
+                this->buffer.append(this->termcap->GetString("do"));
             }
         }
     }
@@ -243,7 +258,7 @@ namespace sloked {
             fflush(this->state->fd);
         } else {
             while (c--) {
-                this->buffer << this->termcap->GetString("le");
+                this->buffer.append(this->termcap->GetString("le"));
             }
         }
     }
@@ -256,7 +271,7 @@ namespace sloked {
             fflush(this->state->fd);
         } else {
             while (c--) {
-                this->buffer << this->termcap->GetString("ri");
+                this->buffer.append(this->termcap->GetString("ri"));
             }
         }
     }
@@ -271,9 +286,9 @@ namespace sloked {
             fflush(this->state->fd);
         } else {
             if (show) {
-                this->buffer << this->termcap->GetString("ve");
+                this->buffer.append(this->termcap->GetString("ve"));
             } else {
-                this->buffer << this->termcap->GetString("vi");
+                this->buffer.append(this->termcap->GetString("vi"));
             }
         }
     }
@@ -283,7 +298,7 @@ namespace sloked {
             fprintf(this->state->fd, "%s", this->termcap->GetString("cl"));
             fflush(this->state->fd);
         } else {
-            this->buffer << this->termcap->GetString("cl");
+            this->buffer.append(this->termcap->GetString("cl"));
         }
     }
 
@@ -293,7 +308,7 @@ namespace sloked {
                 fprintf(this->state->fd, " ");
                 fflush(this->state->fd);
             } else {
-                this->buffer << ' ';
+                this->buffer.push_back(' ');
             }
         }
         this->MoveBackward(cols);
@@ -312,7 +327,7 @@ namespace sloked {
             fprintf(this->state->fd, "%*s", static_cast<int>(str.size()), str.data());
             fflush(this->state->fd);
         } else {
-            this->buffer << str;
+            this->buffer.append(str);
         }
     }
 
@@ -376,6 +391,14 @@ namespace sloked {
     }
 
     void PosixTerminal::SetGraphicsMode(SlokedTextGraphics mode) {
+        constexpr auto GraphicModeCount = static_cast<int>(SlokedTextGraphics::Count);
+        static auto GraphicsModes = []() {
+            std::array<std::string, GraphicModeCount> modes;
+            for (std::size_t i = 0; i < modes.size(); i++) {
+                modes[i] = std::to_string(i);
+            }
+            return modes;
+        }();
         unsigned int imode = 0;
         switch (mode) {
             case SlokedTextGraphics::Off:
@@ -409,23 +432,47 @@ namespace sloked {
         if (!this->disable_flush) {
             fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(imode));
         } else {
-            this->buffer << "\033[" << imode << "m";
+            this->buffer.append("\033[");
+            this->buffer.append(GraphicsModes[imode]);
+            this->buffer.push_back('m');
         }
     }
 
     void PosixTerminal::SetGraphicsMode(SlokedBackgroundGraphics mode) {
+        constexpr auto GraphicModeOffset = 40;
+        constexpr auto GraphicModeCount = static_cast<int>(SlokedBackgroundGraphics::White) + 1;
+        static auto GraphicsModes = []() {
+            std::array<std::string, GraphicModeCount> modes;
+            for (std::size_t i = 0; i < modes.size(); i++) {
+                modes[i] = std::to_string(i + GraphicModeOffset);
+            }
+            return modes;
+        }();
         if (!this->disable_flush) {
-            fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(mode) + 40);
+            fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(mode) + GraphicModeOffset);
         } else {
-            this->buffer << "\033[" << static_cast<unsigned int>(mode) + 40 << "m";
+            this->buffer.append("\033[");
+            this->buffer.append(GraphicsModes[static_cast<unsigned int>(mode)]);
+            this->buffer.push_back('m');
         }
     }
 
     void PosixTerminal::SetGraphicsMode(SlokedForegroundGraphics mode) {
+        constexpr auto GraphicModeOffset = 30;
+        constexpr auto GraphicModeCount = static_cast<int>(SlokedForegroundGraphics::White) + 1;
+        static auto GraphicsModes = []() {
+            std::array<std::string, GraphicModeCount> modes;
+            for (std::size_t i = 0; i < modes.size(); i++) {
+                modes[i] = std::to_string(i + GraphicModeOffset);
+            }
+            return modes;
+        }();
         if (!this->disable_flush) {
-            fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(mode) + 30);
+            fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(mode) + GraphicModeOffset);
         } else {
-            this->buffer << "\033[" << static_cast<unsigned int>(mode) + 30 << "m";
+            this->buffer.append("\033[");
+            this->buffer.append(GraphicsModes[static_cast<unsigned int>(mode)]);
+            this->buffer.push_back('m');
         }
     }
 
@@ -438,9 +485,9 @@ namespace sloked {
 
     void PosixTerminal::Flush(bool flush) {
         if (flush) {
-            fprintf(this->state->fd, "%s", this->buffer.str().c_str());
+            fprintf(this->state->fd, "%s", this->buffer.c_str());
             fflush(this->state->fd);
-            this->buffer.str("");
+            this->buffer.clear();
             this->disable_flush = false;
         } else {
             this->disable_flush = true;

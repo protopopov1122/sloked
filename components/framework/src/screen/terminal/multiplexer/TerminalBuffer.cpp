@@ -44,7 +44,7 @@ namespace sloked {
     }
 
     void BufferedGraphicsMode::apply(SlokedTerminal &term) const {
-        for (std::size_t i = 0; i < this->text.size(); i++) {
+        for (std::size_t i = 0; i < TextSize; i++) {
             if (text[i]) {
                 term.SetGraphicsMode(static_cast<SlokedTextGraphics>(i));
             }
@@ -152,7 +152,7 @@ namespace sloked {
 
     void BufferedTerminal::Write(std::string_view str) {
         const auto length = str.size();
-        for (Encoding::Iterator it{}; (it = this->encoding.Iterate(it, str, length)).value != U'\0';) {
+        for (Encoding::Iterator it{}; this->encoding.Iterate(it, str, length);) {
             if (it.value == U'\n') {
                 this->ClearChars(this->width - this->col);
                 if (this->line + 1 == this->height) {
@@ -207,6 +207,7 @@ namespace sloked {
         auto buffer = this->buffer.get();
 
         BufferedGraphicsMode prev_g;
+        const bool clearScreen = this->cls;
         for (std::size_t i = 0; i < fullSize; i++) {
             Character &chr = buffer[i];
             auto chr_gfx = chr.graphics;
@@ -216,7 +217,7 @@ namespace sloked {
                 chr.graphics.value().apply(term);
                 prev_g = chr.graphics.value();
             }
-            if (chr.value != U'\0' && (chr.updated || this->cls)) {
+            if (chr.value != U'\0' && (chr.updated || clearScreen)) {
                 if (render_base == render_end) {
                     offset = i;
                 }

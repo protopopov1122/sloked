@@ -167,45 +167,42 @@ namespace sloked {
             return res;
         }
 
-        Iterator Iterate(Iterator iter, std::string_view string, std::size_t length) const override {
+        bool Iterate(Iterator &iter, std::string_view string, std::size_t length) const override {
             iter.start += iter.length;
             if (iter.start == length) {
-                return Iterator{};
+                return false;
             }
 #define ASSERT_WIDTH(x) do { \
                             if (iter.start + (x) > length) { \
-                                return Iterator{}; \
+                                return false; \
                             } \
                         } while (false)
             auto string_data = string.data();
             uint_fast8_t current = string_data[iter.start];
             if ((current & 0xc0) ^ 0xc0){
                 iter.length = 1;
-                ASSERT_WIDTH(iter.length);
+                ASSERT_WIDTH(1);
                 iter.value = current;
-                return iter;
             } else if ((current & 0xe0) ^ 0xe0) {
                 iter.length = 2;
-                ASSERT_WIDTH(iter.length);
+                ASSERT_WIDTH(2);
                 iter.value = ((current & 0x1f) << 6)
                     | (string_data[iter.start + 1] & 0x3f);
-                return iter;
             } else if ((current & 0xf0) ^ 0xf0) {
                 iter.length = 3;
-                ASSERT_WIDTH(iter.length);
+                ASSERT_WIDTH(3);
                 iter.value = ((current & 0xf) << 12)
                     | ((string_data[iter.start + 1] & 0x3f) << 6)
                     | (string_data[iter.start + 2] & 0x3f);
-                return iter;
             } else {
                 iter.length = 4;
-                ASSERT_WIDTH(iter.length);
+                ASSERT_WIDTH(4);
                 iter.value = ((current & 0x7) << 18)
                     | ((string_data[iter.start + 1] & 0x3f) << 12)
                     | ((string_data[iter.start + 2] & 0x3f) << 6)
                     | (string_data[iter.start + 3] & 0x3f);
-                return iter;
             }
+            return true;
 #undef ASSERT_WIDTH
         }
 
@@ -223,7 +220,7 @@ namespace sloked {
         }
 
         std::string Encode(std::u32string_view u32str) const override {
-            constexpr std::size_t MaxStaticBuffer = 16;
+            constexpr std::size_t MaxStaticBuffer = 64;
             if (u32str.size() < MaxStaticBuffer){
                 char buffer[MaxStaticBuffer * 4];
                 return std::string(buffer, EncodeImpl(buffer, u32str) - buffer);
