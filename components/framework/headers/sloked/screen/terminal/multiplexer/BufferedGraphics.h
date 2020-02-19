@@ -40,7 +40,8 @@ namespace sloked {
 
      private:
         static constexpr auto TextSize = static_cast<int>(SlokedTextGraphics::Count);
-        std::bitset<TextSize> text;
+        static_assert(TextSize < 32);
+        uint_fast32_t text;
         uint_fast32_t background = None;
         uint_fast32_t foreground = None;
 

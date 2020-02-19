@@ -63,8 +63,9 @@ namespace sloked {
         void dump_buffer(std::u32string_view, std::size_t);
 
         struct Character {
-            bool updated = false;
-            std::optional<BufferedGraphicsMode> graphics;
+            uint_fast8_t updated = false;
+            uint_fast8_t has_graphics;
+            BufferedGraphicsMode graphics;
             char32_t value = '\0';
         };
 

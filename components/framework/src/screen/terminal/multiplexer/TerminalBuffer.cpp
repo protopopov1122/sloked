@@ -28,11 +28,11 @@ namespace sloked {
 
     void BufferedGraphicsMode::SetGraphicsMode(SlokedTextGraphics mode) {
         if (mode == SlokedTextGraphics::Off) {
-            this->text.reset();
+            this->text = 0;
             this->background = None;
             this->foreground = None;
         }
-        this->text.set(static_cast<int>(mode));
+        this->text |= 1 << static_cast<int>(mode);
     }
 
     void BufferedGraphicsMode::SetGraphicsMode(SlokedBackgroundGraphics mode) {
@@ -45,7 +45,7 @@ namespace sloked {
 
     void BufferedGraphicsMode::apply(SlokedTerminal &term) const {
         for (std::size_t i = 0; i < TextSize; i++) {
-            if (text[i]) {
+            if (text & (1 << i)) {
                 term.SetGraphicsMode(static_cast<SlokedTextGraphics>(i));
             }
         }
@@ -122,10 +122,11 @@ namespace sloked {
         auto buffer = this->buffer.get();
         uint_fast32_t area = this->width * this->height;
         for (uint_fast32_t i = 0; i < area; i++) {
-            auto &chr = buffer[i];
-            chr.value = U' ';
+            Character &chr = *buffer++;
             chr.updated = false;
+            chr.has_graphics = true;
             chr.graphics = gfx;
+            chr.value = U' ';
         }
     }
 
@@ -136,9 +137,10 @@ namespace sloked {
         auto buffer = this->buffer.get();
         while (max--) {
             Character &chr = buffer[idx++];
-            chr.value = ' ';
             chr.updated = true;
+            chr.has_graphics = true;
             chr.graphics = gfx;
+            chr.value = ' ';
         }
     }
 
@@ -163,9 +165,10 @@ namespace sloked {
                 this->Write(this->charPreset.GetTab(this->encoding));
             } else if (this->col < this->width) {
                 Character &chr = this->buffer[this->line * this->width + this->col];
-                chr.value = it.value;
                 chr.updated = true;
+                chr.has_graphics = true;
                 chr.graphics = this->graphics;
+                chr.value = it.value;
                 this->col++;
             }
         }
@@ -206,16 +209,16 @@ namespace sloked {
         std::size_t offset = 0;
         auto buffer = this->buffer.get();
 
-        BufferedGraphicsMode prev_g;
+        BufferedGraphicsMode baseGraphics;
+        auto prev_g = &baseGraphics;
         const bool clearScreen = this->cls;
         for (std::size_t i = 0; i < fullSize; i++) {
             Character &chr = buffer[i];
-            auto chr_gfx = chr.graphics;
-            if (chr_gfx.has_value() && !(chr_gfx.value() == prev_g)) {
+            if (chr.has_graphics && !(chr.graphics == *prev_g)) {
                 this->dump_buffer(std::u32string_view(render_base, static_cast<ptrdiff_t>(render_end - render_base)), offset);
                 render_end = render_base;
-                chr.graphics.value().apply(term);
-                prev_g = chr.graphics.value();
+                chr.graphics.apply(term);
+                prev_g = &chr.graphics;
             }
             if (chr.value != U'\0' && (chr.updated || clearScreen)) {
                 if (render_base == render_end) {
@@ -227,7 +230,7 @@ namespace sloked {
                 render_base = render_base;
             }
             chr.updated = false;
-            chr.graphics.reset();
+            chr.has_graphics = false;
         }
         this->cls = false;
         this->dump_buffer(std::u32string_view(render_base, static_cast<ptrdiff_t>(render_end - render_base)), offset);

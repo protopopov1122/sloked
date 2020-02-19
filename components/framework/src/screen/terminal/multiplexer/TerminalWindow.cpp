@@ -107,31 +107,37 @@ namespace sloked {
         const auto terminal_height = this->term.GetHeight();
         const auto offset = this->offset;
         const auto size = this->size;
+        auto currentLine = this->line;
+        auto currentColumn = this->col;
         for (Encoding::Iterator it{}; this->encoding.Iterate(it, str, length);) {
-            if (this->line >= size.line || this->line + offset.line >= terminal_height) {
+            if (currentLine >= size.line || currentLine + offset.line >= terminal_height) {
                 break;
             }
             if (it.value ^ U'\n') {
                 auto curWidth = this->charPreset.GetCharWidth(it.value);
-                if (this->col + curWidth < size.column) {
+                if (currentColumn + curWidth < size.column) {
                     lineLength += it.length;
-                    this->col += curWidth;
+                    currentColumn += curWidth;
                 }
             } else {
                 this->term.Write(str.substr(lineStart, lineLength));
                 lineStart = it.start + it.length;
                 lineLength = 0;
-                this->ClearChars(size.column - this->col - 1);
-                if (this->line + 1 >= size.line || this->line + offset.line >= this->term.GetHeight()) {
+                this->ClearChars(size.column - currentColumn - 1);
+                if (currentLine + 1 >= size.line || currentLine + offset.line >= terminal_height) {
                     break;
                 } else {
-                    this->SetPosition(this->line + 1, 0);
+                    this->SetPosition(currentLine + 1, 0);
+                    currentLine = this->line;
+                    currentColumn = this->col;
                 }
             }
         }
         if (lineLength > 0) {
             this->term.Write(str.substr(lineStart, lineLength));
         }
+        this->line = currentLine;
+        this->col = currentColumn;
     }
 
     void TerminalWindow::SetGraphicsMode(SlokedTextGraphics mode) {
