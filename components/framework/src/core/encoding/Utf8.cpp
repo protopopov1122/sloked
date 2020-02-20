@@ -179,16 +179,16 @@ namespace sloked {
                         } while (false)
             auto string_data = string.data();
             uint_fast8_t current = string_data[iter.start];
-            if ((current & 0xc0) ^ 0xc0){
+            if ((current & 0xc0) != 0xc0){
                 iter.length = 1;
                 ASSERT_WIDTH(1);
                 iter.value = current;
-            } else if ((current & 0xe0) ^ 0xe0) {
+            } else if ((current & 0xe0) != 0xe0) {
                 iter.length = 2;
                 ASSERT_WIDTH(2);
                 iter.value = ((current & 0x1f) << 6)
                     | (string_data[iter.start + 1] & 0x3f);
-            } else if ((current & 0xf0) ^ 0xf0) {
+            } else if ((current & 0xf0) != 0xf0) {
                 iter.length = 3;
                 ASSERT_WIDTH(3);
                 iter.value = ((current & 0xf) << 12)

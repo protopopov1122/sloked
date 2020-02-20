@@ -85,9 +85,11 @@ namespace sloked {
             }
 
             auto input = this->provider.ReceiveInput(timeout);
-            for (const auto &evt : input) {
+            if (!input.empty()) {
                 this->provider.GetScreen().Lock([&](auto &screen) {
-                    screen.ProcessInput(evt);
+                    for (const auto &evt : input) {
+                        screen.ProcessInput(evt);
+                    }
                 });
             }
         }
