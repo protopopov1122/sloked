@@ -23,6 +23,7 @@
 #define SLOKED_FACADE_NETWORK_H_
 
 #include "sloked/net/Socket.h"
+#include "sloked/sched/Scheduler.h"
 #include <stack>
 
 namespace sloked {
@@ -35,6 +36,7 @@ namespace sloked {
 
         bool HasLayers() const;
         void PopLayer();
+        void BufferingLayer(std::chrono::system_clock::duration, SlokedSchedulerThread &);
         void EncryptionLayer(SlokedCrypto &, SlokedCrypto::Key &);
 
      private:

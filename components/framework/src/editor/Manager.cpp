@@ -69,6 +69,13 @@ namespace sloked {
             const auto &cryptoConfig = config["crypto"].AsDictionary();
             this->SetupCrypto(editor, cryptoConfig);
         }
+        if (config.Has("network")) {
+            const auto &networkConfig = config["network"].AsDictionary();
+            if (networkConfig.Has("buffering")) {
+                auto bufferingTimeout = networkConfig["buffering"].AsInt();
+                editor.GetNetwork().BufferingLayer(std::chrono::milliseconds(bufferingTimeout), editor.GetScheduler());
+            }
+        }
         this->SetupServer(editor, config["server"].AsDictionary());
         if (config.Has("parameters")) {
             const auto &parameters = config["parameters"].AsDictionary();

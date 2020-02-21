@@ -435,6 +435,11 @@ int main(int argc, const char **argv) {
             }
         },
         {
+            "network", KgrDictionary {
+                { "buffering", 5 }
+            }
+        },
+        {
             "server", KgrDictionary {
                 {
                     "netServer", KgrDictionary {
@@ -481,6 +486,11 @@ int main(int argc, const char **argv) {
     auto &mainEditor = startup.Spawn("main", mainEditorConfig);
 
     KgrDictionary secondaryEditorConfig {
+        {
+            "network", KgrDictionary {
+                { "buffering", 5 }
+            }
+        },
         {
             "server", KgrDictionary {
                 {
