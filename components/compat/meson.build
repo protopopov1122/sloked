@@ -1,4 +1,5 @@
 compat_src = [
+  'src/compression/Compat.cpp',
   'src/core/awaitable/Compat.cpp',
   'src/crypto/Compat.cpp',
   'src/editor/configuration/Compat.cpp',
@@ -17,6 +18,11 @@ sloked_compat_deps += sloked_platform
 if not sloked_disable_crypto
   sloked_compat_flags += sloked_crypto_flags
   sloked_compat_deps += sloked_crypto
+endif
+
+if not sloked_disable_compression
+  sloked_compat_flags += sloked_compression_flags
+  sloked_compat_deps += sloked_compression
 endif
 
 if not sloked_disable_scripting

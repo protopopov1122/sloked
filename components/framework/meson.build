@@ -57,6 +57,7 @@ sloked_src = [
   'src/namespace/View.cpp',
   'src/namespace/Virtual.cpp',
   'src/net/BufferedSocket.cpp',
+  'src/net/CompressedSocket.cpp',
   'src/net/CryptoSocket.cpp',
   'src/net/Socket.cpp',
   'src/sched/EventLoop.cpp',

@@ -74,6 +74,7 @@
 #include "sloked/namespace/Empty.h"
 #include "sloked/editor/configuration/Compat.h"
 #include "sloked/text/fragment/Updater.h"
+#include "sloked/compression/Compat.h"
 #include <chrono>
 
 using namespace sloked;
@@ -333,6 +334,10 @@ int main(int argc, const char **argv) {
     if constexpr (!SlokedTerminalCompat::HasSystemTerminal()) {
         throw SlokedError("Demo: system terminal is required");
     }
+
+    if constexpr (SlokedCompressionCompat::IsSupported()) {
+        startupPrms.SetComresssion(SlokedCompressionCompat::GetCompression());
+    }
     SlokedDemoScreenFactory screenFactory;
     startupPrms.SetScreenProviders(screenFactory);
     SlokedEditorManager startup(std::move(startupPrms));
@@ -436,7 +441,8 @@ int main(int argc, const char **argv) {
         },
         {
             "network", KgrDictionary {
-                { "buffering", 5 }
+                { "buffering", 5 },
+                { "compression", SlokedCompressionCompat::IsSupported() }
             }
         },
         {
@@ -488,7 +494,8 @@ int main(int argc, const char **argv) {
     KgrDictionary secondaryEditorConfig {
         {
             "network", KgrDictionary {
-                { "buffering", 5 }
+                { "buffering", 5 },
+                { "compression", SlokedCompressionCompat::IsSupported() }
             }
         },
         {

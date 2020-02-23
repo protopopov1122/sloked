@@ -53,7 +53,7 @@ namespace sloked {
     void SlokedBufferedSocket::Write(SlokedSpan<const uint8_t> data) {
         std::unique_lock lock(this->mtx);
         this->buffer.insert(buffer.end(), data.Data(), data.Data() + data.Size());
-        if (this->task == nullptr) {
+        if (this->task == nullptr || !this->task->Pending()) {
             this->task = this->sched.Sleep(this->timeout, [this] {
                 this->Flush();
             });
@@ -63,7 +63,7 @@ namespace sloked {
     void SlokedBufferedSocket::Write(uint8_t byte) {
         std::unique_lock lock(this->mtx);
         this->buffer.push_back(byte);
-        if (this->task == nullptr) {
+        if (this->task == nullptr || !this->task->Pending()) {
             this->task = this->sched.Sleep(this->timeout, [this] {
                 this->Flush();
             });
@@ -81,7 +81,6 @@ namespace sloked {
     void SlokedBufferedSocket::Flush() {
         std::unique_lock lock(this->mtx);
         this->task->Cancel();
-        this->task = nullptr;
         this->socket->Write(SlokedSpan(this->buffer.data(), this->buffer.size()));
         this->buffer.clear();
     }

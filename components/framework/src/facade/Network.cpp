@@ -22,6 +22,7 @@
 #include "sloked/facade/Network.h"
 #include "sloked/net/BufferedSocket.h"
 #include "sloked/net/CryptoSocket.h"
+#include "sloked/net/CompressedSocket.h"
 
 namespace sloked {
 
@@ -54,6 +55,10 @@ namespace sloked {
 
     void SlokedNetworkFacade::BufferingLayer(std::chrono::system_clock::duration timeout, SlokedSchedulerThread &sched) {
         this->layers.push(std::make_unique<SlokedBufferedSocketFactory>(this->GetEngine(), std::move(timeout), sched));
+    }
+    
+    void SlokedNetworkFacade::CompressionLayer(SlokedCompression &compression) {
+        this->layers.push(std::make_unique<SlokedCompressedSocketFactory>(this->GetEngine(), compression));
     }
 
     void SlokedNetworkFacade::EncryptionLayer(SlokedCrypto &crypto, SlokedCrypto::Key &key) {

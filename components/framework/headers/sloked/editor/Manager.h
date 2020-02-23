@@ -24,6 +24,7 @@
 
 #include "sloked/editor/EditorInstance.h"
 #include "sloked/namespace/Root.h"
+#include "sloked/core/Compression.h"
 
 namespace sloked {
 
@@ -35,7 +36,8 @@ namespace sloked {
             Parameters(SlokedLogger &, SlokedRootNamespaceFactory &);
             Parameters &SetTaggers(SlokedTextTaggerRegistry<int> &);
             Parameters &SetEditors(SlokedEditorManager::EditorFactory);
-            Parameters &SetCrypto(SlokedCrypto &);   
+            Parameters &SetCrypto(SlokedCrypto &);
+            Parameters &SetComresssion(SlokedCompression &);
             Parameters &SetScreenProviders(SlokedScreenProviderFactory &);
 
             friend class SlokedEditorManager;
@@ -45,6 +47,7 @@ namespace sloked {
             SlokedTextTaggerRegistry<int> *taggers;
             SlokedEditorManager::EditorFactory editors;
             SlokedCrypto *crypto;
+            SlokedCompression *compression;
             SlokedScreenProviderFactory *screenProviders;
         };
         SlokedEditorManager(Parameters);
@@ -55,6 +58,7 @@ namespace sloked {
         bool HasBaseTaggers() const;
         bool HasEditorFactory() const;
         bool HasCrypto() const;
+        bool HasCompression() const;
         bool HasScreen() const;
 
         bool Has(const std::string &) const final;
@@ -75,6 +79,7 @@ namespace sloked {
         SlokedTextTaggerRegistry<int> *baseTaggers;
         EditorFactory editorFactory;
         SlokedCrypto *cryptoEngine;
+        SlokedCompression *compression;
         SlokedScreenProviderFactory *screenProviders;
     };
 }

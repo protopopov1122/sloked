@@ -19,31 +19,24 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_FACADE_NETWORK_H_
-#define SLOKED_FACADE_NETWORK_H_
+#ifndef SLOKED_COMPRESSION_COMPAT_H_
+#define SLOKED_COMPRESSION_COMPAT_H_
 
-#include "sloked/net/Socket.h"
 #include "sloked/core/Compression.h"
-#include "sloked/sched/Scheduler.h"
-#include <stack>
 
 namespace sloked {
 
-    class SlokedNetworkFacade {
+    class SlokedCompressionCompat {
      public:
-        SlokedNetworkFacade(SlokedSocketFactory &);
-        SlokedSocketFactory &GetBaseEngine() const;
-        SlokedSocketFactory &GetEngine() const;
+        static constexpr bool IsSupported() {
+#ifdef SLOKED_FEATURE_COMPRESSION
+            return true;
+#else
+            return false;
+#endif
+        }
 
-        bool HasLayers() const;
-        void PopLayer();
-        void BufferingLayer(std::chrono::system_clock::duration, SlokedSchedulerThread &);
-        void CompressionLayer(SlokedCompression &);
-        void EncryptionLayer(SlokedCrypto &, SlokedCrypto::Key &);
-
-     private:
-        SlokedSocketFactory &baseEngine;
-        std::stack<std::unique_ptr<SlokedSocketFactory>> layers;
+        static SlokedCompression &GetCompression();
     };
 }
 

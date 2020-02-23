@@ -1,3 +1,4 @@
 option('crypto', type: 'string', value: 'openssl')
+option('compression', type: 'string', value: 'zlib')
 option('scripting_lua', type: 'boolean', value: 'true')
 option('terminal', type: 'string', value: 'sdl')

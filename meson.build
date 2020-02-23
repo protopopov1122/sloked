@@ -10,6 +10,7 @@ elif compiler_id == 'pgi'
 endif
 
 sloked_disable_crypto = true
+sloked_disable_compression = true
 sloked_disable_scripting = true
 
 subdir('components/framework')
@@ -23,6 +24,12 @@ elif get_option('crypto') == 'openssl'
   sloked_crypto = sloked_openssl_crypto
   sloked_crypto_flags = sloked_openssl_crypto_flags
   sloked_disable_crypto = false
+endif
+if get_option('compression') == 'zlib'
+  subdir('components/compression/zlib')
+  sloked_compression = sloked_zlib_compression
+  sloked_compression_flags = sloked_zlib_compression_flags
+  sloked_disable_compression = false
 endif
 subdir('components/platform/posix')
 if get_option('scripting_lua')

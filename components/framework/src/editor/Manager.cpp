@@ -24,7 +24,7 @@
 namespace sloked {
 
     SlokedEditorManager::Parameters::Parameters(SlokedLogger &logger, SlokedRootNamespaceFactory &root)
-        : logger(logger), root(root), taggers{nullptr}, editors{nullptr}, crypto{nullptr}, screenProviders{nullptr} {}
+        : logger(logger), root(root), taggers{nullptr}, editors{nullptr}, crypto{nullptr}, compression{nullptr}, screenProviders{nullptr} {}
     
     SlokedEditorManager::Parameters &SlokedEditorManager::Parameters::SetTaggers(SlokedTextTaggerRegistry<int> &taggers) {
         this->taggers = std::addressof(taggers);
@@ -41,6 +41,11 @@ namespace sloked {
         return *this;
     }
 
+    SlokedEditorManager::Parameters &SlokedEditorManager::Parameters::SetComresssion(SlokedCompression &compression) {
+        this->compression = std::addressof(compression);
+        return *this;
+    }
+
     SlokedEditorManager::Parameters &SlokedEditorManager::Parameters::SetScreenProviders(SlokedScreenProviderFactory &provider) {
         this->screenProviders = std::addressof(provider);
         return *this;
@@ -48,7 +53,7 @@ namespace sloked {
 
     SlokedEditorManager::SlokedEditorManager(Parameters prms)
         : logger(prms.logger), namespaceFactory(prms.root), baseTaggers(prms.taggers),
-          editorFactory(std::move(prms.editors)), cryptoEngine(prms.crypto), screenProviders(prms.screenProviders) {}
+          editorFactory(std::move(prms.editors)), cryptoEngine(prms.crypto), compression(prms.compression), screenProviders(prms.screenProviders) {}
         
     void SlokedEditorManager::Spawn(const KgrValue &config) {
         const auto &editors = config.AsDictionary();
@@ -71,6 +76,9 @@ namespace sloked {
         }
         if (config.Has("network")) {
             const auto &networkConfig = config["network"].AsDictionary();
+            if (networkConfig.Has("compression") && networkConfig["compression"].AsBoolean() && this->compression != nullptr) {
+                editor.GetNetwork().CompressionLayer(*this->compression);
+            }
             if (networkConfig.Has("buffering")) {
                 auto bufferingTimeout = networkConfig["buffering"].AsInt();
                 editor.GetNetwork().BufferingLayer(std::chrono::milliseconds(bufferingTimeout), editor.GetScheduler());
@@ -96,6 +104,10 @@ namespace sloked {
 
     bool SlokedEditorManager::HasCrypto() const {
         return this->cryptoEngine != nullptr;
+    }
+
+    bool SlokedEditorManager::HasCompression() const {
+        return this->compression != nullptr;
     }
 
     bool SlokedEditorManager::HasScreen() const {

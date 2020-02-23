@@ -122,21 +122,22 @@ namespace sloked {
         std::unique_lock lock(this->mtx);
         auto now = std::chrono::system_clock::now();
         while (this->work.load() && !this->tasks.empty() && (this->tasks.begin()->second)->GetTime() <= now) {
-            auto task = this->tasks.begin();
+            auto taskIt = this->tasks.begin();
+            auto taskId = taskIt->first;
+            auto task = taskIt->second;
             bool erase = true;
-            if (task->second->Pending()) {
+            if (task->Pending()) {
                 lock.unlock();
-                task->second->Run();
-                erase = !task->second->Pending();
+                task->Run();
+                erase = !task->Pending();
                 lock.lock();
             }
             if (erase) {
-                this->tasks.erase(task->first);
+                this->tasks.erase(taskId);
             } else {
-                std::shared_ptr<TimerTask> taskHandle = task->second;
-                this->tasks.erase(task->first);
-                taskHandle->NextInterval();
-                this->tasks[taskHandle.get()] = taskHandle;
+                this->tasks.erase(taskId);
+                task->NextInterval();
+                this->tasks[task.get()] = task;
             }
         }
         while (this->work.load() && !this->deferred.empty()) {
