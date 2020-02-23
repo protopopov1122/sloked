@@ -212,6 +212,9 @@ namespace sloked {
     void KgrNetInterface::Write(const KgrValue &msg) {
         DefaultSerializer serializer;
         auto raw = serializer.Serialize(msg);
+        if (raw.size() > std::numeric_limits<uint32_t>::max()) {
+            throw SlokedError("KgrNetInterface: Message length exceeds maximum");
+        }
         std::array<uint8_t, 4> length {
             static_cast<uint8_t>(raw.size() & 0xff),
             static_cast<uint8_t>((raw.size() >> 8) & 0xff),

@@ -252,7 +252,7 @@ namespace sloked {
         Float,
         BooleanTrue,
         BooleanFalse,
-        UnicodeString,
+        String,
         Array,
         Object
     };
@@ -347,13 +347,19 @@ namespace sloked {
                 break;
 
             case KgrValueType::String:
-                output.push_back(static_cast<int8_t>(Tag::UnicodeString));
+                output.push_back(static_cast<int8_t>(Tag::String));
                 if (SlokedLocale::SystemEncoding() != this->encoding) {
                     EncodingConverter conv(SlokedLocale::SystemEncoding(), this->encoding);
                     std::string decoded = conv.Convert(value.AsString());
+                    if (decoded.size() > std::numeric_limits<uint32_t>::max()) {
+                        throw SlokedError("BinarySerializer: String length exceeds maximum");
+                    }
                     SerializeScalar(static_cast<uint32_t>(decoded.size()), std::back_inserter(output));
                     output.insert(output.end(), decoded.begin(), decoded.end());
                 } else {
+                    if (value.AsString().size() > std::numeric_limits<uint32_t>::max()) {
+                        throw SlokedError("BinarySerializer: String length exceeds maximum");
+                    }
                     SerializeScalar(static_cast<uint32_t>(value.AsString().size()), std::back_inserter(output));
                     output.insert(output.end(), value.AsString().begin(), value.AsString().end());
                 }
@@ -361,6 +367,9 @@ namespace sloked {
 
             case KgrValueType::Array: {
                 const auto &array = value.AsArray();
+                if (array.Size() > std::numeric_limits<uint32_t>::max()) {
+                    throw SlokedError("BinarySerializer: Array length exceeds maximum");
+                }
                 output.push_back(static_cast<int8_t>(Tag::Array));
                 SerializeScalar(static_cast<uint32_t>(array.Size()), std::back_inserter(output));
                 for (const auto &el : array) {
@@ -370,6 +379,9 @@ namespace sloked {
 
             case KgrValueType::Object: {
                 const auto &object = value.AsDictionary();
+                if (object.Size() > std::numeric_limits<uint32_t>::max()) {
+                    throw SlokedError("BinarySerializer: Object field count exceeds maximum");
+                }
                 output.push_back(static_cast<int8_t>(Tag::Object));
                 SerializeScalar(static_cast<uint32_t>(object.Size()), std::back_inserter(output));
                 for (const auto &el : object) {
@@ -429,7 +441,7 @@ namespace sloked {
             case Tag::BooleanFalse:
                 return false;
             
-            case Tag::UnicodeString: {
+            case Tag::String: {
                 std::size_t length = DeserializeScalar<uint32_t>(iter);
                 std::string value;
                 value.reserve(length);
