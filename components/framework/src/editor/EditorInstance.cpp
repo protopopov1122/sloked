@@ -30,7 +30,6 @@ namespace sloked {
         : running{false}, ioPoll(std::move(ioPoll)), network(network) {
         this->ioPoller = std::make_unique<SlokedDefaultIOPollThread>(*this->ioPoll);
         this->closeables.Attach(*this->ioPoller);
-        this->closeables.Attach(this->sched);
         this->closeables.Attach(this->contextManager);
     }
 
@@ -114,6 +113,7 @@ namespace sloked {
         if (!this->running.exchange(true)) {
             this->ioPoller->Start(KgrNetConfig::RequestTimeout);
             this->sched.Start();
+            this->closeables.Attach(this->sched);
             this->contextManager.Start();
             if (this->server) {
                 this->server->Start();
