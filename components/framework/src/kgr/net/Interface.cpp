@@ -108,7 +108,7 @@ namespace sloked {
     }
 
     KgrNetInterface::KgrNetInterface(std::unique_ptr<SlokedSocket> socket)
-        : socket(std::move(socket)), nextId(0) {}
+        : socket(std::move(socket)), buffer{0}, nextId(0) {}
 
     bool KgrNetInterface::Wait(std::chrono::system_clock::duration timeout) const {
         return !this->buffer.empty() || this->socket->Wait(timeout);
@@ -128,7 +128,7 @@ namespace sloked {
         if (this->socket->Available() > 0) {
             DefaultSerializer serializer;
             auto data = this->socket->Read(socket->Available());
-            this->buffer.insert(this->buffer.end(), data.begin(), data.end());
+            this->buffer.insert(data.begin(), data.end());
             while (this->buffer.size() >= 4) {
                 std::size_t length = this->buffer.at(0) |
                     (this->buffer.at(1) << 8) |
@@ -138,7 +138,7 @@ namespace sloked {
                     break;
                 }
                 KgrSerializer::Blob message{this->buffer.begin() + 4, this->buffer.begin() + length + 4};
-                this->buffer.erase(this->buffer.begin(), this->buffer.begin() + length + 4);
+                this->buffer.pop_front(length + 4);
                 try {
                     this->incoming.push(serializer.Deserialize(message));
                 } catch (const SlokedError &err) {

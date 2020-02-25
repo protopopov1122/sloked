@@ -24,6 +24,7 @@
 
 #include "sloked/kgr/Value.h"
 #include "sloked/net/Socket.h"
+#include "sloked/core/RingBuffer.h"
 #include <functional>
 #include <mutex>
 #include <condition_variable>
@@ -100,7 +101,7 @@ namespace sloked {
         void ActionClose(const KgrValue &);
 
         std::unique_ptr<SlokedSocket> socket;
-        std::vector<uint8_t> buffer;
+        SlokedRingBuffer<uint8_t, SlokedRingBufferType::Dynamic> buffer;
         int64_t nextId;
         std::queue<KgrValue> incoming;
         std::map<int64_t, std::queue<Response>> responses;
