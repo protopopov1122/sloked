@@ -27,7 +27,12 @@
 
 namespace sloked {
 
-    template <typename T, bool Static = true>
+    enum class SlokedRingBufferType {
+        Static,
+        Dynamic
+    };
+
+    template <typename T, SlokedRingBufferType BufferType = SlokedRingBufferType::Static>
     class SlokedRingBuffer {
         static constexpr std::size_t Padding = 1;
         using AlignedType = std::aligned_storage_t<sizeof(T), alignof(T)>;
@@ -40,7 +45,7 @@ namespace sloked {
         template <typename Self>
         class AbstractIterator : public std::iterator<std::input_iterator_tag, T, IndexType, const T *, const T> {
          public:
-            using Ring = SlokedRingBuffer<T, Static>;
+            using Ring = SlokedRingBuffer<T, BufferType>;
             friend Ring;
 
             Self &operator++() {
@@ -156,44 +161,38 @@ namespace sloked {
 
         SlokedRingBuffer(IndexType user_capacity)
             : head{0}, tail{0}, total_capacity{user_capacity + Padding} {
-            this->buffer = reinterpret_cast<AlignedType *>(operator new(sizeof(AlignedType) * this->total_capacity));
+            this->buffer = this->allocate(this->total_capacity);
         }
 
-        SlokedRingBuffer(const SlokedRingBuffer<T, Static> &) = delete;
+        SlokedRingBuffer(const SlokedRingBuffer<T, BufferType> &) = delete;
 
-        SlokedRingBuffer(SlokedRingBuffer<T, Static> &&ring) {
+        SlokedRingBuffer(SlokedRingBuffer<T, BufferType> &&ring) {
             this->buffer = ring.buffer;
             this->total_capacity = ring.total_capacity;
             this->head = ring.head;
             this->tail = ring.tail;
-            ring.buffer = nullptr;
-            ring.total_capacity = 0;
-            ring.head = 0;
-            ring.tail = 0;
+            ring.reset();
         }
 
         ~SlokedRingBuffer() {
             this->pop_front(this->size());
-            operator delete(reinterpret_cast<void *>(this->buffer));
+            this->deallocate(this->buffer);
         }
 
-        SlokedRingBuffer& operator=(const SlokedRingBuffer<T, Static> &) = delete;
+        SlokedRingBuffer& operator=(const SlokedRingBuffer<T, BufferType> &) = delete;
         
-        SlokedRingBuffer& operator=(const SlokedRingBuffer<T, Static> &&ring) {
+        SlokedRingBuffer& operator=(const SlokedRingBuffer<T, BufferType> &&ring) {
             this->pop_front(this->size());
-            operator delete(reinterpret_cast<void *>(this->buffer));
+            this->deallocate(this->buffer);
             this->buffer = ring.buffer;
             this->total_capacity = ring.total_capacity;
             this->head = ring.head;
             this->tail = ring.tail;
-            ring.buffer = nullptr;
-            ring.total_capacity = 0;
-            ring.head = 0;
-            ring.tail = 0;
+            ring.reset();
         }
 
-        constexpr bool IsStatic() const {
-            return Static;
+        constexpr SlokedRingBufferType GetType() const {
+            return BufferType;
         }
 
         bool empty() const {
@@ -256,6 +255,14 @@ namespace sloked {
             }
         }
 
+        const T &operator[](IndexType idx) const {
+            return this->at(idx);
+        }
+
+        T &operator[](IndexType idx) {
+            return this->at(idx);
+        }
+
         ConstIterator begin() const {
             return ConstIterator{*this, this->head};
         }
@@ -266,14 +273,21 @@ namespace sloked {
 
         void push_back(const T &element) {
             this->ensure_available(1);
-            new(&this->buffer[this->tail]) T(element);
+            this->construct(this->buffer + this->tail, element);
             this->tail = this->shift_forward(this->tail, 1);
         }
 
         void emplace_back(T &&element) {
             this->ensure_available(1);
-            new(&this->buffer[this->tail]) T(std::forward<T>(element));
+            this->construct(this->buffer + this->tail, std::forward<T>(element));
             this->tail = this->shift_forward(this->tail, 1);
+        }
+
+        template <typename I>
+        void insert(I begin, I end) {
+            for (auto it = begin; it != end; ++it) {
+                this->push_back(*it);
+            }
         }
 
         void pop_front(IndexType count = 1) {
@@ -286,6 +300,19 @@ namespace sloked {
                 }
                 this->head = this->shift_forward(this->head, 1);
             }
+        }
+
+        void clear() {
+            this->pop_front(this->size());
+        }
+
+        void reset() {
+            this->pop_front(this->size());
+            this->deallocate(this->buffer);
+            this->total_capacity = Padding;
+            this->buffer = nullptr;
+            this->head = 0;
+            this->tail = 0;
         }
 
         template <typename I>
@@ -306,50 +333,68 @@ namespace sloked {
         }
 
      private:
+        void construct(AlignedType *dest, T &&src) const {
+            if constexpr (std::is_move_constructible_v<T>) {
+                new(dest) T(std::forward<T>(src));
+            } else {
+                new(dest) T(src);
+            }
+        }
+
+        void construct(AlignedType *dest, const T &src) const {
+            new(dest) T(src);
+        }
+
+        AlignedType *allocate(std::size_t sz) const {
+            return reinterpret_cast<AlignedType *>(operator new(sizeof(AlignedType) * sz));
+        }
+
+        void deallocate(AlignedType *ptr) const {
+            operator delete(reinterpret_cast<void *>(ptr));
+        }
+
+        void reallocateBuffer(std::size_t nextCapacity) {
+            auto nextBuffer = this->allocate(nextCapacity);
+            if (this->head <= this->tail) {
+                IndexType nextIdx = 0;
+                for (auto idx = this->head; idx < this->tail; ++idx, ++nextIdx) {
+                    auto &prev = *reinterpret_cast<T *>(&this->buffer[idx]);
+                    this->construct(nextBuffer + nextIdx, std::move(prev));
+                    reinterpret_cast<T *>(std::addressof(prev))->T::~T();
+                }
+                this->deallocate(this->buffer);
+                this->buffer = nextBuffer;
+                this->total_capacity = nextCapacity;
+                this->head = 0;
+                this->tail = nextIdx;
+            } else {
+                IndexType nextIdx = 0;
+                for (auto idx = this->head; idx < this->total_capacity; ++idx, ++nextIdx) {
+                    auto &prev = *reinterpret_cast<T *>(&this->buffer[idx]);
+                    this->construct(nextBuffer + nextIdx, std::move(prev));
+                    reinterpret_cast<T *>(std::addressof(prev))->T::~T();
+                }
+                for (IndexType idx = 0; idx < this->tail; ++idx, ++nextIdx) {
+                    auto &prev = *reinterpret_cast<T *>(&this->buffer[idx]);
+                    this->construct(nextBuffer + nextIdx, std::move(prev));
+                    reinterpret_cast<T *>(std::addressof(prev))->T::~T();
+                }
+                this->deallocate(this->buffer);
+                this->buffer = nextBuffer;
+                this->total_capacity = nextCapacity;
+                this->head = 0;
+                this->tail = nextIdx;
+            }
+        }
+
         void ensure_available(IndexType sz) {
-            if constexpr (Static) {
+            if constexpr (BufferType == SlokedRingBufferType::Static) {
                 if (sz > this->available()) {
                     throw SlokedError("RingBuffer: Can't allocate requested amount");
                 }
             } else if (sz > this->available()) {
-                auto nextCapacity = this->total_capacity * 3 / 2 + 1 + Padding;
-                auto nextBuffer = reinterpret_cast<AlignedType *>(operator new(sizeof(AlignedType) * nextCapacity));
-                if (this->head <= this->tail) {
-                    IndexType nextIdx = 0;
-                    for (auto idx = this->head; idx < this->tail; ++idx, ++nextIdx) {
-                        auto &prev = *reinterpret_cast<T *>(&this->buffer[idx]);
-                        new(nextBuffer + nextIdx) T(std::move(prev));
-                        if constexpr (std::is_destructible_v<T>) {
-                            reinterpret_cast<T *>(std::addressof(prev))->T::~T();
-                        }
-                    }
-                    operator delete(reinterpret_cast<void *>(this->buffer));
-                    this->buffer = nextBuffer;
-                    this->total_capacity = nextCapacity;
-                    this->head = 0;
-                    this->tail = nextIdx;
-                } else {
-                    IndexType nextIdx = 0;
-                    for (auto idx = this->head; idx < this->total_capacity; ++idx, ++nextIdx) {
-                        auto &prev = *reinterpret_cast<T *>(&this->buffer[idx]);
-                        new(nextBuffer + nextIdx) T(std::move(prev));
-                        if constexpr (std::is_destructible_v<T>) {
-                            reinterpret_cast<T *>(std::addressof(prev))->T::~T();
-                        }
-                    }
-                    for (IndexType idx = 0; idx < this->tail; ++idx, ++nextIdx) {
-                        auto &prev = *reinterpret_cast<T *>(&this->buffer[idx]);
-                        new(nextBuffer + nextIdx) T(std::move(prev));
-                        if constexpr (std::is_destructible_v<T>) {
-                            reinterpret_cast<T *>(std::addressof(prev))->T::~T();
-                        }
-                    }
-                    operator delete(reinterpret_cast<void *>(this->buffer));
-                    this->buffer = nextBuffer;
-                    this->total_capacity = nextCapacity;
-                    this->head = 0;
-                    this->tail = nextIdx;
-                }
+                auto nextCapacity = this->total_capacity * 3 / 2 + Padding;
+                this->reallocateBuffer(nextCapacity);
             }
         }
 
