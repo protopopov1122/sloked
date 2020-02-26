@@ -32,7 +32,7 @@ namespace sloked {
         encoded.reserve(((length / 3) + (length % 3 > 0)) * 4);
         uint32_t buffer;
         std::size_t i = 0;
-        for (; i < length - 2;) {
+        for (; length >= 2 && i < length - 2;) {
             buffer = begin[i++] << 16;
             buffer |= begin[i++] << 8;
             buffer |= begin[i++];

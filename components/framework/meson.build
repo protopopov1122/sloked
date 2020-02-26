@@ -120,3 +120,5 @@ sloked_framework_lib = static_library('sloked', sloked_src,
   dependencies : [threads, atomic, execinfo])
 sloked_framework = declare_dependency(link_with : sloked_framework_lib,
   include_directories : include_directories('headers'))
+
+subdir('tests')
