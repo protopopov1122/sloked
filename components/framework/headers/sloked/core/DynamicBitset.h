@@ -4,11 +4,14 @@
 #include "sloked/Base.h"
 #include <vector>
 #include <cinttypes>
+#include <climits>
 
 namespace sloked {
 
     class SlokedDynamicBitset {
+        using Integer = uint64_t;
      public:
+        static constexpr std::size_t MinWidth = sizeof(Integer) * CHAR_BIT;
         SlokedDynamicBitset();
         std::size_t Count() const;
         bool Get(std::size_t) const;
@@ -16,8 +19,7 @@ namespace sloked {
         std::size_t Allocate();
 
      private:
-        using Integer = uint64_t;
-        std::vector<uint64_t> bits;
+        std::vector<Integer> bits;
     };
 }
 

@@ -28,14 +28,14 @@ namespace sloked {
 
     template <typename T = uint64_t>
     static constexpr std::pair<std::size_t, std::size_t> CalcPosition(std::size_t idx) {
-        const std::size_t offset = idx % (sizeof(T) * 8);
-        const std::size_t position = idx / (sizeof(T) * 8);
+        const std::size_t offset = idx % (sizeof(T) * CHAR_BIT);
+        const std::size_t position = idx / (sizeof(T) * CHAR_BIT);
         return {position, offset};
     }
 
     template <typename T = uint64_t>
     static constexpr std::size_t CalcBitOffset(std::size_t position, std::size_t offset) {
-        return position * (sizeof(T) * 8) + offset;
+        return position * (sizeof(T) * CHAR_BIT) + offset;
     }
 
     template <typename T>
@@ -55,7 +55,7 @@ namespace sloked {
 
     template <typename T>
     static std::optional<std::size_t> FindFree(T integer) {
-        for (std::size_t i = 0; i < sizeof(T) * 8; i++) {
+        for (std::size_t i = 0; i < sizeof(T) * CHAR_BIT; i++) {
             if (!BitEnabled(integer, i)) {
                 return i;
             }
@@ -67,7 +67,7 @@ namespace sloked {
         : bits{} {}
     
     std::size_t SlokedDynamicBitset::Count() const {
-        return this->bits.size() * sizeof(Integer) * 8;
+        return this->bits.size() * MinWidth;
     }
 
     bool SlokedDynamicBitset::Get(std::size_t idx) const {
@@ -82,7 +82,7 @@ namespace sloked {
 
     void SlokedDynamicBitset::Set(std::size_t idx, bool value) {
         if (idx >= this->Count()) {
-            this->bits.insert(this->bits.end(), (idx - this->Count()) / 8 + 1, 0);
+            this->bits.insert(this->bits.end(), (idx - this->Count()) / CHAR_BIT + 1, 0);
         }
         auto [position, offset] = CalcPosition<Integer>(idx);
         auto integer = this->bits.at(position);
@@ -103,6 +103,6 @@ namespace sloked {
             }
         }
         this->bits.push_back(0b1);
-        return (this->bits.size() - 1) * sizeof(Integer) * 8;
+        return (this->bits.size() - 1) * MinWidth;
     }
 }

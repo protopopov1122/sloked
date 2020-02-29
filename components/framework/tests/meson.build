@@ -4,7 +4,8 @@ sloked_tests_src = [
     'core/Cache.cpp',
     'core/CharPreset.cpp',
     'core/Counter.cpp',
-    'core/DataHandle.cpp'
+    'core/DataHandle.cpp',
+    'core/DynamicBitset.cpp'
 ]
 
 sloked_framework_tests = executable('sloked_framework_tests', sloked_tests_src,
