@@ -23,38 +23,22 @@
 
 namespace sloked {
 
-    SlokedSDLTerminal::SlokedSDLTerminal(std::unique_ptr<SlokedSDLWindow> window)
-        : window(std::move(window)), text{} {
-        this->window->SetRenderer([this](SDL_Window *window, SDL_Renderer *renderer) {
-            this->RenderSurface(window, renderer);
-        });
-    }
+    SlokedSDLTerminal::SlokedSDLTerminal()
+        : text{} {}
 
-    void SlokedSDLTerminal::Render() {
-        std::unique_lock lock(this->mainSurfaceMtx);
-        while (this->window->Events().HasEvents()) {
-            auto event = this->window->Events().NextEvent();
+    void SlokedSDLTerminal::PollEvents(SlokedSDLEventQueue &events) {
+        while (events.HasEvents()) {
+            auto event = events.NextEvent();
             if (event.type == SDL_TEXTINPUT) {
                 this->text.append(event.text.text);
-                this->mainSurface.reset();
             }
         }
-        if (this->mainSurface == nullptr) {
-            auto winSize = this->window->Size();
-            this->mainSurface = std::make_unique<SlokedSDLSurface>(winSize);
-            this->mainSurface->Fill({0, 0, winSize.x, winSize.y}, {255, 255, 255, 0});
-            static SlokedSDLFont font("/usr/share/fonts/TTF/DejaVuSansMono.ttf", 12);
-            SlokedSDLSurface text = font.RenderShaded(this->text.c_str(), {0, 0, 0, 0}, {255, 255, 255, 0});
-            SDL_BlitSurface(text.GetSurface(), nullptr, this->mainSurface->GetSurface(), nullptr);
-        }
     }
-    
-    void SlokedSDLTerminal::RenderSurface(SDL_Window *, SDL_Renderer *renderer) {
-        this->Render();
-        std::unique_lock lock(this->mainSurfaceMtx);
-        if (this->mainSurface) {
-            SlokedSDLTexture texture(renderer, *this->mainSurface);
-            SDL_RenderCopy(renderer, texture.GetTexture(), nullptr, nullptr);
-        }
+
+    void SlokedSDLTerminal::Render(SlokedSDLSurface &surface) {
+        surface.Fill({0, 0, surface.Size().x, surface.Size().y}, {255, 255, 255, 0});
+        static SlokedSDLFont font("/usr/share/fonts/TTF/DejaVuSansMono.ttf", 12);
+        SlokedSDLSurface text = font.RenderShaded(this->text.c_str(), {0, 0, 0, 0}, {255, 255, 255, 0});
+        SDL_BlitSurface(text.GetSurface(), nullptr, surface.GetSurface(), nullptr);
     }
 }

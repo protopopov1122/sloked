@@ -23,6 +23,7 @@
 #define SLOKED_SCREEN_SDL_WINDOW_H_
 
 #include "sloked/screen/sdl/Event.h"
+#include "sloked/screen/sdl/Component.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -34,17 +35,18 @@
 
 namespace sloked {
 
+    class SlokedSDLWindowRenderer;
+
     class SlokedSDLWindow {
      public:
-        using Renderer = std::function<void(SDL_Window *, SDL_Renderer *)>;
-
-        SlokedSDLWindow(Renderer = nullptr);
+        SlokedSDLWindow(SlokedSDLWindowRenderer &, std::unique_ptr<SlokedSDLComponent> = nullptr);
         ~SlokedSDLWindow();
 
         bool IsOpen() const;
         void Open(SDL_Point);
         void Close();
-        void SetRenderer(Renderer);
+        SlokedSDLComponent *GetRoot() const;
+        void SetRoot(std::unique_ptr<SlokedSDLComponent>);
         void Repaint();
         SDL_Point Size() const;
         void Resize(SDL_Point);
@@ -52,19 +54,41 @@ namespace sloked {
         void Title(const std::string &);
         SlokedSDLEventQueue &Events() const;
 
+        friend class SlokedSDLWindowRenderer;
+
      private:
         struct Context;
         void Init(SDL_Point);
+        void PollEvents();
+        void Render();
+
+        SlokedSDLWindowRenderer &windowRenderer;
+        std::unique_ptr<SlokedSDLComponent> root;
+        std::unique_ptr<Context> nativeContext;
+        mutable std::mutex mtx;
+        std::atomic_bool opened;
+        std::unique_ptr<SlokedSDLEventQueue> events;
+    };
+
+    class SlokedSDLWindowRenderer {
+     public:
+        SlokedSDLWindowRenderer();
+        void Start();
+        void Stop();
+        bool IsRunning() const;
+        void Repaint();
+        void Attach(SlokedSDLWindow &);
+        void Detach(SlokedSDLWindow &);
+
+     private:
         void Run();
         
-        std::atomic<bool> running;
-        std::thread worker;
-        std::unique_ptr<Context> nativeContext;
+        std::atomic_bool running;
+        std::vector<std::reference_wrapper<SlokedSDLWindow>> windows;
         std::mutex mtx;
-        std::condition_variable cond;
-        std::chrono::system_clock::duration repaint_delay;
-        Renderer renderer;
-        std::unique_ptr<SlokedSDLEventQueue> events;
+        std::condition_variable cv;
+        std::thread renderer;
+        std::chrono::system_clock::duration framerate;
     };
 }
 

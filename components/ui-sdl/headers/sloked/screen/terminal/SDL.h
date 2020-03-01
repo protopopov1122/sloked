@@ -29,17 +29,13 @@
 
 namespace sloked {
 
-    class SlokedSDLTerminal {
+    class SlokedSDLTerminal : public SlokedSDLComponent {
      public:
-        SlokedSDLTerminal(std::unique_ptr<SlokedSDLWindow>);
+        SlokedSDLTerminal();
+        void PollEvents(SlokedSDLEventQueue &) final;
+        void Render(SlokedSDLSurface &) final;
 
      private:
-        void Render();
-        void RenderSurface(SDL_Window *, SDL_Renderer *);
-
-        std::unique_ptr<SlokedSDLWindow> window;
-        std::mutex mainSurfaceMtx;
-        std::unique_ptr<SlokedSDLSurface> mainSurface;
         std::string text;
     };
 }
