@@ -50,6 +50,8 @@ namespace sloked {
         void SetHinting(int) const;
         bool GetKerning() const;
         void SetKerning(bool) const;
+        bool IsFixedWidth() const;
+        SDL_Point SizeOf(std::string_view) const;
 
      private:
         TTF_Font *font;

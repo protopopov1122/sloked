@@ -70,6 +70,9 @@ namespace sloked {
             }
             this->events = SlokedSDLEventBroker::Global().Subscribe(SDL_GetWindowID(this->nativeContext->window));
             this->windowRenderer.Attach(*this);
+            if (this->root) {
+                this->root->SetSize(dim);
+            }
         }
     }
 
@@ -88,7 +91,11 @@ namespace sloked {
 
     void SlokedSDLWindow::SetRoot(std::unique_ptr<SlokedSDLComponent> root) {
         std::unique_lock lock(this->mtx);
-        this->root = std::move(root);
+        SDL_Point dim;
+        SDL_GetWindowSize(this->nativeContext->window, &dim.x, &dim.y);
+        if (this->root) {
+            this->root->SetSize(dim);
+        }
     }
     
     void SlokedSDLWindow::Repaint() {

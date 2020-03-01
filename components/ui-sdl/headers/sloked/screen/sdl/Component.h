@@ -8,6 +8,7 @@ namespace sloked {
     class SlokedSDLComponent {
      public:
         virtual ~SlokedSDLComponent() = default;
+        virtual void SetSize(SDL_Point) = 0;
         virtual void PollEvents(SlokedSDLEventQueue &) = 0;
         virtual void Render(SlokedSDLSurface &) = 0;
     };

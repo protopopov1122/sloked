@@ -158,4 +158,22 @@ namespace sloked {
             throw SlokedError("SDLFont: Font not defined");
         }
     }
+
+    bool SlokedSDLFont::IsFixedWidth() const {
+        if (this->font != nullptr) {
+            return TTF_FontFaceIsFixedWidth(this->font);
+        } else {
+            throw SlokedError("SDLFont: Font not defined");
+        }
+    }
+
+    SDL_Point SlokedSDLFont::SizeOf(std::string_view text) const {
+        if (this->font != nullptr) {
+            SDL_Point size;
+            TTF_SizeUTF8(this->font, utf8Converter.Convert(text).c_str(), &size.x, &size.y);
+            return size;
+        } else {
+            throw SlokedError("SDLFont: Font not defined");
+        }
+    }
 }

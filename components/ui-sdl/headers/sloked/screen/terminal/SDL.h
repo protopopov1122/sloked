@@ -29,14 +29,40 @@
 
 namespace sloked {
 
-    class SlokedSDLTerminal : public SlokedSDLComponent {
+    class SlokedSDLTerminal : public SlokedSDLComponent, public SlokedTerminal {
      public:
-        SlokedSDLTerminal();
+        SlokedSDLTerminal(SlokedSDLFont);
+        void SetSize(SDL_Point) final;
         void PollEvents(SlokedSDLEventQueue &) final;
         void Render(SlokedSDLSurface &) final;
 
+        void SetPosition(Line, Column) final;
+        void MoveUp(Line) final;
+        void MoveDown(Line) final;
+        void MoveBackward(Column) final;
+        void MoveForward(Column) final;
+
+        void ShowCursor(bool) final;
+        void ClearScreen() final;
+        void ClearChars(Column) final;
+        Column GetWidth() final;
+        Line GetHeight() final;
+
+        void Write(std::string_view) final;
+
+        void SetGraphicsMode(SlokedTextGraphics) final;
+        void SetGraphicsMode(SlokedBackgroundGraphics) final;
+        void SetGraphicsMode(SlokedForegroundGraphics) final;
+
+
      private:
-        std::string text;
+        SlokedSDLFont font;
+        TextPosition size;
+        SDL_Point glyphSize;
+        SlokedSDLSurface buffer;
+        TextPosition cursor;
+        bool showCursor;
+        SDL_Color backgroundColor;
     };
 }
 
