@@ -37,6 +37,7 @@ namespace sloked {
         void SetGraphicsMode(SlokedForegroundGraphics);
         void apply(SlokedTerminal &) const;
         bool operator==(const BufferedGraphicsMode &) const;
+        bool operator!=(const BufferedGraphicsMode &) const;
 
      private:
         static constexpr auto TextSize = static_cast<int>(SlokedTextGraphics::Count);

@@ -63,7 +63,12 @@ namespace sloked {
         void dump_buffer(std::u32string_view, std::size_t);
 
         struct Character {
-            uint_fast8_t updated = false;
+            bool operator!=(const Character &other) {
+                return this->value != other.value ||
+                    this->has_graphics != other.has_graphics ||
+                    !(this->graphics == other.graphics);
+            }
+            // uint_fast8_t updated = false;
             uint_fast8_t has_graphics;
             BufferedGraphicsMode graphics;
             char32_t value = '\0';
@@ -72,9 +77,10 @@ namespace sloked {
         SlokedTerminal &term;
         const Encoding &encoding;
         const SlokedCharPreset &charPreset;
-        bool cls;
+        // bool cls;
         bool show_cursor;
-        std::unique_ptr<Character[]> buffer;
+        std::unique_ptr<Character[]> current_state;
+        std::unique_ptr<Character[]> prev_state;
         std::unique_ptr<char32_t[]> renderBuffer;
         BufferedGraphicsMode graphics;
         Line line;
