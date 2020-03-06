@@ -19,30 +19,30 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/screen/sdl/Surface.h"
+#include "sloked/screen/cairo/sdl/Surface.h"
 #include "sloked/core/Error.h"
 
 namespace sloked {
 
-    SlokedSDLSurface::SlokedSDLSurface(SDL_Surface *surface)
+    SlokedCairoSDLSurface::SlokedCairoSDLSurface(SDL_Surface *surface)
         : surface(surface) {}
 
-    SlokedSDLSurface::SlokedSDLSurface(SDL_Point dim) {
+    SlokedCairoSDLSurface::SlokedCairoSDLSurface(SDL_Point dim) {
         this->surface = SDL_CreateRGBSurface(0, dim.x, dim.y, 32, 0, 0, 0, 0);
     }
 
-    SlokedSDLSurface::SlokedSDLSurface(SlokedSDLSurface &&surface)
+    SlokedCairoSDLSurface::SlokedCairoSDLSurface(SlokedCairoSDLSurface &&surface)
         : surface(surface.surface) {
         surface.surface = nullptr;
     }
 
-    SlokedSDLSurface::~SlokedSDLSurface() {
+    SlokedCairoSDLSurface::~SlokedCairoSDLSurface() {
         if (this->surface != nullptr) {
             SDL_FreeSurface(this->surface);
         }
     }
 
-    SlokedSDLSurface &SlokedSDLSurface::operator=(SlokedSDLSurface &&surface) {
+    SlokedCairoSDLSurface &SlokedCairoSDLSurface::operator=(SlokedCairoSDLSurface &&surface) {
         if (this->surface != nullptr) {
             SDL_FreeSurface(this->surface);
         }
@@ -51,39 +51,13 @@ namespace sloked {
         return *this;
     }
 
-    SDL_Surface *SlokedSDLSurface::GetSurface() const {
+    SDL_Surface *SlokedCairoSDLSurface::GetSurface() const {
         return this->surface;
     }
 
-    SDL_Point SlokedSDLSurface::Size() const {
+    SDL_Point SlokedCairoSDLSurface::Size() const {
         if (this->surface != nullptr) {
             return {this->surface->w, this->surface->h};
-        } else {
-            throw SlokedError("SDLSurface: No surface defined");
-        }
-    }
-
-    Uint32 SlokedSDLSurface::MapColor(SDL_Color color) const {
-        if (this->surface != nullptr) {
-            return SDL_MapRGBA(this->surface->format, color.r, color.g, color.b, color.a);
-        } else {
-            throw SlokedError("SDLSurface: No surface defined");
-        }
-    }
-
-    SDL_Color SlokedSDLSurface::MapColor(Uint32 value) const {
-        if (this->surface != nullptr) {
-            SDL_Color color;
-            SDL_GetRGBA(value, this->surface->format, &color.r, &color.g, &color.b, &color.a);
-            return color;
-        } else {
-            throw SlokedError("SDLSurface: No surface defined");
-        }
-    }
-
-    void SlokedSDLSurface::Fill(SDL_Rect rect, SDL_Color color) const {
-        if (this->surface != nullptr) {
-            SDL_FillRect(this->surface, &rect, this->MapColor(std::move(color)));
         } else {
             throw SlokedError("SDLSurface: No surface defined");
         }

@@ -19,16 +19,16 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/screen/sdl/Event.h"
+#include "sloked/screen/cairo/sdl/Event.h"
 #include "sloked/core/Error.h"
 
 namespace sloked {
 
-    bool SlokedSDLGlobalEventQueue::HasEvents() const {
+    bool SlokedCairoSDLGlobalEventQueue::HasEvents() const {
         return SDL_PollEvent(nullptr);
     }
 
-    SDL_Event SlokedSDLGlobalEventQueue::NextEvent() {
+    SDL_Event SlokedCairoSDLGlobalEventQueue::NextEvent() {
         SDL_Event event;
         if (SDL_PollEvent(&event)) {
             return event;
@@ -37,7 +37,7 @@ namespace sloked {
         }
     }
 
-    void SlokedSDLGlobalEventQueue::EnableText(bool enable) const {
+    void SlokedCairoSDLGlobalEventQueue::EnableText(bool enable) const {
         if (enable) {
             SDL_StartTextInput();
         } else {
@@ -45,16 +45,16 @@ namespace sloked {
         }
     }
 
-    SlokedSDLGlobalEventQueue &SlokedSDLGlobalEventQueue::Get() {
-        static SlokedSDLGlobalEventQueue globalQueue;
+    SlokedCairoSDLGlobalEventQueue &SlokedCairoSDLGlobalEventQueue::Get() {
+        static SlokedCairoSDLGlobalEventQueue globalQueue;
         return globalQueue;
     }
 
-    SlokedSDLGlobalEventQueue::SlokedSDLGlobalEventQueue() {}
+    SlokedCairoSDLGlobalEventQueue::SlokedCairoSDLGlobalEventQueue() {}
 
-    class SlokedSDLEventBroker::GlobalQueue : public SlokedSDLEventQueue {
+    class SlokedCairoSDLEventBroker::GlobalQueue : public SlokedCairoSDLEventQueue {
      public:
-        GlobalQueue(SlokedSDLEventBroker &broker)
+        GlobalQueue(SlokedCairoSDLEventBroker &broker)
             : broker(broker) {}
         
         bool HasEvents() const final {
@@ -76,12 +76,12 @@ namespace sloked {
         }
 
      private:
-        SlokedSDLEventBroker &broker;
+        SlokedCairoSDLEventBroker &broker;
     };
 
-    class SlokedSDLEventBroker::WindowQueue : public SlokedSDLEventQueue {
+    class SlokedCairoSDLEventBroker::WindowQueue : public SlokedCairoSDLEventQueue {
      public:
-        WindowQueue(SlokedSDLEventBroker &broker, WindowID id)
+        WindowQueue(SlokedCairoSDLEventBroker &broker, WindowID id)
             : broker(broker), winId(id) {
             std::unique_lock lock(this->broker.mtx);
             if (this->broker.windows.count(id) == 0) {
@@ -115,29 +115,29 @@ namespace sloked {
         }
 
      private:
-        SlokedSDLEventBroker &broker;
+        SlokedCairoSDLEventBroker &broker;
         WindowID winId;
     };
 
-    SlokedSDLEventBroker::SlokedSDLEventBroker(SlokedSDLEventQueue &source)
+    SlokedCairoSDLEventBroker::SlokedCairoSDLEventBroker(SlokedCairoSDLEventQueue &source)
         : source(source), global(std::make_unique<GlobalQueue>(*this)) {}
 
-    SlokedSDLEventBroker::~SlokedSDLEventBroker() = default;
+    SlokedCairoSDLEventBroker::~SlokedCairoSDLEventBroker() = default;
 
-    std::unique_ptr<SlokedSDLEventQueue> SlokedSDLEventBroker::Subscribe(WindowID id) {
+    std::unique_ptr<SlokedCairoSDLEventQueue> SlokedCairoSDLEventBroker::Subscribe(WindowID id) {
         return std::make_unique<WindowQueue>(*this, id);
     }
     
-    SlokedSDLEventQueue &SlokedSDLEventBroker::Common() {
+    SlokedCairoSDLEventQueue &SlokedCairoSDLEventBroker::Common() {
         return *this->global;
     }
 
-    SlokedSDLEventBroker &SlokedSDLEventBroker::Global() {
-        static SlokedSDLEventBroker broker(SlokedSDLGlobalEventQueue::Get());
+    SlokedCairoSDLEventBroker &SlokedCairoSDLEventBroker::Global() {
+        static SlokedCairoSDLEventBroker broker(SlokedCairoSDLGlobalEventQueue::Get());
         return broker;
     }
 
-    void SlokedSDLEventBroker::PollEvents() {
+    void SlokedCairoSDLEventBroker::PollEvents() {
         while (this->source.HasEvents()) {
             auto event = this->source.NextEvent();
             switch (event.type) {
@@ -189,7 +189,7 @@ namespace sloked {
         }
     }
 
-    void SlokedSDLEventBroker::AttachEvent(WindowID winId, SDL_Event evt) {
+    void SlokedCairoSDLEventBroker::AttachEvent(WindowID winId, SDL_Event evt) {
         if (this->windows.count(winId) != 0) {
             this->windows.at(winId).push(std::move(evt));
         } else {

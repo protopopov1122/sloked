@@ -75,6 +75,10 @@
 #include "sloked/editor/configuration/Compat.h"
 #include "sloked/text/fragment/Updater.h"
 #include "sloked/compression/Compat.h"
+#include "sloked/screen/cairo/sdl/Window.h"
+#include "sloked/screen/cairo/Context.h"
+#include "sloked/screen/cairo/sdl/Texture.h"
+#include <GL/glu.h>
 #include <chrono>
 
 using namespace sloked;
@@ -313,6 +317,21 @@ class SlokedTestCharVisualPreset : public SlokedFontProperties {
 };
 
 int main(int argc, const char **argv) {
+    SlokedCairoSDLWindow window;
+    window.Open({640, 480});
+    SlokedCairoSDLSurface mainSurface({640, 480});
+    SlokedCairoSurface cairoSurface(window, mainSurface);
+    SlokedCairoContext cairoContext(cairoSurface);
+
+    cairo_set_source_rgba(cairoContext.GetContext(), 1, 1, 1, 1.0);
+    cairo_rectangle(cairoContext.GetContext(), 0, 0, 640, 480);
+    cairo_fill(cairoContext.GetContext());
+
+    SDL_RenderClear(window.GetRenderer());
+    SlokedCairoSDLTexture mainTexture(window.GetRenderer(), mainSurface);
+    SDL_RenderCopy(window.GetRenderer(), mainTexture.GetTexture(), nullptr, nullptr); 
+    SDL_RenderPresent(window.GetRenderer());
+
     // Initialize globals
     SlokedFailure::SetupHandler();
     SlokedLocale::Setup();
@@ -613,6 +632,7 @@ int main(int argc, const char **argv) {
         }
     }
     terminate.WaitAll();
+    window.Close();
     closeables.Close();
     return EXIT_SUCCESS;
 }

@@ -19,32 +19,28 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_SDL_SURFACE_H_
-#define SLOKED_SCREEN_SDL_SURFACE_H_
+#ifndef SLOKED_SCREEN_CAIRO_SDL_TEXTURE_H_
+#define SLOKED_SCREEN_CAIRO_SDL_TEXTURE_H_
 
-#include "sloked/screen/sdl/Base.h"
+#include "sloked/screen/cairo/sdl/Surface.h"
 
 namespace sloked {
 
-    class SlokedSDLSurface {
+    class SlokedCairoSDLTexture {
      public:
-        SlokedSDLSurface(SDL_Surface * = nullptr);
-        SlokedSDLSurface(SDL_Point);
-        SlokedSDLSurface(const SlokedSDLSurface &) = delete;
-        SlokedSDLSurface(SlokedSDLSurface &&);
-        ~SlokedSDLSurface();
+        SlokedCairoSDLTexture(SDL_Texture *);
+        SlokedCairoSDLTexture(SDL_Renderer *, const SlokedCairoSDLSurface &);
+        SlokedCairoSDLTexture(const SlokedCairoSDLTexture &) = delete;
+        SlokedCairoSDLTexture(SlokedCairoSDLTexture &&);
+        ~SlokedCairoSDLTexture();
 
-        SlokedSDLSurface &operator=(const SlokedSDLSurface &) = delete;
-        SlokedSDLSurface &operator=(SlokedSDLSurface &&);
+        SlokedCairoSDLTexture &operator=(const SlokedCairoSDLTexture &) = delete;
+        SlokedCairoSDLTexture &operator=(SlokedCairoSDLTexture &&);
 
-        SDL_Surface *GetSurface() const;
-        SDL_Point Size() const;
-        Uint32 MapColor(SDL_Color) const;
-        SDL_Color MapColor(Uint32) const;
-        void Fill(SDL_Rect, SDL_Color) const;
+        SDL_Texture *GetTexture() const;
 
      private:
-        SDL_Surface *surface;
+        SDL_Texture *texture;
     };
 }
 

@@ -19,11 +19,28 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_SDL_BASE_H_
-#define SLOKED_SCREEN_SDL_BASE_H_
+#ifndef SLOKED_SCREEN_CAIRO_CONTEXT_H_
+#define SLOKED_SCREEN_CAIRO_CONTEXT_H_
 
-#include "sloked/Base.h"
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
+#include "sloked/screen/cairo/Surface.h"
+
+namespace sloked {
+
+    class SlokedCairoContext {
+     public:
+        SlokedCairoContext(const SlokedCairoSurface &);
+        SlokedCairoContext(const SlokedCairoContext &) = delete;
+        SlokedCairoContext(SlokedCairoContext &&);
+        ~SlokedCairoContext();
+
+        SlokedCairoContext &operator=(const SlokedCairoContext &) = delete;
+        SlokedCairoContext &operator=(SlokedCairoContext &&);
+
+        cairo_t *GetContext() const;
+
+     private:
+        cairo_t *context;
+    };
+}
 
 #endif

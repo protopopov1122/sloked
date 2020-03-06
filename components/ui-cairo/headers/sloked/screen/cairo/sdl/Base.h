@@ -19,12 +19,10 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_SDL_SDL_H_
-#define SLOKED_SCREEN_SDL_SDL_H_
+#ifndef SLOKED_SCREEN_CAIRO_SDL_BASE_H_
+#define SLOKED_SCREEN_CAIRO_SDL_BASE_H_
 
-#include "sloked/screen/sdl/Font.h"
-#include "sloked/screen/sdl/Window.h"
-#include "sloked/screen/sdl/Surface.h"
-#include "sloked/screen/sdl/Texture.h"
+#include "sloked/Base.h"
+#include <SDL2/SDL.h>
 
 #endif

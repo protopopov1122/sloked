@@ -22,9 +22,7 @@
 #ifndef SLOKED_SCREEN_SDL_WINDOW_H_
 #define SLOKED_SCREEN_SDL_WINDOW_H_
 
-#include "sloked/screen/sdl/Event.h"
-#include "sloked/screen/sdl/Component.h"
-#include <functional>
+#include "sloked/screen/cairo/sdl/Event.h"
 #include <memory>
 #include <string>
 #include <atomic>
@@ -35,60 +33,30 @@
 
 namespace sloked {
 
-    class SlokedSDLWindowRenderer;
-
-    class SlokedSDLWindow {
+    class SlokedCairoSDLWindow {
      public:
-        SlokedSDLWindow(SlokedSDLWindowRenderer &, std::unique_ptr<SlokedSDLComponent> = nullptr);
-        ~SlokedSDLWindow();
+        SlokedCairoSDLWindow();
+        ~SlokedCairoSDLWindow();
 
         bool IsOpen() const;
         void Open(SDL_Point);
         void Close();
-        SlokedSDLComponent *GetRoot() const;
-        void SetRoot(std::unique_ptr<SlokedSDLComponent>);
-        void Repaint();
         SDL_Point Size() const;
         void Resize(SDL_Point);
         std::string_view Title() const;
         void Title(const std::string &);
-        SlokedSDLEventQueue &Events() const;
-
-        friend class SlokedSDLWindowRenderer;
+        SlokedCairoSDLEventQueue &Events() const;
+        SDL_Window *GetWindow() const;
+        SDL_Renderer *GetRenderer() const;
 
      private:
         struct Context;
         void Init(SDL_Point);
-        void PollEvents();
-        void Render();
 
-        SlokedSDLWindowRenderer &windowRenderer;
-        std::unique_ptr<SlokedSDLComponent> root;
         std::unique_ptr<Context> nativeContext;
         mutable std::mutex mtx;
         std::atomic_bool opened;
-        std::unique_ptr<SlokedSDLEventQueue> events;
-    };
-
-    class SlokedSDLWindowRenderer {
-     public:
-        SlokedSDLWindowRenderer();
-        void Start();
-        void Stop();
-        bool IsRunning() const;
-        void Repaint();
-        void Attach(SlokedSDLWindow &);
-        void Detach(SlokedSDLWindow &);
-
-     private:
-        void Run();
-        
-        std::atomic_bool running;
-        std::vector<std::reference_wrapper<SlokedSDLWindow>> windows;
-        std::mutex mtx;
-        std::condition_variable cv;
-        std::thread renderer;
-        std::chrono::system_clock::duration framerate;
+        std::unique_ptr<SlokedCairoSDLEventQueue> events;
     };
 }
 

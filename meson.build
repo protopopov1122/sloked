@@ -38,8 +38,8 @@ if get_option('scripting_lua')
   sloked_scripting_flags = sloked_lua_bindings_flags
   sloked_disable_scripting = false
 endif
-if get_option('terminal') == 'sdl'
-  subdir('components/ui-sdl')
+if get_option('terminal') == 'cairo'
+  subdir('components/ui-cairo')
 endif
 
 sloked_platform = sloked_posix_platform
