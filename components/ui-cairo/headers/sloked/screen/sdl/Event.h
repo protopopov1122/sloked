@@ -19,10 +19,10 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_CAIRO_SDL_EVENT_H_
-#define SLOKED_SCREEN_CAIRO_SDL_EVENT_H_
+#ifndef SLOKED_SCREEN_SDL_EVENT_H_
+#define SLOKED_SCREEN_SDL_EVENT_H_
 
-#include "sloked/screen/cairo/sdl/Base.h"
+#include "sloked/screen/sdl/Base.h"
 #include <memory>
 #include <map>
 #include <queue>
@@ -30,33 +30,33 @@
 
 namespace sloked {
 
-    class SlokedCairoSDLEventQueue {
+    class SlokedSDLEventQueue {
      public:
-        virtual ~SlokedCairoSDLEventQueue() = default;
+        virtual ~SlokedSDLEventQueue() = default;
         virtual bool HasEvents() const = 0;
         virtual SDL_Event NextEvent() = 0;
     };
 
-    class SlokedCairoSDLGlobalEventQueue : public SlokedCairoSDLEventQueue {
+    class SlokedSDLGlobalEventQueue : public SlokedSDLEventQueue {
      public:
         bool HasEvents() const final;
         SDL_Event NextEvent() final;
         void EnableText(bool = true) const;
 
-        static SlokedCairoSDLGlobalEventQueue &Get();
+        static SlokedSDLGlobalEventQueue &Get();
      private:
-        SlokedCairoSDLGlobalEventQueue();
+        SlokedSDLGlobalEventQueue();
     };
 
-    class SlokedCairoSDLEventBroker {
+    class SlokedSDLEventBroker {
      public:
         using WindowID = Uint32;
-        SlokedCairoSDLEventBroker(SlokedCairoSDLEventQueue &);
-        ~SlokedCairoSDLEventBroker();
-        std::unique_ptr<SlokedCairoSDLEventQueue> Subscribe(WindowID);
-        SlokedCairoSDLEventQueue &Common();
+        SlokedSDLEventBroker(SlokedSDLEventQueue &);
+        ~SlokedSDLEventBroker();
+        std::unique_ptr<SlokedSDLEventQueue> Subscribe(WindowID);
+        SlokedSDLEventQueue &Common();
 
-        static SlokedCairoSDLEventBroker &Global();
+        static SlokedSDLEventBroker &Global();
 
      private:
         class GlobalQueue;
@@ -67,7 +67,7 @@ namespace sloked {
         void PollEvents();
         void AttachEvent(WindowID, SDL_Event);
 
-        SlokedCairoSDLEventQueue &source;
+        SlokedSDLEventQueue &source;
         std::unique_ptr<GlobalQueue> global;
         std::mutex mtx;
         std::queue<SDL_Event> globalQueue;

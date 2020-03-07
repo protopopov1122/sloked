@@ -22,7 +22,7 @@
 #ifndef SLOKED_SCREEN_CAIRO_BASE_H_
 #define SLOKED_SCREEN_CAIRO_BASE_H_
 
-#include "sloked/screen/cairo/sdl/Base.h"
+#include "sloked/screen/sdl/Base.h"
 #include <cairo/cairo.h>
 
 #endif

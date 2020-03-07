@@ -19,28 +19,28 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/screen/cairo/sdl/Texture.h"
+#include "sloked/screen/sdl/Texture.h"
 
 namespace sloked {
 
-    SlokedCairoSDLTexture::SlokedCairoSDLTexture(SDL_Texture *texture)
+    SlokedSDLTexture::SlokedSDLTexture(SDL_Texture *texture)
         : texture(texture) {}
 
-    SlokedCairoSDLTexture::SlokedCairoSDLTexture(SDL_Renderer *renderer, const SlokedCairoSDLSurface &surface)
+    SlokedSDLTexture::SlokedSDLTexture(SDL_Renderer *renderer, const SlokedSDLSurface &surface)
         : texture(SDL_CreateTextureFromSurface(renderer, surface.GetSurface())) {}
         
-    SlokedCairoSDLTexture::SlokedCairoSDLTexture(SlokedCairoSDLTexture &&texture)
+    SlokedSDLTexture::SlokedSDLTexture(SlokedSDLTexture &&texture)
         : texture(texture.texture) {
         texture.texture = nullptr;
     }
 
-    SlokedCairoSDLTexture::~SlokedCairoSDLTexture() {
+    SlokedSDLTexture::~SlokedSDLTexture() {
         if (this->texture != nullptr) {
             SDL_DestroyTexture(this->texture);
         }
     }
 
-    SlokedCairoSDLTexture &SlokedCairoSDLTexture::operator=(SlokedCairoSDLTexture &&texture) {
+    SlokedSDLTexture &SlokedSDLTexture::operator=(SlokedSDLTexture &&texture) {
         if (this->texture != nullptr) {
             SDL_DestroyTexture(this->texture);
         }
@@ -49,7 +49,7 @@ namespace sloked {
         return *this;
     }
 
-    SDL_Texture *SlokedCairoSDLTexture::GetTexture() const {
+    SDL_Texture *SlokedSDLTexture::GetTexture() const {
         return this->texture;
     }
 }

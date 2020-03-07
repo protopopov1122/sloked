@@ -23,11 +23,11 @@
 
 namespace sloked {
 
-    SlokedCairoSurface::SlokedCairoSurface(SlokedCairoSDLWindow &window, SlokedCairoSDLSurface &sdlSurface)
+    SlokedCairoSurface::SlokedCairoSurface(SlokedSDLWindow &window, SlokedSDLRenderer &renderer, SlokedSDLSurface &sdlSurface)
         : surface{nullptr} {
         auto winSize = window.Size();
         SDL_Point rendererSize;
-        SDL_GetRendererOutputSize(window.GetRenderer(), &rendererSize.x, &rendererSize.y);
+        SDL_GetRendererOutputSize(renderer.GetRenderer(), &rendererSize.x, &rendererSize.y);
 
         int cairo_x_multiplier = rendererSize.x / winSize.x;
         int cairo_y_multiplier = rendererSize.y / winSize.y;

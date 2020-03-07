@@ -19,30 +19,30 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/screen/cairo/sdl/Surface.h"
+#include "sloked/screen/sdl/Surface.h"
 #include "sloked/core/Error.h"
 
 namespace sloked {
 
-    SlokedCairoSDLSurface::SlokedCairoSDLSurface(SDL_Surface *surface)
+    SlokedSDLSurface::SlokedSDLSurface(SDL_Surface *surface)
         : surface(surface) {}
 
-    SlokedCairoSDLSurface::SlokedCairoSDLSurface(SDL_Point dim) {
+    SlokedSDLSurface::SlokedSDLSurface(SlokedSDLDimensions dim) {
         this->surface = SDL_CreateRGBSurface(0, dim.x, dim.y, 32, 0, 0, 0, 0);
     }
 
-    SlokedCairoSDLSurface::SlokedCairoSDLSurface(SlokedCairoSDLSurface &&surface)
+    SlokedSDLSurface::SlokedSDLSurface(SlokedSDLSurface &&surface)
         : surface(surface.surface) {
         surface.surface = nullptr;
     }
 
-    SlokedCairoSDLSurface::~SlokedCairoSDLSurface() {
+    SlokedSDLSurface::~SlokedSDLSurface() {
         if (this->surface != nullptr) {
             SDL_FreeSurface(this->surface);
         }
     }
 
-    SlokedCairoSDLSurface &SlokedCairoSDLSurface::operator=(SlokedCairoSDLSurface &&surface) {
+    SlokedSDLSurface &SlokedSDLSurface::operator=(SlokedSDLSurface &&surface) {
         if (this->surface != nullptr) {
             SDL_FreeSurface(this->surface);
         }
@@ -51,11 +51,11 @@ namespace sloked {
         return *this;
     }
 
-    SDL_Surface *SlokedCairoSDLSurface::GetSurface() const {
+    SDL_Surface *SlokedSDLSurface::GetSurface() const {
         return this->surface;
     }
 
-    SDL_Point SlokedCairoSDLSurface::Size() const {
+    SlokedSDLDimensions SlokedSDLSurface::Size() const {
         if (this->surface != nullptr) {
             return {this->surface->w, this->surface->h};
         } else {

@@ -22,7 +22,7 @@
 #ifndef SLOKED_SCREEN_SDL_WINDOW_H_
 #define SLOKED_SCREEN_SDL_WINDOW_H_
 
-#include "sloked/screen/cairo/sdl/Event.h"
+#include "sloked/screen/sdl/Event.h"
 #include <memory>
 #include <string>
 #include <atomic>
@@ -33,21 +33,20 @@
 
 namespace sloked {
 
-    class SlokedCairoSDLWindow {
+    class SlokedSDLWindow {
      public:
-        SlokedCairoSDLWindow();
-        ~SlokedCairoSDLWindow();
+        SlokedSDLWindow();
+        ~SlokedSDLWindow();
 
         bool IsOpen() const;
-        void Open(SDL_Point);
+        void Open(SlokedSDLDimensions, Uint32 = 0);
         void Close();
-        SDL_Point Size() const;
-        void Resize(SDL_Point);
+        SlokedSDLDimensions Size() const;
+        void Resize(SlokedSDLDimensions);
         std::string_view Title() const;
         void Title(const std::string &);
-        SlokedCairoSDLEventQueue &Events() const;
+        SlokedSDLEventQueue &Events() const;
         SDL_Window *GetWindow() const;
-        SDL_Renderer *GetRenderer() const;
 
      private:
         struct Context;
@@ -56,7 +55,7 @@ namespace sloked {
         std::unique_ptr<Context> nativeContext;
         mutable std::mutex mtx;
         std::atomic_bool opened;
-        std::unique_ptr<SlokedCairoSDLEventQueue> events;
+        std::unique_ptr<SlokedSDLEventQueue> events;
     };
 }
 

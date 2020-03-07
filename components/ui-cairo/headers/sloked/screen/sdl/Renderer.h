@@ -19,29 +19,28 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_CAIRO_SDL_SURFACE_H_
-#define SLOKED_SCREEN_CAIRO_SDL_SURFACE_H_
+#ifndef SLOKED_SCREEN_SDL_RENDERER_H_
+#define SLOKED_SCREEN_SDL_RENDERER_H_
 
-#include "sloked/screen/cairo/sdl/Base.h"
+#include "sloked/screen/sdl/Window.h"
 
 namespace sloked {
 
-    class SlokedCairoSDLSurface {
+    class SlokedSDLRenderer {
      public:
-        SlokedCairoSDLSurface(SDL_Surface * = nullptr);
-        SlokedCairoSDLSurface(SDL_Point);
-        SlokedCairoSDLSurface(const SlokedCairoSDLSurface &) = delete;
-        SlokedCairoSDLSurface(SlokedCairoSDLSurface &&);
-        ~SlokedCairoSDLSurface();
+        SlokedSDLRenderer(SDL_Renderer *);
+        SlokedSDLRenderer(const SlokedSDLWindow &, Uint32 = 0);
+        SlokedSDLRenderer(const SlokedSDLRenderer &) = delete;
+        SlokedSDLRenderer(SlokedSDLRenderer &&);
+        ~SlokedSDLRenderer();
 
-        SlokedCairoSDLSurface &operator=(const SlokedCairoSDLSurface &) = delete;
-        SlokedCairoSDLSurface &operator=(SlokedCairoSDLSurface &&);
+        SlokedSDLRenderer &operator=(const SlokedSDLRenderer &) = delete;
+        SlokedSDLRenderer &operator=(SlokedSDLRenderer &&);
 
-        SDL_Surface *GetSurface() const;
-        SDL_Point Size() const;
+        SDL_Renderer *GetRenderer();
 
      private:
-        SDL_Surface *surface;
+        SDL_Renderer *renderer;
     };
 }
 

@@ -19,28 +19,29 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_CAIRO_SDL_TEXTURE_H_
-#define SLOKED_SCREEN_CAIRO_SDL_TEXTURE_H_
+#ifndef SLOKED_SCREEN_SDL_SURFACE_H_
+#define SLOKED_SCREEN_SDL_SURFACE_H_
 
-#include "sloked/screen/cairo/sdl/Surface.h"
+#include "sloked/screen/sdl/Base.h"
 
 namespace sloked {
 
-    class SlokedCairoSDLTexture {
+    class SlokedSDLSurface {
      public:
-        SlokedCairoSDLTexture(SDL_Texture *);
-        SlokedCairoSDLTexture(SDL_Renderer *, const SlokedCairoSDLSurface &);
-        SlokedCairoSDLTexture(const SlokedCairoSDLTexture &) = delete;
-        SlokedCairoSDLTexture(SlokedCairoSDLTexture &&);
-        ~SlokedCairoSDLTexture();
+        SlokedSDLSurface(SDL_Surface * = nullptr);
+        SlokedSDLSurface(SlokedSDLDimensions);
+        SlokedSDLSurface(const SlokedSDLSurface &) = delete;
+        SlokedSDLSurface(SlokedSDLSurface &&);
+        ~SlokedSDLSurface();
 
-        SlokedCairoSDLTexture &operator=(const SlokedCairoSDLTexture &) = delete;
-        SlokedCairoSDLTexture &operator=(SlokedCairoSDLTexture &&);
+        SlokedSDLSurface &operator=(const SlokedSDLSurface &) = delete;
+        SlokedSDLSurface &operator=(SlokedSDLSurface &&);
 
-        SDL_Texture *GetTexture() const;
+        SDL_Surface *GetSurface() const;
+        SlokedSDLDimensions Size() const;
 
      private:
-        SDL_Texture *texture;
+        SDL_Surface *surface;
     };
 }
 

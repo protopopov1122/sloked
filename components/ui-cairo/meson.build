@@ -1,10 +1,11 @@
 sloked_ui_cairo_sdl_src = [
   'src/screen/cairo/Context.cpp',
   'src/screen/cairo/Surface.cpp',
-  'src/screen/cairo/sdl/Event.cpp',
-  'src/screen/cairo/sdl/Surface.cpp',
-  'src/screen/cairo/sdl/Texture.cpp',
-  'src/screen/cairo/sdl/Window.cpp'
+  'src/screen/sdl/Event.cpp',
+  'src/screen/sdl/Renderer.cpp',
+  'src/screen/sdl/Surface.cpp',
+  'src/screen/sdl/Texture.cpp',
+  'src/screen/sdl/Window.cpp'
 ]
 
 sdl2 = dependency('sdl2')

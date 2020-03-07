@@ -19,29 +19,28 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_CAIRO_SURFACE_H_
-#define SLOKED_SCREEN_CAIRO_SURFACE_H_
+#ifndef SLOKED_SCREEN_SDL_TEXTURE_H_
+#define SLOKED_SCREEN_SDL_TEXTURE_H_
 
-#include "sloked/screen/cairo/Base.h"
 #include "sloked/screen/sdl/Surface.h"
-#include "sloked/screen/sdl/Renderer.h"
 
 namespace sloked {
 
-    class SlokedCairoSurface {
+    class SlokedSDLTexture {
      public:
-        SlokedCairoSurface(SlokedSDLWindow &, SlokedSDLRenderer &, SlokedSDLSurface &);
-        SlokedCairoSurface(const SlokedCairoSurface &) = delete;
-        SlokedCairoSurface(SlokedCairoSurface &&);
-        ~SlokedCairoSurface();
+        SlokedSDLTexture(SDL_Texture *);
+        SlokedSDLTexture(SDL_Renderer *, const SlokedSDLSurface &);
+        SlokedSDLTexture(const SlokedSDLTexture &) = delete;
+        SlokedSDLTexture(SlokedSDLTexture &&);
+        ~SlokedSDLTexture();
 
-        SlokedCairoSurface &operator=(const SlokedCairoSurface &) = delete;
-        SlokedCairoSurface &operator=(SlokedCairoSurface &&);
+        SlokedSDLTexture &operator=(const SlokedSDLTexture &) = delete;
+        SlokedSDLTexture &operator=(SlokedSDLTexture &&);
 
-        cairo_surface_t *GetSurface() const;
-    
+        SDL_Texture *GetTexture() const;
+
      private:
-        cairo_surface_t *surface;
+        SDL_Texture *texture;
     };
 }
 
