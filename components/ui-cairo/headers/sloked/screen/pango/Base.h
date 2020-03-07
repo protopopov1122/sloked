@@ -19,28 +19,11 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_CAIRO_CONTEXT_H_
-#define SLOKED_SCREEN_CAIRO_CONTEXT_H_
+#ifndef SLOKED_SCREEN_PANGO_BASE_H_
+#define SLOKED_SCREEN_PANGO_BASE_H_
 
-#include "sloked/screen/cairo/Surface.h"
-
-namespace sloked {
-
-    class SlokedCairoContext {
-     public:
-        SlokedCairoContext(const SlokedCairoSurface &);
-        SlokedCairoContext(const SlokedCairoContext &) = delete;
-        SlokedCairoContext(SlokedCairoContext &&);
-        ~SlokedCairoContext();
-
-        SlokedCairoContext &operator=(const SlokedCairoContext &) = delete;
-        SlokedCairoContext &operator=(SlokedCairoContext &&);
-
-        cairo_t *GetContext() const;
-
-     private:
-        cairo_t *context;
-    };
-}
+#include "sloked/Base.h"
+#include <pangomm-1.4/pangomm.h>
+#include <pango-1.0/pango/pangocairo.h>
 
 #endif

@@ -24,62 +24,58 @@
 
 namespace sloked {
 
-    std::atomic<uint32_t> SDLWindowCount{0};
+    static std::atomic<uint32_t> SDLWindowCount{0};
 
-    struct SlokedSDLWindow::Context {
-        Context()
-            : window{nullptr} {
-            if (SDLWindowCount++ == 0) {
-                if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
-                    throw SlokedError("SDLWindow: Error initializing SDL");
-                }
+    static void InitSDL() {
+        if (SDLWindowCount++ == 0) {
+            if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
+                throw SlokedError("SDLWindow: Error initializing SDL");
             }
         }
+    }
 
-        ~Context() {
-            SDL_DestroyWindow(this->window);
-            if (--SDLWindowCount == 0) {
-                SDL_Quit();
-            }
+    static void DestroySDL() {
+        if (--SDLWindowCount == 0) {
+            SDL_Quit();
         }
-
-        SDL_Window *window;
-    };
+    }
 
     SlokedSDLWindow::SlokedSDLWindow()
-        : nativeContext{nullptr}, opened{false} {}
+        : window{nullptr}, opened{false} {
+        InitSDL();
+    }
 
     SlokedSDLWindow::~SlokedSDLWindow() {
         this->Close();
+        DestroySDL();
     }
 
     bool SlokedSDLWindow::IsOpen() const {
         return this->opened.load();
     }
 
-    void SlokedSDLWindow::Open(SlokedSDLDimensions dim, Uint32 flags) {
+    void SlokedSDLWindow::Open(SlokedSDLDimensions dim, const std::string &title, Uint32 flags) {
         if (!this->opened.exchange(true)) {
-            this->nativeContext = std::make_unique<Context>();
-            this->nativeContext->window = SDL_CreateWindow("",
+            this->window = SDL_CreateWindow(title.c_str(),
                 SDL_WINDOWPOS_UNDEFINED,
                 SDL_WINDOWPOS_UNDEFINED,
                 dim.x,
                 dim.y,
                 flags);
             
-            if (this->nativeContext->window == nullptr) {
-                this->nativeContext.reset();
+            if (this->window == nullptr) {
                 this->opened = false;
                 throw SlokedError("SDLWindow: Error initializing SDL window");
             }
-            this->events = SlokedSDLEventBroker::Global().Subscribe(SDL_GetWindowID(this->nativeContext->window));
+            this->events = SlokedSDLEventBroker::Global().Subscribe(SDL_GetWindowID(this->window));
         }
     }
 
     void SlokedSDLWindow::Close() {
         if (this->opened.exchange(false)) {
             this->events.reset();
-            this->nativeContext.reset();
+            SDL_DestroyWindow(this->window);
+            this->window = nullptr;
         }
     }
 
@@ -88,7 +84,7 @@ namespace sloked {
             throw SlokedError("SDLWindow: Can't get size of closed window");
         }
         SlokedSDLDimensions dim;
-        SDL_GetWindowSize(this->nativeContext->window, &dim.x, &dim.y);
+        SDL_GetWindowSize(this->window, &dim.x, &dim.y);
         return dim;
     }
 
@@ -96,21 +92,21 @@ namespace sloked {
         if (!this->opened.load()) {
             throw SlokedError("SDLWindow: Can't resize closed window");
         }
-        SDL_SetWindowSize(this->nativeContext->window, dim.x, dim.y);
+        SDL_SetWindowSize(this->window, dim.x, dim.y);
     }
 
     std::string_view SlokedSDLWindow::Title() const {
         if (!this->opened.load()) {
             throw SlokedError("SDLWindow: Can't get title of closed window");
         }
-        return SDL_GetWindowTitle(this->nativeContext->window);
+        return SDL_GetWindowTitle(this->window);
     }
 
     void SlokedSDLWindow::Title(const std::string &title) {
         if (!this->opened.load()) {
             throw SlokedError("SDLWindow: Can't set title of closed window");
         }
-        SDL_SetWindowTitle(this->nativeContext->window, title.c_str());
+        SDL_SetWindowTitle(this->window, title.c_str());
     }
 
     SlokedSDLEventQueue &SlokedSDLWindow::Events() const {
@@ -124,6 +120,6 @@ namespace sloked {
         if (!this->opened.load()) {
             throw SlokedError("SDLWindow: Can't get window of closed window");
         }
-        return this->nativeContext->window;
+        return this->window;
     }
 }

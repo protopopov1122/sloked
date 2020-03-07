@@ -55,7 +55,7 @@ namespace sloked {
         return *this;
     }
 
-    SDL_Renderer *SlokedSDLRenderer::GetRenderer() {
+    SDL_Renderer *SlokedSDLRenderer::GetRenderer() const {
         return this->renderer;
     }
 }

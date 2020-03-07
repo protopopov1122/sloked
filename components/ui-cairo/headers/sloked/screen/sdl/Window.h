@@ -39,7 +39,7 @@ namespace sloked {
         ~SlokedSDLWindow();
 
         bool IsOpen() const;
-        void Open(SlokedSDLDimensions, Uint32 = 0);
+        void Open(SlokedSDLDimensions, const std::string & = "", Uint32 = 0);
         void Close();
         SlokedSDLDimensions Size() const;
         void Resize(SlokedSDLDimensions);
@@ -49,11 +49,7 @@ namespace sloked {
         SDL_Window *GetWindow() const;
 
      private:
-        struct Context;
-        void Init(SDL_Point);
-
-        std::unique_ptr<Context> nativeContext;
-        mutable std::mutex mtx;
+        SDL_Window *window;
         std::atomic_bool opened;
         std::unique_ptr<SlokedSDLEventQueue> events;
     };

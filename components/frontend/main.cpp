@@ -76,7 +76,7 @@
 #include "sloked/text/fragment/Updater.h"
 #include "sloked/compression/Compat.h"
 #include "sloked/screen/sdl/Renderer.h"
-#include "sloked/screen/cairo/Context.h"
+#include "sloked/screen/cairo/Base.h"
 #include "sloked/screen/sdl/Texture.h"
 #include <GL/glu.h>
 #include <chrono>
@@ -321,12 +321,17 @@ int main(int argc, const char **argv) {
     window.Open({640, 480});
     SlokedSDLRenderer renderer{window};
     SlokedSDLSurface mainSurface({640, 480});
-    SlokedCairoSurface cairoSurface(window, renderer, mainSurface);
-    SlokedCairoContext cairoContext(cairoSurface);
+    auto cairoSurface = Cairo::ImageSurface::create(
+        (unsigned char *) mainSurface.GetSurface()->pixels,
+        Cairo::Format::FORMAT_RGB24,
+        mainSurface.GetSurface()->w,
+        mainSurface.GetSurface()->h,
+        mainSurface.GetSurface()->pitch);
+    auto cairoContext = Cairo::Context::create(cairoSurface);
 
-    cairo_set_source_rgba(cairoContext.GetContext(), 1, 1, 1, 1.0);
-    cairo_rectangle(cairoContext.GetContext(), 0, 0, 640, 480);
-    cairo_fill(cairoContext.GetContext());
+    cairoContext->set_source_rgba(1, 1, 1, 1.0);
+    cairoContext->rectangle(0, 0, 640, 480);
+    cairoContext->fill();
 
     SDL_RenderClear(renderer.GetRenderer());
     SlokedSDLTexture mainTexture(renderer.GetRenderer(), mainSurface);

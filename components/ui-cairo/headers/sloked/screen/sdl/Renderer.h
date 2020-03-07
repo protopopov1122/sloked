@@ -37,7 +37,7 @@ namespace sloked {
         SlokedSDLRenderer &operator=(const SlokedSDLRenderer &) = delete;
         SlokedSDLRenderer &operator=(SlokedSDLRenderer &&);
 
-        SDL_Renderer *GetRenderer();
+        SDL_Renderer *GetRenderer() const;
 
      private:
         SDL_Renderer *renderer;
