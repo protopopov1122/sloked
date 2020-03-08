@@ -78,6 +78,8 @@
 #include "sloked/screen/sdl/Renderer.h"
 #include "sloked/screen/cairo/Base.h"
 #include "sloked/screen/sdl/Texture.h"
+#include "sloked/screen/terminal/CairoTerminal.h"
+#include "sloked/screen/cairo/SDL.h"
 #include <GL/glu.h>
 #include <chrono>
 
@@ -257,13 +259,43 @@ class SlokedDemoRootNamespaceFactory : public SlokedRootNamespaceFactory {
 
 class SlokedDemoScreenBasis : public SlokedScreenProvider {
  public:
+    struct GUI {
+        GUI(int width, int height)
+            : surface(width, height), terminal(surface.GetCairoSurface(), {width, height}) {
+            window.Open({width, height});
+            renderer = std::make_unique<SlokedSDLRenderer>(this->window);
+        }
+
+        ~GUI() {
+            this->window.Close();
+        }
+
+        void Render() {
+            SDL_RenderClear(this->renderer->GetRenderer());
+            auto texture = this->surface.MakeTexture(this->renderer->GetRenderer());
+            SDL_RenderCopy(this->renderer->GetRenderer(), texture.GetTexture(), nullptr, nullptr); 
+            SDL_RenderPresent(this->renderer->GetRenderer());
+        }
+
+        SlokedTerminal &GetTerminal() {
+            return this->terminal;
+        }
+
+        SlokedSDLWindow window;
+        std::unique_ptr<SlokedSDLRenderer> renderer;
+        SlokedSDLCairoSurface surface;
+        SlokedCairoTerminal terminal;
+    };
+
     SlokedDemoScreenBasis(const SlokedCharPreset &charPreset)
-        : terminal(*SlokedTerminalCompat::GetSystemTerminal()),
-          console(terminal, Encoding::Get("system"), charPreset),
-          provider(console, Encoding::Get("system"), charPreset, terminal) {}
+        : gui(1024, 960),
+          inputTerminal(*SlokedTerminalCompat::GetSystemTerminal()),
+          console(gui.GetTerminal(), Encoding::Get("system"), charPreset),
+          provider(console, Encoding::Get("system"), charPreset, inputTerminal) {}
         
     void Render(std::function<void(SlokedScreenComponent &)> fn) final {
         this->provider.Render(std::move(fn));
+        gui.Render();
     }
 
     std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration timeout) final {
@@ -283,7 +315,8 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
     }
 
  private:
-    SlokedDuplexTerminal &terminal;
+    GUI gui;
+    SlokedDuplexTerminal &inputTerminal;
     BufferedTerminal console;
     SlokedTerminalScreenProvider<SlokedTerminalResizeListener> provider;
 };
@@ -317,26 +350,7 @@ class SlokedTestCharVisualPreset : public SlokedFontProperties {
 };
 
 int main(int argc, const char **argv) {
-    SlokedSDLWindow window;
-    window.Open({640, 480});
-    SlokedSDLRenderer renderer{window};
-    SlokedSDLSurface mainSurface({640, 480});
-    auto cairoSurface = Cairo::ImageSurface::create(
-        (unsigned char *) mainSurface.GetSurface()->pixels,
-        Cairo::Format::FORMAT_RGB24,
-        mainSurface.GetSurface()->w,
-        mainSurface.GetSurface()->h,
-        mainSurface.GetSurface()->pitch);
-    auto cairoContext = Cairo::Context::create(cairoSurface);
-
-    cairoContext->set_source_rgba(1, 1, 1, 1.0);
-    cairoContext->rectangle(0, 0, 640, 480);
-    cairoContext->fill();
-
-    SDL_RenderClear(renderer.GetRenderer());
-    SlokedSDLTexture mainTexture(renderer.GetRenderer(), mainSurface);
-    SDL_RenderCopy(renderer.GetRenderer(), mainTexture.GetTexture(), nullptr, nullptr); 
-    SDL_RenderPresent(renderer.GetRenderer());
+    Pango::init();
 
     // Initialize globals
     SlokedFailure::SetupHandler();
@@ -638,7 +652,6 @@ int main(int argc, const char **argv) {
         }
     }
     terminate.WaitAll();
-    window.Close();
     closeables.Close();
     return EXIT_SUCCESS;
 }

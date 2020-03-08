@@ -438,7 +438,7 @@ namespace sloked {
             }
         }
 
-        SlokedGraphicsPoint::Coordinate GetHeight() override {
+        TextPosition::Line GetHeight() override {
             auto rsp = this->client.Invoke("getHeight", {});
             auto res = rsp.Get();
             if (res.HasResult() && res.GetResult().Is(KgrValueType::Integer)) {

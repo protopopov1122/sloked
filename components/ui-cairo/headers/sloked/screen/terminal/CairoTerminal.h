@@ -23,6 +23,7 @@
 #define SLOKED_SCREEN_TERMINAL_CAIROTERMINAL_H_
 
 #include "sloked/screen/terminal/Terminal.h"
+#include "sloked/screen/Point.h"
 #include "sloked/screen/cairo/Base.h"
 #include "sloked/screen/pango/Base.h"
 #include <mutex>
@@ -32,7 +33,15 @@ namespace sloked {
 
     class SlokedCairoTerminal : public SlokedTerminal {
      public:
-        SlokedCairoTerminal(Cairo::RefPtr<Cairo::Surface>, std::pair<int, int>);
+        struct Dimensions {
+            int x;
+            int y;
+        };
+        using Line = TextPosition::Line;
+        using Column = TextPosition::Column;
+
+        SlokedCairoTerminal(Cairo::RefPtr<Cairo::Surface>, Dimensions);
+        ~SlokedCairoTerminal();
 
         void SetPosition(Line, Column) final;
         void MoveUp(Line) final;
@@ -54,16 +63,14 @@ namespace sloked {
 
 
      private:
-        Cairo::RefPtr<Cairo::Surface> surface;
-        Cairo::RefPtr<Cairo::Context> context;
-        Glib::RefPtr<Pango::Layout> fontLayout;
+        struct Renderer;
+
+        std::unique_ptr<Renderer> renderer;
         TextPosition size;
         TextPosition cursor;
         bool showCursor;
-        struct {
-          int width;
-          int height;
-        } glyphDim;
+        Dimensions surfaceSize;
+        Dimensions glyphSize;
     };
 }
 

@@ -19,12 +19,32 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_PANGO_BASE_H_
-#define SLOKED_SCREEN_PANGO_BASE_H_
+#ifndef SLOKED_SCREEN_CAIRO_SDL_H_
+#define SLOKED_SCREEN_CAIRO_SDL_H_
 
-#include "sloked/Base.h"
-#include <pangomm-1.4/pangomm.h>
-#include <pangomm-1.4/pangomm/init.h>
-#include <pango-1.0/pango/pangocairo.h>
+#include "sloked/screen/cairo/Base.h"
+#include "sloked/screen/sdl/Surface.h"
+#include "sloked/screen/sdl/Texture.h"
+#include <mutex>
+
+namespace sloked {
+
+    class SlokedSDLCairoSurface {
+     public:
+        SlokedSDLCairoSurface(int, int);
+        int GetWidth() const;
+        int GetHeight() const;
+        Cairo::RefPtr<Cairo::Surface> GetCairoSurface() const;
+        std::unique_lock<std::mutex> Lock();
+        SlokedSDLTexture MakeTexture(SDL_Renderer *);
+
+     private:
+        std::mutex mtx;
+        int width;
+        int height;
+        SlokedSDLSurface sdlSurface;
+        Cairo::RefPtr<Cairo::Surface> cairoSurface;
+    };
+}
 
 #endif
