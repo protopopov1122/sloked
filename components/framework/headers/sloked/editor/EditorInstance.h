@@ -57,7 +57,7 @@ namespace sloked {
         void Wait();
         void Close() final;
 
-        SlokedCharPreset &GetCharWidth();
+        SlokedCharPreset &GetCharPreset();
         SlokedSchedulerThread &GetScheduler();
         SlokedIOPoller &GetIO();
         SlokedNetworkFacade &GetNetwork();

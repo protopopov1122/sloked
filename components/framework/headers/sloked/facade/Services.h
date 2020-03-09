@@ -41,7 +41,7 @@ namespace sloked {
         virtual SlokedTextTaggerRegistry<int> &GetTaggers() = 0;
         virtual SlokedLogger &GetLogger() = 0;
         virtual SlokedRootNamespace &GetNamespace() = 0;
-        virtual const SlokedCharPreset &GetCharWidth() = 0;
+        virtual const SlokedCharPreset &GetCharPreset() = 0;
         virtual KgrNamedServer &GetServer() = 0;
         virtual SlokedEditorDocumentSet &GetDocuments() = 0;
     };
@@ -53,7 +53,7 @@ namespace sloked {
         SlokedTextTaggerRegistry<int> &GetTaggers() override;
         SlokedLogger &GetLogger() override;
         SlokedRootNamespace &GetNamespace() override;
-        const SlokedCharPreset &GetCharWidth() override;
+        const SlokedCharPreset &GetCharPreset() override;
         KgrNamedServer &GetServer() override;
         SlokedEditorDocumentSet &GetDocuments() override;
         void Close() override;

@@ -89,7 +89,7 @@ namespace sloked {
             const auto &parameters = config["parameters"].AsDictionary();
             if (parameters.Has("tabWidth")) {
                 auto width = parameters["tabWidth"].AsInt();
-                editor.GetCharWidth().SetTabWidth(width);
+                editor.GetCharPreset().SetTabWidth(width);
             }
         }
     }
@@ -267,7 +267,7 @@ namespace sloked {
         if (serverConfig.Has("services")) {
             const auto &serviceConfig = serverConfig["services"].AsDictionary();
             auto &serviceProvider = editor.InitializeServiceProvider(std::make_unique<SlokedServiceDependencyDefaultProvider>(
-                this->logger, this->namespaceFactory.Build(), editor.GetCharWidth(), editor.GetServer().GetServer(), editor.GetContextManager(),
+                this->logger, this->namespaceFactory.Build(), editor.GetCharPreset(), editor.GetServer().GetServer(), editor.GetContextManager(),
                 this->baseTaggers));
             if (serviceConfig.Has("root")) {
                 serviceProvider.GetNamespace().GetRoot().Mount(SlokedPath{"/"},
