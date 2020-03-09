@@ -524,7 +524,7 @@ int main(int argc, const char **argv) {
         },
         {
             "parameters", KgrDictionary {
-                { "tabWidth", 2 }
+                { "tabWidth", 8 }
             }
         }
     };

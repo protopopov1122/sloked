@@ -90,7 +90,7 @@ namespace sloked {
         } else if (this->screen != nullptr) {
             throw SlokedError("EditorInstance: Screen already initialized");
         } else {
-            this->screenProvider = providers.Make(uri, this->GetCharWidth());
+            this->screenProvider = providers.Make(uri, this->GetCharPreset());
             this->screen = std::make_unique<SlokedScreenServer>(this->GetServer().GetServer(), *this->screenProvider, this->GetContextManager());
             this->closeables.Attach(*this->screen);
             return *this->screen;
@@ -161,7 +161,7 @@ namespace sloked {
         this->Wait();
     }
 
-    SlokedCharPreset &SlokedEditorInstance::GetCharWidth() {
+    SlokedCharPreset &SlokedEditorInstance::GetCharPreset() {
         return this->charPreset;
     }
 

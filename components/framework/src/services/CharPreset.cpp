@@ -28,7 +28,7 @@ namespace sloked {
      private:
         void Send() {
             this->pipe->Write(KgrDictionary {
-                { "tabWidth", static_cast<int64_t>(charPreset.GetCharWidth(U'\t')) }
+                { "tabWidth", static_cast<int64_t>(charPreset.GetCharWidth(U'\t', 0)) }
             });
         }
         const SlokedCharPreset &charPreset;

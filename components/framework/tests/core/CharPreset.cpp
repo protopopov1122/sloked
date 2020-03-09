@@ -30,8 +30,8 @@ TEST_CASE("Char preset correctly stores tab width") {
     const Encoding &encoding = SlokedLocale::SystemEncoding();
     for (std::size_t i = 0; i < 16; i++) {
         charPreset.SetTabWidth(i);
-        REQUIRE(charPreset.GetCharWidth(U'\t') == i);
-        REQUIRE(charPreset.GetTab(encoding) == std::string(i, ' '));
+        REQUIRE(charPreset.GetCharWidth(U'\t', 0) == i);
+        REQUIRE(charPreset.GetTab(encoding, 0) == std::string(i, ' '));
     }
 }
 
@@ -40,7 +40,7 @@ TEST_CASE("Char preset leaves other char width unchanged") {
     charPreset.SetTabWidth(4);
     for (char32_t chr = 0; chr < 255; chr++) {
         if (chr != U'\t') {
-            REQUIRE(charPreset.GetCharWidth(chr) == 1);
+            REQUIRE(charPreset.GetCharWidth(chr, 0) == 1);
         }
     }
 }
@@ -65,7 +65,7 @@ TEST_CASE("Char preset notifies listeners about preset changes") {
     charPreset.SetTabWidth(4);
     std::size_t widthSum = 0;
     auto unbind = charPreset.Listen([&widthSum](const auto &charPreset) {
-        widthSum += charPreset.GetCharWidth(U'\t');
+        widthSum += charPreset.GetCharWidth(U'\t', 0);
     }); 
     charPreset.SetTabWidth(1);
     charPreset.SetTabWidth(2);

@@ -26,11 +26,11 @@ namespace sloked {
     SlokedCharPreset::SlokedCharPreset()
         : tab_width(4), tab(tab_width, U' ') {}
 
-    std::size_t SlokedCharPreset::GetCharWidth(char32_t chr) const {
+    std::size_t SlokedCharPreset::GetCharWidth(char32_t chr, std::size_t position) const {
         if (chr != '\t') {
             return 1;
         } else {
-            return this->tab_width;
+            return this->tab_width - position % this->tab_width;
         }
     }
     
@@ -38,14 +38,14 @@ namespace sloked {
         std::pair<std::size_t, std::size_t> res{0, 0};
         encoding.IterateCodepoints(str, [&](auto start, auto length, auto value) {
             res.first = res.second;
-            res.second += GetCharWidth(value);
+            res.second += GetCharWidth(value, res.first);
             return idx--;
         });
         return res;
     }
 
-    std::string SlokedCharPreset::GetTab(const Encoding &encoding) const {
-        return encoding.Encode(this->tab);
+    std::string SlokedCharPreset::GetTab(const Encoding &encoding, std::size_t column) const {
+        return encoding.Encode(this->tab.substr(column % this->tab_width));
     }
 
     SlokedCharPreset::Unbind SlokedCharPreset::Listen(Listener listener) const {

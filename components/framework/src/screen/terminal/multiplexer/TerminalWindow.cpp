@@ -114,7 +114,7 @@ namespace sloked {
                 break;
             }
             if (it.value ^ U'\n') {
-                auto curWidth = this->charPreset.GetCharWidth(it.value);
+                auto curWidth = this->charPreset.GetCharWidth(it.value, currentColumn);
                 if (currentColumn + curWidth < size.column) {
                     lineLength += it.length;
                     currentColumn += curWidth;

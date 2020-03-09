@@ -51,7 +51,7 @@ namespace sloked {
         return *this->rootNamespace;
     }
 
-    const SlokedCharPreset &SlokedServiceDependencyDefaultProvider::GetCharWidth() {
+    const SlokedCharPreset &SlokedServiceDependencyDefaultProvider::GetCharPreset() {
         return this->charPreset;
     }
 
@@ -76,7 +76,7 @@ namespace sloked {
         : SlokedAbstractServicesFacade(provider) {
         
         this->builders.emplace("document::render", [](SlokedServiceDependencyProvider &provider) {
-            return std::make_unique<SlokedTextRenderService>(provider.GetDocuments(), provider.GetCharWidth(), provider.GetContextManager());
+            return std::make_unique<SlokedTextRenderService>(provider.GetDocuments(), provider.GetCharPreset(), provider.GetContextManager());
         });
         this->builders.emplace("document::cursor", [](SlokedServiceDependencyProvider &provider) {
             return std::make_unique<SlokedCursorService>(provider.GetDocuments(), provider.GetServer().GetConnector("document::render"), provider.GetContextManager());
@@ -94,7 +94,7 @@ namespace sloked {
             return std::make_unique<SlokedNamespaceService>(provider.GetNamespace(), provider.GetContextManager());
         });
         this->builders.emplace("editor::parameters", [](SlokedServiceDependencyProvider &provider) {
-            return std::make_unique<SlokedCharPresetService>(provider.GetCharWidth(), provider.GetContextManager());
+            return std::make_unique<SlokedCharPresetService>(provider.GetCharPreset(), provider.GetContextManager());
         });
     }
 

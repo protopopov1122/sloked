@@ -112,11 +112,11 @@ namespace sloked {
         std::vector<KgrValue> RenderLines(const TextPosition::Line &begin, const TextPosition::Line &end) {
             std::vector<KgrValue> result;
             auto lineIdx = begin;
-            const std::string tab = this->charPreset.GetTab(this->document->encoding);
             this->document->text.Visit(begin, std::min(end - begin + 1,  static_cast<TextPosition::Line>(this->document->text.GetLastLine() - begin + 1)), [&](auto line) {
                 std::optional<std::pair<std::string, std::optional<TaggedTextFragment<int>>>> back;
                 KgrArray fragments;
                 TextPosition::Column columnIdx{0};
+                std::size_t width{0};
                 auto lineTags = this->document->tags.Get(lineIdx);
                 std::string buffer{};
                 buffer.reserve(line.size());
@@ -145,8 +145,11 @@ namespace sloked {
                         current = std::addressof(*iter);
                         ++iter;
                     }
-                    std::string_view fragment = it.value != U'\t' ? line.substr(it.start, it.length) : tab;
+                    std::string_view fragment = it.value != U'\t'
+                        ? line.substr(it.start, it.length)
+                        : this->charPreset.GetTab(this->document->encoding, width);
                     buffer += fragment;
+                    width += this->charPreset.GetCharWidth(it.value, width);
                     columnIdx++;
                 }
                 if (!buffer.empty()) {

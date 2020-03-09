@@ -175,7 +175,7 @@ namespace sloked {
                 }
                 this->SetPosition(this->line + 1, 0);
             } else if (it.value == U'\t') {
-                this->Write(this->charPreset.GetTab(this->encoding));
+                this->Write(this->charPreset.GetTab(this->encoding, this->col));
             } else if (this->col < this->width) {
                 Character &chr = this->current_state[this->line * this->width + this->col];
                 chr.has_graphics = true;
