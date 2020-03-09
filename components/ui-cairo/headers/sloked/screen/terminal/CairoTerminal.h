@@ -40,8 +40,10 @@ namespace sloked {
         using Line = TextPosition::Line;
         using Column = TextPosition::Column;
 
-        SlokedCairoTerminal(Cairo::RefPtr<Cairo::Surface>, Dimensions);
+        SlokedCairoTerminal(Dimensions);
         ~SlokedCairoTerminal();
+
+        void Render(Cairo::RefPtr<Cairo::Context>);
 
         void SetPosition(Line, Column) final;
         void MoveUp(Line) final;

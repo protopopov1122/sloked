@@ -27,8 +27,11 @@
 namespace sloked {
 
     struct SlokedCairoTerminal::Renderer {
-        Renderer(Cairo::RefPtr<Cairo::Surface> surface, const std::string &fontDescr)
-            : surface(surface),
+        Renderer(Dimensions &dim, const std::string &fontDescr)
+            : surface(Cairo::ImageSurface::create(
+                Cairo::Format::FORMAT_RGB24,
+                dim.x,
+                dim.y)),
               context(Cairo::Context::create(surface)),
               fontMap(Glib::wrap(pango_cairo_font_map_get_default())),
               textLayout(Pango::Layout::create(this->context)),
@@ -45,8 +48,8 @@ namespace sloked {
         Glib::RefPtr<Pango::Font> font;
     };
 
-    SlokedCairoTerminal::SlokedCairoTerminal(Cairo::RefPtr<Cairo::Surface> surface, Dimensions surfaceSize)
-        : renderer(std::make_unique<Renderer>(surface, "Monospace 10")), cursor{0, 0}, surfaceSize{surfaceSize} {
+    SlokedCairoTerminal::SlokedCairoTerminal(Dimensions surfaceSize)
+        : renderer(std::make_unique<Renderer>(surfaceSize, "Monospace 10")), cursor{0, 0}, surfaceSize{surfaceSize} {
         this->renderer->textLayout->set_text("A");
         this->renderer->textLayout->get_pixel_size(this->glyphSize.x, this->glyphSize.y);
         this->size = {
@@ -57,6 +60,16 @@ namespace sloked {
     }
 
     SlokedCairoTerminal::~SlokedCairoTerminal() = default;
+
+    void SlokedCairoTerminal::Render(Cairo::RefPtr<Cairo::Context> targetCtx) {
+        targetCtx->set_source(this->renderer->surface, 0.0, 0.0);
+        targetCtx->paint();
+        if (this->showCursor) {
+            targetCtx->set_source_rgba(0, 0, 0, 0.3);
+            targetCtx->rectangle(this->cursor.column * this->glyphSize.x, this->cursor.line * this->glyphSize.y, this->glyphSize.x, this->glyphSize.y);
+            targetCtx->fill();
+        }
+    }
     
     void SlokedCairoTerminal::SetPosition(Line l, Column c) {
         this->cursor = {
@@ -168,8 +181,6 @@ namespace sloked {
             }
         }
     }
-        
-
 
     void SlokedCairoTerminal::SetGraphicsMode(SlokedTextGraphics) {}
 

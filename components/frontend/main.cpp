@@ -261,7 +261,7 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
  public:
     struct GUI {
         GUI(int width, int height)
-            : surface(width, height), terminal(surface.GetCairoSurface(), {width, height}) {
+            : surface(width, height), context(Cairo::Context::create(surface.GetCairoSurface())), terminal({width, height}) {
             window.Open({width, height});
             renderer = std::make_unique<SlokedSDLRenderer>(this->window);
         }
@@ -272,6 +272,7 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
 
         void Render() {
             SDL_RenderClear(this->renderer->GetRenderer());
+            this->terminal.Render(this->context);
             auto texture = this->surface.MakeTexture(this->renderer->GetRenderer());
             SDL_RenderCopy(this->renderer->GetRenderer(), texture.GetTexture(), nullptr, nullptr); 
             SDL_RenderPresent(this->renderer->GetRenderer());
@@ -284,6 +285,7 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
         SlokedSDLWindow window;
         std::unique_ptr<SlokedSDLRenderer> renderer;
         SlokedSDLCairoSurface surface;
+        Cairo::RefPtr<Cairo::Context> context;
         SlokedCairoTerminal terminal;
     };
 
@@ -524,7 +526,7 @@ int main(int argc, const char **argv) {
         },
         {
             "parameters", KgrDictionary {
-                { "tabWidth", 8 }
+                { "tabWidth", 2 }
             }
         }
     };
