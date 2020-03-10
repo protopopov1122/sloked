@@ -26,6 +26,17 @@
 
 namespace sloked {
 
+    namespace CairoColors {
+        static auto Black = Cairo::SolidPattern::create_rgb(0, 0, 0);
+        static auto Red = Cairo::SolidPattern::create_rgb(1, 0, 0);
+        static auto Green = Cairo::SolidPattern::create_rgb(0, 1, 0);
+        static auto Yellow = Cairo::SolidPattern::create_rgb(1, 1, 0);
+        static auto Blue = Cairo::SolidPattern::create_rgb(0, 0, 1);
+        static auto Magenta = Cairo::SolidPattern::create_rgb(1, 0, 1);
+        static auto Cyan = Cairo::SolidPattern::create_rgb(0, 1, 1);
+        static auto White = Cairo::SolidPattern::create_rgb(1, 1, 1);
+    }
+
     struct SlokedCairoTerminal::Renderer {
         Renderer(Dimensions &dim, const std::string &fontDescr)
             : surface(Cairo::ImageSurface::create(
@@ -35,17 +46,24 @@ namespace sloked {
               context(Cairo::Context::create(surface)),
               fontMap(Glib::wrap(pango_cairo_font_map_get_default())),
               textLayout(Pango::Layout::create(this->context)),
-              fontDescription(fontDescr) {
-            this->textLayout->set_font_description(this->fontDescription);
-            this->font = this->fontMap->load_font(this->textLayout->get_context(), this->fontDescription);
+              normalFont(fontDescr),
+              boldFont(Glib::wrap(normalFont.gobj_copy())),
+              foregroundColor(CairoColors::Black),
+              backgroundColor(CairoColors::White) {
+            this->boldFont.set_weight(Pango::Weight::WEIGHT_BOLD);
+            this->textLayout->set_font_description(this->normalFont);
+            this->font = this->fontMap->load_font(this->textLayout->get_context(), this->normalFont);
         }
 
         Cairo::RefPtr<Cairo::Surface> surface;
         Cairo::RefPtr<Cairo::Context> context;
         Glib::RefPtr<Pango::FontMap> fontMap;
         Glib::RefPtr<Pango::Layout> textLayout;
-        Pango::FontDescription fontDescription;
+        Pango::FontDescription normalFont;
+        Pango::FontDescription boldFont;
         Glib::RefPtr<Pango::Font> font;
+        Cairo::RefPtr<Cairo::SolidPattern> foregroundColor;
+        Cairo::RefPtr<Cairo::SolidPattern> backgroundColor;
     };
 
     SlokedCairoTerminal::SlokedCairoTerminal(Dimensions surfaceSize)
@@ -65,7 +83,17 @@ namespace sloked {
         targetCtx->set_source(this->renderer->surface, 0.0, 0.0);
         targetCtx->paint();
         if (this->showCursor) {
-            targetCtx->set_source_rgba(0, 0, 0, 0.3);
+            struct {
+                double red;
+                double green;
+                double blue;
+                double alpha;
+            } cursorColor;
+            this->renderer->backgroundColor->get_rgba(cursorColor.red, cursorColor.green, cursorColor.blue, cursorColor.alpha);
+            cursorColor.red = 1.0 - cursorColor.red;
+            cursorColor.green = 1.0 - cursorColor.green;
+            cursorColor.blue = 1.0 - cursorColor.blue;
+            targetCtx->set_source_rgba(cursorColor.red, cursorColor.green, cursorColor.blue, 0.3);
             targetCtx->rectangle(this->cursor.column * this->glyphSize.x, this->cursor.line * this->glyphSize.y, this->glyphSize.x, this->glyphSize.y);
             targetCtx->fill();
         }
@@ -99,13 +127,13 @@ namespace sloked {
     }
 
     void SlokedCairoTerminal::ClearScreen() {
-        this->renderer->context->set_source_rgba(1, 1, 1, 1.0);
+        this->renderer->context->set_source(this->renderer->backgroundColor);
         this->renderer->context->rectangle(0, 0, this->surfaceSize.x, this->surfaceSize.y);
         this->renderer->context->fill();
     }
 
     void SlokedCairoTerminal::ClearChars(Column col) {
-        this->renderer->context->set_source_rgba(1, 1, 1, 1.0);
+        this->renderer->context->set_source(this->renderer->backgroundColor);
         this->renderer->context->rectangle(this->cursor.column * this->glyphSize.x,
             this->cursor.line * this->glyphSize.y,
             std::min(col, this->size.column - this->cursor.column) * this->glyphSize.x,
@@ -170,11 +198,11 @@ namespace sloked {
                 this->renderer->textLayout->set_text({lineContent.begin(), lineContent.end()});
                 Dimensions sz{0, 0};
                 this->renderer->textLayout->get_pixel_size(sz.x, sz.y);
-                this->renderer->context->set_source_rgba(1, 1, 1, 1.0);
+                this->renderer->context->set_source(this->renderer->backgroundColor);
                 this->renderer->context->rectangle(this->cursor.column * this->glyphSize.x, this->cursor.line * this->glyphSize.y, sz.x, sz.y);
                 this->renderer->context->fill();
                 this->renderer->context->move_to(this->cursor.column * this->glyphSize.x, this->cursor.line * this->glyphSize.y);
-                this->renderer->context->set_source_rgba(0, 0, 0, 1.0);
+                this->renderer->context->set_source(this->renderer->foregroundColor);
                 this->renderer->textLayout->show_in_cairo_context(this->renderer->context);
             }, line, encoding, this->cursor, this->size)) {
                 break;
@@ -182,9 +210,96 @@ namespace sloked {
         }
     }
 
-    void SlokedCairoTerminal::SetGraphicsMode(SlokedTextGraphics) {}
+    void SlokedCairoTerminal::SetGraphicsMode(SlokedTextGraphics mode) {
+        switch (mode) {
+            case SlokedTextGraphics::Off:
+                this->renderer->foregroundColor = CairoColors::Black;
+                this->renderer->backgroundColor = CairoColors::White;
+                this->renderer->textLayout->set_font_description(this->renderer->normalFont);
+                break;
 
-    void SlokedCairoTerminal::SetGraphicsMode(SlokedBackgroundGraphics) {}
+            case SlokedTextGraphics::Bold:
+                this->renderer->textLayout->set_font_description(this->renderer->boldFont);
+                break;
 
-    void SlokedCairoTerminal::SetGraphicsMode(SlokedForegroundGraphics) {}
+            case SlokedTextGraphics::Reverse:
+                std::swap(this->renderer->foregroundColor, this->renderer->backgroundColor);
+                break;
+
+            default:
+                // Not supported yet
+                break;
+        }
+    }
+
+    void SlokedCairoTerminal::SetGraphicsMode(SlokedBackgroundGraphics color) {
+        switch (color) {
+            case SlokedBackgroundGraphics::Black:
+                this->renderer->backgroundColor = CairoColors::Black;
+                break;
+
+            case SlokedBackgroundGraphics::Red:
+                this->renderer->backgroundColor = CairoColors::Red;
+                break;
+
+            case SlokedBackgroundGraphics::Green:
+                this->renderer->backgroundColor = CairoColors::Green;
+                break;
+
+            case SlokedBackgroundGraphics::Yellow:
+                this->renderer->backgroundColor = CairoColors::Black;
+                break;
+
+            case SlokedBackgroundGraphics::Blue:
+                this->renderer->backgroundColor = CairoColors::Blue;
+                break;
+            case SlokedBackgroundGraphics::Magenta:
+                this->renderer->backgroundColor = CairoColors::Magenta;
+                break;
+
+            case SlokedBackgroundGraphics::Cyan:
+                this->renderer->backgroundColor = CairoColors::Cyan;
+                break;
+
+            case SlokedBackgroundGraphics::White:
+                this->renderer->backgroundColor = CairoColors::White;
+                break;
+        }
+    }
+
+    void SlokedCairoTerminal::SetGraphicsMode(SlokedForegroundGraphics color) {
+        switch (color) {
+            case SlokedForegroundGraphics::Black:
+                this->renderer->foregroundColor = CairoColors::Black;
+                break;
+
+            case SlokedForegroundGraphics::Red:
+                this->renderer->foregroundColor = CairoColors::Red;
+                break;
+
+            case SlokedForegroundGraphics::Green:
+                this->renderer->foregroundColor = CairoColors::Green;
+                break;
+
+            case SlokedForegroundGraphics::Yellow:
+                this->renderer->foregroundColor = CairoColors::Black;
+                break;
+
+            case SlokedForegroundGraphics::Blue:
+                this->renderer->foregroundColor = CairoColors::Blue;
+                break;
+
+            case SlokedForegroundGraphics::Magenta:
+                this->renderer->foregroundColor = CairoColors::Magenta;
+                break;
+
+            case SlokedForegroundGraphics::Cyan:
+                this->renderer->foregroundColor = CairoColors::Cyan;
+                break;
+
+            case SlokedForegroundGraphics::White:
+                this->renderer->foregroundColor = CairoColors::White;
+                break;
+        }
+    }
 }

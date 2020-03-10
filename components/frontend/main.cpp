@@ -626,6 +626,7 @@ int main(int argc, const char **argv) {
     int i = 0;
     auto renderStatus = [&] {
         render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
+        render.SetGraphicsMode(SlokedTextGraphics::Bold);
         render.SetPosition(0, 0);
         render.ClearArea(TextPosition{1, 10});
         render.Write(std::to_string(i++));
