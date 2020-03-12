@@ -212,11 +212,13 @@ namespace sloked {
 
     void SlokedCairoTerminal::SetGraphicsMode(SlokedTextGraphics mode) {
         switch (mode) {
-            case SlokedTextGraphics::Off:
+            case SlokedTextGraphics::Off: {
                 this->renderer->foregroundColor = CairoColors::Black;
                 this->renderer->backgroundColor = CairoColors::White;
                 this->renderer->textLayout->set_font_description(this->renderer->normalFont);
-                break;
+                Pango::AttrList attrs;
+                this->renderer->textLayout->set_attributes(attrs);
+            } break;
 
             case SlokedTextGraphics::Bold:
                 this->renderer->textLayout->set_font_description(this->renderer->boldFont);
@@ -226,8 +228,16 @@ namespace sloked {
                 std::swap(this->renderer->foregroundColor, this->renderer->backgroundColor);
                 break;
 
-            default:
-                // Not supported yet
+            case SlokedTextGraphics::Underscore: {
+                Pango::AttrList attrs;
+                auto underline = Pango::Attribute::create_attr_underline(Pango::Underline::UNDERLINE_SINGLE);
+                attrs.insert(underline);
+                this->renderer->textLayout->set_attributes(attrs);
+            } break;
+
+            case SlokedTextGraphics::Blink:
+            case SlokedTextGraphics::Concealed:
+                // Not supported
                 break;
         }
     }

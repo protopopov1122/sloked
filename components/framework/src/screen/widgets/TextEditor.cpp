@@ -149,6 +149,7 @@ namespace sloked {
         }
 
         pane.SetGraphicsMode(this->background);
+        pane.SetGraphicsMode(SlokedTextGraphics::Off);
         pane.ClearScreen();
         pane.SetPosition(0, 0);
 

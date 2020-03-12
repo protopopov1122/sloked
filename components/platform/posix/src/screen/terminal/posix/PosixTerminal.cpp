@@ -391,7 +391,7 @@ namespace sloked {
     }
 
     void PosixTerminal::SetGraphicsMode(SlokedTextGraphics mode) {
-        constexpr auto GraphicModeCount = static_cast<int>(SlokedTextGraphics::Count);
+        constexpr auto GraphicModeCount = static_cast<int>(SlokedTextGraphics::Concealed) + 1;
         static auto GraphicsModes = []() {
             std::array<std::string, GraphicModeCount> modes;
             for (std::size_t i = 0; i < modes.size(); i++) {
@@ -423,10 +423,6 @@ namespace sloked {
 
             case SlokedTextGraphics::Concealed:
                 imode = 8;
-                break;
-            
-            default:
-                assert(false);
                 break;
         }
         if (!this->disable_flush) {

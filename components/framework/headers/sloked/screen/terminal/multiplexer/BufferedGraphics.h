@@ -40,7 +40,7 @@ namespace sloked {
         bool operator!=(const BufferedGraphicsMode &) const;
 
      private:
-        static constexpr auto TextSize = static_cast<int>(SlokedTextGraphics::Count);
+        static constexpr auto TextSize = static_cast<int>(SlokedTextGraphics::Concealed) + 1;
         static_assert(TextSize < 32);
         uint_fast32_t text;
         uint_fast32_t background = None;

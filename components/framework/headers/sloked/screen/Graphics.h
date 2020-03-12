@@ -32,8 +32,7 @@ namespace sloked {
         Underscore,
         Blink,
         Reverse,
-        Concealed,
-        Count
+        Concealed
     };
 
     enum class SlokedForegroundGraphics {
