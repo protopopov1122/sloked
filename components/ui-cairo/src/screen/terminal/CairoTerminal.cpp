@@ -195,7 +195,7 @@ namespace sloked {
                 if (lineContent.empty()) {
                     return;
                 }
-                this->renderer->textLayout->set_text({lineContent.begin(), lineContent.end()});
+                this->renderer->textLayout->set_text({lineContent.data(), lineContent.size()});
                 Dimensions sz{0, 0};
                 this->renderer->textLayout->get_pixel_size(sz.x, sz.y);
                 this->renderer->context->set_source(this->renderer->backgroundColor);
