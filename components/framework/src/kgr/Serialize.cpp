@@ -295,7 +295,7 @@ namespace sloked {
     }
 
     template <typename T, typename I, std::size_t Bytes = sizeof(T)>
-    void SerializeScalar(T value, I inserter) {
+    void SerializeScalar([[maybe_unused]] T value, [[maybe_unused]] I inserter) {
         static_assert(Bytes <= sizeof(uint64_t));
         if constexpr (Bytes > 0) {
             union {
