@@ -71,8 +71,8 @@ namespace sloked {
         this->renderer->textLayout->set_text("A");
         this->renderer->textLayout->get_pixel_size(this->glyphSize.x, this->glyphSize.y);
         this->size = {
-            surfaceSize.y / this->glyphSize.y,
-            surfaceSize.x / this->glyphSize.x
+            static_cast<TextPosition::Line>(surfaceSize.y / this->glyphSize.y),
+            static_cast<TextPosition::Column>(surfaceSize.x / this->glyphSize.x)
         };
         this->ClearScreen();
     }
