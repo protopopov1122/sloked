@@ -44,7 +44,7 @@ namespace sloked {
     }
 
     template <typename T, std::size_t Max, std::size_t Index = 0>
-    void ApplyTextMode(SlokedTerminal &term, T value) {
+    void ApplyTextMode(SlokedTerminal &term, [[maybe_unused]] T value) {
         if constexpr (Index < Max) {
             constexpr T mask = static_cast<T>(1) << Index;
             if (value & mask) {
