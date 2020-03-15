@@ -45,6 +45,11 @@ namespace sloked {
         InitSDL();
     }
 
+    SlokedSDLWindow::SlokedSDLWindow(SlokedSDLDimensions dim, const std::string &title, Uint32 flags)
+        : SlokedSDLWindow() {
+        this->Open(dim, title, flags);
+    }
+
     SlokedSDLWindow::~SlokedSDLWindow() {
         this->Close();
         DestroySDL();

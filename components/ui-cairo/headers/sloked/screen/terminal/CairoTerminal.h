@@ -22,28 +22,28 @@
 #ifndef SLOKED_SCREEN_TERMINAL_CAIROTERMINAL_H_
 #define SLOKED_SCREEN_TERMINAL_CAIROTERMINAL_H_
 
+#include "sloked/core/RingBuffer.h"
 #include "sloked/screen/terminal/Terminal.h"
 #include "sloked/screen/Point.h"
-#include "sloked/screen/cairo/Base.h"
+#include "sloked/screen/cairo/Component.h"
 #include "sloked/screen/pango/Base.h"
 #include <mutex>
+#include <condition_variable>
 #include <memory>
+#include <atomic>
 
 namespace sloked {
 
-    class SlokedCairoTerminal : public SlokedTerminal {
+    class SlokedCairoTerminal : public SlokedDuplexTerminal, public SlokedCairoScreenComponent {
      public:
-        struct Dimensions {
-            int x;
-            int y;
-        };
-        using Line = TextPosition::Line;
-        using Column = TextPosition::Column;
-
-        SlokedCairoTerminal(Dimensions);
+        SlokedCairoTerminal(Dimensions, const std::string &);
         ~SlokedCairoTerminal();
 
-        void Render(Cairo::RefPtr<Cairo::Context>);
+        bool HasUpdates() const final;
+        void ProcessInput(std::vector<SlokedKeyboardInput>) final;
+        void Render(const Cairo::RefPtr<Cairo::Context> &) final;
+        void SetSize(Dimensions) final;
+        Dimensions GetSize() const final;
 
         void SetPosition(Line, Column) final;
         void MoveUp(Line) final;
@@ -63,9 +63,13 @@ namespace sloked {
         void SetGraphicsMode(SlokedBackgroundGraphics) final;
         void SetGraphicsMode(SlokedForegroundGraphics) final;
 
+        bool WaitInput(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
+        std::vector<SlokedKeyboardInput> GetInput() final;
+
 
      private:
         struct Renderer;
+        static constexpr std::size_t InputBufferSize = 4096;
 
         std::unique_ptr<Renderer> renderer;
         TextPosition size;
@@ -73,6 +77,10 @@ namespace sloked {
         bool showCursor;
         Dimensions surfaceSize;
         Dimensions glyphSize;
+        std::atomic_bool updated;
+        std::mutex input_mtx;
+        std::condition_variable input_cv;
+        SlokedRingBuffer<SlokedKeyboardInput> input;
     };
 }
 

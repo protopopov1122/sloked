@@ -64,6 +64,7 @@ sloked_src = [
   'src/sched/Scheduler.cpp',
   'src/screen/Component.cpp',
   'src/screen/ComponentTree.cpp',
+  'src/screen/Manager.cpp',
   'src/screen/Point.cpp',
   'src/screen/Splitter.cpp',
   'src/screen/terminal/multiplexer/TerminalWindow.cpp',

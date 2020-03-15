@@ -22,9 +22,10 @@
 #ifndef SLOKED_SCREEN_CAIRO_SDL_H_
 #define SLOKED_SCREEN_CAIRO_SDL_H_
 
-#include "sloked/screen/cairo/Base.h"
+#include "sloked/screen/cairo/Window.h"
 #include "sloked/screen/sdl/Surface.h"
 #include "sloked/screen/sdl/Texture.h"
+#include "sloked/screen/sdl/Renderer.h"
 #include <mutex>
 
 namespace sloked {
@@ -35,6 +36,7 @@ namespace sloked {
         int GetWidth() const;
         int GetHeight() const;
         Cairo::RefPtr<Cairo::Surface> GetCairoSurface() const;
+        void Resize(int, int);
         std::unique_lock<std::mutex> Lock();
         SlokedSDLTexture MakeTexture(SDL_Renderer *);
 
@@ -44,6 +46,28 @@ namespace sloked {
         int height;
         SlokedSDLSurface sdlSurface;
         Cairo::RefPtr<Cairo::Surface> cairoSurface;
+    };
+
+    class SlokedSDLCairoWindow : public SlokedCairoWindow {
+     public:
+        SlokedSDLCairoWindow(SlokedScreenManager &, Dimensions, const std::string & = "");
+        ~SlokedSDLCairoWindow();
+        Dimensions GetSize() const final;
+        void SetSize(Dimensions) final;
+        std::shared_ptr<SlokedCairoScreenComponent> GetRoot() const final;
+        void SetRoot(std::shared_ptr<SlokedCairoScreenComponent>) final;
+        void Render() final;
+        void Close() final;
+
+     private:
+        void PollInput();
+        
+        SlokedScreenManager &screenMgr;
+        SlokedSDLWindow sdlWindow;
+        SlokedSDLRenderer sdlRenderer;
+        SlokedSDLCairoSurface rootSurface;
+        Cairo::RefPtr<Cairo::Context> rootContext;
+        std::shared_ptr<SlokedCairoScreenComponent> root;
     };
 }
 

@@ -261,39 +261,33 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
  public:
     struct GUI {
         GUI(int width, int height)
-            : surface(width, height), context(Cairo::Context::create(surface.GetCairoSurface())), terminal({width, height}) {
-            window.Open({width, height});
-            renderer = std::make_unique<SlokedSDLRenderer>(this->window);
+            : window(this->screenMgr, {width, height}), terminal(std::make_shared<SlokedCairoTerminal>(SlokedCairoTerminal::Dimensions{width, height}, "Monospace 10")) {
+            this->window.SetRoot(this->terminal);
+            this->screenMgr.Start(std::chrono::milliseconds(50));
         }
 
         ~GUI() {
+            this->screenMgr.Stop();
             this->window.Close();
         }
 
         void Render() {
-            SDL_RenderClear(this->renderer->GetRenderer());
-            this->terminal.Render(this->context);
-            auto texture = this->surface.MakeTexture(this->renderer->GetRenderer());
-            SDL_RenderCopy(this->renderer->GetRenderer(), texture.GetTexture(), nullptr, nullptr); 
-            SDL_RenderPresent(this->renderer->GetRenderer());
+            this->screenMgr.Repaint();
         }
 
-        SlokedTerminal &GetTerminal() {
-            return this->terminal;
+        SlokedDuplexTerminal &GetTerminal() {
+            return *this->terminal;
         }
 
-        SlokedSDLWindow window;
-        std::unique_ptr<SlokedSDLRenderer> renderer;
-        SlokedSDLCairoSurface surface;
-        Cairo::RefPtr<Cairo::Context> context;
-        SlokedCairoTerminal terminal;
+        SlokedScreenManager screenMgr;
+        SlokedSDLCairoWindow window;
+        std::shared_ptr<SlokedCairoTerminal> terminal;
     };
 
     SlokedDemoScreenBasis(const SlokedCharPreset &charPreset)
         : gui(1024, 960),
-          inputTerminal(*SlokedTerminalCompat::GetSystemTerminal()),
           console(gui.GetTerminal(), Encoding::Get("system"), charPreset),
-          provider(console, Encoding::Get("system"), charPreset, inputTerminal) {}
+          provider(console, Encoding::Get("system"), charPreset, gui.GetTerminal()) {}
         
     void Render(std::function<void(SlokedScreenComponent &)> fn) final {
         this->provider.Render(std::move(fn));
@@ -318,7 +312,6 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
 
  private:
     GUI gui;
-    SlokedDuplexTerminal &inputTerminal;
     BufferedTerminal console;
     SlokedTerminalScreenProvider<SlokedTerminalResizeListener> provider;
 };

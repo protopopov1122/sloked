@@ -19,16 +19,25 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_CAIRO_BASE_H_
-#define SLOKED_SCREEN_CAIRO_BASE_H_
+#ifndef SLOKED_SCREEN_CAIRO_WINDOW_H_
+#define SLOKED_SCREEN_CAIRO_WINDOW_H_
 
-#include <cairomm/cairomm.h>
+#include "sloked/screen/cairo/Component.h"
+#include "sloked/screen/Manager.h"
+#include <memory>
 
 namespace sloked {
 
-    struct SlokedCairoScreenDimensions {
-        int x;
-        int y;
+    class SlokedCairoWindow : public SlokedScreenManager::Renderable {
+     public:
+        using Dimensions = SlokedCairoScreenDimensions;
+
+        virtual ~SlokedCairoWindow() = default;
+        virtual Dimensions GetSize() const = 0;
+        virtual void SetSize(Dimensions) = 0;
+        virtual std::shared_ptr<SlokedCairoScreenComponent> GetRoot() const = 0;
+        virtual void SetRoot(std::shared_ptr<SlokedCairoScreenComponent>) = 0;
+        virtual void Close() = 0;
     };
 }
 

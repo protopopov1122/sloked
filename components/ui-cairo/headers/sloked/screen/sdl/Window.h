@@ -36,6 +36,7 @@ namespace sloked {
     class SlokedSDLWindow {
      public:
         SlokedSDLWindow();
+        SlokedSDLWindow(SlokedSDLDimensions, const std::string & = "", Uint32 = 0);
         ~SlokedSDLWindow();
 
         bool IsOpen() const;
