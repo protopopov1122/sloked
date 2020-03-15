@@ -49,7 +49,7 @@ namespace sloked {
 
      private:
         void SendSize() {
-            auto sz = this->size.GetSize();
+            auto sz = this->size.GetScreenSize();
             this->pipe->Write(KgrDictionary {
                 { "height", static_cast<int64_t>(sz.line) },
                 { "width", static_cast<int64_t>(sz.column) }

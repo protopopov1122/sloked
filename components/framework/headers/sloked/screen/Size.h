@@ -10,7 +10,7 @@ namespace sloked {
      public:
         using Listener = std::function<void(const TextPosition &)>;
         virtual ~SlokedScreenSize() = default;
-        virtual TextPosition GetSize() const = 0;
+        virtual TextPosition GetScreenSize() const = 0;
         virtual std::function<void()> Listen(Listener) = 0;
     };
 }

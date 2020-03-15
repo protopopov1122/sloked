@@ -24,6 +24,7 @@
 
 #include "sloked/core/RingBuffer.h"
 #include "sloked/screen/terminal/Terminal.h"
+#include "sloked/screen/Size.h"
 #include "sloked/screen/Point.h"
 #include "sloked/screen/cairo/Component.h"
 #include "sloked/screen/pango/Base.h"
@@ -38,6 +39,8 @@ namespace sloked {
      public:
         SlokedCairoTerminal(Dimensions, const std::string &);
         ~SlokedCairoTerminal();
+
+        SlokedScreenSize &GetTerminalSize();
 
         bool HasUpdates() const final;
         void ProcessInput(std::vector<SlokedKeyboardInput>) final;
@@ -69,9 +72,11 @@ namespace sloked {
 
      private:
         struct Renderer;
+        class Size;
         static constexpr std::size_t InputBufferSize = 4096;
 
         std::unique_ptr<Renderer> renderer;
+        std::unique_ptr<Size> screenSize;
         TextPosition size;
         TextPosition cursor;
         bool showCursor;

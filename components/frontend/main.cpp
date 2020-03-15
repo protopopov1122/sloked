@@ -275,7 +275,7 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
             this->screenMgr.Repaint();
         }
 
-        SlokedDuplexTerminal &GetTerminal() {
+        SlokedCairoTerminal &GetTerminal() {
             return *this->terminal;
         }
 
@@ -287,7 +287,7 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
     SlokedDemoScreenBasis(const SlokedCharPreset &charPreset)
         : gui(1024, 960),
           console(gui.GetTerminal(), Encoding::Get("system"), charPreset),
-          provider(console, Encoding::Get("system"), charPreset, gui.GetTerminal()) {}
+          provider(console, Encoding::Get("system"), charPreset, gui.GetTerminal(), gui.GetTerminal().GetTerminalSize()) {}
         
     void Render(std::function<void(SlokedScreenComponent &)> fn) final {
         this->provider.Render(std::move(fn));
@@ -313,7 +313,7 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
  private:
     GUI gui;
     BufferedTerminal console;
-    SlokedTerminalScreenProvider<SlokedTerminalResizeListener> provider;
+    SlokedTerminalScreenProvider provider;
 };
 
 class SlokedDemoScreenFactory : public SlokedScreenProviderFactory {
@@ -595,13 +595,13 @@ int main(int argc, const char **argv) {
 
     // Screen layout
     screenClient.Handle.NewMultiplexer("/");
-    auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{screenServer.GetScreen().GetSize().GetSize().line, screenServer.GetScreen().GetSize().GetSize().column});
+    auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{screenServer.GetScreen().GetSize().GetScreenSize().line, screenServer.GetScreen().GetSize().GetScreenSize().column});
     screenSizeClient.Listen([&](const auto &size) {
-        mainEditor.GetScheduler().Defer([&, size] {
+        std::thread([&, size] {
             if (screenServer.IsRunning() && mainWindow.has_value()) {
                 screenClient.Multiplexer.ResizeWindow(mainWindow.value(), size);
             }
-        });
+        }).detach();
     });
     screenClient.Handle.NewSplitter(mainWindow.value(), Splitter::Direction::Vertical);
     screenClient.Splitter.NewWindow(mainWindow.value(), Splitter::Constraints(1.0f));

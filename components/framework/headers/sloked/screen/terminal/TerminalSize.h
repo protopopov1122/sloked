@@ -45,7 +45,7 @@ namespace sloked {
             }
         }
 
-        TextPosition GetSize() const {
+        TextPosition GetScreenSize() const {
             return {
                 this->terminal.GetHeight(),
                 this->terminal.GetWidth()
@@ -67,7 +67,7 @@ namespace sloked {
      private:
         void Trigger() {
             this->terminal.UpdateDimensions();
-            auto size = this->GetSize();
+            auto size = this->GetScreenSize();
             std::unique_lock lock(this->mtx);
             for (auto it = this->listeners.begin(); it != this->listeners.end();) {
                 auto current = it++;

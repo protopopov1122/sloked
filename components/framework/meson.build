@@ -27,6 +27,7 @@ sloked_src = [
   'src/editor/doc-mgr/Document.cpp',
   'src/editor/doc-mgr/DocumentSet.cpp',
   'src/editor/doc-mgr/DocumentUpstream.cpp',
+  'src/editor/terminal/ScreenProvider.cpp',
   'src/facade/Crypto.cpp',
   'src/facade/Server.cpp',
   'src/facade/Services.cpp',

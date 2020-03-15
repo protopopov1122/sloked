@@ -48,7 +48,6 @@ namespace sloked {
     }
 
     void SlokedSDLCairoSurface::Resize(int width, int height) {
-        auto lock = this->Lock();
         SlokedSDLSurface newSdlSurface({width, height});
         SDL_LockSurface(newSdlSurface.GetSurface());
         auto newSurface = Cairo::ImageSurface::create(
@@ -71,7 +70,6 @@ namespace sloked {
     }
 
     SlokedSDLTexture SlokedSDLCairoSurface::MakeTexture(SDL_Renderer *renderer) {
-        auto lock = this->Lock();
         return SlokedSDLTexture(renderer, this->sdlSurface);
     }
 
@@ -91,6 +89,7 @@ namespace sloked {
     }
 
     void SlokedSDLCairoWindow::SetSize(Dimensions dim) {
+        auto lock = this->rootSurface.Lock();
         this->sdlWindow.Resize({dim.x, dim.y});
         this->rootSurface.Resize(dim.x, dim.y);
         this->rootContext = Cairo::Context::create(rootSurface.GetCairoSurface());
@@ -109,6 +108,7 @@ namespace sloked {
 
     void SlokedSDLCairoWindow::Render() {
         this->PollInput();
+        auto lock = this->rootSurface.Lock();
         if (this->sdlWindow.IsOpen() || (this->root && this->root->HasUpdates())) {
             SDL_RenderClear(this->sdlRenderer.GetRenderer());
             if (this->root) {
@@ -159,6 +159,7 @@ namespace sloked {
             { SDL_SCANCODE_F11, SlokedControlKey::F11 },
             { SDL_SCANCODE_F12, SlokedControlKey::F12 }
         };
+
         static std::map<SDL_Keycode, SlokedControlKey> ControlKeyMappings = {
             { SDL_SCANCODE_SPACE, SlokedControlKey::CtrlSpace },
             { SDL_SCANCODE_SPACE, SlokedControlKey::CtrlA },
@@ -214,6 +215,19 @@ namespace sloked {
                             std::string{evt.text.text},
                             false
                         });
+                        break;
+
+                    case SDL_WINDOWEVENT:
+                        switch (evt.window.event) {
+                            case SDL_WINDOWEVENT_RESIZED: {
+                                auto lock = this->rootSurface.Lock();
+                                this->rootSurface.Resize(evt.window.data1, evt.window.data2);
+                                this->rootContext = Cairo::Context::create(rootSurface.GetCairoSurface());
+                                if (this->root) {
+                                    this->root->SetSize({evt.window.data1, evt.window.data2});
+                                }
+                            } break;
+                        }
                         break;
 
                     default:

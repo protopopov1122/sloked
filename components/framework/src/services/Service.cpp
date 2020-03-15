@@ -302,12 +302,14 @@ namespace sloked {
         std::unique_lock lock(*this->mtx);
         int64_t id = this->nextId++;
         this->pending.emplace(id, std::queue<Response>{});
+        ResponseHandle rspHandle(id, *this);
+        lock.unlock();
         this->pipe->Write(KgrDictionary {
             { "id", id },
             { "method", method },
             { "params", params }
         });
-        return ResponseHandle(id, *this);
+        return rspHandle;
     }
 
     void SlokedServiceClient::Close() {
