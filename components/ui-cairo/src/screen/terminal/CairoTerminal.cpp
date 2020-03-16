@@ -116,7 +116,6 @@ namespace sloked {
             static_cast<TextPosition::Line>(surfaceSize.y / this->glyphSize.y),
             static_cast<TextPosition::Column>(surfaceSize.x / this->glyphSize.x)
         };
-        this->ClearScreen();
     }
 
     SlokedCairoTerminal::~SlokedCairoTerminal() = default;
@@ -144,19 +143,11 @@ namespace sloked {
         targetCtx->set_source(this->renderer->surface, 0.0, 0.0);
         targetCtx->paint();
         if (this->showCursor) {
-            struct {
-                double red;
-                double green;
-                double blue;
-                double alpha;
-            } cursorColor;
-            this->renderer->backgroundColor->get_rgba(cursorColor.red, cursorColor.green, cursorColor.blue, cursorColor.alpha);
-            cursorColor.red = 1.0 - cursorColor.red;
-            cursorColor.green = 1.0 - cursorColor.green;
-            cursorColor.blue = 1.0 - cursorColor.blue;
-            targetCtx->set_source_rgba(cursorColor.red, cursorColor.green, cursorColor.blue, 0.3);
+            targetCtx->set_source_rgb(1.0, 1.0, 1.0);
+            targetCtx->set_operator(static_cast<Cairo::Operator>(CAIRO_OPERATOR_DIFFERENCE));
             targetCtx->rectangle(this->cursor.column * this->glyphSize.x, this->cursor.line * this->glyphSize.y, this->glyphSize.x, this->glyphSize.y);
             targetCtx->fill();
+            targetCtx->set_operator(Cairo::Operator::OPERATOR_SOURCE);
         }
     }
 
@@ -175,8 +166,6 @@ namespace sloked {
         this->renderer->textLayout->set_font_description(this->renderer->normalFont);
         Pango::AttrList attrs;
         this->renderer->textLayout->set_attributes(attrs);
-        lock.unlock();
-        this->ClearScreen();
         this->updated = true;
         this->screenSize->Notify();
     }

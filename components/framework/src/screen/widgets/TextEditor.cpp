@@ -148,8 +148,8 @@ namespace sloked {
             }
         }
 
-        pane.SetGraphicsMode(this->background);
         pane.SetGraphicsMode(SlokedTextGraphics::Off);
+        pane.SetGraphicsMode(this->background);
         pane.ClearScreen();
         pane.SetPosition(0, 0);
 
