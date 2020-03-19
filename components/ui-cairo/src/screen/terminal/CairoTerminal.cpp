@@ -24,8 +24,21 @@
 #include "sloked/core/NewLine.h"
 #include "sloked/core/Locale.h"
 #include "sloked/core/Event.h"
+#include <limits>
 
 namespace sloked {
+
+    template <typename T = guint16>
+    constexpr T MapDoubleToInt(double value) {
+        return static_cast<T>(value * std::numeric_limits<T>::max());
+    }
+
+    void SetBackgroundAttrinute(Pango::AttrList &attrs, const Cairo::RefPtr<Cairo::SolidPattern> color) {
+        double r, g, b, a;
+        color->get_rgba(r, g, b, a);
+        auto bgColor = Pango::Attribute::create_attr_background(MapDoubleToInt(r), MapDoubleToInt(g), MapDoubleToInt(b));
+        attrs.insert(bgColor);   
+    }
 
     namespace CairoColors {
         static auto Black = Cairo::SolidPattern::create_rgb(0, 0, 0);
@@ -53,6 +66,11 @@ namespace sloked {
               backgroundColor(CairoColors::White) {
             this->boldFont.set_weight(Pango::Weight::WEIGHT_BOLD);
             this->textLayout->set_font_description(this->normalFont);
+            this->textLayout->set_single_paragraph_mode(true);
+
+            Pango::AttrList attrs;
+            SetBackgroundAttrinute(attrs, this->backgroundColor);
+            this->textLayout->set_attributes(attrs);
         }
 
         void Resize(const Dimensions &dim) {
@@ -165,6 +183,7 @@ namespace sloked {
         this->renderer->backgroundColor = CairoColors::White;
         this->renderer->textLayout->set_font_description(this->renderer->normalFont);
         Pango::AttrList attrs;
+        SetBackgroundAttrinute(attrs, this->renderer->backgroundColor);
         this->renderer->textLayout->set_attributes(attrs);
         this->updated = true;
         this->screenSize->Notify();
@@ -286,11 +305,6 @@ namespace sloked {
                     return;
                 }
                 this->renderer->textLayout->set_text({lineContent.data(), lineContent.size()});
-                Dimensions sz{0, 0};
-                this->renderer->textLayout->get_pixel_size(sz.x, sz.y);
-                this->renderer->context->set_source(this->renderer->backgroundColor);
-                this->renderer->context->rectangle(this->cursor.column * this->glyphSize.x, this->cursor.line * this->glyphSize.y, sz.x, sz.y);
-                this->renderer->context->fill();
                 this->renderer->context->move_to(this->cursor.column * this->glyphSize.x, this->cursor.line * this->glyphSize.y);
                 this->renderer->context->set_source(this->renderer->foregroundColor);
                 this->renderer->textLayout->show_in_cairo_context(this->renderer->context);
@@ -309,6 +323,7 @@ namespace sloked {
                 this->renderer->backgroundColor = CairoColors::White;
                 this->renderer->textLayout->set_font_description(this->renderer->normalFont);
                 Pango::AttrList attrs;
+                SetBackgroundAttrinute(attrs, this->renderer->backgroundColor);
                 this->renderer->textLayout->set_attributes(attrs);
             } break;
 
@@ -369,6 +384,10 @@ namespace sloked {
                 this->renderer->backgroundColor = CairoColors::White;
                 break;
         }
+
+        Pango::AttrList attrs;
+        SetBackgroundAttrinute(attrs, this->renderer->backgroundColor);
+        this->renderer->textLayout->set_attributes(attrs);
     }
 
     void SlokedCairoTerminal::SetGraphicsMode(SlokedForegroundGraphics color) {

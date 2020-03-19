@@ -271,10 +271,6 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
             this->window.Close();
         }
 
-        void Render() {
-            this->screenMgr.Repaint();
-        }
-
         SlokedCairoTerminal &GetTerminal() {
             return *this->terminal;
         }
@@ -291,7 +287,6 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
         
     void Render(std::function<void(SlokedScreenComponent &)> fn) final {
         this->provider.Render(std::move(fn));
-        gui.Render();
     }
 
     std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration timeout) final {
