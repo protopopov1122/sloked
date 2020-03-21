@@ -23,7 +23,6 @@
 #include "sloked/core/Encoding.h"
 #include "sloked/core/NewLine.h"
 #include "sloked/core/Locale.h"
-#include "sloked/core/Event.h"
 #include <limits>
 
 namespace sloked {
@@ -33,11 +32,18 @@ namespace sloked {
         return static_cast<T>(value * std::numeric_limits<T>::max());
     }
 
-    void SetBackgroundAttrinute(Pango::AttrList &attrs, const Cairo::RefPtr<Cairo::SolidPattern> color) {
+    void SetForegroundAttribute(Pango::AttrList &attrs, const Cairo::RefPtr<Cairo::SolidPattern> color) {
+        double r, g, b, a;
+        color->get_rgba(r, g, b, a);
+        auto fgColor = Pango::Attribute::create_attr_foreground(MapDoubleToInt(r), MapDoubleToInt(g), MapDoubleToInt(b));
+        attrs.insert(fgColor);
+    }
+
+    void SetBackgroundAttribute(Pango::AttrList &attrs, const Cairo::RefPtr<Cairo::SolidPattern> color) {
         double r, g, b, a;
         color->get_rgba(r, g, b, a);
         auto bgColor = Pango::Attribute::create_attr_background(MapDoubleToInt(r), MapDoubleToInt(g), MapDoubleToInt(b));
-        attrs.insert(bgColor);   
+        attrs.insert(bgColor); 
     }
 
     namespace CairoColors {
@@ -51,125 +57,191 @@ namespace sloked {
         static auto White = Cairo::SolidPattern::create_rgb(1, 1, 1);
     }
 
-    struct TerminalMode {
-        SlokedBackgroundGraphics background{SlokedBackgroundGraphics::White};
-        SlokedForegroundGraphics foreground{SlokedBackgroundGraphics::Black};
-        bool bold{false};
-        bool underscore{false};
-    };
+    SlokedCairoTerminal::Renderer::Renderer(const std::string &fontDescr)
+        : surface(nullptr),
+            context(nullptr),
+            fontMap(Glib::wrap(pango_cairo_font_map_get_default())),
+            textLayout(nullptr),
+            font(fontDescr),
+            backgroundColor(CairoColors::White),
+            surfaceSize{0, 0},
+            glyphSize{0, 0} {}
 
-    struct SlokedCairoTerminal::Renderer {
-        Renderer(const std::string &fontDescr)
-            : surface(nullptr),
-              context(nullptr),
-              fontMap(Glib::wrap(pango_cairo_font_map_get_default())),
-              textLayout(nullptr),
-              normalFont(fontDescr),
-              boldFont(Glib::wrap(normalFont.gobj_copy())),
-              foregroundColor(CairoColors::Black),
-              backgroundColor(CairoColors::White) {
-            this->boldFont.set_weight(Pango::Weight::WEIGHT_BOLD);
+    void SlokedCairoTerminal::Renderer::SetTarget(const Cairo::RefPtr<Cairo::Surface> &targetSurface, Dimensions dim) {
+        auto newContext = Cairo::Context::create(targetSurface);
+        auto newTextLayout = Pango::Layout::create(newContext);
+        if (this->textLayout) {
+            newTextLayout->set_text(this->textLayout->get_text());
+            newTextLayout->set_font_description(this->textLayout->get_font_description());
+            auto attrs = this->textLayout->get_attributes();
+            newTextLayout->set_attributes(attrs);
+        } else {
+            newTextLayout->set_font_description(this->font);
         }
+        this->textLayout = newTextLayout;
+        this->context = newContext;
+        this->surface = targetSurface;
 
-        void SetTarget(const Cairo::RefPtr<Cairo::Surface> &targetSurface) {
-            auto newContext = Cairo::Context::create(targetSurface);
-            auto newTextLayout = Pango::Layout::create(newContext);
-            if (this->textLayout) {
-                newTextLayout->set_text(this->textLayout->get_text());
-                newTextLayout->set_font_description(this->textLayout->get_font_description());
-                auto attrs = this->textLayout->get_attributes();
-                newTextLayout->set_attributes(attrs);
-            } else {
-                newTextLayout->set_font_description(this->normalFont);
-            }
-            this->textLayout = newTextLayout;
-            this->context = newContext;
-            this->surface = targetSurface;
+        this->surfaceSize = dim;
+        this->textLayout->set_text("A");
+        this->textLayout->get_pixel_size(this->glyphSize.x, this->glyphSize.y);
+    }
+
+    bool SlokedCairoTerminal::Renderer::IsValid() const {
+        return this->context.operator bool();
+    }
+
+    void SlokedCairoTerminal::Renderer::Apply(const TerminalMode &mode) {
+        Pango::AttrList attrs;
+        if (mode.bold) {
+            auto bold = Pango::Attribute::create_attr_weight(Pango::Weight::WEIGHT_BOLD);
+            attrs.insert(bold);
         }
+        if (mode.underscore) {
+            auto underline = Pango::Attribute::create_attr_underline(Pango::Underline::UNDERLINE_SINGLE);
+            attrs.insert(underline);
+        }
+        switch (mode.background) {
+            case SlokedBackgroundGraphics::Black:
+                this->backgroundColor = CairoColors::Black;
+                break;
 
-        Cairo::RefPtr<Cairo::Surface> surface;
-        Cairo::RefPtr<Cairo::Context> context;
-        Glib::RefPtr<Pango::FontMap> fontMap;
-        Glib::RefPtr<Pango::Layout> textLayout;
-        Pango::FontDescription normalFont;
-        Pango::FontDescription boldFont;
+            case SlokedBackgroundGraphics::Red:
+                this->backgroundColor = CairoColors::Red;
+                break;
+
+            case SlokedBackgroundGraphics::Green:
+                this->backgroundColor = CairoColors::Green;
+                break;
+
+            case SlokedBackgroundGraphics::Yellow:
+                this->backgroundColor = CairoColors::Black;
+                break;
+
+            case SlokedBackgroundGraphics::Blue:
+                this->backgroundColor = CairoColors::Blue;
+                break;
+
+            case SlokedBackgroundGraphics::Magenta:
+                this->backgroundColor = CairoColors::Magenta;
+                break;
+
+            case SlokedBackgroundGraphics::Cyan:
+                this->backgroundColor = CairoColors::Cyan;
+                break;
+
+            case SlokedBackgroundGraphics::White:
+                this->backgroundColor = CairoColors::White;
+                break;
+        }
+        SetBackgroundAttribute(attrs, this->backgroundColor);
         Cairo::RefPtr<Cairo::SolidPattern> foregroundColor;
-        Cairo::RefPtr<Cairo::SolidPattern> backgroundColor;
-        TerminalMode mode;
-        std::mutex mtx;
-    };
+        switch (mode.foreground) {
+            case SlokedForegroundGraphics::Black:
+                foregroundColor = CairoColors::Black;
+                break;
 
-    class SlokedCairoTerminal::Size : public SlokedScreenSize {
-     public:
-        Size(SlokedCairoTerminal &terminal)
-            : terminal(terminal) {}
+            case SlokedForegroundGraphics::Red:
+                foregroundColor = CairoColors::Red;
+                break;
 
-        TextPosition GetScreenSize() const final {
-            return {
-                terminal.GetHeight(),
-                terminal.GetWidth()
-            };
+            case SlokedForegroundGraphics::Green:
+                foregroundColor = CairoColors::Green;
+                break;
+
+            case SlokedForegroundGraphics::Yellow:
+                foregroundColor = CairoColors::Black;
+                break;
+
+            case SlokedForegroundGraphics::Blue:
+                foregroundColor = CairoColors::Blue;
+                break;
+
+            case SlokedForegroundGraphics::Magenta:
+                foregroundColor = CairoColors::Magenta;
+                break;
+
+            case SlokedForegroundGraphics::Cyan:
+                foregroundColor = CairoColors::Cyan;
+                break;
+
+            case SlokedForegroundGraphics::White:
+                foregroundColor = CairoColors::White;
+                break;
         }
-        
-        std::function<void()> Listen(Listener listener) final {
-            return this->emitter.Listen(std::move(listener));
-        }
+        SetForegroundAttribute(attrs, foregroundColor);
+        this->textLayout->set_attributes(attrs);
+    }
 
-        void Notify() {
-            this->emitter.Emit(this->GetScreenSize());
-        }
+    SlokedCairoTerminal::Size::Size(SlokedCairoTerminal &terminal)
+        : terminal(terminal) {}
 
-     private:
-        SlokedCairoTerminal &terminal;
-        SlokedEventEmitter<TextPosition> emitter;
-    };
+    TextPosition SlokedCairoTerminal::Size::GetScreenSize() const {
+        return {
+            terminal.GetHeight(),
+            terminal.GetWidth()
+        };
+    }
+    
+    std::function<void()> SlokedCairoTerminal::Size::Listen(Listener listener) {
+        return this->emitter.Listen(std::move(listener));
+    }
+
+    void SlokedCairoTerminal::Size::Notify() {
+        this->emitter.Emit(this->GetScreenSize());
+    }
+
+    bool SlokedCairoTerminal::CacheEntry::operator<(const CacheEntry &other) const {
+        return this->text < other.text ||
+            (this->text == other.text && this->mode.background < other.mode.background) ||
+            (this->text == other.text && this->mode.background == other.mode.background &&
+                this->mode.foreground < other.mode.foreground) ||
+            (this->text == other.text && this->mode.background == other.mode.background &&
+                this->mode.foreground == other.mode.foreground && this->mode.bold < other.mode.bold) ||
+            (this->text == other.text && this->mode.background == other.mode.background &&
+                this->mode.foreground == other.mode.foreground && this->mode.bold == other.mode.bold &&
+                this->mode.underscore < other.mode.underscore);
+    }
 
     SlokedCairoTerminal::SlokedCairoTerminal(const std::string &font)
-        : renderer(std::make_unique<Renderer>(font)), screenSize(std::make_unique<Size>(*this)),
-          cursor{0, 0}, showCursor{true}, surfaceSize{0, 0}, glyphSize{0, 0}, updated{true}, input{InputBufferSize} {}
+        : renderer(font), screenSize(*this),
+          updated{true}, size{0, 0}, cursor{0, 0}, showCursor{true}, mode{},
+          cache{1024} {}
 
     SlokedCairoTerminal::~SlokedCairoTerminal() = default;
 
     SlokedScreenSize &SlokedCairoTerminal::GetTerminalSize() {
-        return *this->screenSize;
+        return this->screenSize;
     }
 
-    bool SlokedCairoTerminal::HasUpdates() const {
-        return this->updated.load();
+    bool SlokedCairoTerminal::CheckUpdates() {
+        return this->updated.exchange(false);
     }
 
     void SlokedCairoTerminal::ProcessInput(std::vector<SlokedKeyboardInput> events) {
-        std::unique_lock lock(this->input_mtx);
-        if (this->input.available() < events.size()) {
-            this->input.pop_front(events.size() - this->input.available());
+        std::unique_lock lock(this->input.mtx);
+        if (this->input.content.available() < events.size()) {
+            this->input.content.pop_front(events.size() - this->input.content.available());
         }
-        this->input.insert(events.begin(), events.end());
-        this->input_cv.notify_all();
+        this->input.content.insert(events.begin(), events.end());
+        this->input.cv.notify_all();
     }
 
     void SlokedCairoTerminal::SetTarget(const Cairo::RefPtr<Cairo::Surface> &targetSurface, Dimensions dim) {
-        std::unique_lock lock(this->renderer->mtx);
-        this->renderer->SetTarget(targetSurface);
-        this->renderer->textLayout->set_text("A");
-        this->renderer->textLayout->get_pixel_size(this->glyphSize.x, this->glyphSize.y);
-        this->surfaceSize = dim;
+        std::unique_lock lock(this->renderer.mtx);
+        this->renderer.SetTarget(targetSurface, dim);
         this->size = {
-            static_cast<TextPosition::Line>(this->surfaceSize.y / this->glyphSize.y),
-            static_cast<TextPosition::Column>(this->surfaceSize.x / this->glyphSize.x)
+            static_cast<TextPosition::Line>(this->renderer.surfaceSize.y / this->renderer.glyphSize.y),
+            static_cast<TextPosition::Column>(this->renderer.surfaceSize.x / this->renderer.glyphSize.x)
         };
-        this->renderer->foregroundColor = CairoColors::Black;
-        this->renderer->backgroundColor = CairoColors::White;
-        this->renderer->textLayout->set_font_description(this->renderer->normalFont);
-        Pango::AttrList attrs;
-        this->renderer->textLayout->set_attributes(attrs);
         lock.unlock();
         this->ClearScreen();
         this->FlipCursor();
-        this->screenSize->Notify();
+        this->screenSize.Notify();
     }
 
     SlokedCairoTerminal::Dimensions SlokedCairoTerminal::GetSize() const {
-        return this->surfaceSize;
+        return this->renderer.surfaceSize;
     }
     
     void SlokedCairoTerminal::SetPosition(Line l, Column c) {
@@ -218,27 +290,27 @@ namespace sloked {
     }
 
     void SlokedCairoTerminal::ClearScreen() {
-        std::unique_lock lock(this->renderer->mtx);
-        if (this->renderer->context) {
+        std::unique_lock lock(this->renderer.mtx);
+        if (this->renderer.IsValid()) {
             this->updated = true;
-            this->renderer->context->set_source(this->renderer->backgroundColor);
-            this->renderer->context->rectangle(0, 0, this->surfaceSize.x, this->surfaceSize.y);
-            this->renderer->context->fill();
+            this->renderer.context->set_source(this->renderer.backgroundColor);
+            this->renderer.context->rectangle(0, 0, this->renderer.surfaceSize.x, this->renderer.surfaceSize.y);
+            this->renderer.context->fill();
             this->FlipCursor();
         }
     }
 
     void SlokedCairoTerminal::ClearChars(Column col) {
-        std::unique_lock lock(this->renderer->mtx);
-        if (this->renderer->context) {
+        std::unique_lock lock(this->renderer.mtx);
+        if (this->renderer.IsValid()) {
             this->FlipCursor();
             this->updated = true;
-            this->renderer->context->set_source(this->renderer->backgroundColor);
-            this->renderer->context->rectangle(this->cursor.column * this->glyphSize.x,
-                this->cursor.line * this->glyphSize.y,
-                std::min(col, this->size.column - this->cursor.column) * this->glyphSize.x,
-                this->glyphSize.y);
-            this->renderer->context->fill();
+            this->renderer.context->set_source(this->renderer.backgroundColor);
+            this->renderer.context->rectangle(this->cursor.column * this->renderer.glyphSize.x,
+                this->cursor.line * this->renderer.glyphSize.y,
+                std::min(col, this->size.column - this->cursor.column) * this->renderer.glyphSize.x,
+                this->renderer.glyphSize.y);
+            this->renderer.context->fill();
             this->FlipCursor();
         }
     }
@@ -257,16 +329,17 @@ namespace sloked {
             if (it.value == U'\0') {
                 break;
             }
-            if (currentLength + 1 == size.column - cursor.column) {
+            if (currentLength + it.length >= size.column - cursor.column) {
                 callback(content.substr(start, currentLength));
                 if (cursor.line + 1 == size.line) {
                     return false;
                 }
                 start = it.start;
+                currentLength = 0;
                 cursor.column = 0;
                 cursor.line++;
             }
-            currentLength++;
+            currentLength += it.length;
         }
         if (currentLength > 0 || totalLength == 0) {
             callback(content.substr(start, currentLength));
@@ -291,8 +364,8 @@ namespace sloked {
     }
 
     void SlokedCairoTerminal::Write(std::string_view content) {
-        std::unique_lock lock(this->renderer->mtx);
-        if (this->renderer->context) {
+        std::unique_lock lock(this->renderer.mtx);
+        if (this->renderer.IsValid()) {
             this->FlipCursor();
             this->updated = true;
             const Encoding &encoding = SlokedLocale::SystemEncoding();
@@ -314,38 +387,34 @@ namespace sloked {
     }
 
     void SlokedCairoTerminal::SetGraphicsMode(SlokedTextGraphics mode) {
-        std::unique_lock lock(this->renderer->mtx);
+        std::unique_lock lock(this->renderer.mtx);
         this->updated = true;
         switch (mode) {
-            case SlokedTextGraphics::Off: {
-                this->renderer->foregroundColor = CairoColors::Black;
-                this->renderer->backgroundColor = CairoColors::White;
-                this->renderer->mode = {};
-                if (this->renderer->textLayout) {
-                    this->renderer->textLayout->set_font_description(this->renderer->normalFont);
-                    Pango::AttrList attrs;
-                    this->renderer->textLayout->set_attributes(attrs);
+            case SlokedTextGraphics::Off:
+                this->mode = {};
+                if (this->renderer.IsValid()) {
+                    this->renderer.Apply(this->mode);
                 }
-            } break;
+                break;
 
             case SlokedTextGraphics::Bold:
-                if (this->renderer->textLayout) {
-                    this->renderer->mode.bold = true;
-                    this->renderer->textLayout->set_font_description(this->renderer->boldFont);
+                this->mode.bold = true;
+                if (this->renderer.IsValid()) {
+                    this->renderer.Apply(this->mode);
                 }
                 break;
 
             case SlokedTextGraphics::Reverse:
-                std::swap(this->renderer->foregroundColor, this->renderer->backgroundColor);
+                std::swap(this->mode.background, this->mode.background);
+                if (this->renderer.IsValid()) {
+                    this->renderer.Apply(this->mode);
+                }
                 break;
 
             case SlokedTextGraphics::Underscore: {
-                if (this->renderer->textLayout) {
-                    this->renderer->mode.underscore = true;
-                    Pango::AttrList attrs;
-                    auto underline = Pango::Attribute::create_attr_underline(Pango::Underline::UNDERLINE_SINGLE);
-                    attrs.insert(underline);
-                    this->renderer->textLayout->set_attributes(attrs);
+                this->mode.underscore = true;
+                if (this->renderer.IsValid()) {
+                    this->renderer.Apply(this->mode);
                 }
             } break;
 
@@ -357,124 +426,73 @@ namespace sloked {
     }
 
     void SlokedCairoTerminal::SetGraphicsMode(SlokedBackgroundGraphics color) {
-        std::unique_lock lock(this->renderer->mtx);
+        std::unique_lock lock(this->renderer.mtx);
         this->updated = true;
-        switch (color) {
-            case SlokedBackgroundGraphics::Black:
-                this->renderer->backgroundColor = CairoColors::Black;
-                break;
-
-            case SlokedBackgroundGraphics::Red:
-                this->renderer->backgroundColor = CairoColors::Red;
-                break;
-
-            case SlokedBackgroundGraphics::Green:
-                this->renderer->backgroundColor = CairoColors::Green;
-                break;
-
-            case SlokedBackgroundGraphics::Yellow:
-                this->renderer->backgroundColor = CairoColors::Black;
-                break;
-
-            case SlokedBackgroundGraphics::Blue:
-                this->renderer->backgroundColor = CairoColors::Blue;
-                break;
-            case SlokedBackgroundGraphics::Magenta:
-                this->renderer->backgroundColor = CairoColors::Magenta;
-                break;
-
-            case SlokedBackgroundGraphics::Cyan:
-                this->renderer->backgroundColor = CairoColors::Cyan;
-                break;
-
-            case SlokedBackgroundGraphics::White:
-                this->renderer->backgroundColor = CairoColors::White;
-                break;
-        }
-        auto attrs = this->renderer->textLayout->get_attributes();
-        SetBackgroundAttrinute(attrs, this->renderer->backgroundColor);
-        this->renderer->textLayout->set_attributes(attrs);
+        this->mode.background = color;
+        this->renderer.Apply(this->mode);
     }
 
     void SlokedCairoTerminal::SetGraphicsMode(SlokedForegroundGraphics color) {
-        std::unique_lock lock(this->renderer->mtx);
+        std::unique_lock lock(this->renderer.mtx);
         this->updated = true;
-        switch (color) {
-            case SlokedForegroundGraphics::Black:
-                this->renderer->foregroundColor = CairoColors::Black;
-                break;
-
-            case SlokedForegroundGraphics::Red:
-                this->renderer->foregroundColor = CairoColors::Red;
-                break;
-
-            case SlokedForegroundGraphics::Green:
-                this->renderer->foregroundColor = CairoColors::Green;
-                break;
-
-            case SlokedForegroundGraphics::Yellow:
-                this->renderer->foregroundColor = CairoColors::Black;
-                break;
-
-            case SlokedForegroundGraphics::Blue:
-                this->renderer->foregroundColor = CairoColors::Blue;
-                break;
-
-            case SlokedForegroundGraphics::Magenta:
-                this->renderer->foregroundColor = CairoColors::Magenta;
-                break;
-
-            case SlokedForegroundGraphics::Cyan:
-                this->renderer->foregroundColor = CairoColors::Cyan;
-                break;
-
-            case SlokedForegroundGraphics::White:
-                this->renderer->foregroundColor = CairoColors::White;
-                break;
-        }
+        this->mode.foreground = color;
+        this->renderer.Apply(this->mode);
     }
 
     bool SlokedCairoTerminal::WaitInput(std::chrono::system_clock::duration timeout) {
-        std::unique_lock lock(this->input_mtx);
-        if (this->input.empty()) {
+        std::unique_lock lock(this->input.mtx);
+        if (this->input.content.empty()) {
             if (timeout == std::chrono::system_clock::duration::zero()) {
-                this->input_cv.wait(lock);
+                this->input.cv.wait(lock);
             } else {
-                this->input_cv.wait_for(lock, timeout);
+                this->input.cv.wait_for(lock, timeout);
             }
         }
-        return !this->input.empty();
+        return !this->input.content.empty();
     }
 
     std::vector<SlokedKeyboardInput> SlokedCairoTerminal::GetInput() {
-        std::unique_lock lock(this->input_mtx);
-        std::vector<SlokedKeyboardInput> result(this->input.begin(), this->input.end());
-        this->input.clear();
+        std::unique_lock lock(this->input.mtx);
+        std::vector<SlokedKeyboardInput> result(this->input.content.begin(), this->input.content.end());
+        this->input.content.clear();
         return result;
     }
-
-    struct RenderedText {
-        int width;
-        int height;
-        double x;
-        double y;
-        std::unique_ptr<Cairo::Path> path;
-    };
     
     void SlokedCairoTerminal::DrawText(std::string_view content) {
-        this->renderer->textLayout->set_text({content.data(), content.size()});
-        this->renderer->context->move_to(this->cursor.column * this->glyphSize.x, this->cursor.line * this->glyphSize.y);
-        this->renderer->context->set_source(this->renderer->foregroundColor);
-        this->renderer->textLayout->show_in_cairo_context(this->renderer->context);
+        CacheEntry key{std::string{content}, this->mode};
+        if (this->cache.Has(key)) {
+            auto prerender = this->cache.At(key);            
+            this->renderer.context->set_source(prerender, static_cast<double>(this->cursor.column * this->renderer.glyphSize.x),
+                static_cast<double>(this->cursor.line * this->renderer.glyphSize.y));
+            this->renderer.context->rectangle(static_cast<double>(this->cursor.column * this->renderer.glyphSize.x),
+                static_cast<double>(this->cursor.line * this->renderer.glyphSize.y), prerender->get_width(), prerender->get_height());
+            this->renderer.context->fill();
+
+        } else {
+            int width, height;
+            this->renderer.textLayout->set_text(key.text);
+            this->renderer.textLayout->get_pixel_size(width, height);
+            this->renderer.context->move_to(this->cursor.column * this->renderer.glyphSize.x, this->cursor.line * this->renderer.glyphSize.y);
+            this->renderer.textLayout->show_in_cairo_context(this->renderer.context);
+
+            auto prerender = Cairo::ImageSurface::create(Cairo::Format::FORMAT_RGB24,
+                width, height);
+            auto prerenderContext = Cairo::Context::create(prerender);
+            prerenderContext->set_source(this->renderer.surface, -static_cast<double>(this->cursor.column * this->renderer.glyphSize.x),
+                -static_cast<double>(this->cursor.line * this->renderer.glyphSize.y));
+            prerenderContext->rectangle(0, 0, width, height);
+            prerenderContext->fill();
+            this->cache.Insert(key, prerender);
+        }
     }
 
     void SlokedCairoTerminal::FlipCursor() {
         if (this->showCursor) {
-            this->renderer->context->set_source_rgb(1.0, 1.0, 1.0);
-            this->renderer->context->set_operator(static_cast<Cairo::Operator>(CAIRO_OPERATOR_DIFFERENCE));
-            this->renderer->context->rectangle(this->cursor.column * this->glyphSize.x, this->cursor.line * this->glyphSize.y, this->glyphSize.x, this->glyphSize.y);
-            this->renderer->context->fill();
-            this->renderer->context->set_operator(Cairo::Operator::OPERATOR_SOURCE);
+            this->renderer.context->set_source_rgb(1.0, 1.0, 1.0);
+            this->renderer.context->set_operator(static_cast<Cairo::Operator>(CAIRO_OPERATOR_DIFFERENCE));
+            this->renderer.context->rectangle(this->cursor.column * this->renderer.glyphSize.x, this->cursor.line * this->renderer.glyphSize.y, this->renderer.glyphSize.x, this->renderer.glyphSize.y);
+            this->renderer.context->fill();
+            this->renderer.context->set_operator(Cairo::Operator::OPERATOR_SOURCE);
         }
     }
 }

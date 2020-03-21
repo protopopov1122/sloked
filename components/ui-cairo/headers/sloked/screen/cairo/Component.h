@@ -33,7 +33,7 @@ namespace sloked {
         using Dimensions = SlokedCairoScreenDimensions;
 
         virtual ~SlokedCairoScreenComponent() = default;
-        virtual bool HasUpdates() const = 0;
+        virtual bool CheckUpdates() = 0;
         virtual void ProcessInput(std::vector<SlokedKeyboardInput>) = 0;
         virtual void SetTarget(const Cairo::RefPtr<Cairo::Surface> &, Dimensions) = 0;
         virtual Dimensions GetSize() const = 0;

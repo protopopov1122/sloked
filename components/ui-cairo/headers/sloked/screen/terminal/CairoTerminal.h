@@ -23,11 +23,13 @@
 #define SLOKED_SCREEN_TERMINAL_CAIROTERMINAL_H_
 
 #include "sloked/core/RingBuffer.h"
+#include "sloked/core/LRU.h"
 #include "sloked/screen/terminal/Terminal.h"
 #include "sloked/screen/Size.h"
 #include "sloked/screen/Point.h"
 #include "sloked/screen/cairo/Component.h"
 #include "sloked/screen/pango/Base.h"
+#include "sloked/core/Event.h"
 #include <mutex>
 #include <condition_variable>
 #include <memory>
@@ -42,7 +44,7 @@ namespace sloked {
 
         SlokedScreenSize &GetTerminalSize();
 
-        bool HasUpdates() const final;
+        bool CheckUpdates() final;
         void ProcessInput(std::vector<SlokedKeyboardInput>) final;
         void SetTarget(const Cairo::RefPtr<Cairo::Surface> &, Dimensions) final;
         Dimensions GetSize() const final;
@@ -70,24 +72,69 @@ namespace sloked {
 
 
      private:
-        struct Renderer;
-        class Size;
-        static constexpr std::size_t InputBufferSize = 4096;
+        struct TerminalMode {
+            SlokedBackgroundGraphics background{SlokedBackgroundGraphics::White};
+            SlokedForegroundGraphics foreground{SlokedBackgroundGraphics::Black};
+            bool bold{false};
+            bool underscore{false};
+        };
+
+        struct Renderer {
+            Renderer(const std::string &);
+            void SetTarget(const Cairo::RefPtr<Cairo::Surface> &, Dimensions);
+            bool IsValid() const;
+            void Apply(const TerminalMode &);
+
+            Cairo::RefPtr<Cairo::Surface> surface;
+            Cairo::RefPtr<Cairo::Context> context;
+            Glib::RefPtr<Pango::FontMap> fontMap;
+            Glib::RefPtr<Pango::Layout> textLayout;
+            Pango::FontDescription font;
+            Cairo::RefPtr<Cairo::SolidPattern> backgroundColor;
+            Dimensions surfaceSize;
+            Dimensions glyphSize;
+            std::mutex mtx;
+        };
+
+        class Size : public SlokedScreenSize {
+         public:
+            Size(SlokedCairoTerminal &);
+            TextPosition GetScreenSize() const final;
+            std::function<void()> Listen(Listener) final;
+            void Notify();
+
+         private:
+            SlokedCairoTerminal &terminal;
+            SlokedEventEmitter<TextPosition> emitter;
+        };
+
+        struct Input {
+            static constexpr std::size_t BufferSize = 4096;
+
+            std::mutex mtx;
+            std::condition_variable cv;
+            SlokedRingBuffer<SlokedKeyboardInput> content{BufferSize};
+        };
+
+        struct CacheEntry {
+            std::string text;
+            TerminalMode mode;
+
+            bool operator<(const CacheEntry &) const;
+        };
 
         void DrawText(std::string_view);
         void FlipCursor();
 
-        std::unique_ptr<Renderer> renderer;
-        std::unique_ptr<Size> screenSize;
+        Renderer renderer;
+        Size screenSize;
+        Input input;
+        std::atomic_bool updated;
         TextPosition size;
         TextPosition cursor;
         bool showCursor;
-        Dimensions surfaceSize;
-        Dimensions glyphSize;
-        std::atomic_bool updated;
-        std::mutex input_mtx;
-        std::condition_variable input_cv;
-        SlokedRingBuffer<SlokedKeyboardInput> input;
+        TerminalMode mode;
+        SlokedLRUCache<CacheEntry, Cairo::RefPtr<Cairo::ImageSurface>> cache;
     };
 }
 

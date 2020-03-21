@@ -109,7 +109,7 @@ namespace sloked {
     void SlokedSDLCairoWindow::Render() {
         this->PollInput();
         auto lock = this->rootSurface.Lock();
-        if (this->sdlWindow.IsOpen() && this->root && this->root->HasUpdates()) {
+        if (this->sdlWindow.IsOpen() && this->root && this->root->CheckUpdates()) {
             SDL_RenderClear(this->sdlRenderer.GetRenderer());
             if (this->root) {
                 auto texture = this->rootSurface.MakeTexture(this->sdlRenderer.GetRenderer());
