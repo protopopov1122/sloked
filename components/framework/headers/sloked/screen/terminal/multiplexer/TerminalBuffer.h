@@ -68,8 +68,7 @@ namespace sloked {
                     this->has_graphics != other.has_graphics ||
                     !(this->graphics == other.graphics);
             }
-            // uint_fast8_t updated = false;
-            uint_fast8_t has_graphics;
+            uint_fast8_t has_graphics{false};
             BufferedGraphicsMode graphics;
             char32_t value = '\0';
         };

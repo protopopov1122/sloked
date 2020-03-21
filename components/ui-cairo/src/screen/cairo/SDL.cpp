@@ -75,7 +75,7 @@ namespace sloked {
 
     SlokedSDLCairoWindow::SlokedSDLCairoWindow(SlokedScreenManager &screenMgr, Dimensions dim, const std::string &title)
         : screenMgr(screenMgr), sdlWindow({dim.x, dim.y}, title), sdlRenderer(sdlWindow),
-          rootSurface{dim.x, dim.y}, rootContext{Cairo::Context::create(rootSurface.GetCairoSurface())},
+          rootSurface{dim.x, dim.y},
           root{nullptr} {
         this->screenMgr.Attach(*this);
     }
@@ -92,9 +92,8 @@ namespace sloked {
         auto lock = this->rootSurface.Lock();
         this->sdlWindow.Resize({dim.x, dim.y});
         this->rootSurface.Resize(dim.x, dim.y);
-        this->rootContext = Cairo::Context::create(rootSurface.GetCairoSurface());
         if (this->root) {
-            this->root->SetSize(dim);
+            this->root->SetTarget(this->rootSurface.GetCairoSurface(), dim);
         }
     }
 
@@ -104,15 +103,15 @@ namespace sloked {
 
     void SlokedSDLCairoWindow::SetRoot(std::shared_ptr<SlokedCairoScreenComponent> root) {
         this->root = root;
+        this->root->SetTarget(this->rootSurface.GetCairoSurface(), {this->rootSurface.GetWidth(), this->rootSurface.GetHeight()});
     }
 
     void SlokedSDLCairoWindow::Render() {
         this->PollInput();
         auto lock = this->rootSurface.Lock();
-        if (this->sdlWindow.IsOpen() || (this->root && this->root->HasUpdates())) {
+        if (this->sdlWindow.IsOpen() && this->root && this->root->HasUpdates()) {
             SDL_RenderClear(this->sdlRenderer.GetRenderer());
             if (this->root) {
-                this->root->Render(this->rootContext);
                 auto texture = this->rootSurface.MakeTexture(this->sdlRenderer.GetRenderer());
                 SDL_RenderCopy(this->sdlRenderer.GetRenderer(), texture.GetTexture(), nullptr, nullptr); 
             }
@@ -124,7 +123,6 @@ namespace sloked {
         if (this->sdlWindow.IsOpen()) {
             this->screenMgr.Detach(*this);
             this->root = nullptr;
-            this->rootContext.clear();
             this->sdlRenderer = {nullptr};
             this->sdlWindow.Close();
         }
@@ -222,9 +220,8 @@ namespace sloked {
                             case SDL_WINDOWEVENT_RESIZED: {
                                 auto lock = this->rootSurface.Lock();
                                 this->rootSurface.Resize(evt.window.data1, evt.window.data2);
-                                this->rootContext = Cairo::Context::create(rootSurface.GetCairoSurface());
                                 if (this->root) {
-                                    this->root->SetSize({evt.window.data1, evt.window.data2});
+                                    this->root->SetTarget(this->rootSurface.GetCairoSurface(), {evt.window.data1, evt.window.data2});
                                 }
                             } break;
                         }

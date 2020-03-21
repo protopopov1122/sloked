@@ -66,7 +66,6 @@ namespace sloked {
         SlokedSDLWindow sdlWindow;
         SlokedSDLRenderer sdlRenderer;
         SlokedSDLCairoSurface rootSurface;
-        Cairo::RefPtr<Cairo::Context> rootContext;
         std::shared_ptr<SlokedCairoScreenComponent> root;
     };
 }

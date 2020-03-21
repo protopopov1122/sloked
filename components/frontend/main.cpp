@@ -261,7 +261,7 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
  public:
     struct GUI {
         GUI(int width, int height)
-            : window(this->screenMgr, {width, height}), terminal(std::make_shared<SlokedCairoTerminal>(SlokedCairoTerminal::Dimensions{width, height}, "Monospace 10")) {
+            : window(this->screenMgr, {width, height}), terminal(std::make_shared<SlokedCairoTerminal>("Monospace 10")) {
             this->window.SetRoot(this->terminal);
             this->screenMgr.Start(std::chrono::milliseconds(50));
         }
@@ -269,6 +269,10 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
         ~GUI() {
             this->screenMgr.Stop();
             this->window.Close();
+        }
+
+        void Repaint() {
+            // this->window.Render();
         }
 
         SlokedCairoTerminal &GetTerminal() {
@@ -287,6 +291,7 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
         
     void Render(std::function<void(SlokedScreenComponent &)> fn) final {
         this->provider.Render(std::move(fn));
+        this->gui.Repaint();
     }
 
     std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration timeout) final {

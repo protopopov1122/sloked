@@ -37,15 +37,14 @@ namespace sloked {
 
     class SlokedCairoTerminal : public SlokedDuplexTerminal, public SlokedCairoScreenComponent {
      public:
-        SlokedCairoTerminal(Dimensions, const std::string &);
+        SlokedCairoTerminal(const std::string &);
         ~SlokedCairoTerminal();
 
         SlokedScreenSize &GetTerminalSize();
 
         bool HasUpdates() const final;
         void ProcessInput(std::vector<SlokedKeyboardInput>) final;
-        void Render(const Cairo::RefPtr<Cairo::Context> &) final;
-        void SetSize(Dimensions) final;
+        void SetTarget(const Cairo::RefPtr<Cairo::Surface> &, Dimensions) final;
         Dimensions GetSize() const final;
 
         void SetPosition(Line, Column) final;
@@ -74,6 +73,9 @@ namespace sloked {
         struct Renderer;
         class Size;
         static constexpr std::size_t InputBufferSize = 4096;
+
+        void DrawText(std::string_view);
+        void FlipCursor();
 
         std::unique_ptr<Renderer> renderer;
         std::unique_ptr<Size> screenSize;

@@ -28,11 +28,11 @@
 namespace sloked {
 
     struct KgrNetConfig {
-        static constexpr unsigned int Factor = 1;
-        static constexpr std::chrono::system_clock::duration RequestTimeout = std::chrono::milliseconds(50) * Factor;
-        static constexpr std::chrono::system_clock::duration ResponseTimeout = std::chrono::milliseconds(400) * Factor;
-        static constexpr std::chrono::system_clock::duration InactivityTimeout = std::chrono::seconds(5) * Factor;
-        static constexpr std::chrono::system_clock::duration InactivityThreshold = InactivityTimeout * 2 * Factor;
+        static constexpr unsigned int Factor = 10;
+        static constexpr std::chrono::system_clock::duration RequestTimeout = std::chrono::milliseconds(5) * Factor;
+        static constexpr std::chrono::system_clock::duration ResponseTimeout = std::chrono::milliseconds(40) * Factor;
+        static constexpr std::chrono::system_clock::duration InactivityTimeout = std::chrono::milliseconds(500) * Factor;
+        static constexpr std::chrono::system_clock::duration InactivityThreshold = InactivityTimeout * 2;
     };
 }
 

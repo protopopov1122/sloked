@@ -90,9 +90,14 @@ namespace sloked {
         this->width = term.GetWidth();
         this->height = term.GetHeight();
         const auto newSize = this->width * this->height;
-        this->current_state = std::unique_ptr<Character[]>(new Character[newSize]);
-        this->prev_state = std::unique_ptr<Character[]>(new Character[newSize]);
-        this->renderBuffer = std::unique_ptr<char32_t[]>(new char32_t[newSize]);
+        if (newSize > prevSize) {
+            this->current_state = std::unique_ptr<Character[]>(new Character[newSize]);
+            this->prev_state = std::unique_ptr<Character[]>(new Character[newSize]);
+            this->renderBuffer = std::unique_ptr<char32_t[]>(new char32_t[newSize]);
+        } else if (newSize != prevSize) {
+            std::fill_n(this->current_state.get(), newSize, Character{});
+            std::fill_n(this->prev_state.get(), newSize, Character{});
+        }
     }
     
     void BufferedTerminal::SetPosition(Line l, Column c) {
