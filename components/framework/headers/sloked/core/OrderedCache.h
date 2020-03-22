@@ -19,8 +19,8 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CORE_CACHE_H_
-#define SLOKED_CORE_CACHE_H_
+#ifndef SLOKED_CORE_ORDEREDCACHE_H_
+#define SLOKED_CORE_ORDEREDCACHE_H_
 
 #include "sloked/core/Error.h"
 #include <map>

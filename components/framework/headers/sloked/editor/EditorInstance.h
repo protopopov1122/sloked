@@ -33,6 +33,7 @@
 #include "sloked/core/DataHandle.h"
 #include "sloked/editor/ScreenServer.h"
 #include "sloked/services/CharPreset.h"
+#include "sloked/sched/ThreadManager.h"
 #include <atomic>
 #include <variant>
 #include <mutex>
@@ -59,6 +60,7 @@ namespace sloked {
 
         SlokedCharPreset &GetCharPreset();
         SlokedSchedulerThread &GetScheduler();
+        SlokedThreadManager &GetThreadManager();
         SlokedIOPoller &GetIO();
         SlokedNetworkFacade &GetNetwork();
         bool HasCrypto() const;
@@ -75,6 +77,7 @@ namespace sloked {
         std::condition_variable termination_cv;
         SlokedCloseablePool closeables;
         SlokedDefaultSchedulerThread sched;
+        SlokedDefaultThreadManager threadManager;
         std::unique_ptr<SlokedIOPoll> ioPoll;
         std::unique_ptr<SlokedDefaultIOPollThread> ioPoller;
         SlokedNetworkFacade network;

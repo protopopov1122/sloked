@@ -24,7 +24,7 @@
 #include "sloked/kgr/net/Interface.h"
 #include "sloked/kgr/net/Config.h"
 #include "sloked/kgr/local/Pipe.h"
-#include "sloked/core/ThreadPool.h"
+#include "sloked/sched/ThreadManager.h"
 #include <thread>
 #include <cstring>
 #include <set>
@@ -54,7 +54,7 @@ namespace sloked {
                 if (!this->IsAccessPermitted(service)) {
                         rsp.Error("KgrMasterServer: Access to \'" + service + "\' restricted");
                 } else {
-                    this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
+                    this->workers.Spawn([this, service, rsp = std::move(rsp)]() mutable {
                         auto pipe = this->server.Connect(service);
                         if (pipe == nullptr) {
                             throw SlokedError("KgrMasterServer: Pipe can't be null");
@@ -112,7 +112,7 @@ namespace sloked {
                 if (!this->IsModificationPermitted(service)) {
                     rsp.Error("KgrMasterServer: Modification of \'" + service + "\' restricted");
                 } else {
-                    this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
+                    this->workers.Spawn([this, service, rsp = std::move(rsp)]() mutable {
                         if (!this->server.Registered(service)) {
                             this->server.Register(service, std::make_unique<SlaveService>(*this, service));
                             std::unique_lock lock(this->mtx);
@@ -126,7 +126,7 @@ namespace sloked {
             });
 
             this->net.BindMethod("bound", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                this->workers.Start([this, params, rsp = std::move(rsp)]() mutable {
+                this->workers.Spawn([this, params, rsp = std::move(rsp)]() mutable {
                     const auto &service = params.AsString();
                     rsp.Result(this->server.Registered(service) &&
                             (this->IsAccessPermitted(service) || this->IsModificationPermitted(service)));
@@ -138,7 +138,7 @@ namespace sloked {
                 if (!this->IsModificationPermitted(service)) {
                     rsp.Error("KgrMasterServer: Modification of \'" + service + "\' restricted");
                 } else {
-                    this->workers.Start([this, service, rsp = std::move(rsp)]() mutable {
+                    this->workers.Spawn([this, service, rsp = std::move(rsp)]() mutable {
                         if (this->remoteServiceList.count(service) != 0) {
                             this->server.Deregister(service);
                             std::unique_lock lock(this->mtx);
@@ -182,7 +182,7 @@ namespace sloked {
         }
 
         virtual ~KgrMasterNetServerContext() {
-            this->workers.Wait();
+            this->workers.Shutdown();
             std::unique_lock lock(this->mtx);
             for (const auto &pipe : this->pipes) {
                 pipe.second->Close();
@@ -240,7 +240,7 @@ namespace sloked {
                 std::unique_lock lock(this->srv.mtx);
                 auto pipeId = this->srv.nextPipeId++;
                 lock.unlock();
-                this->srv.workers.Start([this, pipeId, pipePtr = pipe.release()] {
+                this->srv.workers.Spawn([this, pipeId, pipePtr = pipe.release()] {
                     auto rsp = this->srv.net.Invoke("connect", KgrDictionary {
                         { "pipe", pipeId },
                         { "service", this->service }
@@ -370,7 +370,7 @@ namespace sloked {
         SlokedCounter<std::size_t>::Handle counterHandle;
         SlokedIOPoller::Handle awaitableHandle;
         std::chrono::system_clock::time_point lastActivity;
-        SlokedThreadPool workers;
+        SlokedDefaultThreadManager workers;
         bool pinged;
         SlokedNamedRestrictionAuthority *restrictions;
         std::unique_ptr<SlokedMasterAuthenticator> auth;

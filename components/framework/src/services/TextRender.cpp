@@ -24,7 +24,7 @@
 #include "sloked/core/Locale.h"
 #include "sloked/text/cursor/TransactionJournal.h"
 #include "sloked/text/fragment/Updater.h"
-#include "sloked/core/Cache.h"
+#include "sloked/core/OrderedCache.h"
 
 namespace sloked {
 

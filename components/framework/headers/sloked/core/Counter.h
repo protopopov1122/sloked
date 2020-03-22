@@ -41,13 +41,11 @@ namespace sloked {
             : counter(value) {}
 
         void Increment() {
-            std::unique_lock<std::mutex> lock(mutex);
             this->counter++;
             this->cv.notify_all();
         }
 
         void Decrement() {
-            std::unique_lock<std::mutex> lock(mutex);
             this->counter--;
             this->cv.notify_all();
         }
@@ -59,6 +57,10 @@ namespace sloked {
                     return cond(this->counter.load());
                 });
             }
+        }
+
+        T Load() {
+            return this->counter.load();
         }
 
         class Handle {

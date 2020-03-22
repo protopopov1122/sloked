@@ -29,7 +29,7 @@
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentNotify.h"
 #include "sloked/services/TextRender.h"
-#include "sloked/core/Cache.h"
+#include "sloked/core/OrderedCache.h"
 
 namespace sloked {
 

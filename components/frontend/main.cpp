@@ -597,11 +597,11 @@ int main(int argc, const char **argv) {
     screenClient.Handle.NewMultiplexer("/");
     auto mainWindow = screenClient.Multiplexer.NewWindow("/", TextPosition{0, 0}, TextPosition{screenServer.GetScreen().GetSize().GetScreenSize().line, screenServer.GetScreen().GetSize().GetScreenSize().column});
     screenSizeClient.Listen([&](const auto &size) {
-        std::thread([&, size] {
+        mainEditor.GetThreadManager().Spawn([&, size] {
             if (screenServer.IsRunning() && mainWindow.has_value()) {
                 screenClient.Multiplexer.ResizeWindow(mainWindow.value(), size);
             }
-        }).detach();
+        });
     });
     screenClient.Handle.NewSplitter(mainWindow.value(), Splitter::Direction::Vertical);
     screenClient.Splitter.NewWindow(mainWindow.value(), Splitter::Constraints(1.0f));

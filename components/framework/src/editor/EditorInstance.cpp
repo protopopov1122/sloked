@@ -169,6 +169,10 @@ namespace sloked {
         return this->sched;
     }
 
+    SlokedThreadManager &SlokedEditorInstance::GetThreadManager() {
+        return this->threadManager;
+    }
+
     SlokedIOPoller &SlokedEditorInstance::GetIO() {
         return *this->ioPoller;
     }

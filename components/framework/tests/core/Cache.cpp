@@ -20,7 +20,7 @@
 */
 
 #include "catch2/catch.hpp"
-#include "sloked/core/Cache.h"
+#include "sloked/core/OrderedCache.h"
 
 using namespace sloked;
 
