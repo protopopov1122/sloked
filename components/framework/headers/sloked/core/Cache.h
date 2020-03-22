@@ -91,7 +91,8 @@ namespace sloked {
                     if (values.size() != distance + 1) {
                         throw SlokedError("OrderedCache: Supplied value range does not correspond to requested keys");
                     }
-                    for (auto current = fetchRange.first, it = values.begin(); !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
+                    auto it = values.begin();
+                    for (auto current = fetchRange.first; !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
                         this->cache.emplace(current, std::move(*it));
                     }
                 }
@@ -101,7 +102,8 @@ namespace sloked {
                 if (values.size() != this->traits.Distance(fetchRange.first, fetchRange.second) + 1) {
                     throw SlokedError("OrderedCache: Supplied value range does not correspond to requested keys");
                 }
-                for (auto current = fetchRange.first, it = values.begin(); !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
+                auto it = values.begin();
+                for (auto current = fetchRange.first; !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
                     rangeIt = this->cache.emplace(current, std::move(*it)).first;
                 }
             }
@@ -132,7 +134,8 @@ namespace sloked {
                     if (values.size() != distance + 1) {
                         throw SlokedError("OrderedCache: Supplied value range does not correspond to requested keys");
                     }
-                    for (auto current = fetchRange.first, it = values.begin(); !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
+                    auto it = values.begin();
+                    for (auto current = fetchRange.first; !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
                         result.emplace_back(std::make_pair(current, this->cache.emplace(current, std::move(*it)).first));
                     }
                 }
@@ -142,7 +145,8 @@ namespace sloked {
                 if (values.size() != this->traits.Distance(fetchRange.first, fetchRange.second) + 1) {
                     throw SlokedError("OrderedCache: Supplied value range does not correspond to requested keys");
                 }
-                for (auto current = fetchRange.first, it = values.begin(); !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
+                auto it = values.begin();
+                for (auto current = fetchRange.first; !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
                     result.emplace_back(std::make_pair(current, this->cache.emplace(current, std::move(*it)).first));
                 }
             }

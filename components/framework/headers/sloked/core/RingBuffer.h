@@ -157,6 +157,8 @@ namespace sloked {
         class ConstIterator : public AbstractIterator<ConstIterator> {
          public:
             using AbstractIterator<ConstIterator>::AbstractIterator;
+            using Ring = typename AbstractIterator<ConstIterator>::Ring;
+            friend Ring;
         };
 
         SlokedRingBuffer(IndexType user_capacity)

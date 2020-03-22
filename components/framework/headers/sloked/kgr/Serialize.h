@@ -62,8 +62,8 @@ namespace sloked {
         KgrValue Deserialize(const KgrSerializer::Blob &) const final;
         KgrValue Deserialize(std::istream &) const final;
 
-     private:
         class ByteIter;
+     private:
         void SerializeValue(KgrSerializer::Blob &, const KgrValue &) const;
         KgrValue DeserializeValue(ByteIter &) const;
 
