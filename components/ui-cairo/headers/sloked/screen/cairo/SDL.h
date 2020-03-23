@@ -67,6 +67,8 @@ namespace sloked {
         SlokedSDLRenderer sdlRenderer;
         SlokedSDLCairoSurface rootSurface;
         std::shared_ptr<SlokedCairoScreenComponent> root;
+        std::atomic_bool resize_request;
+        std::pair<int, int> new_size;
     };
 }
 

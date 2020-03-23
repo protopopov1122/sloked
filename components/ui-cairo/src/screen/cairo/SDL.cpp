@@ -76,7 +76,8 @@ namespace sloked {
     SlokedSDLCairoWindow::SlokedSDLCairoWindow(SlokedScreenManager &screenMgr, Dimensions dim, const std::string &title)
         : screenMgr(screenMgr), sdlWindow({dim.x, dim.y}, title), sdlRenderer(sdlWindow),
           rootSurface{dim.x, dim.y},
-          root{nullptr} {
+          root{nullptr},
+          resize_request{false} {
         this->screenMgr.Attach(*this);
     }
 
@@ -109,6 +110,13 @@ namespace sloked {
     void SlokedSDLCairoWindow::Render() {
         this->PollInput();
         auto lock = this->rootSurface.Lock();
+        if (this->resize_request) {
+            this->resize_request = false;
+            this->rootSurface.Resize(this->new_size.first, this->new_size.second);
+            if (this->root) {
+                this->root->SetTarget(this->rootSurface.GetCairoSurface(), {this->new_size.first, this->new_size.second});
+            }
+        }
         if (this->sdlWindow.IsOpen() && this->root && this->root->CheckUpdates()) {
             SDL_RenderClear(this->sdlRenderer.GetRenderer());
             if (this->root) {
@@ -218,11 +226,8 @@ namespace sloked {
                     case SDL_WINDOWEVENT:
                         switch (evt.window.event) {
                             case SDL_WINDOWEVENT_RESIZED: {
-                                auto lock = this->rootSurface.Lock();
-                                this->rootSurface.Resize(evt.window.data1, evt.window.data2);
-                                if (this->root) {
-                                    this->root->SetTarget(this->rootSurface.GetCairoSurface(), {evt.window.data1, evt.window.data2});
-                                }
+                                this->new_size = std::make_pair(evt.window.data1, evt.window.data2);
+                                this->resize_request = true;
                             } break;
                         }
                         break;

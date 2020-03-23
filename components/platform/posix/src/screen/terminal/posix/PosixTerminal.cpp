@@ -472,11 +472,13 @@ namespace sloked {
         }
     }
 
-    void PosixTerminal::UpdateDimensions() {
+    bool PosixTerminal::UpdateDimensions() {
         struct winsize w;
         ioctl(fileno(this->state->input), TIOCGWINSZ, &w);
+        bool changed = this->width != w.ws_col || this->height != w.ws_row;
         this->width = w.ws_col;
         this->height = w.ws_row;
+        return changed;
     }
 
     void PosixTerminal::Flush(bool flush) {

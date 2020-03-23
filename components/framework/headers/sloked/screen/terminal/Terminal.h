@@ -79,7 +79,9 @@ namespace sloked {
         virtual void SetGraphicsMode(SlokedBackgroundGraphics) = 0;
         virtual void SetGraphicsMode(SlokedForegroundGraphics) = 0;
 
-        virtual void UpdateDimensions() {}
+        virtual bool UpdateDimensions() {
+            return false;
+        }
         virtual void Flush(bool) {}
         virtual void RenderFrame() {}
     };

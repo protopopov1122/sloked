@@ -210,9 +210,15 @@ namespace sloked {
         }
     }
 
-    void BufferedTerminal::UpdateDimensions() {
-        this->term.UpdateDimensions();
+    bool BufferedTerminal::UpdateDimensions() {
+        bool changed = this->term.UpdateDimensions();
         this->UpdateSize();
+        if (changed) {
+            const auto newSize = this->width * this->height;
+            std::fill_n(this->current_state.get(), newSize, Character{});
+            std::fill_n(this->prev_state.get(), newSize, Character{});
+        }
+        return changed;
     }
 
     void BufferedTerminal::RenderFrame() {

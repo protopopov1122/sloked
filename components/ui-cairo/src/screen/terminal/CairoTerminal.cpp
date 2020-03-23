@@ -206,7 +206,7 @@ namespace sloked {
     SlokedCairoTerminal::SlokedCairoTerminal(const std::string &font)
         : renderer(font), screenSize(*this),
           updated{true}, size{0, 0}, cursor{0, 0}, showCursor{true}, mode{},
-          cache{1024} {}
+          cache{1024}, dimUpdated{0} {}
 
     SlokedCairoTerminal::~SlokedCairoTerminal() = default;
 
@@ -234,9 +234,15 @@ namespace sloked {
             static_cast<TextPosition::Line>(this->renderer.surfaceSize.y / this->renderer.glyphSize.y),
             static_cast<TextPosition::Column>(this->renderer.surfaceSize.x / this->renderer.glyphSize.x)
         };
-        lock.unlock();
-        this->ClearScreen();
+        this->mode = {};
+        this->renderer.Apply(this->mode);
+        this->updated = true;
+        this->renderer.context->set_source(this->renderer.backgroundColor);
+        this->renderer.context->rectangle(0, 0, this->renderer.surfaceSize.x, this->renderer.surfaceSize.y);
+        this->renderer.context->fill();
         this->FlipCursor();
+        this->dimUpdated++;
+        lock.unlock();
         this->screenSize.Notify();
     }
 
@@ -316,10 +322,12 @@ namespace sloked {
     }
 
     SlokedCairoTerminal::Column SlokedCairoTerminal::GetWidth() {
+        std::unique_lock lock(this->renderer.mtx);
         return this->size.column;
     }
 
     SlokedCairoTerminal::Line SlokedCairoTerminal::GetHeight() {
+        std::unique_lock lock(this->renderer.mtx);
         return this->size.line;
     }
     static bool ShowLine(std::function<void(std::string_view)> callback, std::string_view content, const Encoding &encoding, TextPosition &cursor, const TextPosition &size) {
@@ -456,6 +464,16 @@ namespace sloked {
         std::vector<SlokedKeyboardInput> result(this->input.content.begin(), this->input.content.end());
         this->input.content.clear();
         return result;
+    }
+
+    bool SlokedCairoTerminal::UpdateDimensions() {
+        std::unique_lock lock(this->renderer.mtx);
+        if (this->dimUpdated > 0) {
+            this->dimUpdated--;
+            return true;
+        } else {
+            return false;
+        }
     }
     
     void SlokedCairoTerminal::DrawText(std::string_view content) {

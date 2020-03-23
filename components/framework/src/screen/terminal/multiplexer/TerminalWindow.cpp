@@ -152,8 +152,8 @@ namespace sloked {
         this->term.SetGraphicsMode(mode);
     }
 
-    void TerminalWindow::UpdateDimensions() {
-        this->term.UpdateDimensions();
+    bool TerminalWindow::UpdateDimensions() {
+        return this->term.UpdateDimensions();
     }
 
     void TerminalWindow::Flush(bool f) {

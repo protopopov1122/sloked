@@ -70,6 +70,8 @@ namespace sloked {
         bool WaitInput(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
         std::vector<SlokedKeyboardInput> GetInput() final;
 
+        bool UpdateDimensions() final;
+
 
      private:
         struct TerminalMode {
@@ -135,6 +137,7 @@ namespace sloked {
         bool showCursor;
         TerminalMode mode;
         SlokedLRUCache<CacheEntry, Cairo::RefPtr<Cairo::ImageSurface>> cache;
+        unsigned int dimUpdated;
     };
 }
 
