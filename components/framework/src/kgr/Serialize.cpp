@@ -174,7 +174,8 @@ namespace sloked {
             auto raw = conv.Convert(ss.str());
             return Blob{raw.begin(), raw.end()};
         } else {
-            return Blob{ss.str().begin(), ss.str().end()};
+            auto raw = ss.str();
+            return Blob{raw.begin(), raw.end()};
         }
     }
 
