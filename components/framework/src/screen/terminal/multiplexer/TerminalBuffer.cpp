@@ -94,9 +94,10 @@ namespace sloked {
             this->current_state = std::unique_ptr<Character[]>(new Character[newSize]);
             this->prev_state = std::unique_ptr<Character[]>(new Character[newSize]);
             this->renderBuffer = std::unique_ptr<char32_t[]>(new char32_t[newSize]);
-        } else if (newSize != prevSize) {
-            std::fill_n(this->current_state.get(), newSize, Character{});
-            std::fill_n(this->prev_state.get(), newSize, Character{});
+        }
+        if (newSize != prevSize) {
+            std::fill_n(this->current_state.get(), newSize, Character{this->graphics, U' '});
+            std::fill_n(this->prev_state.get(), newSize, Character{this->graphics, U' '});
         }
     }
     
@@ -141,7 +142,6 @@ namespace sloked {
         uint_fast32_t area = this->width * this->height;
         for (uint_fast32_t i = 0; i < area; i++) {
             Character &chr = *buffer++;
-            chr.has_graphics = true;
             chr.graphics = gfx;
             chr.value = U' ';
         }
@@ -154,7 +154,6 @@ namespace sloked {
         auto buffer = this->current_state.get();
         while (max--) {
             Character &chr = buffer[idx++];
-            chr.has_graphics = true;
             chr.graphics = gfx;
             chr.value = ' ';
         }
@@ -181,7 +180,6 @@ namespace sloked {
                 this->Write(this->charPreset.GetTab(this->encoding, this->col));
             } else if (this->col < this->width) {
                 Character &chr = this->current_state[this->line * this->width + this->col];
-                chr.has_graphics = true;
                 chr.graphics = this->graphics;
                 chr.value = it.value;
                 this->col++;
@@ -215,8 +213,8 @@ namespace sloked {
         this->UpdateSize();
         if (changed) {
             const auto newSize = this->width * this->height;
-            std::fill_n(this->current_state.get(), newSize, Character{});
-            std::fill_n(this->prev_state.get(), newSize, Character{});
+            std::fill_n(this->current_state.get(), newSize, Character{this->graphics, U' '});
+            std::fill_n(this->prev_state.get(), newSize, Character{this->graphics, U' '});
         }
         return changed;
     }
@@ -232,18 +230,16 @@ namespace sloked {
         auto current_state = this->current_state.get();
 
         BufferedGraphicsMode prev_g;
-        bool prev_has_g{false};
         for (std::size_t i = 0; i < fullSize; i++) {
             Character &chr = current_state[i];
             Character &prevChr = prev_state[i];
-            if (chr.has_graphics != prev_has_g || (chr.has_graphics && chr.graphics != prev_g)) {
+            if (chr.graphics != prev_g) {
                 if (render_end != render_base) {
                     this->dump_buffer(std::u32string_view(render_base, static_cast<ptrdiff_t>(render_end - render_base)), offset);
                     render_end = render_base;
                 }
                 chr.graphics.apply(term);
                 prev_g = chr.graphics;
-                prev_has_g = chr.has_graphics;
             }
             if (chr != prevChr) {
                 if (render_base == render_end) {

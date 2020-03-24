@@ -65,10 +65,8 @@ namespace sloked {
         struct Character {
             bool operator!=(const Character &other) {
                 return this->value != other.value ||
-                    this->has_graphics != other.has_graphics ||
                     !(this->graphics == other.graphics);
             }
-            uint_fast8_t has_graphics{false};
             BufferedGraphicsMode graphics;
             char32_t value = '\0';
         };

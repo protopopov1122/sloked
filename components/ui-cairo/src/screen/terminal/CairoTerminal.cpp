@@ -241,7 +241,8 @@ namespace sloked {
         this->renderer.context->rectangle(0, 0, this->renderer.surfaceSize.x, this->renderer.surfaceSize.y);
         this->renderer.context->fill();
         this->FlipCursor();
-        this->dimUpdated++;
+        constexpr unsigned int ForceRedrawsAfterUpdate = 10;
+        this->dimUpdated += ForceRedrawsAfterUpdate;
         lock.unlock();
         this->screenSize.Notify();
     }
@@ -498,8 +499,7 @@ namespace sloked {
             auto prerenderContext = Cairo::Context::create(prerender);
             prerenderContext->set_source(this->renderer.surface, -static_cast<double>(this->cursor.column * this->renderer.glyphSize.x),
                 -static_cast<double>(this->cursor.line * this->renderer.glyphSize.y));
-            prerenderContext->rectangle(0, 0, width, height);
-            prerenderContext->fill();
+            prerenderContext->paint();
             this->cache.Insert(key, prerender);
         }
     }
