@@ -50,6 +50,7 @@ namespace sloked {
 
     void SlokedDefaultThreadManager::Shutdown() {
         this->active = false;
+        this->task_cv.notify_all();
         this->total_workers.Wait([](auto count) { return count == 0; });
     }
 
