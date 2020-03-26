@@ -23,21 +23,57 @@
 #define SLOKED_SCREEN_CAIRO_WINDOW_H_
 
 #include "sloked/screen/cairo/Component.h"
+#include "sloked/screen/graphics/Window.h"
 #include "sloked/screen/Manager.h"
 #include <memory>
 
 namespace sloked {
 
-    class SlokedCairoWindow : public SlokedScreenManager::Renderable {
+    class SlokedAbstractCairoWindow : public SlokedScreenManager::Renderable {
      public:
-        using Dimensions = SlokedCairoScreenDimensions;
+        using Dimensions = SlokedGraphicsDimensions;
 
-        virtual ~SlokedCairoWindow() = default;
+        virtual ~SlokedAbstractCairoWindow() = default;
         virtual Dimensions GetSize() const = 0;
         virtual void SetSize(Dimensions) = 0;
         virtual std::shared_ptr<SlokedCairoScreenComponent> GetRoot() const = 0;
         virtual void SetRoot(std::shared_ptr<SlokedCairoScreenComponent>) = 0;
         virtual void Close() = 0;
+    };
+
+    template <typename T>
+    class SlokedCairoGraphicalWindow : public SlokedAbstractGraphicalWindow<T> {
+     public:
+        SlokedCairoGraphicalWindow(std::unique_ptr<SlokedAbstractCairoWindow> window, std::shared_ptr<T> component)
+            : window(std::move(window)), component(std::move(component)) {}
+
+        T &GetComponent() final {
+            return *this->component;
+        }
+
+        const std::string &GetTitle() const final {
+            return this->title;
+        }
+
+        void SetTitle(const std::string &) final {}
+
+        SlokedGraphicsDimensions GetSize() const final {
+            return this->window->GetSize();
+        }
+
+        bool Resize(SlokedGraphicsDimensions dim) final {
+            this->window->SetSize(std::move(dim));
+            return true;
+        }
+
+        void Close() final {
+            this->window->Close();
+        }
+
+     private:
+        std::unique_ptr<SlokedAbstractCairoWindow> window;
+        std::shared_ptr<T> component;
+        std::string title{""};
     };
 }
 

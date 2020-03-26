@@ -19,9 +19,24 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_CAIRO_BASE_H_
-#define SLOKED_SCREEN_CAIRO_BASE_H_
+#ifndef SLOKED_SCREEN_GRAPHICS_WINDOW_H_
+#define SLOKED_SCREEN_GRAPHICS_WINDOW_H_
 
-#include <cairomm/cairomm.h>
+#include "sloked/screen/graphics/Base.h"
+
+namespace sloked {
+
+    template <typename T>
+    class SlokedAbstractGraphicalWindow {
+     public:
+        virtual ~SlokedAbstractGraphicalWindow() = default;
+        virtual T &GetComponent() = 0;
+        virtual const std::string &GetTitle() const = 0;
+        virtual void SetTitle(const std::string &) = 0;
+        virtual SlokedGraphicsDimensions GetSize() const = 0;
+        virtual bool Resize(SlokedGraphicsDimensions)  = 0;
+        virtual void Close() = 0;
+    };
+}
 
 #endif

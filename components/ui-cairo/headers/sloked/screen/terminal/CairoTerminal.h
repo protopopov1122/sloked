@@ -24,7 +24,7 @@
 
 #include "sloked/core/RingBuffer.h"
 #include "sloked/core/LRU.h"
-#include "sloked/screen/terminal/Terminal.h"
+#include "sloked/screen/graphics/Terminal.h"
 #include "sloked/screen/Size.h"
 #include "sloked/screen/Point.h"
 #include "sloked/screen/cairo/Component.h"
@@ -37,12 +37,14 @@
 
 namespace sloked {
 
-    class SlokedCairoTerminal : public SlokedDuplexTerminal, public SlokedCairoScreenComponent {
+    class SlokedCairoTerminal : public SlokedGraphicalTerminal, public SlokedCairoScreenComponent {
      public:
-        SlokedCairoTerminal(const std::string &);
-        ~SlokedCairoTerminal();
+        SlokedCairoTerminal(const std::string &, const Mode & = InitMode);
 
-        SlokedScreenSize &GetTerminalSize();
+        const std::string &GetFont() const final;
+        const Mode &GetDefaultMode() const final;
+        void SetDefaultMode(const Mode &) final;
+        SlokedScreenSize &GetTerminalSize() final;
 
         bool CheckUpdates() final;
         void ProcessInput(std::vector<SlokedKeyboardInput>) final;
@@ -74,18 +76,12 @@ namespace sloked {
 
 
      private:
-        struct TerminalMode {
-            SlokedBackgroundGraphics background{SlokedBackgroundGraphics::White};
-            SlokedForegroundGraphics foreground{SlokedBackgroundGraphics::Black};
-            bool bold{false};
-            bool underscore{false};
-        };
-
+        static const Mode InitMode;
         struct Renderer {
             Renderer(const std::string &);
             void SetTarget(const Cairo::RefPtr<Cairo::Surface> &, Dimensions);
             bool IsValid() const;
-            void Apply(const TerminalMode &);
+            void Apply(const Mode &);
 
             Cairo::RefPtr<Cairo::Surface> surface;
             Cairo::RefPtr<Cairo::Context> context;
@@ -120,7 +116,7 @@ namespace sloked {
 
         struct CacheEntry {
             std::string text;
-            TerminalMode mode;
+            Mode mode;
 
             bool operator<(const CacheEntry &) const;
         };
@@ -132,12 +128,14 @@ namespace sloked {
         Size screenSize;
         Input input;
         std::atomic_bool updated;
+        const std::string font;
         TextPosition size;
         TextPosition cursor;
         bool showCursor;
-        TerminalMode mode;
+        Mode defaultMode;
+        Mode mode;
         SlokedLRUCache<CacheEntry, Cairo::RefPtr<Cairo::ImageSurface>> cache;
-        unsigned int dimUpdated;
+        std::chrono::system_clock::time_point lastResize;
     };
 }
 

@@ -19,9 +19,17 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_CAIRO_BASE_H_
-#define SLOKED_SCREEN_CAIRO_BASE_H_
+#ifndef SLOKED_SCREEN_GRAPHICS_BASE_H_
+#define SLOKED_SCREEN_GRAPHICS_BASE_H_
 
-#include <cairomm/cairomm.h>
+#include "sloked/Base.h"
+
+namespace sloked {
+
+    struct SlokedGraphicsDimensions {
+        int x;
+        int y;
+    };
+}
 
 #endif

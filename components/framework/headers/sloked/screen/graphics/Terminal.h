@@ -19,25 +19,27 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_CAIRO_COMPONENT_H_
-#define SLOKED_SCREEN_CAIRO_COMPONENT_H_
+#ifndef SLOKED_SCREEN_GRAPHICS_TERMINAL_H_
+#define SLOKED_SCREEN_GRAPHICS_TERMINAL_H_
 
-#include "sloked/screen/cairo/Base.h"
-#include "sloked/screen/Keyboard.h"
-#include "sloked/screen/graphics/Base.h"
-#include <vector>
+#include "sloked/screen/terminal/Terminal.h"
+#include "sloked/screen/Size.h"
 
 namespace sloked {
 
-    class SlokedCairoScreenComponent {
+    class SlokedGraphicalTerminal : public SlokedDuplexTerminal {
      public:
-        using Dimensions = SlokedGraphicsDimensions;
+        struct Mode {
+            SlokedBackgroundGraphics background{SlokedBackgroundGraphics::White};
+            SlokedForegroundGraphics foreground{SlokedForegroundGraphics::Black};
+            bool bold{false};
+            bool underscore{false};
+        };
 
-        virtual ~SlokedCairoScreenComponent() = default;
-        virtual bool CheckUpdates() = 0;
-        virtual void ProcessInput(std::vector<SlokedKeyboardInput>) = 0;
-        virtual void SetTarget(const Cairo::RefPtr<Cairo::Surface> &, Dimensions) = 0;
-        virtual Dimensions GetSize() const = 0;
+        virtual const std::string &GetFont() const = 0;
+        virtual const Mode &GetDefaultMode() const = 0;
+        virtual void SetDefaultMode(const Mode &) = 0;
+        virtual SlokedScreenSize &GetTerminalSize() = 0;
     };
 }
 

@@ -48,7 +48,7 @@ namespace sloked {
         Cairo::RefPtr<Cairo::Surface> cairoSurface;
     };
 
-    class SlokedSDLCairoWindow : public SlokedCairoWindow {
+    class SlokedSDLCairoWindow : public SlokedAbstractCairoWindow {
      public:
         SlokedSDLCairoWindow(SlokedScreenManager &, Dimensions, const std::string & = "");
         ~SlokedSDLCairoWindow();

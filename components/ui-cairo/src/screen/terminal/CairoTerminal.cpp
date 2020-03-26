@@ -27,6 +27,8 @@
 
 namespace sloked {
 
+    const SlokedCairoTerminal::Mode SlokedCairoTerminal::InitMode{};
+
     template <typename T = guint16>
     constexpr T MapDoubleToInt(double value) {
         return static_cast<T>(value * std::numeric_limits<T>::max());
@@ -91,7 +93,7 @@ namespace sloked {
         return this->context.operator bool();
     }
 
-    void SlokedCairoTerminal::Renderer::Apply(const TerminalMode &mode) {
+    void SlokedCairoTerminal::Renderer::Apply(const Mode &mode) {
         Pango::AttrList attrs;
         if (mode.bold) {
             auto bold = Pango::Attribute::create_attr_weight(Pango::Weight::WEIGHT_BOLD);
@@ -203,12 +205,24 @@ namespace sloked {
                 this->mode.underscore < other.mode.underscore);
     }
 
-    SlokedCairoTerminal::SlokedCairoTerminal(const std::string &font)
+    SlokedCairoTerminal::SlokedCairoTerminal(const std::string &font, const Mode &defaultMode)
         : renderer(font), screenSize(*this),
-          updated{true}, size{0, 0}, cursor{0, 0}, showCursor{true}, mode{},
-          cache{1024}, dimUpdated{0} {}
+          updated{true}, font{font}, size{0, 0}, cursor{0, 0},
+          showCursor{true}, defaultMode{defaultMode}, mode{defaultMode},
+          cache{256}, lastResize{std::chrono::system_clock::now()} {}
 
-    SlokedCairoTerminal::~SlokedCairoTerminal() = default;
+    const std::string &SlokedCairoTerminal::GetFont() const {
+        return this->font;
+    }
+
+    const SlokedCairoTerminal::Mode &SlokedCairoTerminal::GetDefaultMode() const {
+        return this->defaultMode;
+    }
+
+    void SlokedCairoTerminal::SetDefaultMode(const Mode &mode) {
+        std::unique_lock lock(this->renderer.mtx);
+        this->defaultMode = mode;
+    }
 
     SlokedScreenSize &SlokedCairoTerminal::GetTerminalSize() {
         return this->screenSize;
@@ -241,8 +255,7 @@ namespace sloked {
         this->renderer.context->rectangle(0, 0, this->renderer.surfaceSize.x, this->renderer.surfaceSize.y);
         this->renderer.context->fill();
         this->FlipCursor();
-        constexpr unsigned int ForceRedrawsAfterUpdate = 10;
-        this->dimUpdated += ForceRedrawsAfterUpdate;
+        this->lastResize = std::chrono::system_clock::now();
         lock.unlock();
         this->screenSize.Notify();
     }
@@ -468,13 +481,9 @@ namespace sloked {
     }
 
     bool SlokedCairoTerminal::UpdateDimensions() {
+        constexpr std::chrono::milliseconds LastUpdateTimeout{1000};
         std::unique_lock lock(this->renderer.mtx);
-        if (this->dimUpdated > 0) {
-            this->dimUpdated--;
-            return true;
-        } else {
-            return false;
-        }
+        return this->lastResize + LastUpdateTimeout >= std::chrono::system_clock::now();
     }
     
     void SlokedCairoTerminal::DrawText(std::string_view content) {

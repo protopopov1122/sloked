@@ -75,11 +75,7 @@
 #include "sloked/editor/configuration/Compat.h"
 #include "sloked/text/fragment/Updater.h"
 #include "sloked/compression/Compat.h"
-#include "sloked/screen/sdl/Renderer.h"
-#include "sloked/screen/cairo/Base.h"
-#include "sloked/screen/sdl/Texture.h"
-#include "sloked/screen/terminal/CairoTerminal.h"
-#include "sloked/screen/cairo/SDL.h"
+#include "sloked/screen/cairo/GUI.h"
 #include <GL/glu.h>
 #include <chrono>
 
@@ -261,27 +257,27 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
  public:
     struct GUI {
         GUI(int width, int height)
-            : window(this->screenMgr, {width, height}), terminal(std::make_shared<SlokedCairoTerminal>("Monospace 10")) {
-            this->window.SetRoot(this->terminal);
+            : gui(screenMgr),
+            terminal(gui.OpenTerminal("Monospace 10", {width, height})) {
             this->screenMgr.Start(std::chrono::milliseconds(50));
         }
 
         ~GUI() {
             this->screenMgr.Stop();
-            this->window.Close();
+            this->terminal->Close();
         }
 
         void Repaint() {
             // this->window.Render();
         }
 
-        SlokedCairoTerminal &GetTerminal() {
-            return *this->terminal;
+        SlokedGraphicalTerminal &GetTerminal() {
+            return this->terminal->GetComponent();
         }
 
         SlokedScreenManager screenMgr;
-        SlokedSDLCairoWindow window;
-        std::shared_ptr<SlokedCairoTerminal> terminal;
+        SlokedCairoSDLGraphicalComponents gui;
+        std::unique_ptr<SlokedGraphicalTerminalWindow> terminal;
     };
 
     SlokedDemoScreenBasis(const SlokedCharPreset &charPreset)
@@ -345,8 +341,6 @@ class SlokedTestCharVisualPreset : public SlokedFontProperties {
 };
 
 int main(int argc, const char **argv) {
-    Pango::init();
-
     // Initialize globals
     SlokedFailure::SetupHandler();
     SlokedLocale::Setup();

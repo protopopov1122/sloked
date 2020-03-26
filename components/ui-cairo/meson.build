@@ -1,4 +1,5 @@
 sloked_ui_cairo_sdl_src = [
+  'src/screen/cairo/GUI.cpp',
   'src/screen/cairo/SDL.cpp',
   'src/screen/sdl/Event.cpp',
   'src/screen/sdl/Renderer.cpp',

@@ -19,9 +19,23 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_CAIRO_BASE_H_
-#define SLOKED_SCREEN_CAIRO_BASE_H_
+#ifndef SLOKED_SCREEN_GRAPHICS_GUI_H_
+#define SLOKED_SCREEN_GRAPHICS_GUI_H_
 
-#include <cairomm/cairomm.h>
+#include "sloked/screen/graphics/Base.h"
+#include "sloked/screen/graphics/Terminal.h"
+#include "sloked/screen/graphics/Window.h"
+#include <memory>
+
+namespace sloked {
+
+    using SlokedGraphicalTerminalWindow = SlokedAbstractGraphicalWindow<SlokedGraphicalTerminal>; 
+
+    class SlokedGraphicalComponents {
+     public:
+        virtual ~SlokedGraphicalComponents() = default;
+        virtual std::unique_ptr<SlokedGraphicalTerminalWindow> OpenTerminal(const std::string &, SlokedGraphicsDimensions, const std::string & = "") = 0;
+    };
+}
 
 #endif
