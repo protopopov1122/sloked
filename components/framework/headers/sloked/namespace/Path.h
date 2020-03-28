@@ -93,6 +93,7 @@ namespace sloked {
         operator const std::string &() const;
         SlokedPath operator[](String) const;
         bool operator==(const SlokedPath &) const;
+        bool operator<(const SlokedPath &) const;
 
      private:
         SlokedPath(const Preset &);

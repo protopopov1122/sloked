@@ -38,12 +38,12 @@ namespace sloked {
             std::shared_ptr<SlokedNamedRestrictions>) final;
         void SetModificationRestrictions(
             std::shared_ptr<SlokedNamedRestrictions>) final;
-        std::unique_ptr<KgrPipe> Connect(const std::string &) final;
-        Connector GetConnector(const std::string &) final;
+        std::unique_ptr<KgrPipe> Connect(const SlokedPath &) final;
+        Connector GetConnector(const SlokedPath &) final;
 
-        void Register(const std::string &, std::unique_ptr<KgrService>) final;
-        bool Registered(const std::string &) final;
-        void Deregister(const std::string &) final;
+        void Register(const SlokedPath &, std::unique_ptr<KgrService>) final;
+        bool Registered(const SlokedPath &) final;
+        void Deregister(const SlokedPath &) final;
 
      private:
         KgrNamedServer &server;

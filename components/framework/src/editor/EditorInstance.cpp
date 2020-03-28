@@ -136,7 +136,7 @@ namespace sloked {
                     this->charPresetUpdater =
                         std::make_unique<SlokedCharPresetClient>(
                             this->server->GetServer().Connect(
-                                "editor::parameters"),
+                                {"/editor/parameters"}),
                             this->charPreset);
                 }
             }

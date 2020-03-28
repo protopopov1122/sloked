@@ -72,7 +72,7 @@ namespace sloked {
             std::unique_lock lock(this->mtx);
             const auto &service = params.AsDictionary()["service"].AsString();
             auto remotePipe = params.AsDictionary()["pipe"].AsInt();
-            auto pipe = this->localServer.Connect(service);
+            auto pipe = this->localServer.Connect({service});
             if (pipe == nullptr) {
                 throw SlokedError("KgrSlaveServer: Pipe can't be null");
             }
@@ -136,11 +136,11 @@ namespace sloked {
     }
 
     std::unique_ptr<KgrPipe> KgrSlaveNetServer::Connect(
-        const std::string &service) {
+        const SlokedPath &service) {
         if (!this->work.load()) {
             return nullptr;
         }
-        auto rsp = this->net.Invoke("connect", service);
+        auto rsp = this->net.Invoke("connect", service.ToString());
         if (rsp.WaitResponse(KgrNetConfig::ResponseTimeout) &&
             this->work.load()) {
             const auto &res = rsp.GetResponse();
@@ -175,51 +175,52 @@ namespace sloked {
     }
 
     KgrSlaveNetServer::Connector KgrSlaveNetServer::GetConnector(
-        const std::string &service) {
+        const SlokedPath &service) {
         return [this, service] { return this->Connect(service); };
     }
 
-    void KgrSlaveNetServer::Register(const std::string &serviceName,
+    void KgrSlaveNetServer::Register(const SlokedPath &serviceName,
                                      std::unique_ptr<KgrService> service) {
+        auto id = serviceName.ToString();
         if (!this->localServer.Registered(serviceName)) {
             this->localServer.Register(serviceName, std::move(service));
-            auto rsp = this->net.Invoke("bind", serviceName);
+            auto rsp = this->net.Invoke("bind", id);
             if (!(rsp.WaitResponse(KgrNetConfig::ResponseTimeout) &&
                   this->work.load()) ||
                 !rsp.GetResponse().GetResult().AsBoolean()) {
                 this->localServer.Deregister(serviceName);
                 throw SlokedError("KgrSlaveServer: Error registering service " +
-                                  serviceName);
+                                  id);
             }
         } else {
-            throw SlokedError("KgrSlaveServer: Service " + serviceName +
+            throw SlokedError("KgrSlaveServer: Service " + id +
                               " already registered");
         }
     }
 
-    bool KgrSlaveNetServer::Registered(const std::string &service) {
+    bool KgrSlaveNetServer::Registered(const SlokedPath &service) {
         if (this->localServer.Registered(service)) {
             return true;
         } else {
-            auto rsp = this->net.Invoke("bound", service);
+            auto rsp = this->net.Invoke("bound", service.ToString());
             return rsp.WaitResponse(KgrNetConfig::ResponseTimeout) &&
                    this->work.load() && rsp.HasResponse() &&
                    rsp.GetResponse().GetResult().AsBoolean();
         }
     }
 
-    void KgrSlaveNetServer::Deregister(const std::string &service) {
+    void KgrSlaveNetServer::Deregister(const SlokedPath &service) {
+        auto id = service.ToString();
         if (this->localServer.Registered(service)) {
             this->localServer.Deregister(service);
-            auto rsp = this->net.Invoke("unbind", service);
+            auto rsp = this->net.Invoke("unbind", id);
             if (!(rsp.WaitResponse(KgrNetConfig::ResponseTimeout) &&
                   this->work.load()) ||
                 !rsp.GetResponse().GetResult().AsBoolean()) {
-                throw SlokedError("KgrSlaveServer: Error deregistering " +
-                                  service);
+                throw SlokedError("KgrSlaveServer: Error deregistering " + id);
             }
         } else {
-            throw SlokedError("KgrSlaveServer: Service " + service +
+            throw SlokedError("KgrSlaveServer: Service " + id +
                               " not registered");
         }
     }

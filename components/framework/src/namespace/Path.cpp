@@ -282,6 +282,10 @@ namespace sloked {
         return true;
     }
 
+    bool SlokedPath::operator<(const SlokedPath &other) const {
+        return this->literal < other.literal;
+    }
+
     SlokedPath::SlokedPath(const Preset &preset)
         : preset(preset), absolute{false} {}
 

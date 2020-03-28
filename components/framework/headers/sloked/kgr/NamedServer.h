@@ -23,10 +23,11 @@
 #define SLOKED_KGR_NAMEDSERVER_H_
 
 #include "sloked/kgr/Server.h"
+#include "sloked/namespace/Path.h"
 
 namespace sloked {
 
-    class KgrNamedServer : public KgrAbstractServer<const std::string &> {};
+    class KgrNamedServer : public KgrAbstractServer<const SlokedPath &> {};
 }  // namespace sloked
 
 #endif

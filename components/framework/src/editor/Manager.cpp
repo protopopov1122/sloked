@@ -212,11 +212,11 @@ namespace sloked {
 
     static std::unique_ptr<SlokedNamedRestrictions> KgrToRestriction(
         const KgrDictionary &config) {
-        std::vector<std::string> content;
+        std::vector<SlokedPath> content;
         bool whitelist =
             config.Has("whitelist") && config["whitelist"].AsBoolean();
         for (const auto &entry : config["content"].AsArray()) {
-            content.push_back(entry.AsString());
+            content.push_back({entry.AsString()});
         }
         if (whitelist) {
             return SlokedNamedWhitelist::Make(std::move(content));
@@ -340,7 +340,7 @@ namespace sloked {
             SlokedDefaultServicesFacade services(serviceProvider);
             for (const auto &service : serviceConfig["endpoints"].AsArray()) {
                 editor.GetServer().GetServer().Register(
-                    service.AsString(), services.Build(service.AsString()));
+                    {service.AsString()}, services.Build(service.AsString()));
             }
         }
         if (serverConfig.Has("screen")) {

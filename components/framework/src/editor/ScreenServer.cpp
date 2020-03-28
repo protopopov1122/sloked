@@ -51,29 +51,29 @@ namespace sloked {
         std::chrono::system_clock::duration timeout) {
         if (!this->work.exchange(true)) {
             this->server.Register(
-                "screen::manager",
+                {"/screen/manager"},
                 std::make_unique<SlokedScreenService>(
                     this->provider.GetScreen(), this->provider.GetEncoding(),
-                    this->server.GetConnector("document::cursor"),
-                    this->server.GetConnector("document::render"),
-                    this->server.GetConnector("document::notify"),
+                    this->server.GetConnector({"/document/cursor"}),
+                    this->server.GetConnector({"/document/render"}),
+                    this->server.GetConnector({"/document/notify"}),
                     contextManager));
             this->server.Register(
-                "screen::size.notify",
+                {"/screen/size/notify"},
                 std::make_unique<SlokedScreenSizeNotificationService>(
                     provider.GetSize(), contextManager));
             this->server.Register(
-                "screen::component::input.notify",
+                {"/screen/component/input/notify"},
                 std::make_unique<SlokedScreenInputNotificationService>(
                     this->provider.GetScreen(), this->provider.GetEncoding(),
                     contextManager));
             this->server.Register(
-                "screen::component::input.forward",
+                {"/screen/component/input/forward"},
                 std::make_unique<SlokedScreenInputForwardingService>(
                     this->provider.GetScreen(), this->provider.GetEncoding(),
                     contextManager));
             this->server.Register(
-                "screen::component::text.pane",
+                {"/screen/component/text/pane"},
                 std::make_unique<SlokedTextPaneService>(
                     this->provider.GetScreen(), this->provider.GetEncoding(),
                     contextManager));

@@ -43,33 +43,33 @@ namespace sloked {
     }
 
     std::unique_ptr<KgrPipe> KgrRestrictedNamedServer::Connect(
-        const std::string &name) {
+        const SlokedPath &name) {
         if (this->accessRestrictions != nullptr &&
             this->accessRestrictions->IsAllowed(name)) {
             return this->server.Connect(name);
         } else {
-            throw SlokedError("KgrNamedServer: Connection to \'" + name +
-                              "\' restricted");
+            throw SlokedError("KgrNamedServer: Connection to \'" +
+                              name.ToString() + "\' restricted");
         }
     }
 
     KgrNamedServer::Connector KgrRestrictedNamedServer::GetConnector(
-        const std::string &name) {
+        const SlokedPath &name) {
         return [this, name] { return this->Connect(name); };
     }
 
     void KgrRestrictedNamedServer::Register(
-        const std::string &name, std::unique_ptr<KgrService> service) {
+        const SlokedPath &name, std::unique_ptr<KgrService> service) {
         if (this->modificationRestrictions != nullptr &&
             this->modificationRestrictions->IsAllowed(name)) {
             this->server.Register(name, std::move(service));
         } else {
             throw SlokedError("KgrNamedServer: Modification restricted \'" +
-                              name + "\'");
+                              name.ToString() + "\'");
         }
     }
 
-    bool KgrRestrictedNamedServer::Registered(const std::string &name) {
+    bool KgrRestrictedNamedServer::Registered(const SlokedPath &name) {
         return ((this->accessRestrictions != nullptr &&
                  this->accessRestrictions->IsAllowed(name)) ||
                 (this->modificationRestrictions != nullptr &&
@@ -77,13 +77,13 @@ namespace sloked {
                this->server.Registered(name);
     }
 
-    void KgrRestrictedNamedServer::Deregister(const std::string &name) {
+    void KgrRestrictedNamedServer::Deregister(const SlokedPath &name) {
         if (this->modificationRestrictions != nullptr &&
             this->modificationRestrictions->IsAllowed(name)) {
             this->server.Deregister(name);
         } else {
             throw SlokedError("KgrNamedServer: Modification restricted \'" +
-                              name + "\'");
+                              name.ToString() + "\'");
         }
     }
 }  // namespace sloked

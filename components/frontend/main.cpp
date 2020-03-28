@@ -468,18 +468,18 @@ int main(int argc, const char **argv) {
                    KgrDictionary{
                        {"masterPassword", "password"},
                        {"salt", "salt"},
-                       {"users", KgrArray{KgrDictionary{
-                                     {"id", "user1"},
-                                     {"restrictAccess",
-                                      KgrDictionary{
-                                          {"whitelist", true},
-                                          {"content",
-                                           KgrArray{"document::", "namespace::",
-                                                    "screen::", "editor::"}}}},
-                                     {"restrictModification",
-                                      KgrDictionary{{"whitelist", true},
-                                                    {"content",
-                                                     KgrArray{"screen::"}}}}}}},
+                       {"users",
+                        KgrArray{KgrDictionary{
+                            {"id", "user1"},
+                            {"restrictAccess",
+                             KgrDictionary{
+                                 {"whitelist", true},
+                                 {"content", KgrArray{"/document", "/namespace",
+                                                      "/screen", "/editor"}}}},
+                            {"restrictModification",
+                             KgrDictionary{
+                                 {"whitelist", true},
+                                 {"content", KgrArray{"/screen"}}}}}}},
                        {"defaultUser",
                         KgrDictionary{
                             {"restrictAccess",
@@ -499,19 +499,19 @@ int main(int argc, const char **argv) {
                   {"port", mainConfig.Find("/network/port").AsInt()}}},
              {"restrictAccess",
               KgrDictionary{{"whitelist", true},
-                            {"content", KgrArray{"document::", "namespace::",
-                                                 "screen::", "editor::"}}}},
+                            {"content", KgrArray{"/document", "/namespace",
+                                                 "/screen", "/editor"}}}},
              {"restrictModification",
               KgrDictionary{{"whitelist", true},
-                            {"content", KgrArray{"document::", "namespace::",
-                                                 "screen::", "editor::"}}}},
+                            {"content", KgrArray{"/document", "/namespace",
+                                                 "/screen", "/editor"}}}},
              {"services",
               KgrDictionary{{"root", "file:///"},
                             {"endpoints",
-                             KgrArray{"document::render", "document::cursor",
-                                      "document::manager", "document::notify",
-                                      "document::search", "namespace::root",
-                                      "editor::parameters"}}}}}},
+                             KgrArray{"/document/render", "/document/cursor",
+                                      "/document/manager", "/document/notify",
+                                      "/document/search", "/namespace/root",
+                                      "/editor/parameters"}}}}}},
         {"parameters", KgrDictionary{{"tabWidth", 2}}}};
     auto &mainEditor = startup.Spawn("main", mainEditorConfig);
 
@@ -571,11 +571,12 @@ int main(int argc, const char **argv) {
         return screenServer.GetScreen().GetScreen().IsHolder();
     };
     SlokedScreenClient screenClient(
-        secondaryServer.GetServer().Connect("screen::manager"), isScreenLocked);
+        secondaryServer.GetServer().Connect({"/screen/manager"}),
+        isScreenLocked);
     SlokedScreenSizeNotificationClient screenSizeClient(
-        secondaryServer.GetServer().Connect("screen::size.notify"));
+        secondaryServer.GetServer().Connect({"/screen/size/notify"}));
     SlokedDocumentSetClient documentClient(
-        secondaryServer.GetServer().Connect("document::manager"));
+        secondaryServer.GetServer().Connect({"/document/manager"}));
     documentClient.Open(inputPath.ToString(),
                         mainConfig.Find("/encoding").AsString(),
                         mainConfig.Find("/newline").AsString(), "default");
@@ -606,7 +607,7 @@ int main(int argc, const char **argv) {
         tab1.value(), documentClient.GetId().value(), "default");
 
     SlokedTextPaneClient paneClient(
-        secondaryServer.GetServer().Connect("screen::component::text.pane"),
+        secondaryServer.GetServer().Connect({"/screen/component/text/pane"}),
         isScreenLocked);
     paneClient.Connect("/0/1", false, {});
     auto &render = paneClient.GetRender();
@@ -625,7 +626,7 @@ int main(int argc, const char **argv) {
     };
     renderStatus();
     SlokedScreenInputNotificationClient screenInput(
-        secondaryServer.GetServer().Connect("screen::component::input.notify"),
+        secondaryServer.GetServer().Connect({"/screen/component/input/notify"}),
         terminalEncoding, isScreenLocked);
     screenInput.Listen(
         "/",

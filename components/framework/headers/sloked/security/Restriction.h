@@ -26,36 +26,36 @@
 #include <string>
 #include <vector>
 
-#include "sloked/Base.h"
+#include "sloked/namespace/Path.h"
 
 namespace sloked {
 
     class SlokedNamedRestrictions {
      public:
         virtual ~SlokedNamedRestrictions() = default;
-        virtual bool IsAllowed(const std::string &) const = 0;
+        virtual bool IsAllowed(const SlokedPath &) const = 0;
     };
 
     class SlokedNamedWhitelist : public SlokedNamedRestrictions {
      public:
-        SlokedNamedWhitelist(std::vector<std::string> = {});
-        bool IsAllowed(const std::string &) const final;
+        SlokedNamedWhitelist(std::vector<SlokedPath> = {});
+        bool IsAllowed(const SlokedPath &) const final;
         static std::unique_ptr<SlokedNamedWhitelist> Make(
-            std::vector<std::string>);
+            std::vector<SlokedPath>);
 
      private:
-        std::vector<std::string> prefixes;
+        std::vector<SlokedPath> prefixes;
     };
 
     class SlokedNamedBlacklist : public SlokedNamedRestrictions {
      public:
-        SlokedNamedBlacklist(std::vector<std::string> = {});
-        bool IsAllowed(const std::string &) const final;
+        SlokedNamedBlacklist(std::vector<SlokedPath> = {});
+        bool IsAllowed(const SlokedPath &) const final;
         static std::unique_ptr<SlokedNamedBlacklist> Make(
-            std::vector<std::string>);
+            std::vector<SlokedPath>);
 
      private:
-        std::vector<std::string> prefixes;
+        std::vector<SlokedPath> prefixes;
     };
 
     class SlokedNamedRestrictionTarget {

@@ -66,7 +66,7 @@ namespace sloked {
                     } else {
                         this->workers.Spawn(
                             [this, service, rsp = std::move(rsp)]() mutable {
-                                auto pipe = this->server.Connect(service);
+                                auto pipe = this->server.Connect({service});
                                 if (pipe == nullptr) {
                                     throw SlokedError(
                                         "KgrMasterServer: Pipe can't be null");
@@ -134,9 +134,9 @@ namespace sloked {
                 } else {
                     this->workers.Spawn([this, service,
                                          rsp = std::move(rsp)]() mutable {
-                        if (!this->server.Registered(service)) {
+                        if (!this->server.Registered({service})) {
                             this->server.Register(
-                                service,
+                                {service},
                                 std::make_unique<SlaveService>(*this, service));
                             std::unique_lock lock(this->mtx);
                             this->remoteServiceList.insert(service);
@@ -154,7 +154,7 @@ namespace sloked {
                     this->workers.Spawn([this, params,
                                          rsp = std::move(rsp)]() mutable {
                         const auto &service = params.AsString();
-                        rsp.Result(this->server.Registered(service) &&
+                        rsp.Result(this->server.Registered({service}) &&
                                    (this->IsAccessPermitted(service) ||
                                     this->IsModificationPermitted(service)));
                     });
@@ -171,7 +171,7 @@ namespace sloked {
                         this->workers.Spawn([this, service,
                                              rsp = std::move(rsp)]() mutable {
                             if (this->remoteServiceList.count(service) != 0) {
-                                this->server.Deregister(service);
+                                this->server.Deregister({service});
                                 std::unique_lock lock(this->mtx);
                                 this->remoteServiceList.erase(service);
                                 rsp.Result(true);
@@ -232,7 +232,7 @@ namespace sloked {
             std::thread([handle = this->counterHandle,
                          services = std::move(this->remoteServiceList), &srv] {
                 for (const auto &rService : services) {
-                    srv.Deregister(rService);
+                    srv.Deregister({rService});
                 }
             }).detach();
         }
@@ -381,7 +381,7 @@ namespace sloked {
                 acc = this->restrictions->GetDefaultRestrictions();
             }
             if (auto account = acc.lock()) {
-                return account->GetAccessRestrictions()->IsAllowed(name);
+                return account->GetAccessRestrictions()->IsAllowed({name});
             } else {
                 return false;
             }
@@ -399,7 +399,8 @@ namespace sloked {
                 acc = this->restrictions->GetDefaultRestrictions();
             }
             if (auto account = acc.lock()) {
-                return account->GetModificationRestrictiions()->IsAllowed(name);
+                return account->GetModificationRestrictiions()->IsAllowed(
+                    {name});
             } else {
                 return false;
             }
@@ -462,7 +463,7 @@ namespace sloked {
         std::thread([this, counterHandle = std::move(counterHandle),
                      services = std::move(services)] {
             for (const auto &sName : services) {
-                this->server.Deregister(sName);
+                this->server.Deregister({sName});
             }
         }).detach();
     }

@@ -31,17 +31,16 @@ namespace sloked {
     class KgrLocalNamedServer : public KgrNamedServer {
      public:
         KgrLocalNamedServer(KgrServer &);
-        std::unique_ptr<KgrPipe> Connect(const std::string &) override;
-        Connector GetConnector(const std::string &) override;
+        std::unique_ptr<KgrPipe> Connect(const SlokedPath &) override;
+        Connector GetConnector(const SlokedPath &) override;
 
-        void Register(const std::string &,
-                      std::unique_ptr<KgrService>) override;
-        bool Registered(const std::string &) override;
-        void Deregister(const std::string &) override;
+        void Register(const SlokedPath &, std::unique_ptr<KgrService>) override;
+        bool Registered(const SlokedPath &) override;
+        void Deregister(const SlokedPath &) override;
 
      private:
         KgrServer &server;
-        std::map<std::string, KgrServer::ServiceId> names;
+        std::map<SlokedPath, KgrServer::ServiceId> names;
         std::mutex mtx;
     };
 }  // namespace sloked

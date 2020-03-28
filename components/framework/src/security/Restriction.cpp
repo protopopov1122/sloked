@@ -25,39 +25,37 @@
 
 namespace sloked {
 
-    static bool ContainsPrefix(const std::string &name,
-                               const std::vector<std::string> &prefixes) {
+    static bool ContainsPrefix(const SlokedPath &name,
+                               const std::vector<SlokedPath> &prefixes) {
         for (const auto &prefix : prefixes) {
-            if (starts_with(name, prefix)) {
+            if (prefix.IsParent(name)) {
                 return true;
             }
         }
         return false;
     }
 
-    SlokedNamedWhitelist::SlokedNamedWhitelist(
-        std::vector<std::string> prefixes)
+    SlokedNamedWhitelist::SlokedNamedWhitelist(std::vector<SlokedPath> prefixes)
         : prefixes(std::move(prefixes)) {}
 
-    bool SlokedNamedWhitelist::IsAllowed(const std::string &name) const {
+    bool SlokedNamedWhitelist::IsAllowed(const SlokedPath &name) const {
         return ContainsPrefix(name, this->prefixes);
     }
 
     std::unique_ptr<SlokedNamedWhitelist> SlokedNamedWhitelist::Make(
-        std::vector<std::string> prefixes) {
+        std::vector<SlokedPath> prefixes) {
         return std::make_unique<SlokedNamedWhitelist>(std::move(prefixes));
     }
 
-    SlokedNamedBlacklist::SlokedNamedBlacklist(
-        std::vector<std::string> prefixes)
+    SlokedNamedBlacklist::SlokedNamedBlacklist(std::vector<SlokedPath> prefixes)
         : prefixes(prefixes) {}
 
-    bool SlokedNamedBlacklist::IsAllowed(const std::string &name) const {
+    bool SlokedNamedBlacklist::IsAllowed(const SlokedPath &name) const {
         return !ContainsPrefix(name, this->prefixes);
     }
 
     std::unique_ptr<SlokedNamedBlacklist> SlokedNamedBlacklist::Make(
-        std::vector<std::string> prefixes) {
+        std::vector<SlokedPath> prefixes) {
         return std::make_unique<SlokedNamedBlacklist>(std::move(prefixes));
     }
 }  // namespace sloked
