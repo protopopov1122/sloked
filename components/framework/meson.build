@@ -68,6 +68,7 @@ sloked_src = [
   'src/screen/Manager.cpp',
   'src/screen/Point.cpp',
   'src/screen/Splitter.cpp',
+  'src/screen/graphics/Terminal.cpp',
   'src/screen/terminal/multiplexer/TerminalWindow.cpp',
   'src/screen/terminal/multiplexer/TerminalBuffer.cpp',
   'src/screen/terminal/multiplexer/TerminalSplitter.cpp',

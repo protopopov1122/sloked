@@ -19,21 +19,25 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_CAIRO_GUI_H_
-#define SLOKED_SCREEN_CAIRO_GUI_H_
+#ifndef SLOKED_SCREEN_GRAPHICS_COMPAT_H_
+#define SLOKED_SCREEN_GRAPHICS_COMPAT_H_
 
 #include "sloked/screen/graphics/GUI.h"
 #include "sloked/screen/Manager.h"
 
 namespace sloked {
 
-    class SlokedCairoSDLGraphicalComponents : public SlokedGraphicalComponents {
+    class SlokedGraphicsCompat {
      public:
-        SlokedCairoSDLGraphicalComponents(SlokedScreenManager &);
-        std::unique_ptr<SlokedGraphicalTerminalWindow> OpenTerminal(const SlokedGraphicalTerminalWindow::Parameters &) final;
+        static constexpr bool HasGraphics() {
+#if defined(SLOKED_GFX_CAIRO_SDL)
+            return true;
+#else
+            return false;
+#endif
+        }
 
-     private:
-        SlokedScreenManager &screenManager;
+        static std::unique_ptr<SlokedGraphicalComponents> GetGraphics(SlokedScreenManager &);
     };
 }
 

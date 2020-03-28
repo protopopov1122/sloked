@@ -29,12 +29,10 @@
 
 namespace sloked {
 
-    using SlokedGraphicalTerminalWindow = SlokedAbstractGraphicalWindow<SlokedGraphicalTerminal>; 
-
     class SlokedGraphicalComponents {
      public:
         virtual ~SlokedGraphicalComponents() = default;
-        virtual std::unique_ptr<SlokedGraphicalTerminalWindow> OpenTerminal(const std::string &, SlokedGraphicsDimensions, const std::string & = "") = 0;
+        virtual std::unique_ptr<SlokedGraphicalTerminalWindow> OpenTerminal(const SlokedGraphicalTerminalWindow::Parameters &) = 0;
     };
 }
 

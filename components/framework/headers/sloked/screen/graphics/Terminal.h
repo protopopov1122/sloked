@@ -23,6 +23,7 @@
 #define SLOKED_SCREEN_GRAPHICS_TERMINAL_H_
 
 #include "sloked/screen/terminal/Terminal.h"
+#include "sloked/screen/graphics/Window.h"
 #include "sloked/screen/Size.h"
 
 namespace sloked {
@@ -40,6 +41,24 @@ namespace sloked {
         virtual const Mode &GetDefaultMode() const = 0;
         virtual void SetDefaultMode(const Mode &) = 0;
         virtual SlokedScreenSize &GetTerminalSize() = 0;
+    };
+
+    class SlokedGraphicalTerminalWindow : public SlokedAbstractGraphicalWindow {
+     public:
+        struct Parameters {
+            Parameters(SlokedGraphicsDimensions, const std::string &);
+            Parameters &Size(SlokedGraphicsDimensions);
+            Parameters &Title(const std::string &);
+            Parameters &Font(const std::string &);
+            Parameters &DefaultMode(const SlokedGraphicalTerminal::Mode &);
+
+            SlokedGraphicsDimensions size;
+            std::string title{""};
+            std::string font;
+            SlokedGraphicalTerminal::Mode defaultMode{};
+        };
+
+        virtual SlokedGraphicalTerminal &GetTerminal() = 0;
     };
 }
 

@@ -26,11 +26,9 @@
 
 namespace sloked {
 
-    template <typename T>
     class SlokedAbstractGraphicalWindow {
      public:
         virtual ~SlokedAbstractGraphicalWindow() = default;
-        virtual T &GetComponent() = 0;
         virtual const std::string &GetTitle() const = 0;
         virtual void SetTitle(const std::string &) = 0;
         virtual SlokedGraphicsDimensions GetSize() const = 0;

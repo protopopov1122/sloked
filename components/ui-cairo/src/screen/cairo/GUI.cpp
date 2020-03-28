@@ -35,11 +35,10 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedGraphicalTerminalWindow> SlokedCairoSDLGraphicalComponents::OpenTerminal(const std::string &font, SlokedGraphicsDimensions dim, const std::string &title) {
-        auto sdlWindow = std::make_unique<SlokedSDLCairoWindow>(this->screenManager, std::move(dim), title);
-        std::shared_ptr<SlokedCairoTerminal> terminal = std::make_unique<SlokedCairoTerminal>(font);
-        sdlWindow->SetRoot(terminal);
-        auto window = std::make_unique<SlokedCairoGraphicalWindow<SlokedGraphicalTerminal>>(std::move(sdlWindow), std::move(terminal));
+    std::unique_ptr<SlokedGraphicalTerminalWindow> SlokedCairoSDLGraphicalComponents::OpenTerminal(const SlokedGraphicalTerminalWindow::Parameters &prms) {
+        auto sdlWindow = std::make_unique<SlokedSDLCairoWindow>(this->screenManager, prms.size, prms.title);
+        auto terminal = std::make_unique<SlokedCairoTerminal>(prms.font, prms.defaultMode);
+        auto window = std::make_unique<SlokedCairoTerminalWindow>(std::move(sdlWindow), std::move(terminal));
         return window;
     }
 }

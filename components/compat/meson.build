@@ -5,6 +5,7 @@ compat_src = [
   'src/editor/configuration/Compat.cpp',
   'src/namespace/Compat.cpp',
   'src/net/Compat.cpp',
+  'src/screen/graphics/Compat.cpp',
   'src/screen/terminal/Compat.cpp',
   'src/screen/terminal/TerminalResize.cpp',
   'src/script/Compat.cpp'
@@ -28,6 +29,11 @@ endif
 if not sloked_disable_scripting
   sloked_compat_flags += sloked_scripting_flags
   sloked_compat_deps += sloked_scripting
+endif
+
+if not sloked_disable_graphics
+  sloked_compat_flags += sloked_graphics_flags
+  sloked_compat_deps += sloked_graphics
 endif
 
 sloked_compat_lib = static_library('sloked_compat', compat_src,

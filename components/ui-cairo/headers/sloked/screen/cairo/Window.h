@@ -29,51 +29,10 @@
 
 namespace sloked {
 
-    class SlokedAbstractCairoWindow : public SlokedScreenManager::Renderable {
+    class SlokedAbstractCairoWindow : public SlokedScreenManager::Renderable, public SlokedAbstractGraphicalWindow {
      public:
-        using Dimensions = SlokedGraphicsDimensions;
-
-        virtual ~SlokedAbstractCairoWindow() = default;
-        virtual Dimensions GetSize() const = 0;
-        virtual void SetSize(Dimensions) = 0;
         virtual std::shared_ptr<SlokedCairoScreenComponent> GetRoot() const = 0;
         virtual void SetRoot(std::shared_ptr<SlokedCairoScreenComponent>) = 0;
-        virtual void Close() = 0;
-    };
-
-    template <typename T>
-    class SlokedCairoGraphicalWindow : public SlokedAbstractGraphicalWindow<T> {
-     public:
-        SlokedCairoGraphicalWindow(std::unique_ptr<SlokedAbstractCairoWindow> window, std::shared_ptr<T> component)
-            : window(std::move(window)), component(std::move(component)) {}
-
-        T &GetComponent() final {
-            return *this->component;
-        }
-
-        const std::string &GetTitle() const final {
-            return this->title;
-        }
-
-        void SetTitle(const std::string &) final {}
-
-        SlokedGraphicsDimensions GetSize() const final {
-            return this->window->GetSize();
-        }
-
-        bool Resize(SlokedGraphicsDimensions dim) final {
-            this->window->SetSize(std::move(dim));
-            return true;
-        }
-
-        void Close() final {
-            this->window->Close();
-        }
-
-     private:
-        std::unique_ptr<SlokedAbstractCairoWindow> window;
-        std::shared_ptr<T> component;
-        std::string title{""};
     };
 }
 

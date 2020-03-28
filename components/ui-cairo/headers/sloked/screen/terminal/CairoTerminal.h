@@ -29,6 +29,7 @@
 #include "sloked/screen/Point.h"
 #include "sloked/screen/cairo/Component.h"
 #include "sloked/screen/pango/Base.h"
+#include "sloked/screen/cairo/Window.h"
 #include "sloked/core/Event.h"
 #include <mutex>
 #include <condition_variable>
@@ -39,7 +40,7 @@ namespace sloked {
 
     class SlokedCairoTerminal : public SlokedGraphicalTerminal, public SlokedCairoScreenComponent {
      public:
-        SlokedCairoTerminal(const std::string &, const Mode & = InitMode);
+        SlokedCairoTerminal(const std::string &, const Mode &);
 
         const std::string &GetFont() const final;
         const Mode &GetDefaultMode() const final;
@@ -76,7 +77,6 @@ namespace sloked {
 
 
      private:
-        static const Mode InitMode;
         struct Renderer {
             Renderer(const std::string &);
             void SetTarget(const Cairo::RefPtr<Cairo::Surface> &, Dimensions);
@@ -136,6 +136,22 @@ namespace sloked {
         Mode mode;
         SlokedLRUCache<CacheEntry, Cairo::RefPtr<Cairo::ImageSurface>> cache;
         std::chrono::system_clock::time_point lastResize;
+    };
+
+    class SlokedCairoTerminalWindow : public SlokedGraphicalTerminalWindow {
+     public:
+        SlokedCairoTerminalWindow(std::unique_ptr<SlokedAbstractCairoWindow>, std::unique_ptr<SlokedCairoTerminal>);
+
+        const std::string &GetTitle() const final;
+        void SetTitle(const std::string &) final;
+        SlokedGraphicsDimensions GetSize() const final;
+        bool Resize(SlokedGraphicsDimensions) final;
+        void Close() final;
+        SlokedGraphicalTerminal &GetTerminal() final;
+
+     private:
+        std::unique_ptr<SlokedAbstractCairoWindow> window;
+        std::shared_ptr<SlokedCairoTerminal> terminal;
     };
 }
 

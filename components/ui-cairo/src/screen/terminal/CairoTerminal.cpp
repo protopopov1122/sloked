@@ -27,8 +27,6 @@
 
 namespace sloked {
 
-    const SlokedCairoTerminal::Mode SlokedCairoTerminal::InitMode{};
-
     template <typename T = guint16>
     constexpr T MapDoubleToInt(double value) {
         return static_cast<T>(value * std::numeric_limits<T>::max());
@@ -521,5 +519,34 @@ namespace sloked {
             this->renderer.context->fill();
             this->renderer.context->set_operator(Cairo::Operator::OPERATOR_SOURCE);
         }
+    }
+
+    SlokedCairoTerminalWindow::SlokedCairoTerminalWindow(std::unique_ptr<SlokedAbstractCairoWindow> window, std::unique_ptr<SlokedCairoTerminal> terminal)
+        : window(std::move(window)), terminal(std::move(terminal)) {
+        this->window->SetRoot(this->terminal);
+    }
+
+    const std::string &SlokedCairoTerminalWindow::GetTitle() const {
+        return this->window->GetTitle();
+    }
+
+    void SlokedCairoTerminalWindow::SetTitle(const std::string &title) {
+        this->window->SetTitle(title);
+    }
+
+    SlokedGraphicsDimensions SlokedCairoTerminalWindow::GetSize() const {
+        return this->window->GetSize();
+    }
+
+    bool SlokedCairoTerminalWindow::Resize(SlokedGraphicsDimensions sz) {
+        return this->window->Resize(sz);
+    }
+
+    void SlokedCairoTerminalWindow::Close() {
+        this->window->Close();
+    }
+
+    SlokedGraphicalTerminal &SlokedCairoTerminalWindow::GetTerminal() {
+        return *this->terminal;
     }
 }

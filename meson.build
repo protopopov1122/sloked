@@ -12,6 +12,7 @@ endif
 sloked_disable_crypto = true
 sloked_disable_compression = true
 sloked_disable_scripting = true
+sloked_disable_graphics = true
 
 subdir('components/framework')
 if get_option('crypto') == 'botan'
@@ -38,8 +39,11 @@ if get_option('scripting_lua')
   sloked_scripting_flags = sloked_lua_bindings_flags
   sloked_disable_scripting = false
 endif
-if get_option('terminal') == 'cairo'
+if get_option('graphics') == 'cairo_sdl'
   subdir('components/ui-cairo')
+  sloked_graphics = sloked_graphics_cairo_sdl
+  sloked_graphics_flags = sloked_graphics_cairo_sdl_flags
+  sloked_disable_graphics = false
 endif
 
 sloked_platform = sloked_posix_platform

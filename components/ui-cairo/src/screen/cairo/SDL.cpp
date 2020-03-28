@@ -73,29 +73,40 @@ namespace sloked {
         return SlokedSDLTexture(renderer, this->sdlSurface);
     }
 
-    SlokedSDLCairoWindow::SlokedSDLCairoWindow(SlokedScreenManager &screenMgr, Dimensions dim, const std::string &title)
+    SlokedSDLCairoWindow::SlokedSDLCairoWindow(SlokedScreenManager &screenMgr, SlokedGraphicsDimensions dim, const std::string &title)
         : screenMgr(screenMgr), sdlWindow({dim.x, dim.y}, title), sdlRenderer(sdlWindow),
           rootSurface{dim.x, dim.y},
           root{nullptr},
-          resize_request{false} {
+          resize_request{false},
+          title{sdlWindow.Title()} {
         this->screenMgr.Attach(*this);
     }
 
     SlokedSDLCairoWindow::~SlokedSDLCairoWindow() {
         this->Close();
     }
+
+    const std::string &SlokedSDLCairoWindow::GetTitle() const {
+        return this->title;
+    }
+
+    void SlokedSDLCairoWindow::SetTitle(const std::string &title) {
+        this->sdlWindow.Title(title);
+        this->title = this->sdlWindow.Title();
+    }
     
-    SlokedSDLCairoWindow::Dimensions SlokedSDLCairoWindow::GetSize() const {
+    SlokedGraphicsDimensions SlokedSDLCairoWindow::GetSize() const {
         return {this->sdlWindow.Size().x, this->sdlWindow.Size().y};
     }
 
-    void SlokedSDLCairoWindow::SetSize(Dimensions dim) {
+    bool SlokedSDLCairoWindow::Resize(SlokedGraphicsDimensions dim) {
         auto lock = this->rootSurface.Lock();
         this->sdlWindow.Resize({dim.x, dim.y});
         this->rootSurface.Resize(dim.x, dim.y);
         if (this->root) {
             this->root->SetTarget(this->rootSurface.GetCairoSurface(), dim);
         }
+        return true;
     }
 
     std::shared_ptr<SlokedCairoScreenComponent> SlokedSDLCairoWindow::GetRoot() const {

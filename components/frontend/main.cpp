@@ -75,7 +75,7 @@
 #include "sloked/editor/configuration/Compat.h"
 #include "sloked/text/fragment/Updater.h"
 #include "sloked/compression/Compat.h"
-#include "sloked/screen/cairo/GUI.h"
+#include "sloked/screen/graphics/Compat.h"
 #include <GL/glu.h>
 #include <chrono>
 
@@ -257,8 +257,8 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
  public:
     struct GUI {
         GUI(int width, int height)
-            : gui(screenMgr),
-            terminal(gui.OpenTerminal("Monospace 10", {width, height})) {
+            : gui(SlokedGraphicsCompat::GetGraphics(this->screenMgr)),
+            terminal(gui->OpenTerminal({{width, height}, "Monospace 10"})) {
             this->screenMgr.Start(std::chrono::milliseconds(50));
         }
 
@@ -267,16 +267,12 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
             this->terminal->Close();
         }
 
-        void Repaint() {
-            // this->window.Render();
-        }
-
         SlokedGraphicalTerminal &GetTerminal() {
-            return this->terminal->GetComponent();
+            return this->terminal->GetTerminal();
         }
 
         SlokedScreenManager screenMgr;
-        SlokedCairoSDLGraphicalComponents gui;
+        std::unique_ptr<SlokedGraphicalComponents> gui;
         std::unique_ptr<SlokedGraphicalTerminalWindow> terminal;
     };
 
@@ -287,7 +283,6 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
         
     void Render(std::function<void(SlokedScreenComponent &)> fn) final {
         this->provider.Render(std::move(fn));
-        this->gui.Repaint();
     }
 
     std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration timeout) final {

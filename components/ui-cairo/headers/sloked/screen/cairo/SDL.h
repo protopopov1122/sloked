@@ -50,10 +50,12 @@ namespace sloked {
 
     class SlokedSDLCairoWindow : public SlokedAbstractCairoWindow {
      public:
-        SlokedSDLCairoWindow(SlokedScreenManager &, Dimensions, const std::string & = "");
+        SlokedSDLCairoWindow(SlokedScreenManager &, SlokedGraphicsDimensions, const std::string & = "");
         ~SlokedSDLCairoWindow();
-        Dimensions GetSize() const final;
-        void SetSize(Dimensions) final;
+        const std::string &GetTitle() const final;
+        void SetTitle(const std::string &) final;
+        SlokedGraphicsDimensions GetSize() const final;
+        bool Resize(SlokedGraphicsDimensions) final;
         std::shared_ptr<SlokedCairoScreenComponent> GetRoot() const final;
         void SetRoot(std::shared_ptr<SlokedCairoScreenComponent>) final;
         void Render() final;
@@ -69,6 +71,7 @@ namespace sloked {
         std::shared_ptr<SlokedCairoScreenComponent> root;
         std::atomic_bool resize_request;
         std::pair<int, int> new_size;
+        std::string title;
     };
 }
 
