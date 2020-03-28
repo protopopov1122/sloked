@@ -168,7 +168,6 @@ namespace sloked {
                 this->net.Invoke("activate", pipeId);
                 return std::move(pipe2);
             } else {
-                std::terminate();
                 throw SlokedError(res.GetError().AsString());
             }
         }
