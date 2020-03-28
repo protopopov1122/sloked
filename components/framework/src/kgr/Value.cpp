@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,16 +20,16 @@
 */
 
 #include "sloked/kgr/Value.h"
+
 #include "sloked/core/Error.h"
 
 namespace sloked {
 
-    KgrArray::KgrArray(const std::vector<KgrValue> &value)
-        : content(value) {}
-    
+    KgrArray::KgrArray(const std::vector<KgrValue> &value) : content(value) {}
+
     KgrArray::KgrArray(std::vector<KgrValue> &&value)
         : content(std::forward<std::vector<KgrValue>>(value)) {}
-    
+
     KgrArray::KgrArray(std::initializer_list<KgrValue> content)
         : content(std::move(content)) {}
 
@@ -76,7 +76,7 @@ namespace sloked {
     KgrArray::ConstReverseIterator KgrArray::rend() const {
         return this->content.rend();
     }
-    
+
     KgrArray &KgrArray::Append(const KgrValue &value) {
         this->content.push_back(value);
         return *this;
@@ -116,13 +116,14 @@ namespace sloked {
 
     KgrArray &KgrArray::Insert(std::size_t idx, KgrValue &&value) {
         if (idx <= this->content.size()) {
-            this->content.insert(this->content.begin() + idx, std::forward<KgrValue>(value));
+            this->content.insert(this->content.begin() + idx,
+                                 std::forward<KgrValue>(value));
             return *this;
         } else {
             throw SlokedError("KgrArray: Out of bounds error");
         }
     }
-    
+
     KgrArray &KgrArray::Remove(std::size_t idx) {
         if (idx < this->content.size()) {
             this->content.erase(this->content.begin() + idx);
@@ -138,9 +139,10 @@ namespace sloked {
     KgrDictionary::KgrDictionary(std::map<std::string, KgrValue> &&content)
         : content(content) {}
 
-    KgrDictionary::KgrDictionary(std::initializer_list<std::pair<const std::string, KgrValue>> content)
+    KgrDictionary::KgrDictionary(
+        std::initializer_list<std::pair<const std::string, KgrValue>> content)
         : content(std::move(content)) {}
-    
+
     std::size_t KgrDictionary::Size() const {
         return this->content.size();
     }
@@ -169,7 +171,8 @@ namespace sloked {
         if (this->Has(key)) {
             return this->content.at(key);
         } else {
-            throw SlokedError("KgrDictionary: Unknown key \'" + std::string{key} + "\'");
+            throw SlokedError("KgrDictionary: Unknown key \'" +
+                              std::string{key} + "\'");
         }
     }
 
@@ -185,7 +188,8 @@ namespace sloked {
         if (this->Has(key)) {
             return this->content[key];
         } else {
-            throw SlokedError("KgrDictionary: Unknown key \'" + std::string{key} + "\'");
+            throw SlokedError("KgrDictionary: Unknown key \'" +
+                              std::string{key} + "\'");
         }
     }
 
@@ -193,7 +197,8 @@ namespace sloked {
         if (this->Has(key)) {
             return this->content.at(key);
         } else {
-            throw SlokedError("KgrDictionary: Unknown key \'" + std::string{key} + "\'");
+            throw SlokedError("KgrDictionary: Unknown key \'" +
+                              std::string{key} + "\'");
         }
     }
 
@@ -221,12 +226,14 @@ namespace sloked {
         return this->content.rend();
     }
 
-    KgrDictionary &KgrDictionary::Put(const std::string &key, const KgrValue &value) {
+    KgrDictionary &KgrDictionary::Put(const std::string &key,
+                                      const KgrValue &value) {
         this->content[key] = value;
         return *this;
     }
 
-    KgrDictionary &KgrDictionary::Put(const std::string &key, KgrValue &&value) {
+    KgrDictionary &KgrDictionary::Put(const std::string &key,
+                                      KgrValue &&value) {
         this->content.emplace(key, std::forward<KgrValue>(value));
         return *this;
     }
@@ -240,33 +247,32 @@ namespace sloked {
         }
     }
 
-    KgrValue::KgrValue()
-        : type(KgrValueType::Null) {}
-        
+    KgrValue::KgrValue() : type(KgrValueType::Null) {}
+
     KgrValue::KgrValue(int64_t value)
         : type(KgrValueType::Integer), value(value) {}
-        
+
     KgrValue::KgrValue(int value)
         : type(KgrValueType::Integer), value(int64_t{value}) {}
 
     KgrValue::KgrValue(double value)
         : type(KgrValueType::Number), value(value) {}
-    
+
     KgrValue::KgrValue(bool value)
         : type(KgrValueType::Boolean), value(value) {}
-    
+
     KgrValue::KgrValue(std::string_view value)
         : type(KgrValueType::String), value(std::string{value}) {}
 
     KgrValue::KgrValue(const std::string &value)
         : type(KgrValueType::String), value(value) {}
-    
+
     KgrValue::KgrValue(const char *value)
         : type(KgrValueType::String), value(std::string{value}) {}
 
     KgrValue::KgrValue(const KgrArray &value)
         : type(KgrValueType::Array), value(value) {}
-    
+
     KgrValue::KgrValue(KgrArray &&value)
         : type(KgrValueType::Array), value(std::forward<KgrArray>(value)) {}
 
@@ -274,7 +280,8 @@ namespace sloked {
         : type(KgrValueType::Object), value(value) {}
 
     KgrValue::KgrValue(KgrDictionary &&value)
-        : type(KgrValueType::Object), value(std::forward<KgrDictionary>(value)) {}
+        : type(KgrValueType::Object),
+          value(std::forward<KgrDictionary>(value)) {}
 
     KgrValueType KgrValue::GetType() const {
         return this->type;
@@ -307,7 +314,7 @@ namespace sloked {
             throw SlokedError("KgrValue: Invalid conversion");
         }
     }
-    
+
     const std::string &KgrValue::AsString() const {
         if (this->type == KgrValueType::String) {
             return std::get<3>(this->value);
@@ -339,7 +346,7 @@ namespace sloked {
             throw SlokedError("KgrValue: Invalid conversion");
         }
     }
-    
+
     KgrDictionary &KgrValue::AsDictionary() {
         if (this->type == KgrValueType::Object) {
             return std::get<5>(this->value);
@@ -347,4 +354,4 @@ namespace sloked {
             throw SlokedError("KgrValue: Invalid conversion");
         }
     }
-}
+}  // namespace sloked

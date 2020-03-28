@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,14 +20,16 @@
 */
 
 #include "sloked/kgr/local/Server.h"
-#include "sloked/kgr/local/Pipe.h"
+
 #include "sloked/core/Error.h"
+#include "sloked/kgr/local/Pipe.h"
 
 namespace sloked {
 
     std::unique_ptr<KgrPipe> KgrLocalServer::Connect(ServiceId srvId) {
         if (this->services.count(srvId) == 0) {
-            throw SlokedError("KgrServer: Unknown service #" + std::to_string(srvId));
+            throw SlokedError("KgrServer: Unknown service #" +
+                              std::to_string(srvId));
         }
         auto [clientPipe, servicePipe] = KgrLocalPipe::Make();
         this->services.at(srvId)->Attach(std::move(servicePipe));
@@ -35,12 +37,11 @@ namespace sloked {
     }
 
     KgrLocalServer::Connector KgrLocalServer::GetConnector(ServiceId srvId) {
-        return [this, srvId]() {
-            return this->Connect(srvId);
-        };
+        return [this, srvId]() { return this->Connect(srvId); };
     }
 
-    KgrLocalServer::ServiceId KgrLocalServer::Register(std::unique_ptr<KgrService> service) {
+    KgrLocalServer::ServiceId KgrLocalServer::Register(
+        std::unique_ptr<KgrService> service) {
         if (service == nullptr) {
             throw SlokedError("KgrServer: Service can't be null");
         }
@@ -49,7 +50,8 @@ namespace sloked {
         return serviceId;
     }
 
-    void KgrLocalServer::Register(ServiceId serviceId, std::unique_ptr<KgrService> service) {
+    void KgrLocalServer::Register(ServiceId serviceId,
+                                  std::unique_ptr<KgrService> service) {
         if (service == nullptr) {
             throw SlokedError("KgrServer: Service can't be null");
         }
@@ -57,7 +59,8 @@ namespace sloked {
             this->serviceAllocator.Set(serviceId, true);
             this->services.emplace(serviceId, std::move(service));
         } else {
-            throw SlokedError("KgrLocalServer: Sevice #" + std::to_string(serviceId) + " already allocated");
+            throw SlokedError("KgrLocalServer: Sevice #" +
+                              std::to_string(serviceId) + " already allocated");
         }
     }
 
@@ -70,7 +73,8 @@ namespace sloked {
             this->serviceAllocator.Set(serviceId, false);
             this->services.erase(serviceId);
         } else {
-            throw SlokedError("KgrServer: Unknown service #" + std::to_string(serviceId));
+            throw SlokedError("KgrServer: Unknown service #" +
+                              std::to_string(serviceId));
         }
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,9 +22,10 @@
 #ifndef SLOKED_KGR_SERVER_H_
 #define SLOKED_KGR_SERVER_H_
 
-#include "sloked/kgr/Service.h"
-#include <memory>
 #include <functional>
+#include <memory>
+
+#include "sloked/kgr/Service.h"
 
 namespace sloked {
 
@@ -49,6 +50,6 @@ namespace sloked {
         using KgrAbstractServer<KgrServerServiceId>::Register;
         virtual ServiceId Register(std::unique_ptr<KgrService>) = 0;
     };
-}
+}  // namespace sloked
 
 #endif

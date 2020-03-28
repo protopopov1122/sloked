@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_CORE_COMPRESSION_H_
 #define SLOKED_CORE_COMPRESSION_H_
 
-#include "sloked/core/Span.h"
-#include <vector>
 #include <cinttypes>
 #include <memory>
+#include <vector>
+
+#include "sloked/core/Span.h"
 
 namespace sloked {
 
@@ -46,8 +47,9 @@ namespace sloked {
         static constexpr Level DefaultLevel{0};
 
         virtual ~SlokedCompression() = default;
-        virtual std::unique_ptr<Compressor> NewCompressor(Level = DefaultLevel) = 0;
+        virtual std::unique_ptr<Compressor> NewCompressor(
+            Level = DefaultLevel) = 0;
     };
-}
+}  // namespace sloked
 
 #endif

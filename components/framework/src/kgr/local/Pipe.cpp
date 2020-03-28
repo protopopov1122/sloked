@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,13 +20,17 @@
 */
 
 #include "sloked/kgr/local/Pipe.h"
+
 #include "sloked/core/Error.h"
 
 namespace sloked {
 
-    KgrLocalPipe::KgrLocalPipe(std::shared_ptr<KgrLocalPipeDescriptor> descriptor, std::shared_ptr<KgrLocalPipeContent> input, std::shared_ptr<KgrLocalPipeContent> output)
+    KgrLocalPipe::KgrLocalPipe(
+        std::shared_ptr<KgrLocalPipeDescriptor> descriptor,
+        std::shared_ptr<KgrLocalPipeContent> input,
+        std::shared_ptr<KgrLocalPipeContent> output)
         : descriptor(descriptor), input(input), output(output) {}
-    
+
     KgrLocalPipe::~KgrLocalPipe() {
         if (this->descriptor->status == Status::Open) {
             std::unique_lock<std::mutex> ilock(this->input->content_mtx);
@@ -39,7 +43,7 @@ namespace sloked {
             }
         }
     }
-    
+
     KgrLocalPipe::Status KgrLocalPipe::GetStatus() const {
         return this->descriptor->status.load();
     }
@@ -76,7 +80,8 @@ namespace sloked {
 
     KgrValue KgrLocalPipe::ReadWait() {
         std::unique_lock<std::mutex> lock(this->input->content_mtx);
-        while (this->input->content.empty() && this->descriptor->status == Status::Open) {
+        while (this->input->content.empty() &&
+               this->descriptor->status == Status::Open) {
             this->input->content_cv.wait(lock);
         }
         if (this->input->content.empty()) {
@@ -94,7 +99,8 @@ namespace sloked {
 
     bool KgrLocalPipe::Wait(std::size_t count) {
         std::unique_lock<std::mutex> lock(this->input->content_mtx);
-        while (this->input->content.size() < count && this->descriptor->status == Status::Open) {
+        while (this->input->content.size() < count &&
+               this->descriptor->status == Status::Open) {
             this->input->content_cv.wait(lock);
         }
         return this->input->content.size() >= count;
@@ -152,13 +158,16 @@ namespace sloked {
         }
     }
 
-    std::pair<std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>> KgrLocalPipe::Make() {
+    std::pair<std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>>
+        KgrLocalPipe::Make() {
         auto descriptor = std::make_shared<KgrLocalPipeDescriptor>();
         descriptor->status = Status::Open;
         auto content1 = std::make_shared<KgrLocalPipeContent>();
         auto content2 = std::make_shared<KgrLocalPipeContent>();
-        std::unique_ptr<KgrLocalPipe> pipe1(new KgrLocalPipe(descriptor, content1, content2));
-        std::unique_ptr<KgrLocalPipe> pipe2(new KgrLocalPipe(descriptor, content2, content1));
+        std::unique_ptr<KgrLocalPipe> pipe1(
+            new KgrLocalPipe(descriptor, content1, content2));
+        std::unique_ptr<KgrLocalPipe> pipe2(
+            new KgrLocalPipe(descriptor, content2, content1));
         return std::make_pair(std::move(pipe1), std::move(pipe2));
     }
-}
+}  // namespace sloked

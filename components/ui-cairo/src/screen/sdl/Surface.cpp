@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,6 +20,7 @@
 */
 
 #include "sloked/screen/sdl/Surface.h"
+
 #include "sloked/core/Error.h"
 
 namespace sloked {
@@ -62,4 +63,4 @@ namespace sloked {
             throw SlokedError("SDLSurface: No surface defined");
         }
     }
-}
+}  // namespace sloked

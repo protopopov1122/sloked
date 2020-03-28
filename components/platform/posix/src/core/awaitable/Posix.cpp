@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,24 +20,25 @@
 */
 
 #include "sloked/core/awaitable/Posix.h"
+
+#include <vector>
+
 #include "sloked/core/Error.h"
 #include "sloked/core/posix/Time.h"
-#include <vector>
 
 namespace sloked {
 
     static const int PosixSystemId = 0;
-    const intptr_t SlokedPosixAwaitable::PosixIOSystemId = reinterpret_cast<intptr_t>(&PosixSystemId);
+    const intptr_t SlokedPosixAwaitable::PosixIOSystemId =
+        reinterpret_cast<intptr_t>(&PosixSystemId);
 
-    SlokedPosixAwaitable::SlokedPosixAwaitable(int socket)
-        : socket(socket) {}
+    SlokedPosixAwaitable::SlokedPosixAwaitable(int socket) : socket(socket) {}
 
     int SlokedPosixAwaitable::GetSocket() const {
         return this->socket;
     }
 
-    SlokedPosixAwaitablePoll::SlokedPosixAwaitablePoll()
-        : max_socket{0} {
+    SlokedPosixAwaitablePoll::SlokedPosixAwaitablePoll() : max_socket{0} {
         fd_set rfds;
         FD_ZERO(&rfds);
         this->descriptors.store(rfds);
@@ -47,16 +48,18 @@ namespace sloked {
         return SlokedPosixAwaitable::PosixIOSystemId;
     }
 
-
     SlokedIOAwaitable::SystemId SlokedPosixAwaitablePoll::GetSystemId() const {
         return SlokedPosixAwaitable::PosixIOSystemId;
     }
 
-    std::function<void()> SlokedPosixAwaitablePoll::Attach(std::unique_ptr<SlokedIOAwaitable> awaitable, std::function<void()> callback) {
+    std::function<void()> SlokedPosixAwaitablePoll::Attach(
+        std::unique_ptr<SlokedIOAwaitable> awaitable,
+        std::function<void()> callback) {
         if (awaitable->GetSystemId() != this->GetSystemId()) {
             throw SlokedError("SlokedIOPoll: Unsupported awaitable type");
         }
-        auto socket = static_cast<SlokedPosixAwaitable *>(awaitable.get())->GetSocket();
+        auto socket =
+            static_cast<SlokedPosixAwaitable *>(awaitable.get())->GetSocket();
         std::unique_lock lock(this->mtx);
         this->sockets.emplace(socket, std::move(callback));
         auto rfds = this->descriptors.load();
@@ -83,12 +86,16 @@ namespace sloked {
         };
     }
 
-    void SlokedPosixAwaitablePoll::Await(std::chrono::system_clock::duration timeout) {
+    void SlokedPosixAwaitablePoll::Await(
+        std::chrono::system_clock::duration timeout) {
         struct timeval tv;
         auto rfds = this->descriptors.load();
         DurationToTimeval(timeout, tv);
 
-        int res = select(this->max_socket.load() + 1, &rfds, nullptr, nullptr, timeout > std::chrono::system_clock::duration::zero() ? &tv : nullptr);
+        int res = select(this->max_socket.load() + 1, &rfds, nullptr, nullptr,
+                         timeout > std::chrono::system_clock::duration::zero()
+                             ? &tv
+                             : nullptr);
         if (res > 0) {
             std::unique_lock lock(this->mtx);
             callbacks.clear();
@@ -103,4 +110,4 @@ namespace sloked {
             }
         }
     }
-}
+}  // namespace sloked

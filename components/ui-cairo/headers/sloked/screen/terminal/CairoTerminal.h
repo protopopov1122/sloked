@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,23 +22,25 @@
 #ifndef SLOKED_SCREEN_TERMINAL_CAIROTERMINAL_H_
 #define SLOKED_SCREEN_TERMINAL_CAIROTERMINAL_H_
 
-#include "sloked/core/RingBuffer.h"
-#include "sloked/core/LRU.h"
-#include "sloked/screen/graphics/Terminal.h"
-#include "sloked/screen/Size.h"
-#include "sloked/screen/Point.h"
-#include "sloked/screen/cairo/Component.h"
-#include "sloked/screen/pango/Base.h"
-#include "sloked/screen/cairo/Window.h"
-#include "sloked/core/Event.h"
-#include <mutex>
+#include <atomic>
 #include <condition_variable>
 #include <memory>
-#include <atomic>
+#include <mutex>
+
+#include "sloked/core/Event.h"
+#include "sloked/core/LRU.h"
+#include "sloked/core/RingBuffer.h"
+#include "sloked/screen/Point.h"
+#include "sloked/screen/Size.h"
+#include "sloked/screen/cairo/Component.h"
+#include "sloked/screen/cairo/Window.h"
+#include "sloked/screen/graphics/Terminal.h"
+#include "sloked/screen/pango/Base.h"
 
 namespace sloked {
 
-    class SlokedCairoTerminal : public SlokedGraphicalTerminal, public SlokedCairoScreenComponent {
+    class SlokedCairoTerminal : public SlokedGraphicalTerminal,
+                                public SlokedCairoScreenComponent {
      public:
         SlokedCairoTerminal(const std::string &, const Mode &);
 
@@ -70,11 +72,11 @@ namespace sloked {
         void SetGraphicsMode(SlokedBackgroundGraphics) final;
         void SetGraphicsMode(SlokedForegroundGraphics) final;
 
-        bool WaitInput(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
+        bool WaitInput(std::chrono::system_clock::duration =
+                           std::chrono::system_clock::duration::zero()) final;
         std::vector<SlokedKeyboardInput> GetInput() final;
 
         bool UpdateDimensions() final;
-
 
      private:
         struct Renderer {
@@ -140,7 +142,8 @@ namespace sloked {
 
     class SlokedCairoTerminalWindow : public SlokedGraphicalTerminalWindow {
      public:
-        SlokedCairoTerminalWindow(std::unique_ptr<SlokedAbstractCairoWindow>, std::unique_ptr<SlokedCairoTerminal>);
+        SlokedCairoTerminalWindow(std::unique_ptr<SlokedAbstractCairoWindow>,
+                                  std::unique_ptr<SlokedCairoTerminal>);
 
         const std::string &GetTitle() const final;
         void SetTitle(const std::string &) final;
@@ -153,6 +156,6 @@ namespace sloked {
         std::unique_ptr<SlokedAbstractCairoWindow> window;
         std::shared_ptr<SlokedCairoTerminal> terminal;
     };
-}
+}  // namespace sloked
 
 #endif

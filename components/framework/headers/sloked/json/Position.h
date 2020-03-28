@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,9 +22,10 @@
 #ifndef SLOKED_JSON_POSITION_H_
 #define SLOKED_JSON_POSITION_H_
 
-#include "sloked/Base.h"
-#include <string>
 #include <cinttypes>
+#include <string>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -33,6 +34,6 @@ namespace sloked {
         std::size_t line;
         std::size_t column;
     };
-}
+}  // namespace sloked
 
 #endif

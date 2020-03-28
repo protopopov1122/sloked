@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,6 +20,7 @@
 */
 
 #include "sloked/sched/Scheduler.h"
+
 #include <thread>
 
 namespace sloked {
@@ -28,7 +29,8 @@ namespace sloked {
         return this->pending.load();
     }
 
-    const SlokedDefaultSchedulerThread::TimePoint &SlokedDefaultSchedulerThread::TimerTask::GetTime() const {
+    const SlokedDefaultSchedulerThread::TimePoint &
+        SlokedDefaultSchedulerThread::TimerTask::GetTime() const {
         return this->at;
     }
 
@@ -44,8 +46,11 @@ namespace sloked {
         this->sched.cv.notify_all();
     }
 
-    SlokedDefaultSchedulerThread::TimerTask::TimerTask(SlokedDefaultSchedulerThread &sched, TimePoint at, Callback callback, std::optional<TimeDiff> interval)
-        : sched(sched), pending(true), at(std::move(at)), callback(std::move(callback)), interval(std::move(interval)) {}
+    SlokedDefaultSchedulerThread::TimerTask::TimerTask(
+        SlokedDefaultSchedulerThread &sched, TimePoint at, Callback callback,
+        std::optional<TimeDiff> interval)
+        : sched(sched), pending(true), at(std::move(at)),
+          callback(std::move(callback)), interval(std::move(interval)) {}
 
     void SlokedDefaultSchedulerThread::TimerTask::NextInterval() {
         if (this->pending.load()) {
@@ -69,40 +74,42 @@ namespace sloked {
                     this->Run();
                 }
             }).detach();
-            this->timer_thread.Wait([](auto count) {
-                return count > 0;
-            });
+            this->timer_thread.Wait([](auto count) { return count > 0; });
         }
     }
 
     void SlokedDefaultSchedulerThread::Close() {
         if (this->work.exchange(false)) {
             this->cv.notify_all();
-            this->timer_thread.Wait([](auto count) {
-                return count == 0;
-            });
+            this->timer_thread.Wait([](auto count) { return count == 0; });
         }
     }
 
-    std::shared_ptr<SlokedSchedulerThread::TimerTask> SlokedDefaultSchedulerThread::At(TimePoint time, Callback callback) {
+    std::shared_ptr<SlokedSchedulerThread::TimerTask>
+        SlokedDefaultSchedulerThread::At(TimePoint time, Callback callback) {
         std::unique_lock lock(this->mtx);
-        std::shared_ptr<TimerTask> task(new TimerTask(*this, std::move(time), std::move(callback)));
+        std::shared_ptr<TimerTask> task(
+            new TimerTask(*this, std::move(time), std::move(callback)));
         this->tasks.emplace(task.get(), task);
         this->cv.notify_all();
         return task;
     }
 
-    std::shared_ptr<SlokedSchedulerThread::TimerTask> SlokedDefaultSchedulerThread::Sleep(TimeDiff diff, Callback callback) {
+    std::shared_ptr<SlokedSchedulerThread::TimerTask>
+        SlokedDefaultSchedulerThread::Sleep(TimeDiff diff, Callback callback) {
         auto now = std::chrono::system_clock::now();
         now += diff;
         return this->At(now, std::move(callback));
     }
 
-    std::shared_ptr<SlokedSchedulerThread::TimerTask> SlokedDefaultSchedulerThread::Interval(TimeDiff diff, Callback callback) {
+    std::shared_ptr<SlokedSchedulerThread::TimerTask>
+        SlokedDefaultSchedulerThread::Interval(TimeDiff diff,
+                                               Callback callback) {
         auto now = std::chrono::system_clock::now();
         now += diff;
         std::unique_lock lock(this->mtx);
-        std::shared_ptr<TimerTask> task(new TimerTask(*this, std::move(now), std::move(callback), std::move(diff)));
+        std::shared_ptr<TimerTask> task(new TimerTask(
+            *this, std::move(now), std::move(callback), std::move(diff)));
         this->tasks.emplace(task.get(), task);
         this->cv.notify_all();
         return task;
@@ -114,14 +121,16 @@ namespace sloked {
         this->cv.notify_all();
     }
 
-    bool SlokedDefaultSchedulerThread::TimerTaskCompare::operator()(TimerTask *t1, TimerTask *t2) const {
+    bool SlokedDefaultSchedulerThread::TimerTaskCompare::operator()(
+        TimerTask *t1, TimerTask *t2) const {
         return t1 != t2 && t1->GetTime() < t2->GetTime();
     }
 
     void SlokedDefaultSchedulerThread::Run() {
         std::unique_lock lock(this->mtx);
         auto now = std::chrono::system_clock::now();
-        while (this->work.load() && !this->tasks.empty() && (this->tasks.begin()->second)->GetTime() <= now) {
+        while (this->work.load() && !this->tasks.empty() &&
+               (this->tasks.begin()->second)->GetTime() <= now) {
             auto taskIt = this->tasks.begin();
             auto taskId = taskIt->first;
             auto task = taskIt->second;
@@ -151,33 +160,38 @@ namespace sloked {
             if (this->tasks.empty()) {
                 this->cv.wait(lock);
             } else {
-                this->cv.wait_for(lock, (this->tasks.begin()->second)->GetTime() - now);
+                this->cv.wait_for(
+                    lock, (this->tasks.begin()->second)->GetTime() - now);
             }
         }
     }
 
-    SlokedScheduledTaskPool::SlokedScheduledTaskPool(SlokedSchedulerThread &sched)
+    SlokedScheduledTaskPool::SlokedScheduledTaskPool(
+        SlokedSchedulerThread &sched)
         : sched(sched) {}
 
     SlokedScheduledTaskPool::~SlokedScheduledTaskPool() {
         this->DropAll();
     }
 
-    std::shared_ptr<SlokedSchedulerThread::TimerTask> SlokedScheduledTaskPool::At(TimePoint tp, Callback callback) {
+    std::shared_ptr<SlokedSchedulerThread::TimerTask>
+        SlokedScheduledTaskPool::At(TimePoint tp, Callback callback) {
         auto task = this->sched.At(tp, std::move(callback));
         std::unique_lock lock(this->mtx);
         this->tasks.push_back(task);
         return task;
     }
 
-    std::shared_ptr<SlokedSchedulerThread::TimerTask> SlokedScheduledTaskPool::Sleep(TimeDiff td, Callback callback) {
+    std::shared_ptr<SlokedSchedulerThread::TimerTask>
+        SlokedScheduledTaskPool::Sleep(TimeDiff td, Callback callback) {
         auto task = this->sched.Sleep(td, std::move(callback));
         std::unique_lock lock(this->mtx);
         this->tasks.push_back(task);
         return task;
     }
 
-    std::shared_ptr<SlokedSchedulerThread::TimerTask> SlokedScheduledTaskPool::Interval(TimeDiff td, Callback callback) {
+    std::shared_ptr<SlokedSchedulerThread::TimerTask>
+        SlokedScheduledTaskPool::Interval(TimeDiff td, Callback callback) {
         auto task = this->sched.Interval(td, std::move(callback));
         std::unique_lock lock(this->mtx);
         this->tasks.push_back(task);
@@ -205,4 +219,4 @@ namespace sloked {
         }
         this->tasks.clear();
     }
-}
+}  // namespace sloked

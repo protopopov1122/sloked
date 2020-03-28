@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,17 +22,17 @@
 #ifndef SLOKED_FILESYSTEM_POSIX_FILEIO_H_
 #define SLOKED_FILESYSTEM_POSIX_FILEIO_H_
 
-#include "sloked/core/IO.h"
 #include <cstdio>
 
-namespace sloked {
+#include "sloked/core/IO.h"
 
+namespace sloked {
 
     class SlokedPosixFileIO : public virtual SlokedBaseIO {
      public:
         SlokedPosixFileIO(FILE *);
         virtual ~SlokedPosixFileIO();
-        
+
         SlokedPosixFileIO(const SlokedPosixFileIO &) = delete;
         SlokedPosixFileIO(SlokedPosixFileIO &&);
         SlokedPosixFileIO &operator=(const SlokedPosixFileIO &) = delete;
@@ -47,6 +47,6 @@ namespace sloked {
      protected:
         FILE *file;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_CORE_EVENT_H_
 #define SLOKED_CORE_EVENT_H_
 
-#include "sloked/Base.h"
 #include <functional>
 #include <map>
 #include <mutex>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -35,8 +36,7 @@ namespace sloked {
         using Listener = std::function<void(T)>;
         using Unbind = std::function<void()>;
 
-        SlokedEventEmitter()
-            : nextId{0} {}
+        SlokedEventEmitter() : nextId{0} {}
 
         Unbind Listen(Listener listener) {
             std::unique_lock lock(this->mtx);
@@ -52,7 +52,8 @@ namespace sloked {
 
         void Emit(T &&event) {
             std::unique_lock lock(this->mtx);
-            for (auto it = this->listeners.begin(); it != this->listeners.end();) {
+            for (auto it = this->listeners.begin();
+                 it != this->listeners.end();) {
                 auto current = it++;
                 lock.unlock();
                 current->second(std::forward<T>(event));
@@ -72,8 +73,7 @@ namespace sloked {
         using Listener = std::function<void()>;
         using Unbind = std::function<void()>;
 
-        SlokedEventEmitter()
-            : nextId{0} {}
+        SlokedEventEmitter() : nextId{0} {}
 
         Unbind Listen(Listener listener) {
             std::unique_lock lock(this->mtx);
@@ -89,7 +89,8 @@ namespace sloked {
 
         void Emit() {
             std::unique_lock lock(this->mtx);
-            for (auto it = this->listeners.begin(); it != this->listeners.end();) {
+            for (auto it = this->listeners.begin();
+                 it != this->listeners.end();) {
                 auto current = it++;
                 lock.unlock();
                 current->second();
@@ -102,6 +103,6 @@ namespace sloked {
         uint64_t nextId;
         std::map<uint64_t, Listener> listeners;
     };
-}
+}  // namespace sloked
 
 #endif

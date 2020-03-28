@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,12 +20,14 @@
 */
 
 #include "sloked/kgr/Path.h"
+
 #include "sloked/core/Error.h"
 #include "sloked/core/String.h"
 
 namespace sloked {
 
-    std::optional<KgrValue> KgrPath::Traverse(const KgrValue &root, const SlokedPath &path) {
+    std::optional<KgrValue> KgrPath::Traverse(const KgrValue &root,
+                                              const SlokedPath &path) {
         if (path.Components().empty()) {
             return root;
         }
@@ -46,9 +48,7 @@ namespace sloked {
                 std::size_t idx;
                 try {
                     idx = std::stoull(entry);
-                } catch (const std::invalid_argument &ex) {
-                    return {};
-                }
+                } catch (const std::invalid_argument &ex) { return {}; }
                 if (idx < root.AsArray().Size()) {
                     return Traverse(root.AsArray().At(idx), tail);
                 }
@@ -66,7 +66,8 @@ namespace sloked {
         return {};
     }
 
-    void KgrPath::Assign(KgrValue &root, const SlokedPath &path, const KgrValue &value) {
+    void KgrPath::Assign(KgrValue &root, const SlokedPath &path,
+                         const KgrValue &value) {
         if (path.Components().empty()) {
             throw SlokedError("Path: Cannot assign to root");
         }
@@ -104,7 +105,7 @@ namespace sloked {
             } else if (ends_with(entry, "{}")) {
                 entry.erase(std::prev(entry.end(), 2), entry.end());
                 if (!root.AsDictionary().Has(entry)) {
-                   root.AsDictionary().Put(entry, KgrDictionary{});
+                    root.AsDictionary().Put(entry, KgrDictionary{});
                 }
             }
             KgrPath::Assign(root.AsDictionary()[entry], tail, value);
@@ -140,4 +141,4 @@ namespace sloked {
             KgrPath::Assign(root.AsArray()[idx], tail, value);
         }
     }
-}
+}  // namespace sloked

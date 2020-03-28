@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,12 +22,13 @@
 #ifndef SLOKED_KGR_LOCAL_PIPE_H_
 #define SLOKED_KGR_LOCAL_PIPE_H_
 
-#include "sloked/kgr/Pipe.h"
-#include <mutex>
-#include <queue>
-#include <memory>
 #include <atomic>
 #include <condition_variable>
+#include <memory>
+#include <mutex>
+#include <queue>
+
+#include "sloked/kgr/Pipe.h"
 
 namespace sloked {
 
@@ -57,19 +58,22 @@ namespace sloked {
         bool Wait(std::size_t = 1) override;
         void Drop(std::size_t = 1) override;
         void DropAll() override;
-        
+
         void Write(KgrValue &&) override;
         bool WriteNX(KgrValue &&) override;
 
-        static std::pair<std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>> Make();
+        static std::pair<std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>>
+            Make();
 
      private:
-        KgrLocalPipe(std::shared_ptr<KgrLocalPipeDescriptor>, std::shared_ptr<KgrLocalPipeContent>, std::shared_ptr<KgrLocalPipeContent>);
+        KgrLocalPipe(std::shared_ptr<KgrLocalPipeDescriptor>,
+                     std::shared_ptr<KgrLocalPipeContent>,
+                     std::shared_ptr<KgrLocalPipeContent>);
 
         std::shared_ptr<KgrLocalPipeDescriptor> descriptor;
         std::shared_ptr<KgrLocalPipeContent> input;
         std::shared_ptr<KgrLocalPipeContent> output;
     };
-}
+}  // namespace sloked
 
 #endif

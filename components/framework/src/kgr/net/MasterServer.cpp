@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,16 +20,18 @@
 */
 
 #include "sloked/kgr/net/MasterServer.h"
-#include "sloked/core/Error.h"
-#include "sloked/kgr/net/Interface.h"
-#include "sloked/kgr/net/Config.h"
-#include "sloked/kgr/local/Pipe.h"
-#include "sloked/sched/ThreadManager.h"
-#include <thread>
-#include <cstring>
-#include <set>
+
 #include <chrono>
+#include <cstring>
 #include <iostream>
+#include <set>
+#include <thread>
+
+#include "sloked/core/Error.h"
+#include "sloked/kgr/local/Pipe.h"
+#include "sloked/kgr/net/Config.h"
+#include "sloked/kgr/net/Interface.h"
+#include "sloked/sched/ThreadManager.h"
 
 using namespace std::chrono_literals;
 
@@ -37,10 +39,15 @@ namespace sloked {
 
     class KgrMasterNetServerContext : public SlokedIOPoller::Awaitable {
      public:
-        KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket, const std::atomic<bool> &work, SlokedCounter<std::size_t>::Handle counter,
-            KgrNamedServer &server, SlokedNamedRestrictionAuthority *restrictions, SlokedAuthenticatorFactory *authFactory)
+        KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket,
+                                  const std::atomic<bool> &work,
+                                  SlokedCounter<std::size_t>::Handle counter,
+                                  KgrNamedServer &server,
+                                  SlokedNamedRestrictionAuthority *restrictions,
+                                  SlokedAuthenticatorFactory *authFactory)
             : net(std::move(socket)), work(work), server(server), nextPipeId(0),
-              counterHandle(std::move(counter)), pinged{false}, restrictions(restrictions) {
+              counterHandle(std::move(counter)), pinged{false},
+              restrictions(restrictions) {
 
             if (authFactory) {
                 this->auth = authFactory->NewMaster(this->net.GetEncryption());
@@ -48,73 +55,89 @@ namespace sloked {
 
             this->lastActivity = std::chrono::system_clock::now();
 
-            this->net.BindMethod("connect", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                const auto &service = params.AsString();
-                std::unique_lock lock(this->mtx);
-                if (!this->IsAccessPermitted(service)) {
-                        rsp.Error("KgrMasterServer: Access to \'" + service + "\' restricted");
-                } else {
-                    this->workers.Spawn([this, service, rsp = std::move(rsp)]() mutable {
-                        auto pipe = this->server.Connect(service);
-                        if (pipe == nullptr) {
-                            throw SlokedError("KgrMasterServer: Pipe can't be null");
-                        } else {
-                            this->Connect(std::move(pipe), rsp);
+            this->net.BindMethod(
+                "connect", [this](const std::string &method,
+                                  const KgrValue &params, auto &rsp) {
+                    const auto &service = params.AsString();
+                    std::unique_lock lock(this->mtx);
+                    if (!this->IsAccessPermitted(service)) {
+                        rsp.Error("KgrMasterServer: Access to \'" + service +
+                                  "\' restricted");
+                    } else {
+                        this->workers.Spawn(
+                            [this, service, rsp = std::move(rsp)]() mutable {
+                                auto pipe = this->server.Connect(service);
+                                if (pipe == nullptr) {
+                                    throw SlokedError(
+                                        "KgrMasterServer: Pipe can't be null");
+                                } else {
+                                    this->Connect(std::move(pipe), rsp);
+                                }
+                            });
+                    }
+                });
+
+            this->net.BindMethod(
+                "activate", [this](const std::string &method,
+                                   const KgrValue &params, auto &rsp) {
+                    std::unique_lock lock(this->mtx);
+                    const auto pipeId = params.AsInt();
+                    if (this->frozenPipes.count(pipeId) != 0) {
+                        this->frozenPipes.erase(pipeId);
+                        auto &pipe = *this->pipes.at(pipeId);
+                        while (!pipe.Empty()) {
+                            this->net.Invoke(
+                                "send", KgrDictionary{{"pipe", pipeId},
+                                                      {"data", pipe.Read()}});
                         }
-                    });
-                }
-            });
-
-            this->net.BindMethod("activate", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                std::unique_lock lock(this->mtx);
-                const auto pipeId = params.AsInt();
-                if (this->frozenPipes.count(pipeId) != 0) {
-                    this->frozenPipes.erase(pipeId);
-                    auto &pipe = *this->pipes.at(pipeId);
-                    while (!pipe.Empty()) {
-                        this->net.Invoke("send", KgrDictionary {
-                            { "pipe", pipeId },
-                            { "data", pipe.Read() }
-                        });
+                        if (pipe.GetStatus() == KgrPipe::Status::Closed) {
+                            this->net.Invoke("close", pipeId);
+                            this->pipes.erase(pipeId);
+                        }
                     }
-                    if (pipe.GetStatus() == KgrPipe::Status::Closed) {
-                        this->net.Invoke("close", pipeId);
-                        this->pipes.erase(pipeId);
+                });
+
+            this->net.BindMethod(
+                "send", [this](const std::string &method,
+                               const KgrValue &params, auto &rsp) {
+                    std::unique_lock lock(this->mtx);
+                    const auto pipeId = params.AsDictionary()["pipe"].AsInt();
+                    const auto &data = params.AsDictionary()["data"];
+                    if (this->pipes.count(pipeId)) {
+                        auto &pipe = *this->pipes.at(pipeId);
+                        pipe.Write(KgrValue{data});
+                        rsp.Result(true);
+                    } else {
+                        rsp.Result(false);
                     }
-                }
-            });
+                });
 
-            this->net.BindMethod("send", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                std::unique_lock lock(this->mtx);
-                const auto pipeId = params.AsDictionary()["pipe"].AsInt();
-                const auto &data = params.AsDictionary()["data"];
-                if (this->pipes.count(pipeId)) {
-                    auto &pipe = *this->pipes.at(pipeId);
-                    pipe.Write(KgrValue{data});
-                    rsp.Result(true);
-                } else {
-                    rsp.Result(false);
-                }
-            });
+            this->net.BindMethod("close",
+                                 [this](const std::string &method,
+                                        const KgrValue &params, auto &rsp) {
+                                     std::unique_lock lock(this->mtx);
+                                     const auto pipeId = params.AsInt();
+                                     if (this->pipes.count(pipeId)) {
+                                         auto &pipe = *this->pipes.at(pipeId);
+                                         pipe.Close();
+                                         this->pipes.erase(pipeId);
+                                     }
+                                 });
 
-            this->net.BindMethod("close", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                std::unique_lock lock(this->mtx);
-                const auto pipeId = params.AsInt();
-                if (this->pipes.count(pipeId)) {
-                    auto &pipe = *this->pipes.at(pipeId);
-                    pipe.Close();
-                    this->pipes.erase(pipeId);
-                }
-            });
-
-            this->net.BindMethod("bind", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+            this->net.BindMethod("bind", [this](const std::string &method,
+                                                const KgrValue &params,
+                                                auto &rsp) {
                 const auto &service = params.AsString();
                 if (!this->IsModificationPermitted(service)) {
-                    rsp.Error("KgrMasterServer: Modification of \'" + service + "\' restricted");
+                    rsp.Error("KgrMasterServer: Modification of \'" + service +
+                              "\' restricted");
                 } else {
-                    this->workers.Spawn([this, service, rsp = std::move(rsp)]() mutable {
+                    this->workers.Spawn([this, service,
+                                         rsp = std::move(rsp)]() mutable {
                         if (!this->server.Registered(service)) {
-                            this->server.Register(service, std::make_unique<SlaveService>(*this, service));
+                            this->server.Register(
+                                service,
+                                std::make_unique<SlaveService>(*this, service));
                             std::unique_lock lock(this->mtx);
                             this->remoteServiceList.insert(service);
                             rsp.Result(true);
@@ -125,51 +148,65 @@ namespace sloked {
                 }
             });
 
-            this->net.BindMethod("bound", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                this->workers.Spawn([this, params, rsp = std::move(rsp)]() mutable {
-                    const auto &service = params.AsString();
-                    rsp.Result(this->server.Registered(service) &&
-                            (this->IsAccessPermitted(service) || this->IsModificationPermitted(service)));
-                });
-            });
-
-            this->net.BindMethod("unbind", [this](const std::string &method, const KgrValue &params, auto &rsp) {
-                const auto &service = params.AsString();
-                if (!this->IsModificationPermitted(service)) {
-                    rsp.Error("KgrMasterServer: Modification of \'" + service + "\' restricted");
-                } else {
-                    this->workers.Spawn([this, service, rsp = std::move(rsp)]() mutable {
-                        if (this->remoteServiceList.count(service) != 0) {
-                            this->server.Deregister(service);
-                            std::unique_lock lock(this->mtx);
-                            this->remoteServiceList.erase(service);
-                            rsp.Result(true);
-                        } else {
-                            rsp.Result(false);
-                        }
+            this->net.BindMethod(
+                "bound", [this](const std::string &method,
+                                const KgrValue &params, auto &rsp) {
+                    this->workers.Spawn([this, params,
+                                         rsp = std::move(rsp)]() mutable {
+                        const auto &service = params.AsString();
+                        rsp.Result(this->server.Registered(service) &&
+                                   (this->IsAccessPermitted(service) ||
+                                    this->IsModificationPermitted(service)));
                     });
-                }
-            });
+                });
 
-            this->net.BindMethod("ping", [](const std::string &method, const KgrValue &params, auto &rsp) {
-                rsp.Result("pong");
-            });
+            this->net.BindMethod(
+                "unbind", [this](const std::string &method,
+                                 const KgrValue &params, auto &rsp) {
+                    const auto &service = params.AsString();
+                    if (!this->IsModificationPermitted(service)) {
+                        rsp.Error("KgrMasterServer: Modification of \'" +
+                                  service + "\' restricted");
+                    } else {
+                        this->workers.Spawn([this, service,
+                                             rsp = std::move(rsp)]() mutable {
+                            if (this->remoteServiceList.count(service) != 0) {
+                                this->server.Deregister(service);
+                                std::unique_lock lock(this->mtx);
+                                this->remoteServiceList.erase(service);
+                                rsp.Result(true);
+                            } else {
+                                rsp.Result(false);
+                            }
+                        });
+                    }
+                });
 
-            this->net.BindMethod("auth-request", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+            this->net.BindMethod(
+                "ping", [](const std::string &method, const KgrValue &params,
+                           auto &rsp) { rsp.Result("pong"); });
+
+            this->net.BindMethod("auth-request", [this](
+                                                     const std::string &method,
+                                                     const KgrValue &params,
+                                                     auto &rsp) {
                 if (this->auth) {
                     auto nonce = this->auth->InitiateLogin();
-                    rsp.Result(KgrDictionary {
-                        { "nonce", static_cast<int64_t>(nonce) }
-                    });
+                    rsp.Result(
+                        KgrDictionary{{"nonce", static_cast<int64_t>(nonce)}});
                 } else {
                     rsp.Error("KgrMasterServer: Authentication not supported");
                 }
             });
 
-            this->net.BindMethod("auth-response", [this](const std::string &method, const KgrValue &params, auto &rsp) {
+            this->net.BindMethod("auth-response", [this](
+                                                      const std::string &method,
+                                                      const KgrValue &params,
+                                                      auto &rsp) {
                 if (this->auth) {
                     const auto &keyId = params.AsDictionary()["id"].AsString();
-                    const auto &result = params.AsDictionary()["result"].AsString();
+                    const auto &result =
+                        params.AsDictionary()["result"].AsString();
                     auto res = this->auth->ContinueLogin(keyId, result);
                     rsp.Result(res);
                     if (res) {
@@ -192,7 +229,8 @@ namespace sloked {
                 this->net.Close();
             }
             auto &srv = this->server;
-            std::thread([handle = this->counterHandle, services = std::move(this->remoteServiceList), &srv] {
+            std::thread([handle = this->counterHandle,
+                         services = std::move(this->remoteServiceList), &srv] {
                 for (const auto &rService : services) {
                     srv.Deregister(rService);
                 }
@@ -211,8 +249,11 @@ namespace sloked {
                 auto now = std::chrono::system_clock::now();
                 auto idle = now - this->lastActivity;
                 if (idle > KgrNetConfig::InactivityThreshold && this->pinged) {
-                    throw SlokedError("KgrMasterServer: Connection inactive for " + std::to_string(idle.count()) + " ns");
-                } else if (idle > KgrNetConfig::InactivityTimeout && !this->pinged) {
+                    throw SlokedError(
+                        "KgrMasterServer: Connection inactive for " +
+                        std::to_string(idle.count()) + " ns");
+                } else if (idle > KgrNetConfig::InactivityTimeout &&
+                           !this->pinged) {
                     this->net.Invoke("ping", {});
                     this->pinged = true;
                 }
@@ -233,19 +274,21 @@ namespace sloked {
         friend class SlaveService;
         class SlaveService : public KgrService {
          public:
-            SlaveService(KgrMasterNetServerContext &srv, const std::string &service)
+            SlaveService(KgrMasterNetServerContext &srv,
+                         const std::string &service)
                 : srv(srv), service(service) {}
 
             void Attach(std::unique_ptr<KgrPipe> pipe) final {
                 std::unique_lock lock(this->srv.mtx);
                 auto pipeId = this->srv.nextPipeId++;
                 lock.unlock();
-                this->srv.workers.Spawn([this, pipeId, pipePtr = pipe.release()] {
-                    auto rsp = this->srv.net.Invoke("connect", KgrDictionary {
-                        { "pipe", pipeId },
-                        { "service", this->service }
-                    });
-                    if (rsp.WaitResponse(KgrNetConfig::ResponseTimeout) && rsp.HasResponse()) {
+                this->srv.workers.Spawn([this, pipeId,
+                                         pipePtr = pipe.release()] {
+                    auto rsp = this->srv.net.Invoke(
+                        "connect", KgrDictionary{{"pipe", pipeId},
+                                                 {"service", this->service}});
+                    if (rsp.WaitResponse(KgrNetConfig::ResponseTimeout) &&
+                        rsp.HasResponse()) {
                         auto remotePipe = rsp.GetResponse().GetResult().AsInt();
                         std::unique_ptr<KgrPipe> pipe{pipePtr};
                         pipe->SetMessageListener([this, pipeId, remotePipe] {
@@ -253,12 +296,13 @@ namespace sloked {
                             if (this->srv.pipes.count(pipeId) != 0) {
                                 auto &pipe = *this->srv.pipes.at(pipeId);
                                 while (!pipe.Empty()) {
-                                    this->srv.net.Invoke("send", KgrDictionary {
-                                        { "pipe", remotePipe },
-                                        { "data", pipe.Read() }
-                                    });
+                                    this->srv.net.Invoke(
+                                        "send",
+                                        KgrDictionary{{"pipe", remotePipe},
+                                                      {"data", pipe.Read()}});
                                 }
-                                if (pipe.GetStatus() == KgrPipe::Status::Closed) {
+                                if (pipe.GetStatus() ==
+                                    KgrPipe::Status::Closed) {
                                     this->srv.net.Invoke("close", remotePipe);
                                     this->srv.pipes.erase(pipeId);
                                 }
@@ -266,10 +310,9 @@ namespace sloked {
                         });
                         std::unique_lock lock(this->srv.mtx);
                         while (!pipe->Empty()) {
-                            this->srv.net.Invoke("send", KgrDictionary {
-                                { "pipe", remotePipe },
-                                { "data", pipe->Read() }
-                            });
+                            this->srv.net.Invoke(
+                                "send", KgrDictionary{{"pipe", remotePipe},
+                                                      {"data", pipe->Read()}});
                         }
                         if (pipe->GetStatus() == KgrPipe::Status::Closed) {
                             this->srv.net.Invoke("close", remotePipe);
@@ -285,7 +328,8 @@ namespace sloked {
             std::string service;
         };
 
-        void Connect(std::unique_ptr<KgrPipe> pipe, KgrNetInterface::Responder &rsp) {
+        void Connect(std::unique_ptr<KgrPipe> pipe,
+                     KgrNetInterface::Responder &rsp) {
             std::unique_lock lock(this->mtx);
             auto pipeId = this->nextPipeId++;
             pipe->SetMessageListener([this, pipeId] {
@@ -296,16 +340,16 @@ namespace sloked {
                 if (this->pipes.count(pipeId) != 0) {
                     auto &pipe = *this->pipes.at(pipeId);
                     while (!pipe.Empty()) {
-                        this->net.Invoke("send", KgrDictionary {
-                            { "pipe", pipeId },
-                            { "data", pipe.Read() }
-                        });
+                        this->net.Invoke("send",
+                                         KgrDictionary{{"pipe", pipeId},
+                                                       {"data", pipe.Read()}});
                     }
                     if (pipe.GetStatus() == KgrPipe::Status::Closed) {
                         try {
                             this->net.Invoke("close", pipeId);
                         } catch (const SlokedError &err) {
-                            // Ignoring errors in case when socket already closed
+                            // Ignoring errors in case when socket already
+                            // closed
                         }
                         this->frozenPipes.erase(pipeId);
                         this->pipes.erase(pipeId);
@@ -331,7 +375,8 @@ namespace sloked {
             }
             std::weak_ptr<SlokedNamedRestrictionAuthority::Account> acc;
             if (this->auth->IsLoggedIn()) {
-                acc = this->restrictions->GetRestrictionsByName(this->auth->GetAccount());
+                acc = this->restrictions->GetRestrictionsByName(
+                    this->auth->GetAccount());
             } else {
                 acc = this->restrictions->GetDefaultRestrictions();
             }
@@ -348,7 +393,8 @@ namespace sloked {
             }
             std::weak_ptr<SlokedNamedRestrictionAuthority::Account> acc;
             if (this->auth->IsLoggedIn()) {
-                acc = this->restrictions->GetRestrictionsByName(this->auth->GetAccount());
+                acc = this->restrictions->GetRestrictionsByName(
+                    this->auth->GetAccount());
             } else {
                 acc = this->restrictions->GetDefaultRestrictions();
             }
@@ -376,13 +422,17 @@ namespace sloked {
         std::unique_ptr<SlokedMasterAuthenticator> auth;
     };
 
-    KgrMasterNetServer::KgrMasterNetServer(KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket, SlokedIOPoller &poll, SlokedNamedRestrictionAuthority *restrictions, SlokedAuthenticatorFactory *authFactory)
-        : server(server), srvSocket(std::move(socket)), poll(poll), restrictions(restrictions), authFactory(authFactory), work(false) {}
+    KgrMasterNetServer::KgrMasterNetServer(
+        KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket,
+        SlokedIOPoller &poll, SlokedNamedRestrictionAuthority *restrictions,
+        SlokedAuthenticatorFactory *authFactory)
+        : server(server), srvSocket(std::move(socket)), poll(poll),
+          restrictions(restrictions), authFactory(authFactory), work(false) {}
 
     KgrMasterNetServer::~KgrMasterNetServer() {
         this->Close();
     }
-        
+
     bool KgrMasterNetServer::IsRunning() const {
         return this->work.load();
     }
@@ -396,7 +446,8 @@ namespace sloked {
         }
         this->srvSocket->Start();
         this->work = true;
-        this->awaiterHandle = this->poll.Attach(std::make_unique<Awaitable>(*this));
+        this->awaiterHandle =
+            this->poll.Attach(std::make_unique<Awaitable>(*this));
     }
 
     void KgrMasterNetServer::Close() {
@@ -408,7 +459,8 @@ namespace sloked {
 
     void KgrMasterNetServer::DetachServices(std::vector<std::string> services) {
         SlokedCounter<std::size_t>::Handle counterHandle(this->workers);
-        std::thread([this, counterHandle = std::move(counterHandle), services = std::move(services)] {
+        std::thread([this, counterHandle = std::move(counterHandle),
+                     services = std::move(services)] {
             for (const auto &sName : services) {
                 this->server.Deregister(sName);
             }
@@ -418,20 +470,26 @@ namespace sloked {
     KgrMasterNetServer::Awaitable::Awaitable(KgrMasterNetServer &self)
         : self(self) {}
 
-    std::unique_ptr<SlokedIOAwaitable> KgrMasterNetServer::Awaitable::GetAwaitable() const {
+    std::unique_ptr<SlokedIOAwaitable>
+        KgrMasterNetServer::Awaitable::GetAwaitable() const {
         return this->self.srvSocket->Awaitable();
     }
 
     void KgrMasterNetServer::Awaitable::Process(bool success) {
         if (success) {
-            auto client = this->self.srvSocket->Accept(KgrNetConfig::RequestTimeout);
+            auto client =
+                this->self.srvSocket->Accept(KgrNetConfig::RequestTimeout);
             if (client) {
-                SlokedCounter<std::size_t>::Handle counterHandle(this->self.workers);
-                auto ctx = std::make_unique<KgrMasterNetServerContext>(std::move(client), this->self.work, std::move(counterHandle), this->self.server, this->self.restrictions, this->self.authFactory);
+                SlokedCounter<std::size_t>::Handle counterHandle(
+                    this->self.workers);
+                auto ctx = std::make_unique<KgrMasterNetServerContext>(
+                    std::move(client), this->self.work,
+                    std::move(counterHandle), this->self.server,
+                    this->self.restrictions, this->self.authFactory);
                 auto &ctx_ref = *ctx;
                 auto handle = this->self.poll.Attach(std::move(ctx));
                 ctx_ref.SetHandle(std::move(handle));
             }
         }
     }
-}
+}  // namespace sloked

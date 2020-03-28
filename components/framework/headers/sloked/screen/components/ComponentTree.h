@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,17 +22,19 @@
 #ifndef SLOKED_SCREEN_COMPONENTS_COMPONENTTREE_H_
 #define SLOKED_SCREEN_COMPONENTS_COMPONENTTREE_H_
 
+#include <map>
+
 #include "sloked/namespace/Path.h"
 #include "sloked/screen/components/ComponentHandle.h"
 #include "sloked/screen/components/SplitterComponent.h"
-#include <map>
 
 namespace sloked {
 
     class SlokedComponentTree {
      public:
-        static SlokedScreenComponent &Traverse(SlokedScreenComponent &, const SlokedPath &);
+        static SlokedScreenComponent &Traverse(SlokedScreenComponent &,
+                                               const SlokedPath &);
     };
-}
+}  // namespace sloked
 
 #endif

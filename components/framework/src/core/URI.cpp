@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,11 +20,13 @@
 */
 
 #include "sloked/core/URI.h"
-#include "sloked/core/Locale.h"
-#include "sloked/core/Error.h"
-#include <sstream>
+
 #include <iomanip>
 #include <regex>
+#include <sstream>
+
+#include "sloked/core/Error.h"
+#include "sloked/core/Locale.h"
 
 using namespace std::literals::string_literals;
 
@@ -33,67 +35,76 @@ namespace sloked {
     static constexpr char DigitToHex(uint8_t digit) {
         if (digit < 10) {
             return '0' + digit;
-        } else switch (digit) {
-            case 10:
-                return 'A';
-            
-            case 11:
-                return 'B';
+        } else
+            switch (digit) {
+                case 10:
+                    return 'A';
 
-            case 12:
-                return 'C';
+                case 11:
+                    return 'B';
 
-            case 13:
-                return 'D';
+                case 12:
+                    return 'C';
 
-            case 14:
-                return 'E';
+                case 13:
+                    return 'D';
 
-            case 15:
-                return 'F';
+                case 14:
+                    return 'E';
 
-            default:
-                return '.';
-        }
+                case 15:
+                    return 'F';
+
+                default:
+                    return '.';
+            }
     }
 
     static const std::string ComponentNoEscape = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                        "abcdefghijklmnopqrstuvwxyz"
-                                        "0123456789"
-                                        "-_.!~*'()";
+                                                 "abcdefghijklmnopqrstuvwxyz"
+                                                 "0123456789"
+                                                 "-_.!~*'()";
 
     static const std::string UriNoEscape = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                            "abcdefghijklmnopqrstuvwxyz"
                                            "0123456789"
                                            ";,/?:@&=+$-_.!~*'()#";
 
-    static std::string encodeComponent(std::string_view input, std::string_view notEscaped = ComponentNoEscape) {
+    static std::string encodeComponent(
+        std::string_view input,
+        std::string_view notEscaped = ComponentNoEscape) {
         std::stringstream ss;
-        SlokedLocale::SystemEncoding().IterateCodepoints(input, [&](auto position, auto length, auto chr) {
-            auto content = input.substr(position, length);
-            if (notEscaped.find_first_of(chr) != notEscaped.npos) {
-                ss << content;
-            } else {
-                for (auto b : content) {
-                    ss << '%' << DigitToHex((b & 0xf0) >> 4) << DigitToHex(b & 0xf);
+        SlokedLocale::SystemEncoding().IterateCodepoints(
+            input, [&](auto position, auto length, auto chr) {
+                auto content = input.substr(position, length);
+                if (notEscaped.find_first_of(chr) != notEscaped.npos) {
+                    ss << content;
+                } else {
+                    for (auto b : content) {
+                        ss << '%' << DigitToHex((b & 0xf0) >> 4)
+                           << DigitToHex(b & 0xf);
+                    }
                 }
-            }
-            return true;
-        });
+                return true;
+            });
         return ss.str();
     }
 
     SlokedUri::Authority::Authority(std::string host, std::optional<Port> port)
         : host(std::move(host)), port(std::move(port)) {}
 
-    SlokedUri::Authority::Authority(std::string userinfo, std::string host, std::optional<Port> port)
-        : userinfo(std::move(userinfo)), host(std::move(host)), port(std::move(port)) {}
+    SlokedUri::Authority::Authority(std::string userinfo, std::string host,
+                                    std::optional<Port> port)
+        : userinfo(std::move(userinfo)), host(std::move(host)),
+          port(std::move(port)) {}
 
-    const std::optional<std::string> &SlokedUri::Authority::GetUserinfo() const {
+    const std::optional<std::string> &SlokedUri::Authority::GetUserinfo()
+        const {
         return this->userinfo;
     }
 
-    SlokedUri::Authority &SlokedUri::Authority::SetUserinfo(std::optional<std::string> userinfo) {
+    SlokedUri::Authority &SlokedUri::Authority::SetUserinfo(
+        std::optional<std::string> userinfo) {
         this->userinfo = std::move(userinfo);
         return *this;
     }
@@ -107,16 +118,19 @@ namespace sloked {
         return *this;
     }
 
-    const std::optional<SlokedUri::Authority::Port> &SlokedUri::Authority::GetPort() const {
+    const std::optional<SlokedUri::Authority::Port>
+        &SlokedUri::Authority::GetPort() const {
         return this->port;
     }
 
-    SlokedUri::Authority &SlokedUri::Authority::SetPort(std::optional<Port> port) {
+    SlokedUri::Authority &SlokedUri::Authority::SetPort(
+        std::optional<Port> port) {
         this->port = std::move(port);
         return *this;
     }
 
-    std::ostream &operator<<(std::ostream &os, const SlokedUri::Authority &auth) {
+    std::ostream &operator<<(std::ostream &os,
+                             const SlokedUri::Authority &auth) {
         if (auth.userinfo.has_value()) {
             os << encodeComponent(auth.userinfo.value()) << '@';
         }
@@ -126,11 +140,12 @@ namespace sloked {
         }
         return os;
     }
-    
+
     SlokedUri::Query::Query(std::map<std::string, std::string> content)
         : prms(std::move(content)) {}
 
-    SlokedUri::Query &SlokedUri::Query::Put(std::string key, std::string value) {
+    SlokedUri::Query &SlokedUri::Query::Put(std::string key,
+                                            std::string value) {
         this->prms.emplace(std::move(key), std::move(value));
         return *this;
     }
@@ -153,7 +168,8 @@ namespace sloked {
 
     std::ostream &operator<<(std::ostream &os, const SlokedUri::Query &query) {
         for (auto it = query.prms.begin(); it != query.prms.end();) {
-            os << encodeComponent(it->first) << '=' << encodeComponent(it->second);
+            os << encodeComponent(it->first) << '='
+               << encodeComponent(it->second);
             if (++it != query.prms.end()) {
                 os << '&';
             }
@@ -164,8 +180,12 @@ namespace sloked {
     SlokedUri::SlokedUri(std::string scheme, std::string path)
         : scheme(std::move(scheme)), path(std::move(path)) {}
 
-    SlokedUri::SlokedUri(std::string scheme, Authority auth, std::string path, std::optional<Query> query, std::optional<std::string> fragment)
-        : scheme(std::move(scheme)), authority(std::move(auth)), path(std::move(path)), query(std::move(query)), fragment(std::move(fragment)) {}
+    SlokedUri::SlokedUri(std::string scheme, Authority auth, std::string path,
+                         std::optional<Query> query,
+                         std::optional<std::string> fragment)
+        : scheme(std::move(scheme)), authority(std::move(auth)),
+          path(std::move(path)), query(std::move(query)),
+          fragment(std::move(fragment)) {}
 
     const std::string &SlokedUri::GetScheme() const {
         return this->scheme;
@@ -173,7 +193,7 @@ namespace sloked {
 
     SlokedUri &SlokedUri::SetScheme(std::string scheme) {
         this->scheme = std::move(scheme);
-        return*this;
+        return *this;
     }
 
     const std::optional<SlokedUri::Authority> SlokedUri::GetAuthority() const {
@@ -225,7 +245,8 @@ namespace sloked {
         } else if (uri.path.front() == '/') {
             os << "//";
         }
-        if (!uri.path.empty() && uri.path.front() != '/' && uri.authority.has_value()) {
+        if (!uri.path.empty() && uri.path.front() != '/' &&
+            uri.authority.has_value()) {
             os << '/';
         }
         os << encodeComponent(uri.path, UriNoEscape);
@@ -239,8 +260,10 @@ namespace sloked {
     }
 
     SlokedUri SlokedUri::Parse(const std::string &input) {
-        static const std::regex uriRegex(R"(^(([^:\/?#]+):)?(\/\/([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)");
-        static const std::regex authorityRegex(R"(^(([^\/?#]*)@)?(([^\/?#]*?)(:(\d+))?)$)");
+        static const std::regex uriRegex(
+            R"(^(([^:\/?#]+):)?(\/\/([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)");
+        static const std::regex authorityRegex(
+            R"(^(([^\/?#]*)@)?(([^\/?#]*?)(:(\d+))?)$)");
         static const std::regex queryRegex(R"((([^#=]+)=([^#&]+)(&|#|)))");
         std::smatch match, authMatch;
         if (std::regex_match(input, match, uriRegex)) {
@@ -268,7 +291,9 @@ namespace sloked {
             if (!match.str(6).empty()) {
                 Query query;
                 auto rawQuery = match.str(7);
-                for (auto i = std::sregex_iterator(rawQuery.begin(), rawQuery.end(), queryRegex); i != std::sregex_iterator(); ++i) {
+                for (auto i = std::sregex_iterator(rawQuery.begin(),
+                                                   rawQuery.end(), queryRegex);
+                     i != std::sregex_iterator(); ++i) {
                     std::smatch queryMatch = *i;
                     query.Put(queryMatch.str(2), queryMatch.str(3));
                 }
@@ -290,4 +315,4 @@ namespace sloked {
     std::string SlokedUri::encodeURIComponent(std::string_view value) {
         return encodeComponent(value, ComponentNoEscape);
     }
-}
+}  // namespace sloked

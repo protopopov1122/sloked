@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,21 +20,25 @@
 */
 
 #include "sloked/core/DynamicBitset.h"
-#include "sloked/core/Error.h"
+
 #include <limits>
 #include <optional>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
     template <typename T = uint64_t>
-    static constexpr std::pair<std::size_t, std::size_t> CalcPosition(std::size_t idx) {
+    static constexpr std::pair<std::size_t, std::size_t> CalcPosition(
+        std::size_t idx) {
         const std::size_t offset = idx % (sizeof(T) * CHAR_BIT);
         const std::size_t position = idx / (sizeof(T) * CHAR_BIT);
         return {position, offset};
     }
 
     template <typename T = uint64_t>
-    static constexpr std::size_t CalcBitOffset(std::size_t position, std::size_t offset) {
+    static constexpr std::size_t CalcBitOffset(std::size_t position,
+                                               std::size_t offset) {
         return position * (sizeof(T) * CHAR_BIT) + offset;
     }
 
@@ -63,16 +67,16 @@ namespace sloked {
         return {};
     }
 
-    SlokedDynamicBitset::SlokedDynamicBitset()
-        : bits{} {}
-    
+    SlokedDynamicBitset::SlokedDynamicBitset() : bits{} {}
+
     std::size_t SlokedDynamicBitset::Count() const {
         return this->bits.size() * MinWidth;
     }
 
     bool SlokedDynamicBitset::Get(std::size_t idx) const {
         if (idx >= this->Count()) {
-            throw SlokedError("DynamicBitset: Out of range " + std::to_string(idx));
+            throw SlokedError("DynamicBitset: Out of range " +
+                              std::to_string(idx));
         } else {
             auto [position, offset] = CalcPosition<Integer>(idx);
             auto integer = this->bits.at(position);
@@ -82,7 +86,8 @@ namespace sloked {
 
     void SlokedDynamicBitset::Set(std::size_t idx, bool value) {
         if (idx >= this->Count()) {
-            this->bits.insert(this->bits.end(), (idx - this->Count()) / CHAR_BIT + 1, 0);
+            this->bits.insert(this->bits.end(),
+                              (idx - this->Count()) / CHAR_BIT + 1, 0);
         }
         auto [position, offset] = CalcPosition<Integer>(idx);
         auto integer = this->bits.at(position);
@@ -94,7 +99,8 @@ namespace sloked {
     }
 
     std::size_t SlokedDynamicBitset::Allocate() {
-        for (std::size_t position = 0; position < this->bits.size(); position++) {
+        for (std::size_t position = 0; position < this->bits.size();
+             position++) {
             auto integer = this->bits.at(position);
             auto offset = FindFree(integer);
             if (offset.has_value()) {
@@ -105,4 +111,4 @@ namespace sloked {
         this->bits.push_back(0b1);
         return (this->bits.size() - 1) * MinWidth;
     }
-}
+}  // namespace sloked

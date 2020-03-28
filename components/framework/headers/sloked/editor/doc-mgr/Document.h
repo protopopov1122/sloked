@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,14 +23,14 @@
 #define SLOKED_EDITOR_DOCMGR_DOCUMENT_H_
 
 #include "sloked/core/Encoding.h"
-#include "sloked/core/NewLine.h"
-#include "sloked/text/TextDocument.h"
-#include "sloked/text/TextChunk.h"
-#include "sloked/text/cursor/TransactionStreamMultiplexer.h"
-#include "sloked/namespace/Object.h"
-#include "sloked/editor/doc-mgr/DocumentUpstream.h"
-#include "sloked/text/fragment/TaggedText.h"
 #include "sloked/core/Event.h"
+#include "sloked/core/NewLine.h"
+#include "sloked/editor/doc-mgr/DocumentUpstream.h"
+#include "sloked/namespace/Object.h"
+#include "sloked/text/TextChunk.h"
+#include "sloked/text/TextDocument.h"
+#include "sloked/text/cursor/TransactionStreamMultiplexer.h"
+#include "sloked/text/fragment/TaggedText.h"
 
 namespace sloked {
 
@@ -38,7 +38,8 @@ namespace sloked {
      public:
         using TagType = int;
         SlokedEditorDocument(const Encoding &, std::unique_ptr<NewLine>);
-        SlokedEditorDocument(SlokedNamespace &, const SlokedPath &, const Encoding &, std::unique_ptr<NewLine>);
+        SlokedEditorDocument(SlokedNamespace &, const SlokedPath &,
+                             const Encoding &, std::unique_ptr<NewLine>);
         std::optional<SlokedPath> GetUpstream() const final;
         std::optional<std::string> GetUpstreamURI() const final;
         bool HasUpstream() const final;
@@ -60,6 +61,6 @@ namespace sloked {
         TransactionStreamMultiplexer multiplexer;
         SlokedTextProxyTagger<TagType> tagger;
     };
-}
+}  // namespace sloked
 
 #endif

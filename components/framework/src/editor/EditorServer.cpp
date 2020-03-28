@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -24,7 +24,9 @@
 namespace sloked {
 
     SlokedLocalEditorServer::SlokedLocalEditorServer()
-        : unrestrictedServer(rawServer), server(unrestrictedServer, std::make_unique<SlokedNamedBlacklist>(), std::make_unique<SlokedNamedBlacklist>()) {}
+        : unrestrictedServer(rawServer),
+          server(unrestrictedServer, std::make_unique<SlokedNamedBlacklist>(),
+                 std::make_unique<SlokedNamedBlacklist>()) {}
 
     KgrNamedServer &SlokedLocalEditorServer::GetServer() {
         return this->server;
@@ -35,11 +37,16 @@ namespace sloked {
     }
 
     void SlokedLocalEditorServer::Start() {}
-    
+
     void SlokedLocalEditorServer::Close() {}
 
-    SlokedRemoteEditorServer::SlokedRemoteEditorServer(std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &io, SlokedAuthenticatorFactory *authFactory)
-        : unrestrictedServer(std::move(socket), io, authFactory), server(unrestrictedServer, std::make_unique<SlokedNamedBlacklist>(), std::make_unique<SlokedNamedBlacklist>()), deferredAuth{} {}
+    SlokedRemoteEditorServer::SlokedRemoteEditorServer(
+        std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &io,
+        SlokedAuthenticatorFactory *authFactory)
+        : unrestrictedServer(std::move(socket), io, authFactory),
+          server(unrestrictedServer, std::make_unique<SlokedNamedBlacklist>(),
+                 std::make_unique<SlokedNamedBlacklist>()),
+          deferredAuth{} {}
 
     SlokedRemoteEditorServer::~SlokedRemoteEditorServer() {
         this->Close();
@@ -72,4 +79,4 @@ namespace sloked {
             this->deferredAuth = user;
         }
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,21 +20,24 @@
 */
 
 #include "sloked/script/lua/Lua.h"
-#include "sloked/script/lua/Logger.h"
+
+#include <iostream>
+
+#include "sloked/core/Error.h"
 #include "sloked/script/lua/Common.h"
+#include "sloked/script/lua/Editor.h"
+#include "sloked/script/lua/Logger.h"
 #include "sloked/script/lua/Pipe.h"
 #include "sloked/script/lua/Sched.h"
-#include "sloked/script/lua/Editor.h"
-#include "sloked/core/Error.h"
-#include <iostream>
 
 namespace sloked {
 
-    SlokedLuaEngine::SlokedLuaEngine(SlokedEditorInstanceContainer &apps, SlokedSchedulerThread &sched, const std::string &path)
-        : state{nullptr}, work{false}, apps(apps), sched(sched), path{path}, logger(SlokedLoggerTag) {
-        this->eventLoop.Notify([this] {
-            this->activity.Notify();
-        });
+    SlokedLuaEngine::SlokedLuaEngine(SlokedEditorInstanceContainer &apps,
+                                     SlokedSchedulerThread &sched,
+                                     const std::string &path)
+        : state{nullptr}, work{false}, apps(apps), sched(sched), path{path},
+          logger(SlokedLoggerTag) {
+        this->eventLoop.Notify([this] { this->activity.Notify(); });
     }
 
     SlokedLuaEngine::~SlokedLuaEngine() {
@@ -43,9 +46,8 @@ namespace sloked {
 
     void SlokedLuaEngine::Start(const std::string &script) {
         if (!this->work.exchange(true)) {
-            this->workerThread = std::thread([this, script] {
-                this->Run(script);
-            });
+            this->workerThread =
+                std::thread([this, script] { this->Run(script); });
         }
     }
 
@@ -61,7 +63,8 @@ namespace sloked {
         this->InitializeGlobals();
         this->InitializePath();
         if (luaL_dofile(this->state, script.c_str())) {
-            logger.To(SlokedLogLevel::Error) << luaL_tolstring(state, -1, nullptr);
+            logger.To(SlokedLogLevel::Error)
+                << luaL_tolstring(state, -1, nullptr);
         } else {
             try {
                 while (this->work.load()) {
@@ -99,8 +102,11 @@ namespace sloked {
         }
         try {
             std::string key(lua_tostring(state, 2));
-            SlokedEditorInstanceContainer &apps = *reinterpret_cast<SlokedEditorInstanceContainer *>(lua_touserdata(state, lua_upvalueindex(1)));
-            SlokedEventLoop &eventLoop = *reinterpret_cast<SlokedEventLoop *>(lua_touserdata(state, lua_upvalueindex(2)));
+            SlokedEditorInstanceContainer &apps =
+                *reinterpret_cast<SlokedEditorInstanceContainer *>(
+                    lua_touserdata(state, lua_upvalueindex(1)));
+            SlokedEventLoop &eventLoop = *reinterpret_cast<SlokedEventLoop *>(
+                lua_touserdata(state, lua_upvalueindex(2)));
             auto &app = apps.Get(key);
             SlokedEditorToLua(eventLoop, state, app);
             lua_pushvalue(state, 2);
@@ -135,4 +141,4 @@ namespace sloked {
         lua_setfield(this->state, -2, "logger");
         lua_setglobal(this->state, "sloked");
     }
-}
+}  // namespace sloked

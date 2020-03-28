@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -26,9 +26,11 @@ namespace sloked {
     SlokedSDLTexture::SlokedSDLTexture(SDL_Texture *texture)
         : texture(texture) {}
 
-    SlokedSDLTexture::SlokedSDLTexture(SDL_Renderer *renderer, const SlokedSDLSurface &surface)
-        : texture(SDL_CreateTextureFromSurface(renderer, surface.GetSurface())) {}
-        
+    SlokedSDLTexture::SlokedSDLTexture(SDL_Renderer *renderer,
+                                       const SlokedSDLSurface &surface)
+        : texture(
+              SDL_CreateTextureFromSurface(renderer, surface.GetSurface())) {}
+
     SlokedSDLTexture::SlokedSDLTexture(SlokedSDLTexture &&texture)
         : texture(texture.texture) {
         texture.texture = nullptr;
@@ -52,4 +54,4 @@ namespace sloked {
     SDL_Texture *SlokedSDLTexture::GetTexture() const {
         return this->texture;
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,49 +20,57 @@
 */
 
 #include "sloked/services/ScreenInput.h"
-#include "sloked/screen/components/ComponentTree.h"
+
+#include <set>
+
 #include "sloked/core/Locale.h"
 #include "sloked/sched/EventLoop.h"
-#include <set>
+#include "sloked/screen/components/ComponentTree.h"
 
 namespace sloked {
 
-    static KgrValue EventToKgr(const Encoding &encoding, const SlokedKeyboardInput &evt) {
+    static KgrValue EventToKgr(const Encoding &encoding,
+                               const SlokedKeyboardInput &evt) {
         EncodingConverter conv(encoding, SlokedLocale::SystemEncoding());
         if (evt.value.index() == 0) {
-            return KgrDictionary {
-                { "alt", evt.alt },
-                { "text", conv.Convert(std::get<0>(evt.value)) }
-            };
+            return KgrDictionary{
+                {"alt", evt.alt},
+                {"text", conv.Convert(std::get<0>(evt.value))}};
         } else {
-            return KgrDictionary {
-                { "alt", evt.alt },
-                { "key", static_cast<int64_t>(std::get<1>(evt.value)) }
-            };
+            return KgrDictionary{
+                {"alt", evt.alt},
+                {"key", static_cast<int64_t>(std::get<1>(evt.value))}};
         }
     }
 
-    static SlokedKeyboardInput KgrToEvent(const Encoding &encoding, const KgrValue &msg) {
+    static SlokedKeyboardInput KgrToEvent(const Encoding &encoding,
+                                          const KgrValue &msg) {
         EncodingConverter conv(SlokedLocale::SystemEncoding(), encoding);
         SlokedKeyboardInput event;
         event.alt = msg.AsDictionary()["alt"].AsBoolean();
         if (msg.AsDictionary().Has("text")) {
             event.value = conv.Convert(msg.AsDictionary()["text"].AsString());
         } else if (msg.AsDictionary().Has("key")) {
-            event.value = static_cast<SlokedControlKey>(msg.AsDictionary()["key"].AsInt());
+            event.value = static_cast<SlokedControlKey>(
+                msg.AsDictionary()["key"].AsInt());
         }
         return event;
     }
 
     class SlokedScreenInputNotifierContext : public KgrLocalContext {
      public:
-        SlokedScreenInputNotifierContext(std::unique_ptr<KgrPipe> pipe, SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding)
-            : KgrLocalContext(std::move(pipe)), root(root), encoding(encoding) {}
+        SlokedScreenInputNotifierContext(
+            std::unique_ptr<KgrPipe> pipe,
+            SlokedMonitor<SlokedScreenComponent &> &root,
+            const Encoding &encoding)
+            : KgrLocalContext(std::move(pipe)), root(root), encoding(encoding) {
+        }
 
         virtual ~SlokedScreenInputNotifierContext() {
             if (this->listener.has_value()) {
                 this->root.Lock([&](auto &component) {
-                    SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
+                    SlokedComponentTree::Traverse(component, this->path.value())
+                        .DetachInputHandle(this->listener.value());
                 });
             }
         }
@@ -73,7 +81,7 @@ namespace sloked {
                 state = State::Pending;
             }
             return state;
-        }        
+        }
 
         void Run() final {
             while (!this->pipe->Empty()) {
@@ -87,8 +95,8 @@ namespace sloked {
             if (this->eventLoop.HasPending()) {
                 this->eventLoop.Run();
             }
-        }    
-    
+        }
+
      private:
         void RootLock(std::function<void(SlokedScreenComponent &)> callback) {
             if (!this->root.TryLock(callback)) {
@@ -97,7 +105,7 @@ namespace sloked {
                 });
             }
         }
-        
+
         void Connect(const KgrValue &params) {
             SlokedPath path{params.AsDictionary()["path"].AsString()};
             this->forwardInput = false;
@@ -105,31 +113,42 @@ namespace sloked {
             this->subscribeOnText = false;
             this->subscribes.clear();
             if (params.AsDictionary().Has("forward")) {
-                this->forwardInput = params.AsDictionary()["forward"].AsBoolean();
+                this->forwardInput =
+                    params.AsDictionary()["forward"].AsBoolean();
             }
             if (params.AsDictionary().Has("all")) {
                 this->subscribeAll = params.AsDictionary()["all"].AsBoolean();
             }
             RootLock([this, path = std::move(path), params](auto &component) {
                 if (this->listener.has_value()) {
-                    SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
+                    SlokedComponentTree::Traverse(component, this->path.value())
+                        .DetachInputHandle(this->listener.value());
                 }
-                this->listener = SlokedComponentTree::Traverse(component, path).AsHandle().AttachInputHandler([this](const auto &evt) {
-                    if (this->subscribeAll ||
-                        (evt.value.index() == 0 && this->subscribeOnText) ||
-                        (evt.value.index() == 1 && this->subscribes.find(std::make_pair(std::get<1>(evt.value), evt.alt)) != this->subscribes.end())) {
-                        this->SendInput(evt);
-                        return !this->forwardInput;
-                    } else {
-                        return false;
-                    }
-                });
+                this->listener =
+                    SlokedComponentTree::Traverse(component, path)
+                        .AsHandle()
+                        .AttachInputHandler([this](const auto &evt) {
+                            if (this->subscribeAll ||
+                                (evt.value.index() == 0 &&
+                                 this->subscribeOnText) ||
+                                (evt.value.index() == 1 &&
+                                 this->subscribes.find(std::make_pair(
+                                     std::get<1>(evt.value), evt.alt)) !=
+                                     this->subscribes.end())) {
+                                this->SendInput(evt);
+                                return !this->forwardInput;
+                            } else {
+                                return false;
+                            }
+                        });
                 this->path = path;
                 if (!this->subscribeAll) {
-                    this->subscribeOnText = params.AsDictionary()["text"].AsBoolean();
+                    this->subscribeOnText =
+                        params.AsDictionary()["text"].AsBoolean();
                     const auto &keys = params.AsDictionary()["keys"].AsArray();
                     for (const auto &key : keys) {
-                        auto code = static_cast<SlokedControlKey>(key.AsDictionary()["code"].AsInt());
+                        auto code = static_cast<SlokedControlKey>(
+                            key.AsDictionary()["code"].AsInt());
                         auto alt = key.AsDictionary()["alt"].AsBoolean();
                         this->subscribes.emplace(std::make_pair(code, alt));
                     }
@@ -145,7 +164,8 @@ namespace sloked {
             this->subscribes.clear();
             if (this->listener.has_value()) {
                 RootLock([this](auto &component) {
-                    SlokedComponentTree::Traverse(component, this->path.value()).DetachInputHandle(this->listener.value());
+                    SlokedComponentTree::Traverse(component, this->path.value())
+                        .DetachInputHandle(this->listener.value());
                     this->listener.reset();
                     this->path.reset();
                 });
@@ -169,32 +189,39 @@ namespace sloked {
         SlokedDefaultEventLoop eventLoop;
     };
 
-    SlokedScreenInputNotificationService::SlokedScreenInputNotificationService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
+    SlokedScreenInputNotificationService::SlokedScreenInputNotificationService(
+        SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding,
+        KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), contextManager(contextManager) {}
 
-    void SlokedScreenInputNotificationService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedScreenInputNotifierContext>(std::move(pipe), this->root, this->encoding);
+    void SlokedScreenInputNotificationService::Attach(
+        std::unique_ptr<KgrPipe> pipe) {
+        auto ctx = std::make_unique<SlokedScreenInputNotifierContext>(
+            std::move(pipe), this->root, this->encoding);
         this->contextManager.Attach(std::move(ctx));
     }
 
-    SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(std::unique_ptr<KgrPipe> pipe, const Encoding &encoding, std::function<bool()> holdsLock)
-        : pipe(std::move(pipe)), encoding(encoding), holdsLock(std::move(holdsLock)) {}
+    SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(
+        std::unique_ptr<KgrPipe> pipe, const Encoding &encoding,
+        std::function<bool()> holdsLock)
+        : pipe(std::move(pipe)), encoding(encoding),
+          holdsLock(std::move(holdsLock)) {}
 
-    void SlokedScreenInputNotificationClient::Listen(const std::string &path, bool text, const std::vector<std::pair<SlokedControlKey, bool>> &keys, Callback callback, bool forwardInput) {
+    void SlokedScreenInputNotificationClient::Listen(
+        const std::string &path, bool text,
+        const std::vector<std::pair<SlokedControlKey, bool>> &keys,
+        Callback callback, bool forwardInput) {
         if (this->holdsLock && this->holdsLock()) {
-            throw SlokedError("ScreenInputNotificationService: Deadlock prevented");
+            throw SlokedError(
+                "ScreenInputNotificationService: Deadlock prevented");
         }
-        KgrDictionary params {
-            { "path", path },
-            { "forward", forwardInput },
-            { "text", text }
-        };
+        KgrDictionary params{
+            {"path", path}, {"forward", forwardInput}, {"text", text}};
         KgrArray array;
         for (const auto &key : keys) {
-            array.Append(KgrDictionary {
-                { "code", static_cast<int64_t>(key.first) },
-                { "alt", key.second }
-            });
+            array.Append(
+                KgrDictionary{{"code", static_cast<int64_t>(key.first)},
+                              {"alt", key.second}});
         }
         params.Put("keys", std::move(array));
         this->pipe->Write(std::move(params));
@@ -209,15 +236,15 @@ namespace sloked {
         });
     }
 
-    void SlokedScreenInputNotificationClient::Listen(const std::string &path, Callback callback, bool forwardInput) {
+    void SlokedScreenInputNotificationClient::Listen(const std::string &path,
+                                                     Callback callback,
+                                                     bool forwardInput) {
         if (this->holdsLock && this->holdsLock()) {
-            throw SlokedError("ScreenInputNotificationService: Deadlock prevented");
+            throw SlokedError(
+                "ScreenInputNotificationService: Deadlock prevented");
         }
-        KgrDictionary params {
-            { "path", path },
-            { "forward", forwardInput },
-            { "all", true }
-        };
+        KgrDictionary params{
+            {"path", path}, {"forward", forwardInput}, {"all", true}};
         this->pipe->Write(std::move(params));
         this->pipe->ReadWait();
         this->pipe->SetMessageListener([this, callback = std::move(callback)] {
@@ -237,22 +264,29 @@ namespace sloked {
 
     class SlokedScreenInputForwardingContext : public SlokedServiceContext {
      public:
-        SlokedScreenInputForwardingContext(std::unique_ptr<KgrPipe> pipe, SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding)
-            : SlokedServiceContext(std::move(pipe)), root(root), encoding(encoding) {
+        SlokedScreenInputForwardingContext(
+            std::unique_ptr<KgrPipe> pipe,
+            SlokedMonitor<SlokedScreenComponent &> &root,
+            const Encoding &encoding)
+            : SlokedServiceContext(std::move(pipe)), root(root),
+              encoding(encoding) {
             this->BindMethod("send", &SlokedScreenInputForwardingContext::Send);
         }
 
      private:
-        void Send(const std::string &method, const KgrValue &params, Response &rsp) {
+        void Send(const std::string &method, const KgrValue &params,
+                  Response &rsp) {
             SlokedPath path(params.AsDictionary()["path"].AsString());
-            auto event = KgrToEvent(this->encoding, params.AsDictionary()["event"]);
+            auto event =
+                KgrToEvent(this->encoding, params.AsDictionary()["event"]);
             this->Process(path, event);
         }
 
         void Process(const SlokedPath &path, const SlokedKeyboardInput &event) {
             if (!this->root.TryLock([&](auto &screen) {
-                SlokedComponentTree::Traverse(screen, path).ProcessInput(event);
-            })) {
+                    SlokedComponentTree::Traverse(screen, path)
+                        .ProcessInput(event);
+                })) {
                 this->Defer([this, path, event] {
                     this->Process(path, event);
                     return false;
@@ -264,24 +298,33 @@ namespace sloked {
         const Encoding &encoding;
     };
 
-    SlokedScreenInputForwardingService::SlokedScreenInputForwardingService(SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, KgrContextManager<KgrLocalContext> &contextManager)
+    SlokedScreenInputForwardingService::SlokedScreenInputForwardingService(
+        SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding,
+        KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), contextManager(contextManager) {}
 
-    void SlokedScreenInputForwardingService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedScreenInputForwardingContext>(std::move(pipe), this->root, this->encoding);
+    void SlokedScreenInputForwardingService::Attach(
+        std::unique_ptr<KgrPipe> pipe) {
+        auto ctx = std::make_unique<SlokedScreenInputForwardingContext>(
+            std::move(pipe), this->root, this->encoding);
         this->contextManager.Attach(std::move(ctx));
     }
 
-    SlokedScreenInputForwardingClient::SlokedScreenInputForwardingClient(std::unique_ptr<KgrPipe> pipe, const Encoding &encoding, std::function<bool()> holdsLock)
-        : client(std::move(pipe)), encoding(encoding), holdsLock(std::move(holdsLock)) {}
+    SlokedScreenInputForwardingClient::SlokedScreenInputForwardingClient(
+        std::unique_ptr<KgrPipe> pipe, const Encoding &encoding,
+        std::function<bool()> holdsLock)
+        : client(std::move(pipe)), encoding(encoding),
+          holdsLock(std::move(holdsLock)) {}
 
-    void SlokedScreenInputForwardingClient::Send(const std::string &path, const SlokedKeyboardInput &event) {
+    void SlokedScreenInputForwardingClient::Send(
+        const std::string &path, const SlokedKeyboardInput &event) {
         if (this->holdsLock && this->holdsLock()) {
-            throw SlokedError("ScreenInputNotificationService: Deadlock prevented");
+            throw SlokedError(
+                "ScreenInputNotificationService: Deadlock prevented");
         }
-        this->client.Invoke("send", KgrDictionary {
-            { "path", path },
-            { "event", EventToKgr(this->encoding, event) }
-        });
+        this->client.Invoke(
+            "send",
+            KgrDictionary{{"path", path},
+                          {"event", EventToKgr(this->encoding, event)}});
     }
-}
+}  // namespace sloked

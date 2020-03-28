@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -32,9 +32,9 @@ namespace sloked {
         virtual const std::string &GetTitle() const = 0;
         virtual void SetTitle(const std::string &) = 0;
         virtual SlokedGraphicsDimensions GetSize() const = 0;
-        virtual bool Resize(SlokedGraphicsDimensions)  = 0;
+        virtual bool Resize(SlokedGraphicsDimensions) = 0;
         virtual void Close() = 0;
     };
-}
+}  // namespace sloked
 
 #endif

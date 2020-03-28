@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -29,8 +29,10 @@ namespace sloked {
 
     class TextView {
      public:
-        static std::unique_ptr<TextBlock> Open(std::string_view, const NewLine &, const TextBlockFactory &);
+        static std::unique_ptr<TextBlock> Open(std::string_view,
+                                               const NewLine &,
+                                               const TextBlockFactory &);
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -24,15 +24,16 @@
 
 #include "sloked/core/CharPreset.h"
 #include "sloked/core/Closeable.h"
-#include "sloked/kgr/Service.h"
 #include "sloked/kgr/ContextManager.h"
+#include "sloked/kgr/Service.h"
 #include "sloked/kgr/local/Context.h"
 
 namespace sloked {
 
     class SlokedCharPresetService : public KgrService {
      public:
-        SlokedCharPresetService(const SlokedCharPreset &, KgrContextManager<KgrLocalContext> &);
+        SlokedCharPresetService(const SlokedCharPreset &,
+                                KgrContextManager<KgrLocalContext> &);
         void Attach(std::unique_ptr<KgrPipe>) final;
 
      private:
@@ -49,6 +50,6 @@ namespace sloked {
         std::unique_ptr<KgrPipe> pipe;
         SlokedCharPreset &charPreset;
     };
-}
+}  // namespace sloked
 
 #endif

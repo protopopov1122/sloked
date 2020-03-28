@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -28,12 +28,21 @@ namespace sloked {
 
     class SlokedTransactionFactory {
      public:
-        static SlokedCursorTransaction Insert(const TextPosition &, std::string_view);
-        static SlokedCursorTransaction Newline(const TextPosition &, std::string_view);
-        static SlokedCursorTransaction DeleteBackward(const TextBlock &, const Encoding &, const TextPosition &);
-        static SlokedCursorTransaction DeleteForward(const TextBlock &, const Encoding &, const TextPosition &);
-        static SlokedCursorTransaction ClearRegion(const TextBlock &, const Encoding &, const TextPosition &, const TextPosition &);
+        static SlokedCursorTransaction Insert(const TextPosition &,
+                                              std::string_view);
+        static SlokedCursorTransaction Newline(const TextPosition &,
+                                               std::string_view);
+        static SlokedCursorTransaction DeleteBackward(const TextBlock &,
+                                                      const Encoding &,
+                                                      const TextPosition &);
+        static SlokedCursorTransaction DeleteForward(const TextBlock &,
+                                                     const Encoding &,
+                                                     const TextPosition &);
+        static SlokedCursorTransaction ClearRegion(const TextBlock &,
+                                                   const Encoding &,
+                                                   const TextPosition &,
+                                                   const TextPosition &);
     };
-}
+}  // namespace sloked
 
 #endif

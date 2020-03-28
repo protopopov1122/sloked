@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,11 +22,12 @@
 #ifndef SLOKED_CORE_MONITOR_H_
 #define SLOKED_CORE_MONITOR_H_
 
-#include "sloked/core/Error.h"
-#include <mutex>
-#include <functional>
-#include <thread>
 #include <atomic>
+#include <functional>
+#include <mutex>
+#include <thread>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
@@ -34,8 +35,7 @@ namespace sloked {
     class SlokedMonitor {
      public:
         SlokedMonitor() = delete;
-        SlokedMonitor(T data)
-            : data(std::forward<T>(data)) {}
+        SlokedMonitor(T data) : data(std::forward<T>(data)) {}
         SlokedMonitor(const SlokedMonitor<T> &) = delete;
         SlokedMonitor(SlokedMonitor<T> &&) = default;
 
@@ -109,6 +109,6 @@ namespace sloked {
         mutable std::mutex mtx;
         mutable std::atomic<std::thread::id> holder;
     };
-}
+}  // namespace sloked
 
 #endif

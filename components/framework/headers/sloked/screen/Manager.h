@@ -1,13 +1,14 @@
 #ifndef SLOKED_SCREEN_MANAGER_H_
 #define SLOKED_SCREEN_MANAGER_H_
 
-#include "sloked/Base.h"
-#include <chrono>
 #include <atomic>
-#include <thread>
+#include <chrono>
+#include <condition_variable>
 #include <list>
 #include <mutex>
-#include <condition_variable>
+#include <thread>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -37,6 +38,6 @@ namespace sloked {
         std::condition_variable cv;
         std::list<std::reference_wrapper<Renderable>> renderables;
     };
-}
+}  // namespace sloked
 
 #endif

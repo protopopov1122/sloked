@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,15 +20,19 @@
 */
 
 #include "sloked/screen/terminal/components/ComponentHandle.h"
+
+#include "sloked/core/Error.h"
+#include "sloked/screen/terminal/components/MultiplexerComponent.h"
 #include "sloked/screen/terminal/components/SplitterComponent.h"
 #include "sloked/screen/terminal/components/TabberComponent.h"
-#include "sloked/screen/terminal/components/MultiplexerComponent.h"
-#include "sloked/core/Error.h"
 
 namespace sloked {
 
-    TerminalComponentHandle::TerminalComponentHandle(SlokedTerminal &term, const Encoding &encoding, const SlokedCharPreset &charPreset)
-        : SlokedComponentHandle(Type::Handle), terminal(term), encoding(encoding), charPreset(charPreset), component(nullptr) {}
+    TerminalComponentHandle::TerminalComponentHandle(
+        SlokedTerminal &term, const Encoding &encoding,
+        const SlokedCharPreset &charPreset)
+        : SlokedComponentHandle(Type::Handle), terminal(term),
+          encoding(encoding), charPreset(charPreset), component(nullptr) {}
 
     bool TerminalComponentHandle::HasComponent() const {
         return this->component != nullptr;
@@ -42,8 +46,10 @@ namespace sloked {
         }
     }
 
-    SlokedTextPaneComponent &TerminalComponentHandle::NewTextPane(std::unique_ptr<SlokedTextPaneWidget> widget) {
-        auto component = std::make_unique<TerminalTextPaneComponent>(this->terminal, std::move(widget));
+    SlokedTextPaneComponent &TerminalComponentHandle::NewTextPane(
+        std::unique_ptr<SlokedTextPaneWidget> widget) {
+        auto component = std::make_unique<TerminalTextPaneComponent>(
+            this->terminal, std::move(widget));
         TerminalTextPaneComponent &ref = *component;
         this->component = std::move(component);
         this->component->OnUpdate(this->updateListener);
@@ -53,8 +59,10 @@ namespace sloked {
         return ref;
     }
 
-    SlokedSplitterComponent &TerminalComponentHandle::NewSplitter(Splitter::Direction dir) {
-        auto component = std::make_unique<TerminalSplitterComponent>(this->terminal, dir, this->encoding, this->charPreset);
+    SlokedSplitterComponent &TerminalComponentHandle::NewSplitter(
+        Splitter::Direction dir) {
+        auto component = std::make_unique<TerminalSplitterComponent>(
+            this->terminal, dir, this->encoding, this->charPreset);
         TerminalSplitterComponent &ref = *component;
         this->component = std::move(component);
         this->component->OnUpdate(this->updateListener);
@@ -65,7 +73,8 @@ namespace sloked {
     }
 
     SlokedTabberComponent &TerminalComponentHandle::NewTabber() {
-        auto component = std::make_unique<TerminalTabberComponent>(this->terminal, this->encoding, this->charPreset);
+        auto component = std::make_unique<TerminalTabberComponent>(
+            this->terminal, this->encoding, this->charPreset);
         TerminalTabberComponent &ref = *component;
         this->component = std::move(component);
         this->component->OnUpdate(this->updateListener);
@@ -76,7 +85,8 @@ namespace sloked {
     }
 
     SlokedMultiplexerComponent &TerminalComponentHandle::NewMultiplexer() {
-        auto component = std::make_unique<TerminalMultiplexerComponent>(this->terminal, this->encoding, this->charPreset);
+        auto component = std::make_unique<TerminalMultiplexerComponent>(
+            this->terminal, this->encoding, this->charPreset);
         TerminalMultiplexerComponent &ref = *component;
         this->component = std::move(component);
         this->component->OnUpdate(this->updateListener);
@@ -104,7 +114,7 @@ namespace sloked {
     }
 
     TextPosition TerminalComponentHandle::GetDimensions() {
-        return { this->terminal.GetHeight(), this->terminal.GetWidth() };
+        return {this->terminal.GetHeight(), this->terminal.GetWidth()};
     }
 
     void TerminalComponentHandle::OnUpdate(std::function<void()> listener) {
@@ -114,9 +124,10 @@ namespace sloked {
         }
     }
 
-    void TerminalComponentHandle::ProcessComponentInput(const SlokedKeyboardInput &input) {
+    void TerminalComponentHandle::ProcessComponentInput(
+        const SlokedKeyboardInput &input) {
         if (this->component) {
             this->component->ProcessInput(input);
         }
     }
-}
+}  // namespace sloked

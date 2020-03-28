@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,12 +22,13 @@
 #include "sloked/core/Failure.h"
 
 #if __has_include(<execinfo.h>)
-#include <exception>
+#include <execinfo.h>
+#include <unistd.h>
+
+#include <array>
 #include <csignal>
 #include <cstdio>
-#include <array>
-#include <unistd.h>
-#include <execinfo.h>
+#include <exception>
 
 namespace sloked {
     void PrintStack() {
@@ -45,9 +46,7 @@ namespace sloked {
                 std::rethrow_exception(std::current_exception());
             } catch (const std::exception &ex) {
                 fprintf(stdout, "\'%s\'. ", ex.what());
-            } catch (...) {
-                fprintf(stdout, "unknown exception. ");
-            }
+            } catch (...) { fprintf(stdout, "unknown exception. "); }
         } else {
             fprintf(stdout, "without throwing exception. ");
         }
@@ -86,7 +85,7 @@ namespace sloked {
         std::signal(SIGPIPE, SIG_IGN);
 #endif
     }
-}
+}  // namespace sloked
 #else
 namespace sloked {
 
@@ -95,5 +94,5 @@ namespace sloked {
         std::signal(SIGPIPE, SIG_IGN);
 #endif
     }
-}
+}  // namespace sloked
 #endif

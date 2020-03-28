@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,12 +20,13 @@
 */
 
 #include "sloked/screen/Component.h"
+
+#include "sloked/core/Error.h"
 #include "sloked/screen/components/ComponentHandle.h"
 #include "sloked/screen/components/MultiplexerComponent.h"
 #include "sloked/screen/components/SplitterComponent.h"
 #include "sloked/screen/components/TabberComponent.h"
 #include "sloked/screen/components/TextPane.h"
-#include "sloked/core/Error.h"
 
 namespace sloked {
 
@@ -75,7 +76,7 @@ namespace sloked {
             throw SlokedError("Component: Not a text pane");
         }
     }
-    
+
     void SlokedScreenComponent::ProcessInput(const SlokedKeyboardInput &input) {
         bool res = false;
         for (const auto &kv : this->inputHandler) {
@@ -86,15 +87,17 @@ namespace sloked {
         }
     }
 
-    SlokedComponentListener SlokedScreenComponent::AttachInputHandler(InputHandler handler) {
+    SlokedComponentListener SlokedScreenComponent::AttachInputHandler(
+        InputHandler handler) {
         auto id = this->nextInputId++;
         this->inputHandler[id] = handler;
         return SlokedComponentListener{*this, id};
     }
 
-    void SlokedScreenComponent::DetachInputHandle(const SlokedComponentListener &listener) {
+    void SlokedScreenComponent::DetachInputHandle(
+        const SlokedComponentListener &listener) {
         if (this == listener.component) {
             this->inputHandler.erase(listener.id);
         }
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,16 +20,20 @@
 */
 
 #include "sloked/text/cursor/TransactionCursor.h"
-#include "sloked/text/cursor/EditingPrimitives.h"
-#include "sloked/text/cursor/TransactionFactory.h"
+
 #include <functional>
 #include <iostream>
+
+#include "sloked/text/cursor/EditingPrimitives.h"
+#include "sloked/text/cursor/TransactionFactory.h"
 
 namespace sloked {
 
     class TransactionListener : public SlokedTransactionStream::Listener {
      public:
-        TransactionListener(const Encoding &encoding, TransactionCursor::Line &line, TransactionCursor::Column &column)
+        TransactionListener(const Encoding &encoding,
+                            TransactionCursor::Line &line,
+                            TransactionCursor::Column &column)
             : encoding(encoding), line(line), column(column) {}
 
         void OnCommit(const SlokedCursorTransaction &trans) override {
@@ -68,9 +72,12 @@ namespace sloked {
         TransactionCursor::Column &column;
     };
 
-    TransactionCursor::TransactionCursor(TextBlock &text, const Encoding &encoding, SlokedTransactionStream &stream)
+    TransactionCursor::TransactionCursor(TextBlock &text,
+                                         const Encoding &encoding,
+                                         SlokedTransactionStream &stream)
         : text(text), encoding(encoding), stream(stream), line(0), column(0) {
-        this->listener = std::make_shared<TransactionListener>(this->encoding, this->line, this->column);
+        this->listener = std::make_shared<TransactionListener>(
+            this->encoding, this->line, this->column);
         this->stream.AddListener(this->listener);
     }
 
@@ -101,7 +108,7 @@ namespace sloked {
     bool TransactionCursor::HasRedoable() const {
         return this->stream.HasRevertable();
     }
-    
+
     TextPosition::Line TransactionCursor::GetLine() const {
         return this->line;
     }
@@ -122,16 +129,27 @@ namespace sloked {
 
     void TransactionCursor::MoveUp(Line l) {
         this->line -= std::min(l, this->line);
-        this->column = std::min(this->column, static_cast<TextPosition::Column>(this->encoding.CodepointCount(this->text.GetLine(this->line))));
+        this->column = std::min(
+            this->column,
+            static_cast<TextPosition::Column>(
+                this->encoding.CodepointCount(this->text.GetLine(this->line))));
     }
 
     void TransactionCursor::MoveDown(Line l) {
-        this->line += std::min(this->line + l, static_cast<TextPosition::Line>(this->text.GetLastLine())) - this->line;
-        this->column = std::min(this->column, static_cast<TextPosition::Column>(this->encoding.CodepointCount(this->text.GetLine(this->line))));
+        this->line += std::min(this->line + l, static_cast<TextPosition::Line>(
+                                                   this->text.GetLastLine())) -
+                      this->line;
+        this->column = std::min(
+            this->column,
+            static_cast<TextPosition::Column>(
+                this->encoding.CodepointCount(this->text.GetLine(this->line))));
     }
 
     void TransactionCursor::MoveForward(Column c) {
-        this->column = std::min(this->column + c, static_cast<TextPosition::Column>(this->encoding.CodepointCount(this->text.GetLine(this->line))));
+        this->column = std::min(
+            this->column + c,
+            static_cast<TextPosition::Column>(
+                this->encoding.CodepointCount(this->text.GetLine(this->line))));
     }
 
     void TransactionCursor::MoveBackward(Column c) {
@@ -139,26 +157,34 @@ namespace sloked {
     }
 
     void TransactionCursor::Insert(std::string_view view) {
-        this->applyCommand(SlokedTransactionFactory::Insert(TextPosition {this->line, this->column}, view));
+        this->applyCommand(SlokedTransactionFactory::Insert(
+            TextPosition{this->line, this->column}, view));
     }
-    
+
     void TransactionCursor::NewLine(std::string_view view) {
-        this->applyCommand(SlokedTransactionFactory::Newline(TextPosition {this->line, this->column}, view));
+        this->applyCommand(SlokedTransactionFactory::Newline(
+            TextPosition{this->line, this->column}, view));
     }
 
     void TransactionCursor::DeleteBackward() {
-        this->applyCommand(SlokedTransactionFactory::DeleteBackward(this->text, this->encoding, TextPosition {this->line, this->column}));
+        this->applyCommand(SlokedTransactionFactory::DeleteBackward(
+            this->text, this->encoding,
+            TextPosition{this->line, this->column}));
     }
 
     void TransactionCursor::DeleteForward() {
-        this->applyCommand(SlokedTransactionFactory::DeleteForward(this->text, this->encoding, TextPosition {this->line, this->column}));
+        this->applyCommand(SlokedTransactionFactory::DeleteForward(
+            this->text, this->encoding,
+            TextPosition{this->line, this->column}));
     }
 
-    void TransactionCursor::ClearRegion(const TextPosition &from, const TextPosition &to) {
-        this->applyCommand(SlokedTransactionFactory::ClearRegion(this->text, this->encoding, from, to));
+    void TransactionCursor::ClearRegion(const TextPosition &from,
+                                        const TextPosition &to) {
+        this->applyCommand(SlokedTransactionFactory::ClearRegion(
+            this->text, this->encoding, from, to));
     }
 
     void TransactionCursor::applyCommand(const SlokedCursorTransaction &trans) {
         this->stream.Commit(trans);
     }
-}
+}  // namespace sloked

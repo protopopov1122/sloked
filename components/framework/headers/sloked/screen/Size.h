@@ -1,8 +1,9 @@
 #ifndef SLOKED_SCREEN_SIZE_H_
 #define SLOKED_SCREEN_SIZE_H_
 
-#include "sloked/core/Position.h"
 #include <functional>
+
+#include "sloked/core/Position.h"
 
 namespace sloked {
 
@@ -13,6 +14,6 @@ namespace sloked {
         virtual TextPosition GetScreenSize() const = 0;
         virtual std::function<void()> Listen(Listener) = 0;
     };
-}
+}  // namespace sloked
 
 #endif

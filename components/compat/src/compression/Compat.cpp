@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -21,7 +21,8 @@
 
 #include "sloked/compression/Compat.h"
 
-#if defined(SLOKED_FEATURE_COMPRESSION) && !defined(SLOKED_FEATURE_COMPRESSION_ZLIB)
+#if defined(SLOKED_FEATURE_COMPRESSION) && \
+    !defined(SLOKED_FEATURE_COMPRESSION_ZLIB)
 #error "Build system error: compression engine is not defined"
 #endif
 
@@ -34,7 +35,7 @@ namespace sloked {
         static SlokedZlibCompression compression;
         return compression;
     }
-}
+}  // namespace sloked
 
 #else
 namespace sloked {
@@ -42,5 +43,5 @@ namespace sloked {
     SlokedCompression &SlokedCompressionCompat::GetCompression() {
         throw SlokedError("Compat: Compression not supported");
     }
-}
+}  // namespace sloked
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,11 +22,12 @@
 #ifndef SLOKED_SCREEN_CAIRO_SDL_H_
 #define SLOKED_SCREEN_CAIRO_SDL_H_
 
+#include <mutex>
+
 #include "sloked/screen/cairo/Window.h"
+#include "sloked/screen/sdl/Renderer.h"
 #include "sloked/screen/sdl/Surface.h"
 #include "sloked/screen/sdl/Texture.h"
-#include "sloked/screen/sdl/Renderer.h"
-#include <mutex>
 
 namespace sloked {
 
@@ -50,7 +51,8 @@ namespace sloked {
 
     class SlokedSDLCairoWindow : public SlokedAbstractCairoWindow {
      public:
-        SlokedSDLCairoWindow(SlokedScreenManager &, SlokedGraphicsDimensions, const std::string & = "");
+        SlokedSDLCairoWindow(SlokedScreenManager &, SlokedGraphicsDimensions,
+                             const std::string & = "");
         ~SlokedSDLCairoWindow();
         const std::string &GetTitle() const final;
         void SetTitle(const std::string &) final;
@@ -63,7 +65,7 @@ namespace sloked {
 
      private:
         void PollInput();
-        
+
         SlokedScreenManager &screenMgr;
         SlokedSDLWindow sdlWindow;
         SlokedSDLRenderer sdlRenderer;
@@ -73,6 +75,6 @@ namespace sloked {
         std::pair<int, int> new_size;
         std::string title;
     };
-}
+}  // namespace sloked
 
 #endif

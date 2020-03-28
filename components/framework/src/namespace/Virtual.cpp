@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,6 +20,7 @@
 */
 
 #include "sloked/namespace/Virtual.h"
+
 #include "sloked/core/Error.h"
 #include "sloked/namespace/Directory.h"
 
@@ -28,9 +29,10 @@ namespace sloked {
     class SlokedVirtualObjectHandle : public SlokedNamespaceObjectHandle {
      public:
         using Entry = SlokedDefaultVirtualNamespace::Entry;
-        SlokedVirtualObjectHandle(SlokedDefaultVirtualNamespace &, const SlokedPath &);
+        SlokedVirtualObjectHandle(SlokedDefaultVirtualNamespace &,
+                                  const SlokedPath &);
         bool HasPermission(SlokedNamespacePermission) const override;
-        
+
         std::optional<std::string> ToURI() const override;
         bool Exists() const override;
         void MakeDir() override;
@@ -43,20 +45,28 @@ namespace sloked {
         SlokedPath path;
     };
 
-    SlokedVirtualObjectHandle::SlokedVirtualObjectHandle(SlokedDefaultVirtualNamespace &ns, const SlokedPath &path)
+    SlokedVirtualObjectHandle::SlokedVirtualObjectHandle(
+        SlokedDefaultVirtualNamespace &ns, const SlokedPath &path)
         : ns(ns), path(path) {}
-    
-    bool SlokedVirtualObjectHandle::HasPermission(SlokedNamespacePermission perm) const {
-        SlokedPath realPath = this->path.IsAbsolute() ? this->path : this->path.RelativeTo(this->path.Root());
+
+    bool SlokedVirtualObjectHandle::HasPermission(
+        SlokedNamespacePermission perm) const {
+        SlokedPath realPath = this->path.IsAbsolute()
+                                  ? this->path
+                                  : this->path.RelativeTo(this->path.Root());
         const Entry &entry = this->ns.find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
+        SlokedPath nsPath =
+            realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
         return entry.ns->GetHandle(nsPath)->HasPermission(perm);
     }
 
     std::optional<std::string> SlokedVirtualObjectHandle::ToURI() const {
-        SlokedPath realPath = this->path.IsAbsolute() ? this->path : this->path.RelativeTo(this->path.Root());
+        SlokedPath realPath = this->path.IsAbsolute()
+                                  ? this->path
+                                  : this->path.RelativeTo(this->path.Root());
         const Entry &entry = this->ns.find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
+        SlokedPath nsPath =
+            realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
         return entry.ns->GetHandle(nsPath)->ToURI();
     }
 
@@ -65,42 +75,58 @@ namespace sloked {
     }
 
     void SlokedVirtualObjectHandle::MakeDir() {
-        SlokedPath realPath = this->path.IsAbsolute() ? this->path : this->path.RelativeTo(this->path.Root());
+        SlokedPath realPath = this->path.IsAbsolute()
+                                  ? this->path
+                                  : this->path.RelativeTo(this->path.Root());
         const Entry &entry = this->ns.find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
+        SlokedPath nsPath =
+            realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
         entry.ns->GetHandle(nsPath)->MakeDir();
     }
 
     void SlokedVirtualObjectHandle::MakeFile() {
-        SlokedPath realPath = this->path.IsAbsolute() ? this->path : this->path.RelativeTo(this->path.Root());
+        SlokedPath realPath = this->path.IsAbsolute()
+                                  ? this->path
+                                  : this->path.RelativeTo(this->path.Root());
         const Entry &entry = this->ns.find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
+        SlokedPath nsPath =
+            realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
         entry.ns->GetHandle(nsPath)->MakeFile();
     }
 
     void SlokedVirtualObjectHandle::Delete() {
-        SlokedPath realPath = this->path.IsAbsolute() ? this->path : this->path.RelativeTo(this->path.Root());
+        SlokedPath realPath = this->path.IsAbsolute()
+                                  ? this->path
+                                  : this->path.RelativeTo(this->path.Root());
         const Entry &entry = this->ns.find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
+        SlokedPath nsPath =
+            realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
         entry.ns->GetHandle(nsPath)->Delete();
     }
 
     void SlokedVirtualObjectHandle::Rename(const SlokedPath &to) {
-        SlokedPath realFrom = this->path.IsAbsolute() ? this->path : this->path.RelativeTo(this->path.Root());
+        SlokedPath realFrom = this->path.IsAbsolute()
+                                  ? this->path
+                                  : this->path.RelativeTo(this->path.Root());
         SlokedPath realTo = to.IsAbsolute() ? to : to.RelativeTo(to.Root());
         const Entry &entry = this->ns.find(realFrom);
         if (entry.path.IsParent(realTo)) {
-            SlokedPath nsFromPath = realFrom.RelativeTo(entry.path).RelativeTo(realFrom.Root());
-            SlokedPath nsToPath = realTo.RelativeTo(entry.path).RelativeTo(realTo.Root());
+            SlokedPath nsFromPath =
+                realFrom.RelativeTo(entry.path).RelativeTo(realFrom.Root());
+            SlokedPath nsToPath =
+                realTo.RelativeTo(entry.path).RelativeTo(realTo.Root());
             entry.ns->GetHandle(nsFromPath)->Rename(nsToPath);
         }
     }
 
-    SlokedDefaultVirtualNamespace::SlokedDefaultVirtualNamespace(std::unique_ptr<SlokedNamespace> ns, const SlokedPath &root)
+    SlokedDefaultVirtualNamespace::SlokedDefaultVirtualNamespace(
+        std::unique_ptr<SlokedNamespace> ns, const SlokedPath &root)
         : root{std::move(ns), root.Root(), {}} {}
 
-    void SlokedDefaultVirtualNamespace::Mount(const SlokedPath &path, std::unique_ptr<SlokedNamespace> ns) {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(path.Root());
+    void SlokedDefaultVirtualNamespace::Mount(
+        const SlokedPath &path, std::unique_ptr<SlokedNamespace> ns) {
+        SlokedPath realPath =
+            path.IsAbsolute() ? path : path.RelativeTo(path.Root());
         Entry *entry = &this->root;
         SlokedPath entryPath = realPath.Root();
         for (const auto &name : realPath.Components()) {
@@ -122,7 +148,8 @@ namespace sloked {
     }
 
     void SlokedDefaultVirtualNamespace::Umount(const SlokedPath &path) {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(path.Root());
+        SlokedPath realPath =
+            path.IsAbsolute() ? path : path.RelativeTo(path.Root());
         Entry *entry = &this->root;
         SlokedPath entryPath = realPath.Root();
         if (realPath == entryPath) {
@@ -147,44 +174,60 @@ namespace sloked {
         this->cleanup(this->root);
     }
 
-    std::unique_ptr<SlokedNamespaceObject> SlokedDefaultVirtualNamespace::GetObject(const SlokedPath &path) {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(path.Root());
+    std::unique_ptr<SlokedNamespaceObject>
+        SlokedDefaultVirtualNamespace::GetObject(const SlokedPath &path) {
+        SlokedPath realPath =
+            path.IsAbsolute() ? path : path.RelativeTo(path.Root());
         const Entry &entry = this->find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
+        SlokedPath nsPath =
+            realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
         auto obj = entry.ns->GetObject(nsPath);
         if (obj && obj->GetType() == SlokedNamespaceObject::Type::Directory) {
-            return std::make_unique<SlokedNamespaceDefaultDirectory>(*this, path);
+            return std::make_unique<SlokedNamespaceDefaultDirectory>(*this,
+                                                                     path);
         } else {
             return obj;
         }
     }
 
-    bool SlokedDefaultVirtualNamespace::HasObject(const SlokedPath &path) const {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(path.Root());
+    bool SlokedDefaultVirtualNamespace::HasObject(
+        const SlokedPath &path) const {
+        SlokedPath realPath =
+            path.IsAbsolute() ? path : path.RelativeTo(path.Root());
         const Entry &entry = this->find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
+        SlokedPath nsPath =
+            realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
         return entry.ns->HasObject(nsPath);
     }
-    
-    void SlokedDefaultVirtualNamespace::Iterate(const SlokedPath &path, Visitor visitor) const {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(path.Root());
+
+    void SlokedDefaultVirtualNamespace::Iterate(const SlokedPath &path,
+                                                Visitor visitor) const {
+        SlokedPath realPath =
+            path.IsAbsolute() ? path : path.RelativeTo(path.Root());
         const Entry &entry = this->find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
+        SlokedPath nsPath =
+            realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
         entry.ns->Iterate(nsPath, visitor);
     }
 
-    void SlokedDefaultVirtualNamespace::Traverse(const SlokedPath &path, Visitor visitor, bool include_dirs) const {
-        SlokedPath realPath = path.IsAbsolute() ? path : path.RelativeTo(path.Root());
+    void SlokedDefaultVirtualNamespace::Traverse(const SlokedPath &path,
+                                                 Visitor visitor,
+                                                 bool include_dirs) const {
+        SlokedPath realPath =
+            path.IsAbsolute() ? path : path.RelativeTo(path.Root());
         const Entry &entry = this->find(realPath);
-        SlokedPath nsPath = realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
+        SlokedPath nsPath =
+            realPath.RelativeTo(entry.path).RelativeTo(realPath.Root());
         entry.ns->Traverse(nsPath, visitor, include_dirs);
     }
 
-    std::unique_ptr<SlokedNamespaceObjectHandle> SlokedDefaultVirtualNamespace::GetHandle(const SlokedPath &path) {
+    std::unique_ptr<SlokedNamespaceObjectHandle>
+        SlokedDefaultVirtualNamespace::GetHandle(const SlokedPath &path) {
         return std::make_unique<SlokedVirtualObjectHandle>(*this, path);
     }
 
-    void SlokedDefaultVirtualNamespace::GetMounted(const Entry &entry, std::vector<SlokedPath> &pathes) const {
+    void SlokedDefaultVirtualNamespace::GetMounted(
+        const Entry &entry, std::vector<SlokedPath> &pathes) const {
         if (entry.ns) {
             pathes.push_back(entry.path);
         }
@@ -193,7 +236,8 @@ namespace sloked {
         }
     }
 
-    const SlokedDefaultVirtualNamespace::Entry &SlokedDefaultVirtualNamespace::find(const SlokedPath &path) const {
+    const SlokedDefaultVirtualNamespace::Entry &
+        SlokedDefaultVirtualNamespace::find(const SlokedPath &path) const {
         const Entry *entry = &this->root;
         const Entry *actualEntry = &this->root;
         for (const auto &name : path.Components()) {
@@ -217,7 +261,8 @@ namespace sloked {
             this->cleanup(kv.second);
         }
 
-        for (auto it = entry.subentries.begin(); it != entry.subentries.end();) {
+        for (auto it = entry.subentries.begin();
+             it != entry.subentries.end();) {
             if (it->second.ns == nullptr && it->second.subentries.empty()) {
                 it = entry.subentries.erase(it);
             } else {
@@ -225,4 +270,4 @@ namespace sloked {
             }
         }
     }
-}
+}  // namespace sloked

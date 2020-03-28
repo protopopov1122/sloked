@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_JSON_PARSER_H_
 #define SLOKED_JSON_PARSER_H_
 
-#include "sloked/json/AST.h"
-#include "sloked/json/Lexer.h"
 #include <iosfwd>
 #include <queue>
+
+#include "sloked/json/AST.h"
+#include "sloked/json/Lexer.h"
 
 namespace sloked {
 
@@ -54,7 +55,7 @@ namespace sloked {
         std::unique_ptr<JsonASTNode> NextNumber();
         bool HasString() const;
         std::string NextString();
-        
+
         void Shift();
         bool IsSymbol(JsonLexem::Symbol) const;
         [[noreturn]] void ThrowError(std::string_view) const;
@@ -67,6 +68,6 @@ namespace sloked {
         std::size_t buffer_size;
         std::array<JsonLexem, BufferSize> buffer;
     };
-}
+}  // namespace sloked
 
 #endif

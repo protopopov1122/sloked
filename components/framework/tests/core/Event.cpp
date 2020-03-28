@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -19,8 +19,9 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "catch2/catch.hpp"
 #include "sloked/core/Event.h"
+
+#include "catch2/catch.hpp"
 
 using namespace sloked;
 
@@ -52,9 +53,7 @@ TEST_CASE("Typed event emitter notifies listener about new events") {
 TEST_CASE("Untyped event emitter notifies listener about new events") {
     SlokedEventEmitter<void> emitter;
     std::size_t counter{0};
-    SlokedEventEmitter<void>::Listener callback = [&counter]() {
-        counter++;
-    };
+    SlokedEventEmitter<void>::Listener callback = [&counter]() { counter++; };
     emitter.Emit();
     auto unbind1 = emitter.Listen(callback);
     REQUIRE(counter == 0);

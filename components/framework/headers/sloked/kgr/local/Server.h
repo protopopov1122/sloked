@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,11 +22,12 @@
 #ifndef SLOKED_KGR_LOCAL_SERVER_H_
 #define SLOKED_KGR_LOCAL_SERVER_H_
 
-#include "sloked/kgr/Server.h"
-#include "sloked/kgr/ContextManager.h"
-#include "sloked/kgr/local/Context.h"
-#include "sloked/core/DynamicBitset.h"
 #include <map>
+
+#include "sloked/core/DynamicBitset.h"
+#include "sloked/kgr/ContextManager.h"
+#include "sloked/kgr/Server.h"
+#include "sloked/kgr/local/Context.h"
 
 namespace sloked {
 
@@ -34,7 +35,7 @@ namespace sloked {
      public:
         std::unique_ptr<KgrPipe> Connect(ServiceId) override;
         Connector GetConnector(ServiceId) override;
-        
+
         ServiceId Register(std::unique_ptr<KgrService>) override;
         void Register(ServiceId, std::unique_ptr<KgrService>) override;
         bool Registered(ServiceId) override;
@@ -44,6 +45,6 @@ namespace sloked {
         std::map<ServiceId, std::unique_ptr<KgrService>> services;
         SlokedDynamicBitset serviceAllocator;
     };
-}
+}  // namespace sloked
 
 #endif

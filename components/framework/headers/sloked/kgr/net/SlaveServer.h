@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,23 +22,25 @@
 #ifndef SLOKED_KGR_NET_SLAVESERVER_H_
 #define SLOKED_KGR_NET_SLAVESERVER_H_
 
+#include <atomic>
+#include <chrono>
+#include <mutex>
+
 #include "sloked/core/Closeable.h"
 #include "sloked/core/Counter.h"
 #include "sloked/core/awaitable/Poll.h"
-#include "sloked/kgr/net/Interface.h"
 #include "sloked/kgr/NamedServer.h"
-#include "sloked/kgr/local/Server.h"
 #include "sloked/kgr/local/NamedServer.h"
+#include "sloked/kgr/local/Server.h"
+#include "sloked/kgr/net/Interface.h"
 #include "sloked/security/Authenticator.h"
-#include <mutex>
-#include <atomic>
-#include <chrono>
 
 namespace sloked {
 
     class KgrSlaveNetServer : public KgrNamedServer, public SlokedCloseable {
      public:
-        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &, SlokedAuthenticatorFactory *);
+        KgrSlaveNetServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &,
+                          SlokedAuthenticatorFactory *);
         ~KgrSlaveNetServer();
         bool IsRunning() const;
         void Start();
@@ -46,8 +48,9 @@ namespace sloked {
 
         std::unique_ptr<KgrPipe> Connect(const std::string &) override;
         Connector GetConnector(const std::string &) override;
-        
-        void Register(const std::string &, std::unique_ptr<KgrService>) override;
+
+        void Register(const std::string &,
+                      std::unique_ptr<KgrService>) override;
         bool Registered(const std::string &) override;
         void Deregister(const std::string &) override;
 
@@ -82,6 +85,6 @@ namespace sloked {
         std::chrono::system_clock::time_point lastActivity;
         bool pinged;
     };
-}
+}  // namespace sloked
 
 #endif

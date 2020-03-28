@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,8 +22,9 @@
 #ifndef SLOKED_KGR_LOCAL_NAMEDSERVER_H_
 #define SLOKED_KGR_LOCAL_NAMEDSERVER_H_
 
-#include "sloked/kgr/NamedServer.h"
 #include <mutex>
+
+#include "sloked/kgr/NamedServer.h"
 
 namespace sloked {
 
@@ -32,8 +33,9 @@ namespace sloked {
         KgrLocalNamedServer(KgrServer &);
         std::unique_ptr<KgrPipe> Connect(const std::string &) override;
         Connector GetConnector(const std::string &) override;
-        
-        void Register(const std::string &, std::unique_ptr<KgrService>) override;
+
+        void Register(const std::string &,
+                      std::unique_ptr<KgrService>) override;
         bool Registered(const std::string &) override;
         void Deregister(const std::string &) override;
 
@@ -42,6 +44,6 @@ namespace sloked {
         std::map<std::string, KgrServer::ServiceId> names;
         std::mutex mtx;
     };
-}
+}  // namespace sloked
 
 #endif

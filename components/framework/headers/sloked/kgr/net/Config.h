@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,18 +22,23 @@
 #ifndef SLOKED_KGR_NET_CONFIG_H_
 #define SLOKED_KGR_NET_CONFIG_H_
 
-#include "sloked/Base.h"
 #include <chrono>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
     struct KgrNetConfig {
         static constexpr unsigned int Factor = 10;
-        static constexpr std::chrono::system_clock::duration RequestTimeout = std::chrono::milliseconds(5) * Factor;
-        static constexpr std::chrono::system_clock::duration ResponseTimeout = std::chrono::milliseconds(40) * Factor;
-        static constexpr std::chrono::system_clock::duration InactivityTimeout = std::chrono::milliseconds(500) * Factor;
-        static constexpr std::chrono::system_clock::duration InactivityThreshold = InactivityTimeout * 2;
+        static constexpr std::chrono::system_clock::duration RequestTimeout =
+            std::chrono::milliseconds(5) * Factor;
+        static constexpr std::chrono::system_clock::duration ResponseTimeout =
+            std::chrono::milliseconds(40) * Factor;
+        static constexpr std::chrono::system_clock::duration InactivityTimeout =
+            std::chrono::milliseconds(500) * Factor;
+        static constexpr std::chrono::system_clock::duration
+            InactivityThreshold = InactivityTimeout * 2;
     };
-}
+}  // namespace sloked
 
 #endif

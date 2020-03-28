@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,15 +20,20 @@
 */
 
 #include "sloked/text/cursor/TransactionStreamMultiplexer.h"
-#include "sloked/core/Listener.h"
+
 #include <algorithm>
 #include <iostream>
 
+#include "sloked/core/Listener.h"
+
 namespace sloked {
 
-    class TransactionStreamMultiplexer::Stream : public virtual SlokedTransactionStream,
-                                                 public SlokedListenerManager<SlokedTransactionStream::Listener, SlokedCursorTransaction, SlokedTransactionStream>,
-                                                 public SlokedTransactionStream::Listener {
+    class TransactionStreamMultiplexer::Stream
+        : public virtual SlokedTransactionStream,
+          public SlokedListenerManager<SlokedTransactionStream::Listener,
+                                       SlokedCursorTransaction,
+                                       SlokedTransactionStream>,
+          public SlokedTransactionStream::Listener {
      public:
         Stream(TransactionStreamMultiplexer &multiplexer)
             : multiplexer(multiplexer) {
@@ -39,7 +44,8 @@ namespace sloked {
             this->multiplexer.RemoveStream(this->streamId);
         }
 
-        TextPosition Commit(const SlokedCursorTransaction &transaction) override {
+        TextPosition Commit(
+            const SlokedCursorTransaction &transaction) override {
             return this->multiplexer.Commit(this->streamId, transaction);
         }
 
@@ -60,15 +66,18 @@ namespace sloked {
         }
 
         void OnCommit(const SlokedCursorTransaction &trans) override {
-            this->TriggerListeners(&SlokedTransactionStream::Listener::OnCommit, trans);
+            this->TriggerListeners(&SlokedTransactionStream::Listener::OnCommit,
+                                   trans);
         }
 
         void OnRollback(const SlokedCursorTransaction &trans) override {
-            this->TriggerListeners(&SlokedTransactionStream::Listener::OnRollback, trans);
+            this->TriggerListeners(
+                &SlokedTransactionStream::Listener::OnRollback, trans);
         }
 
         void OnRevert(const SlokedCursorTransaction &trans) override {
-            this->TriggerListeners(&SlokedTransactionStream::Listener::OnRevert, trans);
+            this->TriggerListeners(&SlokedTransactionStream::Listener::OnRevert,
+                                   trans);
         }
 
      private:
@@ -76,34 +85,45 @@ namespace sloked {
         TransactionStreamMultiplexer::StreamId streamId;
     };
 
-    TransactionStreamMultiplexer::TransactionStreamMultiplexer(TextBlock &text, const Encoding &encoding)
-        : text(text), encoding(encoding), nextStreamId(0), nextTransactionStamp(0) {}
+    TransactionStreamMultiplexer::TransactionStreamMultiplexer(
+        TextBlock &text, const Encoding &encoding)
+        : text(text), encoding(encoding), nextStreamId(0),
+          nextTransactionStamp(0) {}
 
-    std::unique_ptr<SlokedTransactionStream> TransactionStreamMultiplexer::NewStream() {
+    std::unique_ptr<SlokedTransactionStream>
+        TransactionStreamMultiplexer::NewStream() {
         return std::make_unique<Stream>(*this);
     }
 
-    void TransactionStreamMultiplexer::AddListener(std::shared_ptr<SlokedTransactionStream::Listener> l) {
+    void TransactionStreamMultiplexer::AddListener(
+        std::shared_ptr<SlokedTransactionStream::Listener> l) {
         this->anonymousListeners.push_back(l);
     }
 
-    void TransactionStreamMultiplexer::RemoveListener(const SlokedTransactionStream::Listener &l) {
-        this->anonymousListeners.erase(std::remove_if(this->anonymousListeners.begin(), this->anonymousListeners.end(), [&](const auto &listener) {
-            return listener.get() == std::addressof(l);
-        }), this->anonymousListeners.end());
+    void TransactionStreamMultiplexer::RemoveListener(
+        const SlokedTransactionStream::Listener &l) {
+        this->anonymousListeners.erase(
+            std::remove_if(this->anonymousListeners.begin(),
+                           this->anonymousListeners.end(),
+                           [&](const auto &listener) {
+                               return listener.get() == std::addressof(l);
+                           }),
+            this->anonymousListeners.end());
     }
 
     void TransactionStreamMultiplexer::ClearListeners() {
         this->anonymousListeners.clear();
     }
 
-    TransactionStreamMultiplexer::StreamId TransactionStreamMultiplexer::RegisterStream(SlokedTransactionStream::Listener &listener) {
+    TransactionStreamMultiplexer::StreamId
+        TransactionStreamMultiplexer::RegisterStream(
+            SlokedTransactionStream::Listener &listener) {
         std::size_t id = this->nextStreamId++;
         this->backtrack[id] = std::vector<LabeledTransaction>{};
         this->listeners.emplace(id, std::ref(listener));
         return id;
     }
-    
+
     void TransactionStreamMultiplexer::RemoveStream(StreamId id) {
         if (this->backtrack.count(id)) {
             this->backtrack.erase(id);
@@ -113,17 +133,16 @@ namespace sloked {
         }
     }
 
-    TextPosition TransactionStreamMultiplexer::Commit(StreamId stream, const SlokedCursorTransaction &transaction) {
-        this->journal.push_back(LabeledTransaction {
-            stream,
-            this->nextTransactionStamp++,
-            transaction
-        });
+    TextPosition TransactionStreamMultiplexer::Commit(
+        StreamId stream, const SlokedCursorTransaction &transaction) {
+        this->journal.push_back(LabeledTransaction{
+            stream, this->nextTransactionStamp++, transaction});
         if (this->backtrack.count(stream)) {
             this->backtrack[stream].clear();
         }
         transaction.Commit(this->text, this->encoding);
-        this->TriggerListeners(&SlokedTransactionStream::Listener::OnCommit, transaction);
+        this->TriggerListeners(&SlokedTransactionStream::Listener::OnCommit,
+                               transaction);
         auto pos = transaction.GetPosition();
         auto patch = transaction.CommitPatch(this->encoding);
         if (patch.Has(pos)) {
@@ -134,18 +153,18 @@ namespace sloked {
         return pos;
     }
 
-    
     bool TransactionStreamMultiplexer::HasRollback(StreamId streamId) const {
-        auto it = std::find_if(this->journal.rbegin(), this->journal.rend(), [streamId](const auto &trans) {
-            return trans.stream == streamId;
-        });
+        auto it = std::find_if(
+            this->journal.rbegin(), this->journal.rend(),
+            [streamId](const auto &trans) { return trans.stream == streamId; });
         return it != this->journal.rend();
     }
 
     TextPosition TransactionStreamMultiplexer::Rollback(StreamId streamId) {
         std::size_t idx;
         for (idx = 0; idx < this->journal.size(); idx++) {
-            if (this->journal[this->journal.size() - idx - 1].stream == streamId) {
+            if (this->journal[this->journal.size() - idx - 1].stream ==
+                streamId) {
                 break;
             }
         }
@@ -155,17 +174,20 @@ namespace sloked {
         idx = this->journal.size() - idx - 1;
 
         this->backtrack[streamId].push_back(this->journal[idx]);
-        for (std::size_t i = this->journal.size() - 1; i >= idx && i < this->journal.size(); i--) {
+        for (std::size_t i = this->journal.size() - 1;
+             i >= idx && i < this->journal.size(); i--) {
             this->journal[i].transaction.Rollback(this->text, this->encoding);
         }
         auto pos = this->journal[idx].transaction.GetPosition();
-        auto patch = this->journal[idx].transaction.RollbackPatch(this->encoding);
+        auto patch =
+            this->journal[idx].transaction.RollbackPatch(this->encoding);
         this->journal.erase(this->journal.begin() + idx);
         for (std::size_t i = idx; i < this->journal.size(); i++) {
             this->journal[i].transaction.Apply(patch);
             this->journal[i].transaction.Update(this->text, this->encoding);
             this->journal[i].transaction.Commit(this->text, this->encoding);
-            auto commitPatch = this->journal[i].transaction.CommitPatch(this->encoding);
+            auto commitPatch =
+                this->journal[i].transaction.CommitPatch(this->encoding);
             if (commitPatch.Has(pos)) {
                 const auto &delta = commitPatch.At(pos);
                 pos.line += delta.line;
@@ -173,7 +195,8 @@ namespace sloked {
             }
         }
 
-        this->TriggerListeners(&SlokedTransactionStream::Listener::OnRollback, this->backtrack[streamId].back().transaction);
+        this->TriggerListeners(&SlokedTransactionStream::Listener::OnRollback,
+                               this->backtrack[streamId].back().transaction);
         return pos;
     }
 
@@ -185,8 +208,10 @@ namespace sloked {
         }
     }
 
-    TextPosition TransactionStreamMultiplexer::RevertRollback(StreamId streamId) {
-        if (this->backtrack.count(streamId) == 0 || this->backtrack[streamId].empty()) {
+    TextPosition TransactionStreamMultiplexer::RevertRollback(
+        StreamId streamId) {
+        if (this->backtrack.count(streamId) == 0 ||
+            this->backtrack[streamId].empty()) {
             return TextPosition{};
         }
         auto transaction = this->backtrack[streamId].back();
@@ -194,13 +219,15 @@ namespace sloked {
 
         std::size_t idx;
         for (idx = 0; idx < this->journal.size(); idx++) {
-            if (this->journal[this->journal.size() - idx - 1].stamp < transaction.stamp) {
+            if (this->journal[this->journal.size() - idx - 1].stamp <
+                transaction.stamp) {
                 break;
             }
         }
         idx = this->journal.size() - idx;
 
-        for (std::size_t i = this->journal.size() - 1; i >= idx && i < this->journal.size(); i--) {
+        for (std::size_t i = this->journal.size() - 1;
+             i >= idx && i < this->journal.size(); i--) {
             this->journal[i].transaction.Rollback(this->text, this->encoding);
         }
         auto pos = transaction.transaction.GetPosition();
@@ -220,7 +247,8 @@ namespace sloked {
             this->journal[i].transaction.Apply(patch);
             this->journal[i].transaction.Update(this->text, this->encoding);
             this->journal[i].transaction.Commit(this->text, this->encoding);
-            auto commitPatch = this->journal[i].transaction.CommitPatch(this->encoding);
+            auto commitPatch =
+                this->journal[i].transaction.CommitPatch(this->encoding);
             if (commitPatch.Has(pos)) {
                 const auto &delta = commitPatch.At(pos);
                 pos.line += delta.line;
@@ -228,11 +256,15 @@ namespace sloked {
             }
         }
 
-        this->TriggerListeners(&SlokedTransactionStream::Listener::OnRevert, transaction.transaction);
+        this->TriggerListeners(&SlokedTransactionStream::Listener::OnRevert,
+                               transaction.transaction);
         return pos;
     }
 
-    void TransactionStreamMultiplexer::TriggerListeners(void (SlokedTransactionStream::Listener::*callback)(const SlokedCursorTransaction &), const SlokedCursorTransaction &trans) {
+    void TransactionStreamMultiplexer::TriggerListeners(
+        void (SlokedTransactionStream::Listener::*callback)(
+            const SlokedCursorTransaction &),
+        const SlokedCursorTransaction &trans) {
         for (auto listener : this->listeners) {
             (listener.second.get().*callback)(trans);
         }
@@ -240,4 +272,4 @@ namespace sloked {
             (*listener.*callback)(trans);
         }
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,6 +20,7 @@
 */
 
 #include "sloked/screen/sdl/Window.h"
+
 #include "sloked/core/Error.h"
 
 namespace sloked {
@@ -40,12 +41,12 @@ namespace sloked {
         }
     }
 
-    SlokedSDLWindow::SlokedSDLWindow()
-        : window{nullptr}, opened{false} {
+    SlokedSDLWindow::SlokedSDLWindow() : window{nullptr}, opened{false} {
         InitSDL();
     }
 
-    SlokedSDLWindow::SlokedSDLWindow(SlokedSDLDimensions dim, const std::string &title, Uint32 flags)
+    SlokedSDLWindow::SlokedSDLWindow(SlokedSDLDimensions dim,
+                                     const std::string &title, Uint32 flags)
         : SlokedSDLWindow() {
         this->Open(dim, title, flags);
     }
@@ -59,20 +60,19 @@ namespace sloked {
         return this->opened.load();
     }
 
-    void SlokedSDLWindow::Open(SlokedSDLDimensions dim, const std::string &title, Uint32 flags) {
+    void SlokedSDLWindow::Open(SlokedSDLDimensions dim,
+                               const std::string &title, Uint32 flags) {
         if (!this->opened.exchange(true)) {
-            this->window = SDL_CreateWindow(title.c_str(),
-                SDL_WINDOWPOS_UNDEFINED,
-                SDL_WINDOWPOS_UNDEFINED,
-                dim.x,
-                dim.y,
-                flags);
-            
+            this->window =
+                SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_UNDEFINED,
+                                 SDL_WINDOWPOS_UNDEFINED, dim.x, dim.y, flags);
+
             if (this->window == nullptr) {
                 this->opened = false;
                 throw SlokedError("SDLWindow: Error initializing SDL window");
             }
-            this->events = SlokedSDLEventBroker::Global().Subscribe(SDL_GetWindowID(this->window));
+            this->events = SlokedSDLEventBroker::Global().Subscribe(
+                SDL_GetWindowID(this->window));
         }
     }
 
@@ -127,4 +127,4 @@ namespace sloked {
         }
         return this->window;
     }
-}
+}  // namespace sloked

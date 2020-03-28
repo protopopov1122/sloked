@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,9 +22,10 @@
 #ifndef SLOKED_CORE_IO_H_
 #define SLOKED_CORE_IO_H_
 
-#include "sloked/Base.h"
 #include <cinttypes>
 #include <string>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -32,11 +33,7 @@ namespace sloked {
      public:
         using Char = int;
         using Offset = uint64_t;
-        enum class Origin {
-            Begin = 0,
-            Current,
-            End
-        };
+        enum class Origin { Begin = 0, Current, End };
 
         virtual ~SlokedBaseIO() = default;
         virtual void Close() = 0;
@@ -67,6 +64,6 @@ namespace sloked {
         virtual std::string_view GetView() const = 0;
         operator std::string_view() const;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,20 +22,21 @@
 #ifndef SLOKED_EDITOR_SCREENSERVER_H_
 #define SLOKED_EDITOR_SCREENSERVER_H_
 
-#include "sloked/core/Closeable.h"
-#include "sloked/core/Monitor.h"
-#include "sloked/core/Encoding.h"
-#include "sloked/kgr/NamedServer.h"
-#include "sloked/kgr/ContextManager.h"
-#include "sloked/kgr/local/Context.h"
-#include "sloked/screen/Component.h"
-#include "sloked/screen/Size.h"
-#include "sloked/kgr/ctx-manager/RunnableContextManager.h"
-#include "sloked/core/URI.h"
-#include "sloked/core/CharPreset.h"
 #include <atomic>
 #include <chrono>
 #include <thread>
+
+#include "sloked/core/CharPreset.h"
+#include "sloked/core/Closeable.h"
+#include "sloked/core/Encoding.h"
+#include "sloked/core/Monitor.h"
+#include "sloked/core/URI.h"
+#include "sloked/kgr/ContextManager.h"
+#include "sloked/kgr/NamedServer.h"
+#include "sloked/kgr/ctx-manager/RunnableContextManager.h"
+#include "sloked/kgr/local/Context.h"
+#include "sloked/screen/Component.h"
+#include "sloked/screen/Size.h"
 
 namespace sloked {
 
@@ -43,7 +44,8 @@ namespace sloked {
      public:
         virtual ~SlokedScreenProvider() = default;
         virtual void Render(std::function<void(SlokedScreenComponent &)>) = 0;
-        virtual std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration) = 0;
+        virtual std::vector<SlokedKeyboardInput> ReceiveInput(
+            std::chrono::system_clock::duration) = 0;
         virtual SlokedMonitor<SlokedScreenComponent &> &GetScreen() = 0;
         virtual SlokedScreenSize &GetSize() = 0;
         virtual const Encoding &GetEncoding() = 0;
@@ -51,8 +53,10 @@ namespace sloked {
 
     class SlokedScreenServer : public SlokedCloseable {
      public:
-        using InputProcessor = std::function<std::vector<SlokedKeyboardInput>(std::vector<SlokedKeyboardInput>)>;
-        SlokedScreenServer(KgrNamedServer &, SlokedScreenProvider &, KgrContextManager<KgrLocalContext> &);
+        using InputProcessor = std::function<std::vector<SlokedKeyboardInput>(
+            std::vector<SlokedKeyboardInput>)>;
+        SlokedScreenServer(KgrNamedServer &, SlokedScreenProvider &,
+                           KgrContextManager<KgrLocalContext> &);
         ~SlokedScreenServer();
         void Redraw();
         bool IsRunning() const;
@@ -74,8 +78,9 @@ namespace sloked {
     class SlokedScreenProviderFactory {
      public:
         virtual ~SlokedScreenProviderFactory() = default;
-        virtual std::unique_ptr<SlokedScreenProvider> Make(const SlokedUri &, const SlokedCharPreset &) = 0;
+        virtual std::unique_ptr<SlokedScreenProvider> Make(
+            const SlokedUri &, const SlokedCharPreset &) = 0;
     };
-}
+}  // namespace sloked
 
 #endif

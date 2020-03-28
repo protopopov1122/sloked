@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_SECURITY_RESTRICTION_H_
 #define SLOKED_SECURITY_RESTRICTION_H_
 
-#include "sloked/Base.h"
-#include <string>
 #include <memory>
+#include <string>
 #include <vector>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -39,7 +40,8 @@ namespace sloked {
      public:
         SlokedNamedWhitelist(std::vector<std::string> = {});
         bool IsAllowed(const std::string &) const final;
-        static std::unique_ptr<SlokedNamedWhitelist> Make(std::vector<std::string>);
+        static std::unique_ptr<SlokedNamedWhitelist> Make(
+            std::vector<std::string>);
 
      private:
         std::vector<std::string> prefixes;
@@ -49,7 +51,8 @@ namespace sloked {
      public:
         SlokedNamedBlacklist(std::vector<std::string> = {});
         bool IsAllowed(const std::string &) const final;
-        static std::unique_ptr<SlokedNamedBlacklist> Make(std::vector<std::string>);
+        static std::unique_ptr<SlokedNamedBlacklist> Make(
+            std::vector<std::string>);
 
      private:
         std::vector<std::string> prefixes;
@@ -58,8 +61,10 @@ namespace sloked {
     class SlokedNamedRestrictionTarget {
      public:
         virtual ~SlokedNamedRestrictionTarget() = default;
-        virtual void SetAccessRestrictions(std::shared_ptr<SlokedNamedRestrictions>) = 0;
-        virtual void SetModificationRestrictions(std::shared_ptr<SlokedNamedRestrictions>) = 0;
+        virtual void SetAccessRestrictions(
+            std::shared_ptr<SlokedNamedRestrictions>) = 0;
+        virtual void SetModificationRestrictions(
+            std::shared_ptr<SlokedNamedRestrictions>) = 0;
     };
 
     class SlokedNamedRestrictionAuthority {
@@ -67,14 +72,17 @@ namespace sloked {
         class Account {
          public:
             virtual ~Account() = default;
-            virtual std::shared_ptr<SlokedNamedRestrictions> GetAccessRestrictions() const = 0;
-            virtual std::shared_ptr<SlokedNamedRestrictions> GetModificationRestrictiions() const = 0;
+            virtual std::shared_ptr<SlokedNamedRestrictions>
+                GetAccessRestrictions() const = 0;
+            virtual std::shared_ptr<SlokedNamedRestrictions>
+                GetModificationRestrictiions() const = 0;
         };
 
         virtual ~SlokedNamedRestrictionAuthority() = default;
-        virtual std::weak_ptr<Account> GetRestrictionsByName(const std::string &) = 0;
+        virtual std::weak_ptr<Account> GetRestrictionsByName(
+            const std::string &) = 0;
         virtual std::weak_ptr<Account> GetDefaultRestrictions() = 0;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,8 +22,9 @@
 #ifndef SLOKED_CORE_DATAHANDLE_H_
 #define SLOKED_CORE_DATAHANDLE_H_
 
-#include "sloked/Base.h"
 #include <memory>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -35,8 +36,7 @@ namespace sloked {
     template <typename T>
     class SlokedTypedDataHandle : public SlokedDataHandle {
      public:
-        SlokedTypedDataHandle(std::unique_ptr<T> ptr)
-            : ptr(std::move(ptr)) {}
+        SlokedTypedDataHandle(std::unique_ptr<T> ptr) : ptr(std::move(ptr)) {}
 
         virtual ~SlokedTypedDataHandle() = default;
 
@@ -47,6 +47,6 @@ namespace sloked {
      private:
         std::unique_ptr<T> ptr;
     };
-}
+}  // namespace sloked
 
 #endif

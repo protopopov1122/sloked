@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,54 +20,58 @@
 */
 
 #include "sloked/namespace/Filesystem.h"
+
 #include "sloked/namespace/Directory.h"
 
 namespace sloked {
 
-   class SlokedFilesystemDocument : public SlokedNamespaceFile {
-   public:
-      SlokedFilesystemDocument(std::unique_ptr<SlokedFile>, const SlokedPath &);
-      Type GetType() const override;
-      const SlokedPath &GetPath() const override;
-      SlokedNamespaceFile *AsFile() override;
-      std::unique_ptr<SlokedIOReader> Reader() const override;
-      std::unique_ptr<SlokedIOWriter> Writer() override;
-      std::unique_ptr<SlokedIOView> View() const override;
+    class SlokedFilesystemDocument : public SlokedNamespaceFile {
+     public:
+        SlokedFilesystemDocument(std::unique_ptr<SlokedFile>,
+                                 const SlokedPath &);
+        Type GetType() const override;
+        const SlokedPath &GetPath() const override;
+        SlokedNamespaceFile *AsFile() override;
+        std::unique_ptr<SlokedIOReader> Reader() const override;
+        std::unique_ptr<SlokedIOWriter> Writer() override;
+        std::unique_ptr<SlokedIOView> View() const override;
 
-   private:
-      std::unique_ptr<SlokedFile> file;
-      SlokedPath path;
-   };
+     private:
+        std::unique_ptr<SlokedFile> file;
+        SlokedPath path;
+    };
 
-   class SlokedFilesystemObjectHandle : public SlokedNamespaceObjectHandle {
-    public:
-      SlokedFilesystemObjectHandle(SlokedFilesystemAdapter &, const SlokedPath &);
-      bool HasPermission(SlokedNamespacePermission) const override;
-      std::optional<std::string> ToURI() const override;
-      bool Exists() const override;
-      void MakeDir() override;
-      void MakeFile() override;
-      void Delete() override;
-      void Rename(const SlokedPath &) override;
+    class SlokedFilesystemObjectHandle : public SlokedNamespaceObjectHandle {
+     public:
+        SlokedFilesystemObjectHandle(SlokedFilesystemAdapter &,
+                                     const SlokedPath &);
+        bool HasPermission(SlokedNamespacePermission) const override;
+        std::optional<std::string> ToURI() const override;
+        bool Exists() const override;
+        void MakeDir() override;
+        void MakeFile() override;
+        void Delete() override;
+        void Rename(const SlokedPath &) override;
 
-    private:
-      SlokedFilesystemAdapter &filesystem;
-      SlokedPath path;
-   };
+     private:
+        SlokedFilesystemAdapter &filesystem;
+        SlokedPath path;
+    };
 
-    SlokedFilesystemDocument::SlokedFilesystemDocument(std::unique_ptr<SlokedFile> file, const SlokedPath &path)
+    SlokedFilesystemDocument::SlokedFilesystemDocument(
+        std::unique_ptr<SlokedFile> file, const SlokedPath &path)
         : file(std::move(file)), path(path) {}
-    
+
     SlokedNamespaceObject::Type SlokedFilesystemDocument::GetType() const {
         if (this->file && this->file->IsFile()) {
             return Type::File;
-        } else  if (this->file && this->file->IsDirectory()) {
+        } else if (this->file && this->file->IsDirectory()) {
             return Type::Directory;
         } else {
             return Type::None;
         }
     }
-    
+
     const SlokedPath &SlokedFilesystemDocument::GetPath() const {
         return this->path;
     }
@@ -79,7 +83,7 @@ namespace sloked {
             return nullptr;
         }
     }
-    
+
     std::unique_ptr<SlokedIOReader> SlokedFilesystemDocument::Reader() const {
         if (this->file && this->file->IsFile()) {
             return this->file->Reader();
@@ -104,18 +108,23 @@ namespace sloked {
         }
     }
 
-    SlokedFilesystemObjectHandle::SlokedFilesystemObjectHandle(SlokedFilesystemAdapter &filesystem, const SlokedPath &path)
+    SlokedFilesystemObjectHandle::SlokedFilesystemObjectHandle(
+        SlokedFilesystemAdapter &filesystem, const SlokedPath &path)
         : filesystem(filesystem), path(path) {}
 
-    bool SlokedFilesystemObjectHandle::HasPermission(SlokedNamespacePermission perm) const {
+    bool SlokedFilesystemObjectHandle::HasPermission(
+        SlokedNamespacePermission perm) const {
         auto file = this->filesystem.NewFile(this->path);
-        if (file) switch (perm) {
-            case SlokedNamespacePermission::Read:
-                return file->HasPermission(SlokedFilesystemPermission::Read);
+        if (file)
+            switch (perm) {
+                case SlokedNamespacePermission::Read:
+                    return file->HasPermission(
+                        SlokedFilesystemPermission::Read);
 
-            case SlokedNamespacePermission::Write:
-                return file->HasPermission(SlokedFilesystemPermission::Write);
-        }
+                case SlokedNamespacePermission::Write:
+                    return file->HasPermission(
+                        SlokedFilesystemPermission::Write);
+            }
         return false;
     }
 
@@ -157,15 +166,19 @@ namespace sloked {
         }
     }
 
-    SlokedFilesystemNamespace::SlokedFilesystemNamespace(std::unique_ptr<SlokedFilesystemAdapter> filesystem)
+    SlokedFilesystemNamespace::SlokedFilesystemNamespace(
+        std::unique_ptr<SlokedFilesystemAdapter> filesystem)
         : filesystem(std::move(filesystem)) {}
-    
-    std::unique_ptr<SlokedNamespaceObject> SlokedFilesystemNamespace::GetObject(const SlokedPath &path) {
+
+    std::unique_ptr<SlokedNamespaceObject> SlokedFilesystemNamespace::GetObject(
+        const SlokedPath &path) {
         auto file = this->filesystem->NewFile(path);
         if (file && file->IsFile()) {
-            return std::make_unique<SlokedFilesystemDocument>(std::move(file), path);
+            return std::make_unique<SlokedFilesystemDocument>(std::move(file),
+                                                              path);
         } else if (file && file->IsDirectory()) {
-            return std::make_unique<SlokedNamespaceDefaultDirectory>(*this, path);
+            return std::make_unique<SlokedNamespaceDefaultDirectory>(*this,
+                                                                     path);
         } else {
             return nullptr;
         }
@@ -176,7 +189,8 @@ namespace sloked {
         return file && (file->IsFile() || file->IsDirectory());
     }
 
-    void SlokedFilesystemNamespace::Iterate(const SlokedPath &path, Visitor visitor) const {
+    void SlokedFilesystemNamespace::Iterate(const SlokedPath &path,
+                                            Visitor visitor) const {
         auto file = this->filesystem->NewFile(path);
         if (file && file->IsDirectory()) {
             file->ListFiles([&](const std::string &name) {
@@ -190,21 +204,27 @@ namespace sloked {
         }
     }
 
-    void SlokedFilesystemNamespace::Traverse(const SlokedPath &path, Visitor visitor, bool include_dirs) const {
+    void SlokedFilesystemNamespace::Traverse(const SlokedPath &path,
+                                             Visitor visitor,
+                                             bool include_dirs) const {
         auto file = this->filesystem->NewFile(path);
         if (file) {
-            file->Traverse([&](const std::string &name) {
-                auto childPath = this->filesystem->ToPath(name);
-                auto file = this->filesystem->NewFile(childPath);
-                visitor(childPath.RelativeTo(path).ToString(),
-                    file->IsFile()
-                        ? SlokedNamespaceObject::Type::File
-                        : SlokedNamespaceObject::Type::Directory);
-            }, include_dirs);
+            file->Traverse(
+                [&](const std::string &name) {
+                    auto childPath = this->filesystem->ToPath(name);
+                    auto file = this->filesystem->NewFile(childPath);
+                    visitor(childPath.RelativeTo(path).ToString(),
+                            file->IsFile()
+                                ? SlokedNamespaceObject::Type::File
+                                : SlokedNamespaceObject::Type::Directory);
+                },
+                include_dirs);
         }
     }
 
-    std::unique_ptr<SlokedNamespaceObjectHandle> SlokedFilesystemNamespace::GetHandle(const SlokedPath &path) {
-        return std::make_unique<SlokedFilesystemObjectHandle>(*this->filesystem, path);
+    std::unique_ptr<SlokedNamespaceObjectHandle>
+        SlokedFilesystemNamespace::GetHandle(const SlokedPath &path) {
+        return std::make_unique<SlokedFilesystemObjectHandle>(*this->filesystem,
+                                                              path);
     }
-}
+}  // namespace sloked

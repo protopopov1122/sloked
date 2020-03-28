@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,18 +22,20 @@
 #ifndef SLOKED_SCREEN_CAIRO_WINDOW_H_
 #define SLOKED_SCREEN_CAIRO_WINDOW_H_
 
+#include <memory>
+
+#include "sloked/screen/Manager.h"
 #include "sloked/screen/cairo/Component.h"
 #include "sloked/screen/graphics/Window.h"
-#include "sloked/screen/Manager.h"
-#include <memory>
 
 namespace sloked {
 
-    class SlokedAbstractCairoWindow : public SlokedScreenManager::Renderable, public SlokedAbstractGraphicalWindow {
+    class SlokedAbstractCairoWindow : public SlokedScreenManager::Renderable,
+                                      public SlokedAbstractGraphicalWindow {
      public:
         virtual std::shared_ptr<SlokedCairoScreenComponent> GetRoot() const = 0;
         virtual void SetRoot(std::shared_ptr<SlokedCairoScreenComponent>) = 0;
     };
-}
+}  // namespace sloked
 
 #endif

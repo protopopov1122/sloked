@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,12 +23,16 @@
 
 namespace sloked {
 
-    SlokedTerminalScreenProvider::SlokedTerminalScreenProvider(SlokedTerminal &terminal, const Encoding &encoding, const SlokedCharPreset &charPreset,
+    SlokedTerminalScreenProvider::SlokedTerminalScreenProvider(
+        SlokedTerminal &terminal, const Encoding &encoding,
+        const SlokedCharPreset &charPreset,
         SlokedTerminalInputSource &inputSource, SlokedScreenSize &screenSize)
-        : terminal(terminal), encoding(encoding), rootComponent(terminal, encoding, charPreset),
-            screen(rootComponent), inputSource(inputSource), screenSize(screenSize) {}
+        : terminal(terminal), encoding(encoding),
+          rootComponent(terminal, encoding, charPreset), screen(rootComponent),
+          inputSource(inputSource), screenSize(screenSize) {}
 
-    void SlokedTerminalScreenProvider::Render(std::function<void(SlokedScreenComponent &)> render) {
+    void SlokedTerminalScreenProvider::Render(
+        std::function<void(SlokedScreenComponent &)> render) {
         this->screen.Lock([&](auto &screen) {
             this->terminal.SetGraphicsMode(SlokedTextGraphics::Off);
             this->terminal.ClearScreen();
@@ -37,7 +41,8 @@ namespace sloked {
         });
     }
 
-    std::vector<SlokedKeyboardInput> SlokedTerminalScreenProvider::ReceiveInput(std::chrono::system_clock::duration timeout) {
+    std::vector<SlokedKeyboardInput> SlokedTerminalScreenProvider::ReceiveInput(
+        std::chrono::system_clock::duration timeout) {
         if (this->inputSource.WaitInput(timeout)) {
             return this->inputSource.GetInput();
         } else {
@@ -45,7 +50,8 @@ namespace sloked {
         }
     }
 
-    SlokedMonitor<SlokedScreenComponent &> &SlokedTerminalScreenProvider::GetScreen() {
+    SlokedMonitor<SlokedScreenComponent &>
+        &SlokedTerminalScreenProvider::GetScreen() {
         return this->screen;
     }
 
@@ -56,4 +62,4 @@ namespace sloked {
     const Encoding &SlokedTerminalScreenProvider::GetEncoding() {
         return this->encoding;
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_SCREEN_TERMINAL_COMPONENTS_TEXTPANE_H_
 #define SLOKED_SCREEN_TERMINAL_COMPONENTS_TEXTPANE_H_
 
-#include "sloked/Base.h"
-#include "sloked/screen/widgets/TextPane.h"
-#include "sloked/screen/terminal/Terminal.h"
 #include <memory>
+
+#include "sloked/Base.h"
+#include "sloked/screen/terminal/Terminal.h"
+#include "sloked/screen/widgets/TextPane.h"
 
 namespace sloked {
 
@@ -33,7 +34,7 @@ namespace sloked {
      public:
         TerminalTextPane(SlokedTerminal &);
         ~TerminalTextPane();
-    
+
         void SetPosition(TextPosition::Line, TextPosition::Column) final;
         void MoveUp(TextPosition::Line) final;
         void MoveDown(TextPosition::Line) final;
@@ -52,13 +53,13 @@ namespace sloked {
         void SetGraphicsMode(SlokedTextGraphics) final;
         void SetGraphicsMode(SlokedBackgroundGraphics) final;
         void SetGraphicsMode(SlokedForegroundGraphics) final;
-        
+
      private:
         class TerminalVisualPreset;
 
         SlokedTerminal &term;
         std::unique_ptr<TerminalVisualPreset> fontProperties;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,10 +20,11 @@
 */
 
 #include "sloked/namespace/posix/Environment.h"
-#include <unistd.h>
+
 #include <limits.h>
 #include <pwd.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 namespace sloked {
 
@@ -32,9 +33,9 @@ namespace sloked {
         getcwd(cwd, PATH_MAX);
         return SlokedPath{cwd};
     }
-    
+
     SlokedPath SlokedPosixNamespaceEnvironment::HomeDir() {
         struct passwd *pw = getpwuid(getuid());
         return SlokedPath{pw->pw_dir};
     }
-}
+}  // namespace sloked

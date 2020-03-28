@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,19 +20,19 @@
 */
 
 #include "sloked/core/Position.h"
+
 #include <limits>
 
 namespace sloked {
 
     const TextPosition TextPosition::Min{0, 0};
-    const TextPosition TextPosition::Max {
+    const TextPosition TextPosition::Max{
         std::numeric_limits<TextPosition::Line>::max(),
-        std::numeric_limits<TextPosition::Column>::max()
-    };
+        std::numeric_limits<TextPosition::Column>::max()};
 
     bool TextPosition::operator<(const TextPosition &other) const {
         return this->line < other.line ||
-            (this->line == other.line && this->column < other.column);
+               (this->line == other.line && this->column < other.column);
     }
 
     bool TextPosition::operator<=(const TextPosition &other) const {
@@ -48,8 +48,7 @@ namespace sloked {
     }
 
     bool TextPosition::operator==(const TextPosition &other) const {
-        return this->line == other.line &&
-            this->column == other.column;
+        return this->line == other.line && this->column == other.column;
     }
 
     bool TextPosition::operator!=(const TextPosition &other) const {
@@ -57,15 +56,16 @@ namespace sloked {
     }
 
     TextPosition TextPosition::operator+(const TextPosition &other) const {
-        return TextPosition{this->line + other.line, this->column + other.column};
+        return TextPosition{this->line + other.line,
+                            this->column + other.column};
     }
 
     TextPosition TextPosition::operator-(const TextPosition &other) const {
-        return TextPosition{this->line - other.line, this->column - other.column};
+        return TextPosition{this->line - other.line,
+                            this->column - other.column};
     }
 
     bool TextPositionDelta::operator==(const TextPositionDelta &delta) const {
-        return this->line == delta.line &&
-            this->column == delta.column;
+        return this->line == delta.line && this->column == delta.column;
     }
-}
+}  // namespace sloked

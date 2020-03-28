@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,23 +22,28 @@
 #ifndef SLOKED_KGR_NET_MASTERSERVER_H_
 #define SLOKED_KGR_NET_MASTERSERVER_H_
 
-#include "sloked/core/Closeable.h"
-#include "sloked/net/Socket.h"
-#include "sloked/core/awaitable/Poll.h"
-#include "sloked/kgr/NamedServer.h"
-#include "sloked/core/Counter.h"
-#include "sloked/kgr/local/Server.h"
-#include "sloked/kgr/local/NamedServer.h"
-#include "sloked/kgr/RestrictedServer.h"
-#include "sloked/security/Authenticator.h"
 #include <atomic>
 #include <vector>
+
+#include "sloked/core/Closeable.h"
+#include "sloked/core/Counter.h"
+#include "sloked/core/awaitable/Poll.h"
+#include "sloked/kgr/NamedServer.h"
+#include "sloked/kgr/RestrictedServer.h"
+#include "sloked/kgr/local/NamedServer.h"
+#include "sloked/kgr/local/Server.h"
+#include "sloked/net/Socket.h"
+#include "sloked/security/Authenticator.h"
 
 namespace sloked {
 
     class KgrMasterNetServer : public SlokedCloseable {
      public:
-        KgrMasterNetServer(KgrNamedServer &, std::unique_ptr<SlokedServerSocket>, SlokedIOPoller &, SlokedNamedRestrictionAuthority * = nullptr, SlokedAuthenticatorFactory * = nullptr);
+        KgrMasterNetServer(KgrNamedServer &,
+                           std::unique_ptr<SlokedServerSocket>,
+                           SlokedIOPoller &,
+                           SlokedNamedRestrictionAuthority * = nullptr,
+                           SlokedAuthenticatorFactory * = nullptr);
         ~KgrMasterNetServer();
         bool IsRunning() const;
         void Start();
@@ -67,6 +72,6 @@ namespace sloked {
         std::atomic<bool> work;
         SlokedCounter<std::size_t> workers;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,21 +20,24 @@
 */
 
 #include "sloked/core/Locale.h"
-#include "sloked/core/Error.h"
-#include <locale>
+
 #include <clocale>
 #include <iostream>
+#include <locale>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
-    std::reference_wrapper<const Encoding> SlokedLocale::encoding{Encoding::Utf8};
+    std::reference_wrapper<const Encoding> SlokedLocale::encoding{
+        Encoding::Utf8};
 
     void SlokedLocale::Setup() {
         std::locale userLocale("");
         auto locale = userLocale.name();
         if (locale.empty()) {
             SlokedLocale::encoding = std::cref(Encoding::Get("UTF-8"));
-	} else {
+        } else {
             auto separator = locale.find(".");
             if (locale == "*" || separator == locale.npos) {
                 throw SlokedError("Locale: Unknown locale \'" + locale + "\'");
@@ -48,11 +51,12 @@ namespace sloked {
         return SlokedLocale::encoding.get();
     }
 
-    std::unique_ptr<NewLine> SlokedLocale::SystemNewline(const Encoding &encoding) {
+    std::unique_ptr<NewLine> SlokedLocale::SystemNewline(
+        const Encoding &encoding) {
 #if defined(SLOKED_PLATFORM_OS_LINUX) || defined(SLOKED_PLATFORM_OS_UNIX)
         return NewLine::LF(encoding);
 #else
 #error "Internal error: Unknown platform"
 #endif
     }
-}
+}  // namespace sloked

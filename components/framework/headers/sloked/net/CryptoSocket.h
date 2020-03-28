@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -27,11 +27,16 @@
 
 namespace sloked {
 
-    class SlokedCryptoSocket : public SlokedSocket, public SlokedSocketEncryption {
+    class SlokedCryptoSocket : public SlokedSocket,
+                               public SlokedSocketEncryption {
      public:
-        using CipherGenerator = std::function<std::unique_ptr<SlokedCrypto::Cipher>(const std::string &)>;
+        using CipherGenerator =
+            std::function<std::unique_ptr<SlokedCrypto::Cipher>(
+                const std::string &)>;
 
-        SlokedCryptoSocket(std::unique_ptr<SlokedSocket>, std::unique_ptr<SlokedCrypto::Cipher>, std::unique_ptr<SlokedCrypto::Random>);
+        SlokedCryptoSocket(std::unique_ptr<SlokedSocket>,
+                           std::unique_ptr<SlokedCrypto::Cipher>,
+                           std::unique_ptr<SlokedCrypto::Random>);
         SlokedCryptoSocket(const SlokedCryptoSocket &) = delete;
         SlokedCryptoSocket(SlokedCryptoSocket &&);
         SlokedCryptoSocket &operator=(const SlokedCryptoSocket &) = delete;
@@ -40,14 +45,15 @@ namespace sloked {
         bool Valid() final;
         void Close() final;
         std::size_t Available() final;
-        bool Wait(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
+        bool Wait(std::chrono::system_clock::duration =
+                      std::chrono::system_clock::duration::zero()) final;
         std::optional<uint8_t> Read() final;
         std::vector<uint8_t> Read(std::size_t) final;
         void Write(SlokedSpan<const uint8_t>) final;
         void Write(uint8_t) final;
         std::unique_ptr<SlokedIOAwaitable> Awaitable() const final;
         SlokedSocketEncryption *GetEncryption() final;
-        
+
         void SetEncryption(std::unique_ptr<SlokedCrypto::Cipher>) final;
         void RestoreDedaultEncryption() final;
 
@@ -65,16 +71,21 @@ namespace sloked {
 
     class SlokedCryptoServerSocket : public SlokedServerSocket {
      public:
-        SlokedCryptoServerSocket(std::unique_ptr<SlokedServerSocket>, SlokedCrypto &, SlokedCrypto::Key &);
+        SlokedCryptoServerSocket(std::unique_ptr<SlokedServerSocket>,
+                                 SlokedCrypto &, SlokedCrypto::Key &);
         SlokedCryptoServerSocket(const SlokedCryptoServerSocket &) = delete;
         SlokedCryptoServerSocket(SlokedCryptoServerSocket &&);
-        SlokedCryptoServerSocket &operator=(const SlokedCryptoServerSocket &) = delete;
-        SlokedCryptoServerSocket &operator=(SlokedCryptoServerSocket &&) = delete;
+        SlokedCryptoServerSocket &operator=(const SlokedCryptoServerSocket &) =
+            delete;
+        SlokedCryptoServerSocket &operator=(SlokedCryptoServerSocket &&) =
+            delete;
 
         bool Valid() final;
         void Start() final;
         void Close() final;
-        std::unique_ptr<SlokedSocket> Accept(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
+        std::unique_ptr<SlokedSocket> Accept(
+            std::chrono::system_clock::duration =
+                std::chrono::system_clock::duration::zero()) final;
         std::unique_ptr<SlokedIOAwaitable> Awaitable() const final;
 
      private:
@@ -85,21 +96,26 @@ namespace sloked {
 
     class SlokedCryptoSocketFactory : public SlokedSocketFactory {
      public:
-        SlokedCryptoSocketFactory(SlokedSocketFactory &, SlokedCrypto &, SlokedCrypto::Key &);
+        SlokedCryptoSocketFactory(SlokedSocketFactory &, SlokedCrypto &,
+                                  SlokedCrypto::Key &);
         SlokedCryptoSocketFactory(const SlokedCryptoSocketFactory &) = delete;
         SlokedCryptoSocketFactory(SlokedCryptoSocketFactory &&);
 
-        SlokedCryptoSocketFactory &operator=(const SlokedCryptoSocketFactory &) = delete;
-        SlokedCryptoSocketFactory &operator=(SlokedCryptoSocketFactory &&) = delete;
+        SlokedCryptoSocketFactory &operator=(
+            const SlokedCryptoSocketFactory &) = delete;
+        SlokedCryptoSocketFactory &operator=(SlokedCryptoSocketFactory &&) =
+            delete;
 
-        std::unique_ptr<SlokedSocket> Connect(const SlokedSocketAddress &) final;
-        std::unique_ptr<SlokedServerSocket> Bind(const SlokedSocketAddress &) final;
+        std::unique_ptr<SlokedSocket> Connect(
+            const SlokedSocketAddress &) final;
+        std::unique_ptr<SlokedServerSocket> Bind(
+            const SlokedSocketAddress &) final;
 
      private:
         SlokedSocketFactory &socketFactory;
         SlokedCrypto &crypto;
         SlokedCrypto::Key &key;
     };
-}
+}  // namespace sloked
 
 #endif

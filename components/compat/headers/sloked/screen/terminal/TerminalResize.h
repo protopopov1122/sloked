@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_SCREEN_TERMINAL_TERMINALRESIZE_H_
 #define SLOKED_SCREEN_TERMINAL_TERMINALRESIZE_H_
 
-#include "sloked/Base.h"
 #include <functional>
 #include <map>
 #include <mutex>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -40,6 +41,6 @@ namespace sloked {
         static int64_t nextId;
         static std::map<int64_t, std::function<void()>> listeners;
     };
-}
+}  // namespace sloked
 
 #endif

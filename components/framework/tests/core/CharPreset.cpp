@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -19,8 +19,9 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "catch2/catch.hpp"
 #include "sloked/core/CharPreset.h"
+
+#include "catch2/catch.hpp"
 #include "sloked/core/Locale.h"
 
 using namespace sloked;
@@ -50,14 +51,22 @@ TEST_CASE("Char preset correctly calculates character positions") {
     const Encoding &encoding = SlokedLocale::SystemEncoding();
     const std::string sample{"\tA\tB\tC\tD"};
     charPreset.SetTabWidth(4);
-    REQUIRE(charPreset.GetRealPosition(sample, 0, encoding) == std::pair<std::size_t, std::size_t>{0, 4});
-    REQUIRE(charPreset.GetRealPosition(sample, 1, encoding) == std::pair<std::size_t, std::size_t>{4, 5});
-    REQUIRE(charPreset.GetRealPosition(sample, 2, encoding) == std::pair<std::size_t, std::size_t>{5, 9});
-    REQUIRE(charPreset.GetRealPosition(sample, 3, encoding) == std::pair<std::size_t, std::size_t>{9, 10});
-    REQUIRE(charPreset.GetRealPosition(sample, 4, encoding) == std::pair<std::size_t, std::size_t>{10, 14});
-    REQUIRE(charPreset.GetRealPosition(sample, 5, encoding) == std::pair<std::size_t, std::size_t>{14, 15});
-    REQUIRE(charPreset.GetRealPosition(sample, 6, encoding) == std::pair<std::size_t, std::size_t>{15, 19});
-    REQUIRE(charPreset.GetRealPosition(sample, 7, encoding) == std::pair<std::size_t, std::size_t>{19, 20});
+    REQUIRE(charPreset.GetRealPosition(sample, 0, encoding) ==
+            std::pair<std::size_t, std::size_t>{0, 4});
+    REQUIRE(charPreset.GetRealPosition(sample, 1, encoding) ==
+            std::pair<std::size_t, std::size_t>{4, 5});
+    REQUIRE(charPreset.GetRealPosition(sample, 2, encoding) ==
+            std::pair<std::size_t, std::size_t>{5, 9});
+    REQUIRE(charPreset.GetRealPosition(sample, 3, encoding) ==
+            std::pair<std::size_t, std::size_t>{9, 10});
+    REQUIRE(charPreset.GetRealPosition(sample, 4, encoding) ==
+            std::pair<std::size_t, std::size_t>{10, 14});
+    REQUIRE(charPreset.GetRealPosition(sample, 5, encoding) ==
+            std::pair<std::size_t, std::size_t>{14, 15});
+    REQUIRE(charPreset.GetRealPosition(sample, 6, encoding) ==
+            std::pair<std::size_t, std::size_t>{15, 19});
+    REQUIRE(charPreset.GetRealPosition(sample, 7, encoding) ==
+            std::pair<std::size_t, std::size_t>{19, 20});
 }
 
 TEST_CASE("Char preset notifies listeners about preset changes") {
@@ -66,7 +75,7 @@ TEST_CASE("Char preset notifies listeners about preset changes") {
     std::size_t widthSum = 0;
     auto unbind = charPreset.Listen([&widthSum](const auto &charPreset) {
         widthSum += charPreset.GetCharWidth(U'\t', 0);
-    }); 
+    });
     charPreset.SetTabWidth(1);
     charPreset.SetTabWidth(2);
     charPreset.SetTabWidth(3);

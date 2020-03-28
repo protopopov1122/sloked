@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,12 @@
 #ifndef SLOKED_CORE_RESOURCE_H_
 #define SLOKED_CORE_RESOURCE_H_
 
-#include "sloked/core/Error.h"
 #include <map>
-#include <utility>
+#include <memory>
 #include <optional>
+#include <utility>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
@@ -35,7 +37,7 @@ namespace sloked {
         using Key = uint32_t;
         friend class Resource;
         class Resource {
-         public: 
+         public:
             friend class SlokedRegistry<T>;
 
             Resource(SlokedRegistry<T> &registry)
@@ -83,7 +85,8 @@ namespace sloked {
                 if (this->key != SlokedRegistry<T>::None) {
                     return *this->registry.get().registry.at(this->key);
                 } else {
-                    throw SlokedError("Registry: Resource points to non-existing object");
+                    throw SlokedError(
+                        "Registry: Resource points to non-existing object");
                 }
             }
 
@@ -102,8 +105,7 @@ namespace sloked {
             std::reference_wrapper<SlokedRegistry<T>> registry;
         };
 
-        SlokedRegistry()
-            : nextKey(1) {}
+        SlokedRegistry() : nextKey(1) {}
 
         Resource Add(std::unique_ptr<T> obj) {
             Key objKey = this->nextKey++;
@@ -147,6 +149,6 @@ namespace sloked {
         std::map<Key, std::unique_ptr<T>> registry;
         std::map<Key, uint32_t> refcount;
     };
-}
+}  // namespace sloked
 
 #endif

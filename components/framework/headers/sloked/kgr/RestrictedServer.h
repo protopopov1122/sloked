@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,16 +22,22 @@
 #ifndef SLOKED_SECURITY_RESTRICTEDSERVER_H_
 #define SLOKED_SECURITY_RESTRICTEDSERVER_H_
 
-#include "sloked/security/Restriction.h"
 #include "sloked/kgr/NamedServer.h"
+#include "sloked/security/Restriction.h"
 
 namespace sloked {
 
-    class KgrRestrictedNamedServer : public KgrNamedServer, public SlokedNamedRestrictionTarget {
+    class KgrRestrictedNamedServer : public KgrNamedServer,
+                                     public SlokedNamedRestrictionTarget {
      public:
-        KgrRestrictedNamedServer(KgrNamedServer &, std::shared_ptr<SlokedNamedRestrictions> = nullptr, std::shared_ptr<SlokedNamedRestrictions> = nullptr);
-        void SetAccessRestrictions(std::shared_ptr<SlokedNamedRestrictions>) final;
-        void SetModificationRestrictions(std::shared_ptr<SlokedNamedRestrictions>) final;
+        KgrRestrictedNamedServer(
+            KgrNamedServer &,
+            std::shared_ptr<SlokedNamedRestrictions> = nullptr,
+            std::shared_ptr<SlokedNamedRestrictions> = nullptr);
+        void SetAccessRestrictions(
+            std::shared_ptr<SlokedNamedRestrictions>) final;
+        void SetModificationRestrictions(
+            std::shared_ptr<SlokedNamedRestrictions>) final;
         std::unique_ptr<KgrPipe> Connect(const std::string &) final;
         Connector GetConnector(const std::string &) final;
 
@@ -44,6 +50,6 @@ namespace sloked {
         std::shared_ptr<SlokedNamedRestrictions> accessRestrictions;
         std::shared_ptr<SlokedNamedRestrictions> modificationRestrictions;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,11 +22,12 @@
 #ifndef SLOKED_KGR_SERIALIZE_H_
 #define SLOKED_KGR_SERIALIZE_H_
 
-#include "sloked/core/Encoding.h"
-#include "sloked/kgr/Value.h"
-#include "sloked/json/AST.h"
-#include "sloked/core/Base64.h"
 #include <vector>
+
+#include "sloked/core/Base64.h"
+#include "sloked/core/Encoding.h"
+#include "sloked/json/AST.h"
+#include "sloked/kgr/Value.h"
 
 namespace sloked {
 
@@ -63,12 +64,13 @@ namespace sloked {
         KgrValue Deserialize(std::istream &) const final;
 
         class ByteIter;
+
      private:
         void SerializeValue(KgrSerializer::Blob &, const KgrValue &) const;
         KgrValue DeserializeValue(ByteIter &) const;
 
         const Encoding &encoding;
     };
-}
+}  // namespace sloked
 
 #endif

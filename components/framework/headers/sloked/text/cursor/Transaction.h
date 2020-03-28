@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,14 +22,15 @@
 #ifndef SLOKED_TEXT_CURSOR_TRANSACTION_H_
 #define SLOKED_TEXT_CURSOR_TRANSACTION_H_
 
-#include "sloked/Base.h"
-#include "sloked/core/RangeMap.h"
-#include "sloked/core/Position.h"
-#include "sloked/core/Encoding.h"
-#include "sloked/text/TextBlock.h"
 #include <string>
 #include <variant>
 #include <vector>
+
+#include "sloked/Base.h"
+#include "sloked/core/Encoding.h"
+#include "sloked/core/Position.h"
+#include "sloked/core/RangeMap.h"
+#include "sloked/text/TextBlock.h"
 
 namespace sloked {
 
@@ -37,7 +38,8 @@ namespace sloked {
      public:
         SlokedTransactionPatch();
         void NextTransaction();
-        void Insert(const TextPosition &, const TextPosition &, const TextPositionDelta &);
+        void Insert(const TextPosition &, const TextPosition &,
+                    const TextPositionDelta &);
         bool Has(const TextPosition &) const;
         TextPositionDelta At(const TextPosition &) const;
 
@@ -95,6 +97,6 @@ namespace sloked {
         Action action;
         std::variant<DeletePosition, Content, Range, Batch> argument;
     };
-}
+}  // namespace sloked
 
 #endif

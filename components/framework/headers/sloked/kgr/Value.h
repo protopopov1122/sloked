@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,12 +22,13 @@
 #ifndef SLOKED_KGR_OBJECT_H_
 #define SLOKED_KGR_OBJECT_H_
 
-#include "sloked/Base.h"
-#include <variant>
-#include <string>
 #include <cinttypes>
-#include <vector>
 #include <map>
+#include <string>
+#include <variant>
+#include <vector>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -46,7 +47,8 @@ namespace sloked {
     class KgrArray {
      public:
         using ConstIterator = std::vector<KgrValue>::const_iterator;
-        using ConstReverseIterator = std::vector<KgrValue>::const_reverse_iterator;
+        using ConstReverseIterator =
+            std::vector<KgrValue>::const_reverse_iterator;
 
         KgrArray() = default;
         KgrArray(const std::vector<KgrValue> &);
@@ -68,7 +70,7 @@ namespace sloked {
         ConstIterator end() const;
         ConstReverseIterator rbegin() const;
         ConstReverseIterator rend() const;
-        
+
         KgrArray &Append(const KgrValue &);
         KgrArray &Append(KgrValue &&);
         KgrArray &Replace(std::size_t, const KgrValue &);
@@ -84,12 +86,14 @@ namespace sloked {
     class KgrDictionary {
      public:
         using ConstIterator = std::map<std::string, KgrValue>::const_iterator;
-        using ConstReverseIterator = std::map<std::string, KgrValue>::const_reverse_iterator;
+        using ConstReverseIterator =
+            std::map<std::string, KgrValue>::const_reverse_iterator;
 
         KgrDictionary() = default;
         KgrDictionary(const std::map<std::string, KgrValue> &);
         KgrDictionary(std::map<std::string, KgrValue> &&);
-        KgrDictionary(std::initializer_list<std::pair<const std::string, KgrValue>>);
+        KgrDictionary(
+            std::initializer_list<std::pair<const std::string, KgrValue>>);
         KgrDictionary(const KgrDictionary &) = default;
         KgrDictionary(KgrDictionary &&) = default;
 
@@ -154,8 +158,10 @@ namespace sloked {
 
      private:
         KgrValueType type;
-        std::variant<int64_t, double, bool, std::string, KgrArray, KgrDictionary> value;
+        std::variant<int64_t, double, bool, std::string, KgrArray,
+                     KgrDictionary>
+            value;
     };
-}
+}  // namespace sloked
 
 #endif

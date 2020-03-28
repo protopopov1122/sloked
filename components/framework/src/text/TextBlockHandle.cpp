@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,15 +20,19 @@
 */
 
 #include "sloked/text/TextBlockHandle.h"
-#include <iostream>
+
 #include <cassert>
+#include <iostream>
+
 #include "sloked/core/Error.h"
 
 namespace sloked {
 
-
-    TextBlockHandle::TextBlockHandle(std::string_view content, std::map<std::size_t, std::pair<std::size_t, std::size_t>> lines, const TextBlockFactory &factory)
-        : content(view {content, std::move(lines)}), factory(factory) {}
+    TextBlockHandle::TextBlockHandle(
+        std::string_view content,
+        std::map<std::size_t, std::pair<std::size_t, std::size_t>> lines,
+        const TextBlockFactory &factory)
+        : content(view{content, std::move(lines)}), factory(factory) {}
 
     std::size_t TextBlockHandle::GetLastLine() const {
         switch (this->content.index()) {
@@ -60,7 +64,8 @@ namespace sloked {
                     const auto &pos = content.lines.at(line);
                     return content.content.substr(pos.first, pos.second);
                 } else {
-                    throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
+                    throw SlokedError("Line " + std::to_string(line) +
+                                      " exceeds total length of block");
                 }
             }
             case 1:
@@ -81,7 +86,8 @@ namespace sloked {
         }
     }
 
-    void TextBlockHandle::Visit(std::size_t start, std::size_t count, Visitor visitor) const {
+    void TextBlockHandle::Visit(std::size_t start, std::size_t count,
+                                Visitor visitor) const {
         switch (this->content.index()) {
             case 0: {
                 const view &content = std::get<0>(this->content);
@@ -90,7 +96,8 @@ namespace sloked {
                         const auto &pos = content.lines.at(i);
                         visitor(content.content.substr(pos.first, pos.second));
                     } else {
-                        throw SlokedError("Line " + std::to_string(i) + " exceeds total length of block");   
+                        throw SlokedError("Line " + std::to_string(i) +
+                                          " exceeds total length of block");
                     }
                 }
             } break;
@@ -112,7 +119,8 @@ namespace sloked {
         std::get<1>(this->content)->EraseLine(line);
     }
 
-    void TextBlockHandle::InsertLine(std::size_t line, std::string_view content) {
+    void TextBlockHandle::InsertLine(std::size_t line,
+                                     std::string_view content) {
         this->open_block();
         std::get<1>(this->content)->InsertLine(line, content);
     }
@@ -136,7 +144,8 @@ namespace sloked {
 
     void TextBlockHandle::open_block() const {
         if (this->content.index() == 0) {
-            this->content = this->factory.make(std::get<0>(this->content).content);
+            this->content =
+                this->factory.make(std::get<0>(this->content).content);
         }
     }
-}
+}  // namespace sloked

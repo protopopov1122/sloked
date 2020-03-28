@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,23 +22,24 @@
 #ifndef SLOKED_SCREEN_TERMINAL_POSIX_POSIXTERMINAL_H_
 #define SLOKED_SCREEN_TERMINAL_POSIX_POSIXTERMINAL_H_
 
-#include "sloked/Base.h"
-#include "sloked/screen/terminal/Terminal.h"
-#include <string>
-#include <memory>
-#include <sstream>
 #include <chrono>
 #include <map>
+#include <memory>
+#include <sstream>
+#include <string>
+
+#include "sloked/Base.h"
+#include "sloked/screen/terminal/Terminal.h"
 
 namespace sloked {
-    
+
     class PosixTerminal : public SlokedDuplexTerminal {
      public:
         class Termcap;
 
         PosixTerminal(FILE * = stdout, FILE * = stdin);
         virtual ~PosixTerminal();
-    
+
         void SetPosition(Line, Column) override;
         void MoveUp(Line) override;
         void MoveDown(Line) override;
@@ -52,7 +53,9 @@ namespace sloked {
         Line GetHeight() override;
 
         void Write(std::string_view) override;
-        bool WaitInput(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) override;
+        bool WaitInput(
+            std::chrono::system_clock::duration =
+                std::chrono::system_clock::duration::zero()) override;
         std::vector<SlokedKeyboardInput> GetInput() override;
 
         void SetGraphicsMode(SlokedTextGraphics) override;
@@ -74,6 +77,6 @@ namespace sloked {
         Line height;
         std::map<std::pair<Line, Column>, std::string> cursorMotionCache;
     };
-}
+}  // namespace sloked
 
 #endif

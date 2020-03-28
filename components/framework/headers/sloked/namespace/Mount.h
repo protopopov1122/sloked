@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,15 +22,16 @@
 #ifndef SLOKED_NAMESPACE_MOUNT_H_
 #define SLOKED_NAMESPACE_MOUNT_H_
 
+#include "sloked/core/URI.h"
 #include "sloked/namespace/Filesystem.h"
 #include "sloked/namespace/Object.h"
-#include "sloked/core/URI.h"
 
 namespace sloked {
 
     class SlokedMountableNamespace : public SlokedNamespace {
      public:
-        virtual void Mount(const SlokedPath &, std::unique_ptr<SlokedNamespace>) = 0;
+        virtual void Mount(const SlokedPath &,
+                           std::unique_ptr<SlokedNamespace>) = 0;
         virtual std::vector<SlokedPath> Mounted() const = 0;
         virtual void Umount(const SlokedPath &) = 0;
     };
@@ -38,18 +39,20 @@ namespace sloked {
     class SlokedNamespaceMounter {
      public:
         virtual ~SlokedNamespaceMounter() = default;
-        virtual std::unique_ptr<SlokedNamespace> Mount(const SlokedUri &) const = 0;
+        virtual std::unique_ptr<SlokedNamespace> Mount(
+            const SlokedUri &) const = 0;
     };
 
     class SlokedDefaultNamespaceMounter : public SlokedNamespaceMounter {
      public:
-        SlokedDefaultNamespaceMounter(std::unique_ptr<SlokedFilesystemAdapter>, SlokedNamespace &);
+        SlokedDefaultNamespaceMounter(std::unique_ptr<SlokedFilesystemAdapter>,
+                                      SlokedNamespace &);
         std::unique_ptr<SlokedNamespace> Mount(const SlokedUri &) const final;
 
      private:
         std::unique_ptr<SlokedFilesystemAdapter> filesystem;
         SlokedNamespace &root;
     };
-}
+}  // namespace sloked
 
 #endif

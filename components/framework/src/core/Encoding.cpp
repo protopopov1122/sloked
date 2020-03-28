@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,9 +20,11 @@
 */
 
 #include "sloked/core/Encoding.h"
+
+#include <map>
+
 #include "sloked/core/Error.h"
 #include "sloked/core/Locale.h"
-#include <map>
 
 namespace sloked {
 
@@ -30,13 +32,11 @@ namespace sloked {
     const std::string EncodingIdentifiers::Utf8 = "UTF-8";
     const std::string EncodingIdentifiers::Utf32LE = "UTF-32LE";
 
-    static std::map<std::string, std::reference_wrapper<const Encoding>> Encodings = {
-        { EncodingIdentifiers::Utf8, Encoding::Utf8 },
-        { EncodingIdentifiers::Utf32LE, Encoding::Utf32LE }
-    };
+    static std::map<std::string, std::reference_wrapper<const Encoding>>
+        Encodings = {{EncodingIdentifiers::Utf8, Encoding::Utf8},
+                     {EncodingIdentifiers::Utf32LE, Encoding::Utf32LE}};
 
-    Encoding::Iterator::Iterator()
-        : start{0}, length{0}, value{U'\0'} {}
+    Encoding::Iterator::Iterator() : start{0}, length{0}, value{U'\0'} {}
 
     bool Encoding::operator==(const Encoding &other) const {
         return this == &other;
@@ -66,7 +66,8 @@ namespace sloked {
         }
     }
 
-    EncodingConverter::EncodingConverter(const Encoding &from, const Encoding &to)
+    EncodingConverter::EncodingConverter(const Encoding &from,
+                                         const Encoding &to)
         : from(from), to(to) {}
 
     std::string EncodingConverter::Convert(std::string_view str) const {
@@ -92,4 +93,4 @@ namespace sloked {
     const Encoding &EncodingConverter::GetDestination() const {
         return this->to;
     }
-}
+}  // namespace sloked

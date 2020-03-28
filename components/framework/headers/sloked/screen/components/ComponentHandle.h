@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_SCREEN_COMPONENTS_COMPONENTHANDLE_H_
 #define SLOKED_SCREEN_COMPONENTS_COMPONENTHANDLE_H_
 
+#include <memory>
+
 #include "sloked/screen/Component.h"
 #include "sloked/screen/Splitter.h"
 #include "sloked/screen/widgets/TextPaneWidget.h"
-#include <memory>
 
 namespace sloked {
 
@@ -38,12 +39,13 @@ namespace sloked {
      public:
         virtual bool HasComponent() const = 0;
         virtual SlokedScreenComponent &GetComponent() const = 0;
-        virtual SlokedTextPaneComponent &NewTextPane(std::unique_ptr<SlokedTextPaneWidget>) = 0;
+        virtual SlokedTextPaneComponent &NewTextPane(
+            std::unique_ptr<SlokedTextPaneWidget>) = 0;
         virtual SlokedSplitterComponent &NewSplitter(Splitter::Direction) = 0;
         virtual SlokedTabberComponent &NewTabber() = 0;
         virtual SlokedMultiplexerComponent &NewMultiplexer() = 0;
         virtual void Close() = 0;
-    
+
      protected:
         using SlokedScreenComponent::SlokedScreenComponent;
     };
@@ -60,6 +62,6 @@ namespace sloked {
         virtual void SetFocus() = 0;
         virtual void Close() = 0;
     };
-}
+}  // namespace sloked
 
 #endif

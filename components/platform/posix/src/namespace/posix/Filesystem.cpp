@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,20 +20,23 @@
 */
 
 #include "sloked/namespace/posix/Filesystem.h"
-#include "sloked/filesystem/posix/File.h"
+
 #include "sloked/core/Error.h"
 #include "sloked/core/URI.h"
+#include "sloked/filesystem/posix/File.h"
 
 namespace sloked {
 
-    SlokedPosixFilesystemAdapter::SlokedPosixFilesystemAdapter(std::string_view root)
+    SlokedPosixFilesystemAdapter::SlokedPosixFilesystemAdapter(
+        std::string_view root)
         : rootPath(root) {}
 
     const SlokedPath &SlokedPosixFilesystemAdapter::GetRoot() const {
         return this->rootPath;
     }
 
-    std::unique_ptr<SlokedFile> SlokedPosixFilesystemAdapter::NewFile(const SlokedPath &path) const {
+    std::unique_ptr<SlokedFile> SlokedPosixFilesystemAdapter::NewFile(
+        const SlokedPath &path) const {
         SlokedPath realPath = path.Root();
         if (path.IsAbsolute()) {
             realPath = this->GetRoot().RelativeTo(path.RelativeTo(path.Root()));
@@ -41,21 +44,27 @@ namespace sloked {
             realPath = this->GetRoot().RelativeTo(path);
         }
         if (!this->GetRoot().IsParent(realPath)) {
-            throw SlokedError(std::string{"Path out of root scope: "} + path.ToString());
+            throw SlokedError(std::string{"Path out of root scope: "} +
+                              path.ToString());
         } else {
             return std::make_unique<SlokedPosixFile>(realPath.ToString());
         }
     }
-    SlokedPath SlokedPosixFilesystemAdapter::ToPath(const std::string &path) const {
+    SlokedPath SlokedPosixFilesystemAdapter::ToPath(
+        const std::string &path) const {
         return SlokedPath(path);
     }
 
-    std::string SlokedPosixFilesystemAdapter::ToURI(const SlokedPath &path) const {
-        SlokedPath realPath = path.IsAbsolute() ? path.RelativeTo(path.Root()) : path;
-        return SlokedUri("file", realPath.RelativeTo(this->rootPath).ToString()).ToString();
+    std::string SlokedPosixFilesystemAdapter::ToURI(
+        const SlokedPath &path) const {
+        SlokedPath realPath =
+            path.IsAbsolute() ? path.RelativeTo(path.Root()) : path;
+        return SlokedUri("file", realPath.RelativeTo(this->rootPath).ToString())
+            .ToString();
     }
 
-    std::unique_ptr<SlokedFilesystemAdapter> SlokedPosixFilesystemAdapter::Rebase(std::string_view path) const {
+    std::unique_ptr<SlokedFilesystemAdapter>
+        SlokedPosixFilesystemAdapter::Rebase(std::string_view path) const {
         return std::make_unique<SlokedPosixFilesystemAdapter>(path);
     }
-}
+}  // namespace sloked

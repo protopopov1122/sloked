@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_CORE_AWAITABLE_POSIX_H_
 #define SLOKED_CORE_AWAITABLE_POSIX_H_
 
-#include "sloked/core/awaitable/Awaitable.h"
 #include <atomic>
-#include <mutex>
 #include <map>
+#include <mutex>
+
+#include "sloked/core/awaitable/Awaitable.h"
 
 namespace sloked {
 
@@ -36,6 +37,7 @@ namespace sloked {
         SystemId GetSystemId() const final;
 
         static const intptr_t PosixIOSystemId;
+
      private:
         int socket;
     };
@@ -44,8 +46,10 @@ namespace sloked {
      public:
         SlokedPosixAwaitablePoll();
         SlokedIOAwaitable::SystemId GetSystemId() const final;
-        std::function<void()> Attach(std::unique_ptr<SlokedIOAwaitable>, std::function<void()>) final;
-        void Await(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
+        std::function<void()> Attach(std::unique_ptr<SlokedIOAwaitable>,
+                                     std::function<void()>) final;
+        void Await(std::chrono::system_clock::duration =
+                       std::chrono::system_clock::duration::zero()) final;
 
      private:
         std::mutex mtx;
@@ -54,6 +58,6 @@ namespace sloked {
         std::map<int, std::function<void()>> sockets;
         std::vector<std::function<void()>> callbacks;
     };
-}
+}  // namespace sloked
 
 #endif

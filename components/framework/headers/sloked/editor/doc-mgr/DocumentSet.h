@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,28 +22,29 @@
 #ifndef SLOKED_EDITOR_DOCMGR_DOCUMENTSET_H_
 #define SLOKED_EDITOR_DOCMGR_DOCUMENTSET_H_
 
-#include "sloked/editor/doc-mgr/Document.h"
 #include "sloked/core/Resource.h"
+#include "sloked/editor/doc-mgr/Document.h"
 
 namespace sloked {
 
-	class SlokedEditorDocumentSet {
-	 public:
-		using Document = SlokedRegistry<SlokedEditorDocument>::Resource;
-		using DocumentId = SlokedRegistry<SlokedEditorDocument>::Key;
+    class SlokedEditorDocumentSet {
+     public:
+        using Document = SlokedRegistry<SlokedEditorDocument>::Resource;
+        using DocumentId = SlokedRegistry<SlokedEditorDocument>::Key;
 
-		SlokedEditorDocumentSet(SlokedNamespace &);
-		Document NewDocument(const Encoding &, std::unique_ptr<NewLine>);
-		Document OpenDocument(const SlokedPath &, const Encoding &, std::unique_ptr<NewLine>);
-		std::optional<Document> OpenDocument(DocumentId);
-		void SaveAs(SlokedEditorDocument &, const SlokedPath &);
-		bool HasDocument(DocumentId);
-		Document Empty();
+        SlokedEditorDocumentSet(SlokedNamespace &);
+        Document NewDocument(const Encoding &, std::unique_ptr<NewLine>);
+        Document OpenDocument(const SlokedPath &, const Encoding &,
+                              std::unique_ptr<NewLine>);
+        std::optional<Document> OpenDocument(DocumentId);
+        void SaveAs(SlokedEditorDocument &, const SlokedPath &);
+        bool HasDocument(DocumentId);
+        Document Empty();
 
-	 private:
-		SlokedNamespace &ns;
-		SlokedRegistry<SlokedEditorDocument> documents;
-	};
-}
+     private:
+        SlokedNamespace &ns;
+        SlokedRegistry<SlokedEditorDocument> documents;
+    };
+}  // namespace sloked
 
 #endif

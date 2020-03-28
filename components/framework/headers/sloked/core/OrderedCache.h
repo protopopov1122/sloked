@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_CORE_ORDEREDCACHE_H_
 #define SLOKED_CORE_ORDEREDCACHE_H_
 
-#include "sloked/core/Error.h"
-#include <map>
 #include <functional>
+#include <map>
 #include <type_traits>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
@@ -33,7 +34,8 @@ namespace sloked {
     struct SlokedOrderedCacheKeyTraits;
 
     template <typename T>
-    struct SlokedOrderedCacheKeyTraits<T, std::enable_if_t<std::is_integral_v<T>>> {
+    struct SlokedOrderedCacheKeyTraits<
+        T, std::enable_if_t<std::is_integral_v<T>>> {
         constexpr T Next(const T &key) const {
             return key + 1;
         }
@@ -47,11 +49,11 @@ namespace sloked {
         }
     };
 
-    template <typename Key, typename Value, typename KeyTraits = SlokedOrderedCacheKeyTraits<Key>>
+    template <typename Key, typename Value,
+              typename KeyTraits = SlokedOrderedCacheKeyTraits<Key>>
     class SlokedOrderedCache {
         struct Comparator {
-            Comparator(const KeyTraits &traits)
-                : traits(traits) {}
+            Comparator(const KeyTraits &traits) : traits(traits) {}
 
             bool operator()(const Key &first, const Key &second) const {
                 return traits.Less(first, second);
@@ -61,21 +63,28 @@ namespace sloked {
         };
 
      public:
-        using Supplier = std::function<std::vector<Value>(const Key &, const Key &)>;
-        using Iterator = typename std::map<Key, Value, Comparator>::const_iterator;
+        using Supplier =
+            std::function<std::vector<Value>(const Key &, const Key &)>;
+        using Iterator =
+            typename std::map<Key, Value, Comparator>::const_iterator;
         using Range = std::pair<Iterator, Iterator>;
 
         SlokedOrderedCache(Supplier supplier, KeyTraits traits = {})
-            : supplier(std::move(supplier)), traits(std::move(traits)), comparator{this->traits}, cache(this->comparator) {}
+            : supplier(std::move(supplier)),
+              traits(std::move(traits)), comparator{this->traits},
+              cache(this->comparator) {}
 
         Range Fetch(const Key &begin, const Key &end) {
-            if (!this->traits.Less(begin, end) && this->traits.Distance(begin, end) > 0) {
-                throw SlokedError("OrderedCache: Reversed order of requested range");
+            if (!this->traits.Less(begin, end) &&
+                this->traits.Distance(begin, end) > 0) {
+                throw SlokedError(
+                    "OrderedCache: Reversed order of requested range");
             }
             bool countingRange{false};
             std::pair<Key, Key> fetchRange;
             auto rangeIt = this->cache.end();
-            for (auto key = begin; !traits.Less(end, key); key = traits.Next(key)) {
+            for (auto key = begin; !traits.Less(end, key);
+                 key = traits.Next(key)) {
                 rangeIt = this->cache.find(key);
                 if (rangeIt == this->cache.end()) {
                     if (countingRange) {
@@ -86,39 +95,56 @@ namespace sloked {
                     }
                 } else if (countingRange) {
                     countingRange = false;
-                    auto values = this->supplier(fetchRange.first, fetchRange.second);
-                    auto distance = this->traits.Distance(fetchRange.first, fetchRange.second);
+                    auto values =
+                        this->supplier(fetchRange.first, fetchRange.second);
+                    auto distance = this->traits.Distance(fetchRange.first,
+                                                          fetchRange.second);
                     if (values.size() != distance + 1) {
-                        throw SlokedError("OrderedCache: Supplied value range does not correspond to requested keys");
+                        throw SlokedError(
+                            "OrderedCache: Supplied value range does not "
+                            "correspond to requested keys");
                     }
                     auto it = values.begin();
-                    for (auto current = fetchRange.first; !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
+                    for (auto current = fetchRange.first;
+                         !this->traits.Less(fetchRange.second, current);
+                         current = this->traits.Next(current), ++it) {
                         this->cache.emplace(current, std::move(*it));
                     }
                 }
             }
             if (countingRange) {
-                auto values = this->supplier(fetchRange.first, fetchRange.second);
-                if (values.size() != this->traits.Distance(fetchRange.first, fetchRange.second) + 1) {
-                    throw SlokedError("OrderedCache: Supplied value range does not correspond to requested keys");
+                auto values =
+                    this->supplier(fetchRange.first, fetchRange.second);
+                if (values.size() !=
+                    this->traits.Distance(fetchRange.first, fetchRange.second) +
+                        1) {
+                    throw SlokedError("OrderedCache: Supplied value range does "
+                                      "not correspond to requested keys");
                 }
                 auto it = values.begin();
-                for (auto current = fetchRange.first; !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
-                    rangeIt = this->cache.emplace(current, std::move(*it)).first;
+                for (auto current = fetchRange.first;
+                     !this->traits.Less(fetchRange.second, current);
+                     current = this->traits.Next(current), ++it) {
+                    rangeIt =
+                        this->cache.emplace(current, std::move(*it)).first;
                 }
             }
             return {this->cache.find(begin), std::next(rangeIt)};
         }
 
-        std::vector<std::pair<Key, Iterator>> FetchUpdated(const Key &begin, const Key &end) {
-            if (!this->traits.Less(begin, end) && this->traits.Distance(begin, end) > 0) {
-                throw SlokedError("OrderedCache: Reversed order of requested range");
+        std::vector<std::pair<Key, Iterator>> FetchUpdated(const Key &begin,
+                                                           const Key &end) {
+            if (!this->traits.Less(begin, end) &&
+                this->traits.Distance(begin, end) > 0) {
+                throw SlokedError(
+                    "OrderedCache: Reversed order of requested range");
             }
             std::vector<std::pair<Key, Iterator>> result;
             bool countingRange{false};
             std::pair<Key, Key> fetchRange;
             auto rangeIt = this->cache.end();
-            for (auto key = begin; !traits.Less(end, key); key = traits.Next(key)) {
+            for (auto key = begin; !traits.Less(end, key);
+                 key = traits.Next(key)) {
                 rangeIt = this->cache.find(key);
                 if (rangeIt == this->cache.end()) {
                     if (countingRange) {
@@ -129,32 +155,50 @@ namespace sloked {
                     }
                 } else if (countingRange) {
                     countingRange = false;
-                    auto values = this->supplier(fetchRange.first, fetchRange.second);
-                    auto distance = this->traits.Distance(fetchRange.first, fetchRange.second);
+                    auto values =
+                        this->supplier(fetchRange.first, fetchRange.second);
+                    auto distance = this->traits.Distance(fetchRange.first,
+                                                          fetchRange.second);
                     if (values.size() != distance + 1) {
-                        throw SlokedError("OrderedCache: Supplied value range does not correspond to requested keys");
+                        throw SlokedError(
+                            "OrderedCache: Supplied value range does not "
+                            "correspond to requested keys");
                     }
                     auto it = values.begin();
-                    for (auto current = fetchRange.first; !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
-                        result.emplace_back(std::make_pair(current, this->cache.emplace(current, std::move(*it)).first));
+                    for (auto current = fetchRange.first;
+                         !this->traits.Less(fetchRange.second, current);
+                         current = this->traits.Next(current), ++it) {
+                        result.emplace_back(std::make_pair(
+                            current,
+                            this->cache.emplace(current, std::move(*it))
+                                .first));
                     }
                 }
             }
             if (countingRange) {
-                auto values = this->supplier(fetchRange.first, fetchRange.second);
-                if (values.size() != this->traits.Distance(fetchRange.first, fetchRange.second) + 1) {
-                    throw SlokedError("OrderedCache: Supplied value range does not correspond to requested keys");
+                auto values =
+                    this->supplier(fetchRange.first, fetchRange.second);
+                if (values.size() !=
+                    this->traits.Distance(fetchRange.first, fetchRange.second) +
+                        1) {
+                    throw SlokedError("OrderedCache: Supplied value range does "
+                                      "not correspond to requested keys");
                 }
                 auto it = values.begin();
-                for (auto current = fetchRange.first; !this->traits.Less(fetchRange.second, current); current = this->traits.Next(current), ++it) {
-                    result.emplace_back(std::make_pair(current, this->cache.emplace(current, std::move(*it)).first));
+                for (auto current = fetchRange.first;
+                     !this->traits.Less(fetchRange.second, current);
+                     current = this->traits.Next(current), ++it) {
+                    result.emplace_back(std::make_pair(
+                        current,
+                        this->cache.emplace(current, std::move(*it)).first));
                 }
             }
             return result;
         }
 
         void Drop(const Key &begin, const Key &end) {
-            this->cache.erase(this->cache.lower_bound(begin), this->cache.upper_bound(end));
+            this->cache.erase(this->cache.lower_bound(begin),
+                              this->cache.upper_bound(end));
         }
 
         void Clear() {
@@ -168,13 +212,12 @@ namespace sloked {
             }
         }
 
-    
      private:
         Supplier supplier;
         KeyTraits traits;
         Comparator comparator;
         std::map<Key, Value, Comparator> cache;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,9 +22,10 @@
 #ifndef SLOKED_NAMESPACE_ROOT_H_
 #define SLOKED_NAMESPACE_ROOT_H_
 
-#include "sloked/namespace/Resolve.h"
-#include "sloked/namespace/Mount.h"
 #include <memory>
+
+#include "sloked/namespace/Mount.h"
+#include "sloked/namespace/Resolve.h"
 
 namespace sloked {
 
@@ -41,6 +42,6 @@ namespace sloked {
         virtual ~SlokedRootNamespaceFactory() = default;
         virtual std::unique_ptr<SlokedRootNamespace> Build() const = 0;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -11,9 +11,10 @@ namespace sloked {
     }
 
     void SlokedCloseablePool::Close() {
-        for (auto it = this->closeables.rbegin(); it != this->closeables.rend(); ++it) {
+        for (auto it = this->closeables.rbegin(); it != this->closeables.rend();
+             ++it) {
             it->get().Close();
         }
         this->closeables.clear();
     }
-}
+}  // namespace sloked

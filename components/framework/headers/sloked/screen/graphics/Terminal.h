@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,17 +22,19 @@
 #ifndef SLOKED_SCREEN_GRAPHICS_TERMINAL_H_
 #define SLOKED_SCREEN_GRAPHICS_TERMINAL_H_
 
-#include "sloked/screen/terminal/Terminal.h"
-#include "sloked/screen/graphics/Window.h"
 #include "sloked/screen/Size.h"
+#include "sloked/screen/graphics/Window.h"
+#include "sloked/screen/terminal/Terminal.h"
 
 namespace sloked {
 
     class SlokedGraphicalTerminal : public SlokedDuplexTerminal {
      public:
         struct Mode {
-            SlokedBackgroundGraphics background{SlokedBackgroundGraphics::White};
-            SlokedForegroundGraphics foreground{SlokedForegroundGraphics::Black};
+            SlokedBackgroundGraphics background{
+                SlokedBackgroundGraphics::White};
+            SlokedForegroundGraphics foreground{
+                SlokedForegroundGraphics::Black};
             bool bold{false};
             bool underscore{false};
         };
@@ -60,6 +62,6 @@ namespace sloked {
 
         virtual SlokedGraphicalTerminal &GetTerminal() = 0;
     };
-}
+}  // namespace sloked
 
 #endif

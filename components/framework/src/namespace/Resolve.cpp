@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,7 +23,8 @@
 
 namespace sloked {
 
-    SlokedPathResolver::SlokedPathResolver(SlokedPath currentDir, std::optional<SlokedPath> homeDir)
+    SlokedPathResolver::SlokedPathResolver(SlokedPath currentDir,
+                                           std::optional<SlokedPath> homeDir)
         : currentDir(std::move(currentDir)), homeDir(std::move(homeDir)) {}
 
     const SlokedPath &SlokedPathResolver::GetCurrentDir() const {
@@ -44,11 +45,14 @@ namespace sloked {
 
     SlokedPath SlokedPathResolver::Resolve(SlokedPath dir) {
         if (dir.IsAbsolute()) {
-            if (this->homeDir.has_value() &&
-                !dir.Components().empty() &&
+            if (this->homeDir.has_value() && !dir.Components().empty() &&
                 dir.Components().front() == dir.GetPreset().GetHomeDir() &&
                 !dir.GetPreset().GetHomeDir().empty()) {
-                return dir.RelativeTo(SlokedPath(dir.GetPrefix(), dir.GetPreset().GetHomeDir(), dir.GetPreset())).RelativeTo(this->homeDir.value());
+                return dir
+                    .RelativeTo(SlokedPath(dir.GetPrefix(),
+                                           dir.GetPreset().GetHomeDir(),
+                                           dir.GetPreset()))
+                    .RelativeTo(this->homeDir.value());
             } else {
                 return dir;
             }
@@ -56,4 +60,4 @@ namespace sloked {
             return dir.RelativeTo(this->currentDir);
         }
     }
-}
+}  // namespace sloked

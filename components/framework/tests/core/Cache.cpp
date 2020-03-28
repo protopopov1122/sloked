@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -54,26 +54,29 @@ TEST_CASE("Cache throws on reversed requested range") {
 
 TEST_CASE("Cache throws on incorrect supply result range") {
     SECTION("Less than expected") {
-        SlokedOrderedCache<int, int> cache([](const auto &from, const auto &to) {
-            return std::vector<int>{};
-        });
+        SlokedOrderedCache<int, int> cache(
+            [](const auto &from, const auto &to) {
+                return std::vector<int>{};
+            });
         REQUIRE_THROWS(cache.Fetch(1, 10));
     }
     SECTION("More than expected") {
-        SlokedOrderedCache<int, int> cache([](const auto &from, const auto &to) {
-            return std::vector<int>(to - from + 10, 0);
-        });
+        SlokedOrderedCache<int, int> cache(
+            [](const auto &from, const auto &to) {
+                return std::vector<int>(to - from + 10, 0);
+            });
         REQUIRE_THROWS(cache.Fetch(1, 10));
     }
 }
 
 TEST_CASE("Cache does not duplicate supplier invocations") {
     int fetched = 0;
-    SlokedOrderedCache<int, int> cache([&fetched](const auto &from, const auto &to) {
-        int count = to - from + 1;
-        fetched += count;
-        return std::vector<int>(count, 0);
-    });
+    SlokedOrderedCache<int, int> cache(
+        [&fetched](const auto &from, const auto &to) {
+            int count = to - from + 1;
+            fetched += count;
+            return std::vector<int>(count, 0);
+        });
     cache.Fetch(1, 10);
     cache.Drop(8, 15);
     cache.Fetch(1, 15);
@@ -91,17 +94,18 @@ TEST_CASE("Cache is able to fetch only updated parts") {
     REQUIRE(updated.size() == 15);
     for (const auto &entry : updated) {
         REQUIRE(((entry.first >= 27 && entry.first <= 30) ||
-            (entry.first >= 35 && entry.first <= 45)));
+                 (entry.first >= 35 && entry.first <= 45)));
     }
 }
 
 TEST_CASE("Cache is able to clear itself") {
     int fetched = 0;
-    SlokedOrderedCache<int, int> cache([&fetched](const auto &from, const auto &to) {
-        int count = to - from + 1;
-        fetched += count;
-        return std::vector<int>(count, 0);
-    });
+    SlokedOrderedCache<int, int> cache(
+        [&fetched](const auto &from, const auto &to) {
+            int count = to - from + 1;
+            fetched += count;
+            return std::vector<int>(count, 0);
+        });
     cache.Fetch(1, 100);
     REQUIRE(fetched == 100);
     cache.Fetch(1, 100);
@@ -112,16 +116,11 @@ TEST_CASE("Cache is able to clear itself") {
 }
 
 TEST_CASE("Cache supports insertion without calling supplier") {
-    SlokedOrderedCache<int, int> cache([](const auto &from, const auto &to)->std::vector<int> {
-        throw std::exception{};
-    });
-    std::map<int, int> values {
-        { 1, 1 },
-        { 2, 2 },
-        { 3, 3 },
-        { 4, 4 },
-        { 5, 5 }
-    };
+    SlokedOrderedCache<int, int> cache(
+        [](const auto &from, const auto &to) -> std::vector<int> {
+            throw std::exception{};
+        });
+    std::map<int, int> values{{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}};
     REQUIRE_THROWS(cache.Fetch(2, 4));
     cache.Insert(values.begin(), values.end());
     auto fetched = cache.Fetch(2, 4);

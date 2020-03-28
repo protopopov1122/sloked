@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -34,16 +34,18 @@ namespace sloked {
         const SlokedPath &GetPath() const override;
         SlokedNamespaceDirectory *AsDirectory() override;
 
-        std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) override;
+        std::unique_ptr<SlokedNamespaceObject> GetObject(
+            const SlokedPath &) override;
         bool HasObject(const SlokedPath &) const override;
         void Iterate(const SlokedPath &, Visitor) const override;
         void Traverse(const SlokedPath &, Visitor, bool = false) const override;
-        std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(const SlokedPath &) override;
+        std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(
+            const SlokedPath &) override;
 
      private:
         SlokedNamespace &ns;
         SlokedPath path;
     };
-}
+}  // namespace sloked
 
 #endif

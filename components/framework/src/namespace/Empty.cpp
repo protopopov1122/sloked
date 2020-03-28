@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,7 +23,8 @@
 
 namespace sloked {
 
-    class SlokedEmptyNamespaceObjectHandle : public SlokedNamespaceObjectHandle {
+    class SlokedEmptyNamespaceObjectHandle
+        : public SlokedNamespaceObjectHandle {
      public:
         std::optional<std::string> ToURI() const final {
             return {};
@@ -43,7 +44,8 @@ namespace sloked {
         }
     };
 
-    std::unique_ptr<SlokedNamespaceObject> SlokedEmptyNamespace::GetObject(const SlokedPath &) {
+    std::unique_ptr<SlokedNamespaceObject> SlokedEmptyNamespace::GetObject(
+        const SlokedPath &) {
         return nullptr;
     }
 
@@ -53,9 +55,11 @@ namespace sloked {
 
     void SlokedEmptyNamespace::Iterate(const SlokedPath &, Visitor) const {}
 
-    void SlokedEmptyNamespace::Traverse(const SlokedPath &, Visitor, bool) const {}
+    void SlokedEmptyNamespace::Traverse(const SlokedPath &, Visitor,
+                                        bool) const {}
 
-    std::unique_ptr<SlokedNamespaceObjectHandle> SlokedEmptyNamespace::GetHandle(const SlokedPath &) {
+    std::unique_ptr<SlokedNamespaceObjectHandle>
+        SlokedEmptyNamespace::GetHandle(const SlokedPath &) {
         return std::make_unique<SlokedEmptyNamespaceObjectHandle>();
     }
-}
+}  // namespace sloked

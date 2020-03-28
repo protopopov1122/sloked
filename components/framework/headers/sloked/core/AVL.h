@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,20 +22,22 @@
 #ifndef SLOKED_CORE_AVL_H_
 #define SLOKED_CORE_AVL_H_
 
-#include "sloked/Base.h"
-#include <type_traits>
 #include <cinttypes>
 #include <memory>
+#include <type_traits>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
     template <typename T, typename U = std::unique_ptr<T>>
     class AVLNode {
      protected:
-        AVLNode(U begin, U end)
-            : begin(std::move(begin)), end(std::move(end)) {
+        AVLNode(U begin, U end) : begin(std::move(begin)), end(std::move(end)) {
             static_assert(std::is_base_of<AVLNode<T, U>, T>::value);
-            static_assert(std::is_convertible_v<decltype(std::declval<const T &>().GetHeight()), std::size_t>);
+            static_assert(std::is_convertible_v<
+                          decltype(std::declval<const T &>().GetHeight()),
+                          std::size_t>);
         }
 
         virtual ~AVLNode() = default;
@@ -50,7 +52,7 @@ namespace sloked {
             int64_t balance = hB - hE;
             return balance > -2 && balance < 2;
         }
-        
+
         void AvlBalance() {
             if (this->begin) {
                 this->begin->AvlBalance();
@@ -115,7 +117,7 @@ namespace sloked {
                 this->AvlUpdate();
             }
         }
-        
+
         void RotateLr() {
             if (this->begin) {
                 this->begin->RotateRr();
@@ -130,6 +132,6 @@ namespace sloked {
             }
         }
     };
-}
+}  // namespace sloked
 
 #endif

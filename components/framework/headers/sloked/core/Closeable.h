@@ -1,9 +1,10 @@
 #ifndef SLOKED_CORE_CLOSEABLE_H_
 #define SLOKED_CORE_CLOSEABLE_H_
 
-#include "sloked/Base.h"
-#include <vector>
 #include <functional>
+#include <vector>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -18,9 +19,10 @@ namespace sloked {
         ~SlokedCloseablePool();
         void Attach(SlokedCloseable &);
         void Close() final;
+
      private:
         std::vector<std::reference_wrapper<SlokedCloseable>> closeables;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -29,16 +29,19 @@ namespace sloked {
 
     class SlokedCompressedSocket : public SlokedSocket {
      public:
-        SlokedCompressedSocket(std::unique_ptr<SlokedSocket>, std::unique_ptr<SlokedCompression::Compressor>);
+        SlokedCompressedSocket(std::unique_ptr<SlokedSocket>,
+                               std::unique_ptr<SlokedCompression::Compressor>);
         SlokedCompressedSocket(const SlokedCompressedSocket &) = delete;
         SlokedCompressedSocket(SlokedCompressedSocket &&);
-        SlokedCompressedSocket &operator=(const SlokedCompressedSocket &) = delete;
+        SlokedCompressedSocket &operator=(const SlokedCompressedSocket &) =
+            delete;
         SlokedCompressedSocket &operator=(SlokedCompressedSocket &&);
 
         bool Valid() final;
         void Close() final;
         std::size_t Available() final;
-        bool Wait(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
+        bool Wait(std::chrono::system_clock::duration =
+                      std::chrono::system_clock::duration::zero()) final;
         std::optional<uint8_t> Read() final;
         std::vector<uint8_t> Read(std::size_t) final;
         void Write(SlokedSpan<const uint8_t>) final;
@@ -58,16 +61,22 @@ namespace sloked {
 
     class SlokedCompressedServerSocket : public SlokedServerSocket {
      public:
-        SlokedCompressedServerSocket(std::unique_ptr<SlokedServerSocket>, SlokedCompression &);
-        SlokedCompressedServerSocket(const SlokedCompressedServerSocket &) = delete;
+        SlokedCompressedServerSocket(std::unique_ptr<SlokedServerSocket>,
+                                     SlokedCompression &);
+        SlokedCompressedServerSocket(const SlokedCompressedServerSocket &) =
+            delete;
         SlokedCompressedServerSocket(SlokedCompressedServerSocket &&);
-        SlokedCompressedServerSocket &operator=(const SlokedCompressedServerSocket &) = delete;
-        SlokedCompressedServerSocket &operator=(SlokedCompressedServerSocket &&) = delete;
+        SlokedCompressedServerSocket &operator=(
+            const SlokedCompressedServerSocket &) = delete;
+        SlokedCompressedServerSocket &operator=(
+            SlokedCompressedServerSocket &&) = delete;
 
         bool Valid() final;
         void Start() final;
         void Close() final;
-        std::unique_ptr<SlokedSocket> Accept(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) final;
+        std::unique_ptr<SlokedSocket> Accept(
+            std::chrono::system_clock::duration =
+                std::chrono::system_clock::duration::zero()) final;
         std::unique_ptr<SlokedIOAwaitable> Awaitable() const final;
 
      private:
@@ -77,20 +86,26 @@ namespace sloked {
 
     class SlokedCompressedSocketFactory : public SlokedSocketFactory {
      public:
-        SlokedCompressedSocketFactory(SlokedSocketFactory &, SlokedCompression &);
-        SlokedCompressedSocketFactory(const SlokedCompressedSocketFactory &) = delete;
+        SlokedCompressedSocketFactory(SlokedSocketFactory &,
+                                      SlokedCompression &);
+        SlokedCompressedSocketFactory(const SlokedCompressedSocketFactory &) =
+            delete;
         SlokedCompressedSocketFactory(SlokedCompressedSocketFactory &&);
 
-        SlokedCompressedSocketFactory &operator=(const SlokedCompressedSocketFactory &) = delete;
-        SlokedCompressedSocketFactory &operator=(SlokedCompressedSocketFactory &&) = delete;
+        SlokedCompressedSocketFactory &operator=(
+            const SlokedCompressedSocketFactory &) = delete;
+        SlokedCompressedSocketFactory &operator=(
+            SlokedCompressedSocketFactory &&) = delete;
 
-        std::unique_ptr<SlokedSocket> Connect(const SlokedSocketAddress &) final;
-        std::unique_ptr<SlokedServerSocket> Bind(const SlokedSocketAddress &) final;
+        std::unique_ptr<SlokedSocket> Connect(
+            const SlokedSocketAddress &) final;
+        std::unique_ptr<SlokedServerSocket> Bind(
+            const SlokedSocketAddress &) final;
 
      private:
         SlokedSocketFactory &socketFactory;
         SlokedCompression &compression;
     };
-}
+}  // namespace sloked
 
 #endif

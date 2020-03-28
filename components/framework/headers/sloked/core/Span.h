@@ -7,8 +7,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,23 +23,21 @@
 #ifndef SLOKED_CORE_SPAN_H_
 #define SLOKED_CORE_SPAN_H_
 
-#include "sloked/core/Error.h"
 #include <cinttypes>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
     template <typename T>
     class SlokedSpan {
      public:
-        SlokedSpan()
-            : data_ptr(nullptr), sz(0) {}
+        SlokedSpan() : data_ptr(nullptr), sz(0) {}
 
-        SlokedSpan(T *data, std::size_t size)
-            : data_ptr(data), sz(size) {}
+        SlokedSpan(T *data, std::size_t size) : data_ptr(data), sz(size) {}
 
         SlokedSpan(const SlokedSpan<T> &) = default;
-        SlokedSpan(SlokedSpan<T> &&span)
-            : data_ptr(span), sz(span.sz) {
+        SlokedSpan(SlokedSpan<T> &&span) : data_ptr(span), sz(span.sz) {
             span.data_ptr = nullptr;
             span.sz = 0;
         }
@@ -61,8 +59,7 @@ namespace sloked {
         }
 
         bool Empty() const {
-            return this->data_ptr == nullptr ||
-                this->sz == 0;
+            return this->data_ptr == nullptr || this->sz == 0;
         }
 
         T &operator[](std::size_t idx) const {
@@ -93,8 +90,7 @@ namespace sloked {
             if (count == 0) {
                 return SlokedSpan<T>(nullptr, 0);
             }
-            if (this->data_ptr == nullptr ||
-                start + count >= this->sz) {
+            if (this->data_ptr == nullptr || start + count >= this->sz) {
                 throw SlokedError("SlokedSpan: Subspan out of bounds");
             } else {
                 return SlokedSpan<T>(this->data_ptr + start, count);
@@ -109,6 +105,6 @@ namespace sloked {
         T *data_ptr;
         std::size_t sz;
     };
-}
+}  // namespace sloked
 
 #endif

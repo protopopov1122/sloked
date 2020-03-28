@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,11 +20,13 @@
 */
 
 #include "sloked/screen/Splitter.h"
+
 #include <cassert>
 
 namespace sloked {
 
-    Splitter::Constraints::Constraints(float dim, unsigned int min, unsigned int max)
+    Splitter::Constraints::Constraints(float dim, unsigned int min,
+                                       unsigned int max)
         : dim(dim), min(min), max(max) {
         assert(dim >= 0.0f);
         assert(dim <= 1.0f);
@@ -42,4 +44,4 @@ namespace sloked {
     unsigned int Splitter::Constraints::GetMaximum() const {
         return this->max;
     }
-}
+}  // namespace sloked

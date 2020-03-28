@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,16 +22,17 @@
 #ifndef SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALSPLITTER_H_
 #define SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALSPLITTER_H_
 
+#include <functional>
+#include <memory>
+#include <optional>
+#include <vector>
+
+#include "sloked/core/CharPreset.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/core/Indexed.h"
 #include "sloked/screen/Splitter.h"
 #include "sloked/screen/terminal/Terminal.h"
-#include "sloked/core/CharPreset.h"
 #include "sloked/screen/terminal/multiplexer/TerminalWindow.h"
-#include <vector>
-#include <memory>
-#include <functional>
-#include <optional>
 
 namespace sloked {
 
@@ -39,15 +40,18 @@ namespace sloked {
      public:
         using WinId = std::size_t;
 
-        TerminalSplitter(SlokedTerminal &, Splitter::Direction, const Encoding &, const SlokedCharPreset &);
+        TerminalSplitter(SlokedTerminal &, Splitter::Direction,
+                         const Encoding &, const SlokedCharPreset &);
 
         SlokedTerminal &GetTerminal(WinId) const;
         WinId GetTerminalCount() const;
         Splitter::Direction GetDirection() const;
         const Splitter::Constraints &GetConstraints(WinId) const;
 
-        SlokedIndexed<SlokedTerminal &, WinId> NewTerminal(const Splitter::Constraints &);
-        SlokedIndexed<SlokedTerminal &, WinId> NewTerminal(WinId, const Splitter::Constraints &);
+        SlokedIndexed<SlokedTerminal &, WinId> NewTerminal(
+            const Splitter::Constraints &);
+        SlokedIndexed<SlokedTerminal &, WinId> NewTerminal(
+            WinId, const Splitter::Constraints &);
         bool UpdateConstraints(WinId, const Splitter::Constraints &);
         bool Move(WinId, WinId);
         bool CloseTerminal(WinId);
@@ -55,7 +59,8 @@ namespace sloked {
         TextPosition GetDimensions();
 
      private:
-        using Window = std::pair<std::shared_ptr<TerminalWindow>, Splitter::Constraints>;
+        using Window =
+            std::pair<std::shared_ptr<TerminalWindow>, Splitter::Constraints>;
         unsigned int GetMinimum() const;
 
         SlokedTerminal &term;
@@ -64,6 +69,6 @@ namespace sloked {
         const SlokedCharPreset &charPreset;
         std::vector<Window> windows;
     };
-}
+}  // namespace sloked
 
 #endif

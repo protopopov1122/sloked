@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,9 +20,11 @@
 */
 
 #include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
-#include "sloked/core/Encoding.h"
-#include <iostream>
+
 #include <cstring>
+#include <iostream>
+
+#include "sloked/core/Encoding.h"
 
 namespace sloked {
 
@@ -57,30 +59,35 @@ namespace sloked {
     void BufferedGraphicsMode::apply(SlokedTerminal &term) const {
         ApplyTextMode<decltype(this->text), TextSize>(term, this->text);
         if (this->background != None) {
-            term.SetGraphicsMode(static_cast<SlokedBackgroundGraphics>(this->background));
+            term.SetGraphicsMode(
+                static_cast<SlokedBackgroundGraphics>(this->background));
         }
         if (this->foreground != None) {
-            term.SetGraphicsMode(static_cast<SlokedForegroundGraphics>(this->foreground));
+            term.SetGraphicsMode(
+                static_cast<SlokedForegroundGraphics>(this->foreground));
         }
     }
 
     bool BufferedGraphicsMode::operator==(const BufferedGraphicsMode &g) const {
-        return this->text == g.text &&
-            this->background == g.background &&
-            this->foreground == g.foreground;
+        return this->text == g.text && this->background == g.background &&
+               this->foreground == g.foreground;
     }
 
     bool BufferedGraphicsMode::operator!=(const BufferedGraphicsMode &g) const {
-        return this->text != g.text ||
-            this->background != g.background ||
-            this->foreground != g.foreground;
+        return this->text != g.text || this->background != g.background ||
+               this->foreground != g.foreground;
     }
 
-    BufferedTerminal::BufferedTerminal(SlokedTerminal &term, const Encoding &encoding, const SlokedCharPreset &charPreset)
-        : term(term), encoding(encoding), charPreset(charPreset), show_cursor(true), current_state(nullptr), prev_state(nullptr), line(0), col(0), width(0), height(0) {
+    BufferedTerminal::BufferedTerminal(SlokedTerminal &term,
+                                       const Encoding &encoding,
+                                       const SlokedCharPreset &charPreset)
+        : term(term), encoding(encoding), charPreset(charPreset),
+          show_cursor(true), current_state(nullptr), prev_state(nullptr),
+          line(0), col(0), width(0), height(0) {
         this->UpdateDimensions();
         const auto length = this->width * this->height;
-        this->current_state = std::unique_ptr<Character[]>(new Character[length]);
+        this->current_state =
+            std::unique_ptr<Character[]>(new Character[length]);
         this->prev_state = std::unique_ptr<Character[]>(new Character[length]);
         this->renderBuffer = std::unique_ptr<char32_t[]>(new char32_t[length]);
     }
@@ -91,16 +98,21 @@ namespace sloked {
         this->height = term.GetHeight();
         const auto newSize = this->width * this->height;
         if (newSize > prevSize) {
-            this->current_state = std::unique_ptr<Character[]>(new Character[newSize]);
-            this->prev_state = std::unique_ptr<Character[]>(new Character[newSize]);
-            this->renderBuffer = std::unique_ptr<char32_t[]>(new char32_t[newSize]);
+            this->current_state =
+                std::unique_ptr<Character[]>(new Character[newSize]);
+            this->prev_state =
+                std::unique_ptr<Character[]>(new Character[newSize]);
+            this->renderBuffer =
+                std::unique_ptr<char32_t[]>(new char32_t[newSize]);
         }
         if (newSize != prevSize) {
-            std::fill_n(this->current_state.get(), newSize, Character{this->graphics, U' '});
-            std::fill_n(this->prev_state.get(), newSize, Character{this->graphics, U' '});
+            std::fill_n(this->current_state.get(), newSize,
+                        Character{this->graphics, U' '});
+            std::fill_n(this->prev_state.get(), newSize,
+                        Character{this->graphics, U' '});
         }
     }
-    
+
     void BufferedTerminal::SetPosition(Line l, Column c) {
         if (l < this->height && c < this->width) {
             this->line = l;
@@ -122,7 +134,7 @@ namespace sloked {
 
     void BufferedTerminal::MoveBackward(Column c) {
         if (this->col >= c) {
-            this->col -=c;
+            this->col -= c;
         }
     }
 
@@ -169,7 +181,8 @@ namespace sloked {
 
     void BufferedTerminal::Write(std::string_view str) {
         const auto length = str.size();
-        for (Encoding::Iterator it{}; this->encoding.Iterate(it, str, length);) {
+        for (Encoding::Iterator it{};
+             this->encoding.Iterate(it, str, length);) {
             if (it.value == U'\n') {
                 this->ClearChars(this->width - this->col);
                 if (this->line + 1 == this->height) {
@@ -179,7 +192,8 @@ namespace sloked {
             } else if (it.value == U'\t') {
                 this->Write(this->charPreset.GetTab(this->encoding, this->col));
             } else if (this->col < this->width) {
-                Character &chr = this->current_state[this->line * this->width + this->col];
+                Character &chr =
+                    this->current_state[this->line * this->width + this->col];
                 chr.graphics = this->graphics;
                 chr.value = it.value;
                 this->col++;
@@ -199,7 +213,8 @@ namespace sloked {
         this->graphics.SetGraphicsMode(mode);
     }
 
-    void BufferedTerminal::dump_buffer(std::u32string_view str, std::size_t buffer_start) {
+    void BufferedTerminal::dump_buffer(std::u32string_view str,
+                                       std::size_t buffer_start) {
         if (!str.empty()) {
             Line l = buffer_start / this->width;
             Column c = buffer_start % this->width;
@@ -213,8 +228,10 @@ namespace sloked {
         this->UpdateSize();
         if (changed) {
             const auto newSize = this->width * this->height;
-            std::fill_n(this->current_state.get(), newSize, Character{this->graphics, U' '});
-            std::fill_n(this->prev_state.get(), newSize, Character{this->graphics, U' '});
+            std::fill_n(this->current_state.get(), newSize,
+                        Character{this->graphics, U' '});
+            std::fill_n(this->prev_state.get(), newSize,
+                        Character{this->graphics, U' '});
         }
         return changed;
     }
@@ -235,7 +252,11 @@ namespace sloked {
             Character &prevChr = prev_state[i];
             if (chr.graphics != prev_g) {
                 if (render_end != render_base) {
-                    this->dump_buffer(std::u32string_view(render_base, static_cast<ptrdiff_t>(render_end - render_base)), offset);
+                    this->dump_buffer(
+                        std::u32string_view(
+                            render_base,
+                            static_cast<ptrdiff_t>(render_end - render_base)),
+                        offset);
                     render_end = render_base;
                 }
                 chr.graphics.apply(term);
@@ -247,14 +268,21 @@ namespace sloked {
                 }
                 *(render_end++) = chr.value;
             } else if (render_end != render_base) {
-                this->dump_buffer(std::u32string_view(render_base, static_cast<ptrdiff_t>(render_end - render_base)), offset);
+                this->dump_buffer(
+                    std::u32string_view(
+                        render_base,
+                        static_cast<ptrdiff_t>(render_end - render_base)),
+                    offset);
                 render_end = render_base;
             }
             prevChr = chr;
         }
-        this->dump_buffer(std::u32string_view(render_base, static_cast<ptrdiff_t>(render_end - render_base)), offset);
+        this->dump_buffer(
+            std::u32string_view(
+                render_base, static_cast<ptrdiff_t>(render_end - render_base)),
+            offset);
         this->term.SetPosition(this->line, this->col);
         this->term.ShowCursor(this->show_cursor);
         this->term.Flush(true);
     }
-}
+}  // namespace sloked

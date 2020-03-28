@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,6 +20,7 @@
 */
 
 #include "sloked/screen/sdl/Renderer.h"
+
 #include "sloked/core/Error.h"
 
 namespace sloked {
@@ -27,7 +28,8 @@ namespace sloked {
     SlokedSDLRenderer::SlokedSDLRenderer(SDL_Renderer *renderer)
         : renderer{renderer} {}
 
-    SlokedSDLRenderer::SlokedSDLRenderer(const SlokedSDLWindow &window, Uint32 flags)
+    SlokedSDLRenderer::SlokedSDLRenderer(const SlokedSDLWindow &window,
+                                         Uint32 flags)
         : renderer{nullptr} {
         this->renderer = SDL_CreateRenderer(window.GetWindow(), -1, flags);
         if (this->renderer == nullptr) {
@@ -46,7 +48,8 @@ namespace sloked {
         }
     }
 
-    SlokedSDLRenderer &SlokedSDLRenderer::operator=(SlokedSDLRenderer &&renderer) {
+    SlokedSDLRenderer &SlokedSDLRenderer::operator=(
+        SlokedSDLRenderer &&renderer) {
         if (this->renderer) {
             SDL_DestroyRenderer(this->renderer);
         }
@@ -58,4 +61,4 @@ namespace sloked {
     SDL_Renderer *SlokedSDLRenderer::GetRenderer() const {
         return this->renderer;
     }
-}
+}  // namespace sloked

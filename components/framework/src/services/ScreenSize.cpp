@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -25,7 +25,8 @@ namespace sloked {
 
     class SlokedScreenSizeNotificationContext : public KgrLocalContext {
      public:
-        SlokedScreenSizeNotificationContext(std::unique_ptr<KgrPipe> pipe, SlokedScreenSize &size)
+        SlokedScreenSizeNotificationContext(std::unique_ptr<KgrPipe> pipe,
+                                            SlokedScreenSize &size)
             : KgrLocalContext(std::move(pipe)), size(size) {}
 
         ~SlokedScreenSizeNotificationContext() {
@@ -41,41 +42,44 @@ namespace sloked {
                 if (this->unsubscribe) {
                     this->unsubscribe();
                 }
-                this->unsubscribe = this->size.Listen([this](const auto &) {
-                    this->SendSize();
-                });
+                this->unsubscribe = this->size.Listen(
+                    [this](const auto &) { this->SendSize(); });
             }
         }
 
      private:
         void SendSize() {
             auto sz = this->size.GetScreenSize();
-            this->pipe->Write(KgrDictionary {
-                { "height", static_cast<int64_t>(sz.line) },
-                { "width", static_cast<int64_t>(sz.column) }
-            });
+            this->pipe->Write(
+                KgrDictionary{{"height", static_cast<int64_t>(sz.line)},
+                              {"width", static_cast<int64_t>(sz.column)}});
         }
 
         SlokedScreenSize &size;
         std::function<void()> unsubscribe;
     };
 
-    SlokedScreenSizeNotificationService::SlokedScreenSizeNotificationService(SlokedScreenSize &size, KgrContextManager<KgrLocalContext> &contextManager)
+    SlokedScreenSizeNotificationService::SlokedScreenSizeNotificationService(
+        SlokedScreenSize &size,
+        KgrContextManager<KgrLocalContext> &contextManager)
         : size(size), contextManager(contextManager) {}
 
-    void SlokedScreenSizeNotificationService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedScreenSizeNotificationContext>(std::move(pipe), this->size);
+    void SlokedScreenSizeNotificationService::Attach(
+        std::unique_ptr<KgrPipe> pipe) {
+        auto ctx = std::make_unique<SlokedScreenSizeNotificationContext>(
+            std::move(pipe), this->size);
         this->contextManager.Attach(std::move(ctx));
     }
 
-    SlokedScreenSizeNotificationClient::SlokedScreenSizeNotificationClient(std::unique_ptr<KgrPipe> pipe)
+    SlokedScreenSizeNotificationClient::SlokedScreenSizeNotificationClient(
+        std::unique_ptr<KgrPipe> pipe)
         : pipe(std::move(pipe)) {
         this->pipe->Write({});
         auto sz = this->pipe->ReadWait();
-        this->currentSize = {
-            static_cast<TextPosition::Column>(sz.AsDictionary()["height"].AsInt()),
-            static_cast<TextPosition::Line>(sz.AsDictionary()["width"].AsInt())
-        };
+        this->currentSize = {static_cast<TextPosition::Column>(
+                                 sz.AsDictionary()["height"].AsInt()),
+                             static_cast<TextPosition::Line>(
+                                 sz.AsDictionary()["width"].AsInt())};
     }
 
     TextPosition SlokedScreenSizeNotificationClient::GetSize() const {
@@ -86,10 +90,10 @@ namespace sloked {
         this->pipe->SetMessageListener([this, listener = std::move(listener)] {
             while (!this->pipe->Empty()) {
                 auto sz = this->pipe->Read();
-                this->currentSize = {
-                    static_cast<TextPosition::Column>(sz.AsDictionary()["height"].AsInt()),
-                    static_cast<TextPosition::Line>(sz.AsDictionary()["width"].AsInt())
-                };
+                this->currentSize = {static_cast<TextPosition::Column>(
+                                         sz.AsDictionary()["height"].AsInt()),
+                                     static_cast<TextPosition::Line>(
+                                         sz.AsDictionary()["width"].AsInt())};
             }
             if (this->pipe->GetStatus() == KgrPipe::Status::Open) {
                 listener(this->currentSize.load());
@@ -100,4 +104,4 @@ namespace sloked {
     void SlokedScreenSizeNotificationClient::Close() {
         this->pipe->Close();
     }
-}
+}  // namespace sloked

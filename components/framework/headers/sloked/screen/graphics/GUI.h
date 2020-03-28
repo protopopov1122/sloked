@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,18 +22,20 @@
 #ifndef SLOKED_SCREEN_GRAPHICS_GUI_H_
 #define SLOKED_SCREEN_GRAPHICS_GUI_H_
 
+#include <memory>
+
 #include "sloked/screen/graphics/Base.h"
 #include "sloked/screen/graphics/Terminal.h"
 #include "sloked/screen/graphics/Window.h"
-#include <memory>
 
 namespace sloked {
 
     class SlokedGraphicalComponents {
      public:
         virtual ~SlokedGraphicalComponents() = default;
-        virtual std::unique_ptr<SlokedGraphicalTerminalWindow> OpenTerminal(const SlokedGraphicalTerminalWindow::Parameters &) = 0;
+        virtual std::unique_ptr<SlokedGraphicalTerminalWindow> OpenTerminal(
+            const SlokedGraphicalTerminalWindow::Parameters &) = 0;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,8 +22,9 @@
 #ifndef SLOKED_CRYPTO_OPENSSL_OPENSSL_H_
 #define SLOKED_CRYPTO_OPENSSL_OPENSSL_H_
 
-#include "sloked/core/Crypto.h"
 #include <mutex>
+
+#include "sloked/core/Crypto.h"
 
 namespace sloked {
 
@@ -39,7 +40,6 @@ namespace sloked {
             std::vector<uint8_t> key;
         };
 
-
         class OpenSSLCipher : public Cipher {
          public:
             OpenSSLCipher(const OpenSSLKey &);
@@ -50,6 +50,7 @@ namespace sloked {
             std::size_t IVSize() const final;
 
             struct Impl;
+
          private:
             std::unique_ptr<Impl> impl;
             mutable std::mutex mtx;
@@ -68,15 +69,18 @@ namespace sloked {
             uint8_t NextByte() final;
         };
 
-        std::unique_ptr<Key> DeriveKey(const std::string &, const std::string &) final;
+        std::unique_ptr<Key> DeriveKey(const std::string &,
+                                       const std::string &) final;
         std::unique_ptr<Cipher> NewCipher(const SlokedCrypto::Key &) final;
-        std::unique_ptr<Cipher> NewCipher(std::unique_ptr<SlokedCrypto::Key>) final;
+        std::unique_ptr<Cipher> NewCipher(
+            std::unique_ptr<SlokedCrypto::Key>) final;
         std::unique_ptr<Random> NewRandom() final;
 
         static const EngineId Engine;
+
      private:
         static int engineId;
     };
-}
+}  // namespace sloked
 
 #endif

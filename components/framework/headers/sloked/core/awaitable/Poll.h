@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,14 +22,15 @@
 #ifndef SLOKED_CORE_AWAITABLE_POLL_H_
 #define SLOKED_CORE_AWAITABLE_POLL_H_
 
+#include <atomic>
+#include <map>
+#include <mutex>
+#include <thread>
+
 #include "sloked/core/Closeable.h"
-#include "sloked/core/awaitable/Awaitable.h"
 #include "sloked/core/Counter.h"
 #include "sloked/core/Scope.h"
-#include <atomic>
-#include <thread>
-#include <mutex>
-#include <map>
+#include "sloked/core/awaitable/Awaitable.h"
 
 namespace sloked {
 
@@ -48,7 +49,8 @@ namespace sloked {
         virtual Handle Attach(std::unique_ptr<Awaitable>) = 0;
     };
 
-    class SlokedDefaultIOPollThread : public SlokedIOPoller, public SlokedCloseable {
+    class SlokedDefaultIOPollThread : public SlokedIOPoller,
+                                      public SlokedCloseable {
      public:
         SlokedDefaultIOPollThread(SlokedIOPoll &);
         ~SlokedDefaultIOPollThread();
@@ -66,6 +68,6 @@ namespace sloked {
         std::map<std::size_t, std::unique_ptr<Awaitable>> awaitableQueue;
         std::vector<std::size_t> removalQueue;
     };
-}
+}  // namespace sloked
 
 #endif

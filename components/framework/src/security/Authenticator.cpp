@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,12 +20,16 @@
 */
 
 #include "sloked/security/Authenticator.h"
+
 #include "sloked/core/Base64.h"
 
 namespace sloked {
 
-    SlokedBaseAuthenticator::SlokedBaseAuthenticator(SlokedCrypto &crypto, SlokedCredentialProvider &provider, std::string salt, SlokedSocketEncryption *encryption)
-        : crypto(crypto), provider(provider), salt(std::move(salt)), encryption(encryption) {}
+    SlokedBaseAuthenticator::SlokedBaseAuthenticator(
+        SlokedCrypto &crypto, SlokedCredentialProvider &provider,
+        std::string salt, SlokedSocketEncryption *encryption)
+        : crypto(crypto), provider(provider), salt(std::move(salt)),
+          encryption(encryption) {}
 
     SlokedBaseAuthenticator::~SlokedBaseAuthenticator() {
         if (this->unwatchCredentials) {
@@ -45,19 +49,23 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedCrypto::Cipher> SlokedBaseAuthenticator::DeriveCipher(const std::string &account) {
+    std::unique_ptr<SlokedCrypto::Cipher> SlokedBaseAuthenticator::DeriveCipher(
+        const std::string &account) {
         if (auto acc = this->provider.GetByName(account).lock()) {
             auto key = acc->DeriveKey(this->salt);
             auto cipher = this->crypto.NewCipher(std::move(key));
             return cipher;
         } else {
-            throw SlokedError("Authenticator: Account \'" + account + "\' is not available");
+            throw SlokedError("Authenticator: Account \'" + account +
+                              "\' is not available");
         }
     }
-    
-    std::string SlokedBaseAuthenticator::GenerateToken(SlokedCrypto::Cipher &cipher, Challenge ch) {
+
+    std::string SlokedBaseAuthenticator::GenerateToken(
+        SlokedCrypto::Cipher &cipher, Challenge ch) {
         if (cipher.BlockSize() < sizeof(Challenge)) {
-            throw SlokedError("Authenticator: Authentication not supported for current cipher");
+            throw SlokedError("Authenticator: Authentication not supported for "
+                              "current cipher");
         }
         constexpr std::size_t NonceSize = sizeof(Challenge) / sizeof(uint8_t);
         union {
@@ -71,7 +79,8 @@ namespace sloked {
             raw[i] = nonce.bytes[i];
         }
         auto encrypted = cipher.Encrypt(raw);
-        return SlokedBase64::Encode(encrypted.data(), encrypted.data() + encrypted.size());
+        return SlokedBase64::Encode(encrypted.data(),
+                                    encrypted.data() + encrypted.size());
     }
 
     void SlokedBaseAuthenticator::SetupEncryption() {
@@ -85,7 +94,8 @@ namespace sloked {
         if (this->encryption) {
             auto cipher = this->DeriveCipher(this->account.value());
             this->encryption->SetEncryption(std::move(cipher));
-            if (auto acc = this->provider.GetByName(this->account.value()).lock()) {
+            if (auto acc =
+                    this->provider.GetByName(this->account.value()).lock()) {
                 this->unwatchCredentials = acc->Watch([this] {
                     if (this->account.has_value()) {
                         auto cipher = this->DeriveCipher(this->account.value());
@@ -93,27 +103,35 @@ namespace sloked {
                     }
                 });
             } else {
-                throw SlokedError("Authenticator: Account \'" + this->account.value() + "\' is not available");
+                throw SlokedError("Authenticator: Account \'" +
+                                  this->account.value() +
+                                  "\' is not available");
             }
         }
     }
 
-    SlokedMasterAuthenticator::SlokedMasterAuthenticator(SlokedCrypto &crypto, SlokedCredentialProvider &provider, std::string salt, SlokedSocketEncryption *encryption)
-        : SlokedBaseAuthenticator(crypto, provider, std::move(salt), encryption), random(crypto.NewRandom()) {}
-    
+    SlokedMasterAuthenticator::SlokedMasterAuthenticator(
+        SlokedCrypto &crypto, SlokedCredentialProvider &provider,
+        std::string salt, SlokedSocketEncryption *encryption)
+        : SlokedBaseAuthenticator(crypto, provider, std::move(salt),
+                                  encryption),
+          random(crypto.NewRandom()) {}
+
     SlokedMasterAuthenticator::~SlokedMasterAuthenticator() {
         if (this->unwatchCredentials) {
             this->unwatchCredentials();
         }
     }
 
-    SlokedMasterAuthenticator::Challenge SlokedMasterAuthenticator::InitiateLogin() {
+    SlokedMasterAuthenticator::Challenge
+        SlokedMasterAuthenticator::InitiateLogin() {
         this->nonce = this->random->NextInt<Challenge>();
         this->account.reset();
         return this->nonce.value();
     }
 
-    bool SlokedMasterAuthenticator::ContinueLogin(const std::string &account, const std::string &token) {
+    bool SlokedMasterAuthenticator::ContinueLogin(const std::string &account,
+                                                  const std::string &token) {
         if (!this->nonce.has_value()) {
             throw SlokedError("AuthenticationMaster: Initiate login first");
         }
@@ -132,8 +150,11 @@ namespace sloked {
         this->SetupEncryption();
     }
 
-    SlokedSlaveAuthenticator::SlokedSlaveAuthenticator(SlokedCrypto &crypto, SlokedCredentialProvider &provider, std::string salt, SlokedSocketEncryption *encryption)
-        : SlokedBaseAuthenticator(crypto, provider, std::move(salt), encryption) {}
+    SlokedSlaveAuthenticator::SlokedSlaveAuthenticator(
+        SlokedCrypto &crypto, SlokedCredentialProvider &provider,
+        std::string salt, SlokedSocketEncryption *encryption)
+        : SlokedBaseAuthenticator(crypto, provider, std::move(salt),
+                                  encryption) {}
 
     SlokedSlaveAuthenticator::~SlokedSlaveAuthenticator() {
         if (this->unwatchCredentials) {
@@ -141,7 +162,8 @@ namespace sloked {
         }
     }
 
-    std::string SlokedSlaveAuthenticator::InitiateLogin(const std::string keyId, Challenge ch) {
+    std::string SlokedSlaveAuthenticator::InitiateLogin(const std::string keyId,
+                                                        Challenge ch) {
         this->account.reset();
         auto cipher = this->DeriveCipher(keyId);
         return this->GenerateToken(*cipher, ch);
@@ -158,14 +180,22 @@ namespace sloked {
         this->SetupEncryption();
     }
 
-    SlokedAuthenticatorFactory::SlokedAuthenticatorFactory(SlokedCrypto &crypto, SlokedCredentialProvider &provider, std::string salt)
+    SlokedAuthenticatorFactory::SlokedAuthenticatorFactory(
+        SlokedCrypto &crypto, SlokedCredentialProvider &provider,
+        std::string salt)
         : crypto(crypto), provider(provider), salt(std::move(salt)) {}
 
-    std::unique_ptr<SlokedMasterAuthenticator> SlokedAuthenticatorFactory::NewMaster(SlokedSocketEncryption *encryption) {
-        return std::make_unique<SlokedMasterAuthenticator>(this->crypto, this->provider, this->salt, encryption);
+    std::unique_ptr<SlokedMasterAuthenticator>
+        SlokedAuthenticatorFactory::NewMaster(
+            SlokedSocketEncryption *encryption) {
+        return std::make_unique<SlokedMasterAuthenticator>(
+            this->crypto, this->provider, this->salt, encryption);
     }
 
-    std::unique_ptr<SlokedSlaveAuthenticator> SlokedAuthenticatorFactory::NewSlave(SlokedSocketEncryption *encryption) {
-        return std::make_unique<SlokedSlaveAuthenticator>(this->crypto, this->provider, this->salt, encryption);
+    std::unique_ptr<SlokedSlaveAuthenticator>
+        SlokedAuthenticatorFactory::NewSlave(
+            SlokedSocketEncryption *encryption) {
+        return std::make_unique<SlokedSlaveAuthenticator>(
+            this->crypto, this->provider, this->salt, encryption);
     }
-}
+}  // namespace sloked

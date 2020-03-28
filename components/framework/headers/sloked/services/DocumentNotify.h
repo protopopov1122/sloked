@@ -1,18 +1,19 @@
 #ifndef SLOKED_SERVICES_DOCUMENTNOTIFY_H_
 #define SLOKED_SERVICES_DOCUMENTNOTIFY_H_
 
-#include "sloked/kgr/Service.h"
-#include "sloked/kgr/ContextManager.h"
-#include "sloked/kgr/local/Context.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
+#include "sloked/kgr/ContextManager.h"
+#include "sloked/kgr/Service.h"
+#include "sloked/kgr/local/Context.h"
 
 namespace sloked {
 
     class SlokedDocumentNotifyService : public KgrService {
      public:
-        SlokedDocumentNotifyService(SlokedEditorDocumentSet &, KgrContextManager<KgrLocalContext> &);
+        SlokedDocumentNotifyService(SlokedEditorDocumentSet &,
+                                    KgrContextManager<KgrLocalContext> &);
         void Attach(std::unique_ptr<KgrPipe>) override;
-    
+
      private:
         SlokedEditorDocumentSet &documents;
         KgrContextManager<KgrLocalContext> &contextManager;
@@ -21,12 +22,14 @@ namespace sloked {
     class SlokedDocumentNotifyClient {
      public:
         using Notification = std::optional<TextPositionRange>;
-        SlokedDocumentNotifyClient(std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, bool = false);
+        SlokedDocumentNotifyClient(std::unique_ptr<KgrPipe>,
+                                   SlokedEditorDocumentSet::DocumentId,
+                                   bool = false);
         void OnUpdate(std::function<void(const Notification &)>);
 
      private:
         std::unique_ptr<KgrPipe> pipe;
     };
-}
+}  // namespace sloked
 
 #endif

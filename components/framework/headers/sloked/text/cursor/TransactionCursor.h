@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,27 +22,30 @@
 #ifndef SLOKED_TEXT_CURSOR_TRANSACTIONCURSOR_H_
 #define SLOKED_TEXT_CURSOR_TRANSACTIONCURSOR_H_
 
+#include <memory>
+#include <vector>
+
 #include "sloked/core/Encoding.h"
 #include "sloked/text/TextBlock.h"
 #include "sloked/text/cursor/Cursor.h"
 #include "sloked/text/cursor/Transaction.h"
-#include "sloked/text/cursor/TransactionStream.h"
 #include "sloked/text/cursor/TransactionJournal.h"
-#include <vector>
-#include <memory>
+#include "sloked/text/cursor/TransactionStream.h"
 
 namespace sloked {
 
-    class TransactionCursor : public SlokedCursor, public SlokedTransactionJournal {
+    class TransactionCursor : public SlokedCursor,
+                              public SlokedTransactionJournal {
      public:
-        TransactionCursor(TextBlock &, const Encoding &, SlokedTransactionStream &);
+        TransactionCursor(TextBlock &, const Encoding &,
+                          SlokedTransactionStream &);
         virtual ~TransactionCursor();
 
         void Undo() override;
         bool HasUndoable() const override;
         void Redo() override;
         bool HasRedoable() const override;
-    
+
         Line GetLine() const override;
         Column GetColumn() const override;
 
@@ -61,7 +64,7 @@ namespace sloked {
 
      private:
         void applyCommand(const SlokedCursorTransaction &);
-    
+
         TextBlock &text;
         const Encoding &encoding;
         SlokedTransactionStream &stream;
@@ -70,6 +73,6 @@ namespace sloked {
         std::shared_ptr<SlokedTransactionStream::Listener> listener;
         std::vector<TextPositionDelta> cursors;
     };
-}
+}  // namespace sloked
 
 #endif

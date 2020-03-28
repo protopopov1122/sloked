@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,27 +22,28 @@
 #ifndef SLOKED_TEXT_SEARCH_MATCH_H_
 #define SLOKED_TEXT_SEARCH_MATCH_H_
 
+#include <regex>
+#include <vector>
+
 #include "sloked/core/Encoding.h"
 #include "sloked/text/TextBlock.h"
 #include "sloked/text/search/Entry.h"
-#include <regex>
-#include <vector>
 
 namespace sloked {
 
     class SlokedTextMatcher {
      public:
-         using Result = SlokedSearchEntry;
-         using Flags = uint64_t;
+        using Result = SlokedSearchEntry;
+        using Flags = uint64_t;
 
-         virtual ~SlokedTextMatcher() = default;
-         virtual const std::vector<Result> &GetResults() const = 0;
-         virtual void Match(const std::string &, Flags = None) = 0;
-         virtual void Rewind(const TextPosition &) = 0;
-         virtual void Reset() = 0;
+        virtual ~SlokedTextMatcher() = default;
+        virtual const std::vector<Result> &GetResults() const = 0;
+        virtual void Match(const std::string &, Flags = None) = 0;
+        virtual void Rewind(const TextPosition &) = 0;
+        virtual void Reset() = 0;
 
-         static constexpr Flags None = 0;
-         static constexpr Flags CaseInsensitive = 1;
+        static constexpr Flags None = 0;
+        static constexpr Flags CaseInsensitive = 1;
     };
 
     class SlokedTextMatcherBase : public SlokedTextMatcher {
@@ -82,6 +83,6 @@ namespace sloked {
 
         void Match(const std::string &, Flags = None) override;
     };
-}
+}  // namespace sloked
 
 #endif

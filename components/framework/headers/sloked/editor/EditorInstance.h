@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,33 +22,37 @@
 #ifndef SLOKED_EDITOR_EDITORINSTANCE_H_
 #define SLOKED_EDITOR_EDITORINSTANCE_H_
 
-#include "sloked/core/Closeable.h"
-#include "sloked/core/awaitable/Poll.h"
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <variant>
+
 #include "sloked/core/CharPreset.h"
-#include "sloked/sched/Scheduler.h"
+#include "sloked/core/Closeable.h"
+#include "sloked/core/DataHandle.h"
+#include "sloked/core/awaitable/Poll.h"
+#include "sloked/editor/ScreenServer.h"
 #include "sloked/facade/Crypto.h"
 #include "sloked/facade/Network.h"
 #include "sloked/facade/Server.h"
 #include "sloked/facade/Services.h"
-#include "sloked/core/DataHandle.h"
-#include "sloked/editor/ScreenServer.h"
-#include "sloked/services/CharPreset.h"
+#include "sloked/sched/Scheduler.h"
 #include "sloked/sched/ThreadManager.h"
-#include <atomic>
-#include <variant>
-#include <mutex>
-#include <condition_variable>
+#include "sloked/services/CharPreset.h"
 
 namespace sloked {
-    
+
     class SlokedEditorInstance : public SlokedCloseable {
      public:
-        SlokedEditorInstance(std::unique_ptr<SlokedIOPoll>, SlokedSocketFactory &);
+        SlokedEditorInstance(std::unique_ptr<SlokedIOPoll>,
+                             SlokedSocketFactory &);
         SlokedCryptoFacade &InitializeCrypto(SlokedCrypto &);
         SlokedServerFacade &InitializeServer();
         SlokedServerFacade &InitializeServer(std::unique_ptr<SlokedSocket>);
-        SlokedServiceDependencyProvider &InitializeServiceProvider(std::unique_ptr<SlokedServiceDependencyProvider>);
-        SlokedScreenServer &InitializeScreen(SlokedScreenProviderFactory &, const SlokedUri &);
+        SlokedServiceDependencyProvider &InitializeServiceProvider(
+            std::unique_ptr<SlokedServiceDependencyProvider>);
+        SlokedScreenServer &InitializeScreen(SlokedScreenProviderFactory &,
+                                             const SlokedUri &);
         void Attach(SlokedCloseable &);
         void Attach(std::unique_ptr<SlokedDataHandle>);
 
@@ -97,10 +101,13 @@ namespace sloked {
         virtual ~SlokedEditorInstanceContainer() = default;
         virtual bool Has(const std::string &) const = 0;
         virtual SlokedEditorInstance &Get(const std::string &) const = 0;
-        virtual void Enumerate(std::function<void(const std::string, SlokedEditorInstance &)>) const = 0;
-        virtual SlokedEditorInstance &Spawn(const std::string &, const KgrValue &) = 0;
+        virtual void Enumerate(
+            std::function<void(const std::string, SlokedEditorInstance &)>)
+            const = 0;
+        virtual SlokedEditorInstance &Spawn(const std::string &,
+                                            const KgrValue &) = 0;
         virtual void Shutdown(const std::string &) = 0;
     };
-}
+}  // namespace sloked
 
 #endif

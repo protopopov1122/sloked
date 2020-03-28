@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,15 +20,18 @@
 */
 
 #include "sloked/text/TextDocument.h"
-#include "sloked/text/TextChunk.h"
+
 #include "sloked/core/Error.h"
+#include "sloked/text/TextChunk.h"
 
 namespace sloked {
 
-    TextDocument::TextDocument(const NewLine &newline, std::unique_ptr<TextBlock> content)
+    TextDocument::TextDocument(const NewLine &newline,
+                               std::unique_ptr<TextBlock> content)
         : newline(std::cref(newline)), content(std::move(content)) {}
 
-    void TextDocument::Rebuild(const NewLine &newline, std::unique_ptr<TextBlock> content) {
+    void TextDocument::Rebuild(const NewLine &newline,
+                               std::unique_ptr<TextBlock> content) {
         this->newline = std::cref(newline);
         this->content = std::move(content);
     }
@@ -40,7 +43,7 @@ namespace sloked {
             return 0;
         }
     }
-    
+
     std::size_t TextDocument::GetTotalLength() const {
         if (this->content) {
             return this->content->GetTotalLength();
@@ -55,7 +58,8 @@ namespace sloked {
         } else if (line == 0) {
             return "";
         } else {
-            throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
+            throw SlokedError("Line " + std::to_string(line) +
+                              " exceeds total length of block");
         }
     }
 
@@ -67,7 +71,8 @@ namespace sloked {
         }
     }
 
-    void TextDocument::Visit(std::size_t start, std::size_t count, Visitor visitor) const {
+    void TextDocument::Visit(std::size_t start, std::size_t count,
+                             Visitor visitor) const {
         if (this->content) {
             this->content->Visit(start, count, visitor);
         } else if (start == 0 && count == 1) {
@@ -76,14 +81,16 @@ namespace sloked {
             throw SlokedError("Range exceeds total length of block");
         }
     }
-    
+
     void TextDocument::SetLine(std::size_t line, std::string_view content) {
         if (this->content) {
             this->content->SetLine(line, content);
         } else if (line == 0) {
-            this->content = std::make_unique<TextChunk>(this->newline.get(), content);
+            this->content =
+                std::make_unique<TextChunk>(this->newline.get(), content);
         } else {
-            throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
+            throw SlokedError("Line " + std::to_string(line) +
+                              " exceeds total length of block");
         }
     }
 
@@ -94,7 +101,8 @@ namespace sloked {
                 this->content.reset();
             }
         } else if (line > 0) {
-            throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
+            throw SlokedError("Line " + std::to_string(line) +
+                              " exceeds total length of block");
         }
     }
 
@@ -102,12 +110,14 @@ namespace sloked {
         if (this->content) {
             this->content->InsertLine(line, content);
         } else if (line == 0) {
-            this->content = std::make_unique<TextChunk>(this->newline.get(), "\n" + std::string {content});
+            this->content = std::make_unique<TextChunk>(
+                this->newline.get(), "\n" + std::string{content});
         } else {
-            throw SlokedError("Line " + std::to_string(line) + " exceeds total length of block");
+            throw SlokedError("Line " + std::to_string(line) +
+                              " exceeds total length of block");
         }
     }
-    
+
     void TextDocument::Optimize() {
         if (this->content) {
             this->content->Optimize();
@@ -121,4 +131,4 @@ namespace sloked {
             return os;
         }
     }
-}
+}  // namespace sloked

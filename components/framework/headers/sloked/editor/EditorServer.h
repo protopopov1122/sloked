@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -24,10 +24,10 @@
 
 #include "sloked/core/Closeable.h"
 #include "sloked/kgr/NamedServer.h"
-#include "sloked/kgr/local/Server.h"
-#include "sloked/kgr/local/NamedServer.h"
-#include "sloked/kgr/net/SlaveServer.h"
 #include "sloked/kgr/RestrictedServer.h"
+#include "sloked/kgr/local/NamedServer.h"
+#include "sloked/kgr/local/Server.h"
+#include "sloked/kgr/net/SlaveServer.h"
 
 namespace sloked {
 
@@ -55,7 +55,9 @@ namespace sloked {
 
     class SlokedRemoteEditorServer : public SlokedEditorServer {
      public:
-        SlokedRemoteEditorServer(std::unique_ptr<SlokedSocket>, SlokedIOPoller &, SlokedAuthenticatorFactory *);
+        SlokedRemoteEditorServer(std::unique_ptr<SlokedSocket>,
+                                 SlokedIOPoller &,
+                                 SlokedAuthenticatorFactory *);
         ~SlokedRemoteEditorServer();
         KgrNamedServer &GetServer() final;
         SlokedNamedRestrictionTarget &GetRestrictions() final;
@@ -68,6 +70,6 @@ namespace sloked {
         KgrRestrictedNamedServer server;
         std::optional<std::string> deferredAuth;
     };
-}
+}  // namespace sloked
 
 #endif

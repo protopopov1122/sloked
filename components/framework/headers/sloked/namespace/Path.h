@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,9 +22,10 @@
 #ifndef SLOKED_NAMESPACE_PATH_H_
 #define SLOKED_NAMESPACE_PATH_H_
 
-#include "sloked/Base.h"
 #include <string>
 #include <vector>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -32,7 +33,9 @@ namespace sloked {
      public:
         class Preset {
          public:
-            explicit Preset(const std::string &, const std::string & = ".", const std::string & = "..", const std::string & = "~");
+            explicit Preset(const std::string &, const std::string & = ".",
+                            const std::string & = "..",
+                            const std::string & = "~");
             const std::string &GetSeparators() const;
             const std::string &GetCurrentDir() const;
             const std::string &GetParentDir() const;
@@ -74,10 +77,10 @@ namespace sloked {
         const std::string &GetPrefix() const;
         const std::vector<std::string> &Components() const;
         const std::string &ToString() const;
-        
+
         bool IsAbsolute() const;
         bool IsParent(const SlokedPath &) const;
-        
+
         SlokedPath RelativeTo(const SlokedPath &) const;
         SlokedPath Parent() const;
         SlokedPath Child(String) const;
@@ -101,6 +104,6 @@ namespace sloked {
         std::vector<std::string> path;
         std::string literal;
     };
-}
+}  // namespace sloked
 
 #endif

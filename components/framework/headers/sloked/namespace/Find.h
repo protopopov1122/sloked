@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -29,17 +29,20 @@ namespace sloked {
     class SlokedNamespaceFind {
      public:
         virtual ~SlokedNamespaceFind() = default;
-        virtual std::vector<SlokedPath> Query(const SlokedPath &, const std::string &, bool = false) const = 0;
+        virtual std::vector<SlokedPath> Query(const SlokedPath &,
+                                              const std::string &,
+                                              bool = false) const = 0;
     };
 
     class SlokedNamespacePlainFind : public SlokedNamespaceFind {
      public:
         SlokedNamespacePlainFind(const SlokedNamespace &);
-        std::vector<SlokedPath> Query(const SlokedPath &, const std::string &, bool = false) const override;
+        std::vector<SlokedPath> Query(const SlokedPath &, const std::string &,
+                                      bool = false) const override;
 
      private:
         const SlokedNamespace &ns;
     };
-}
+}  // namespace sloked
 
 #endif

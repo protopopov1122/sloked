@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,9 +22,10 @@
 #ifndef SLOKED_SECURITY_PROVIDER_H_
 #define SLOKED_SECURITY_PROVIDER_H_
 
-#include "sloked/core/Crypto.h"
-#include <string>
 #include <functional>
+#include <string>
+
+#include "sloked/core/Crypto.h"
 
 namespace sloked {
 
@@ -36,7 +37,8 @@ namespace sloked {
             virtual ~Account() = default;
             virtual std::string GetName() const = 0;
             virtual std::string GetCredentials() const = 0;
-            virtual std::unique_ptr<SlokedCrypto::Key> DeriveKey(const std::string &) const = 0;
+            virtual std::unique_ptr<SlokedCrypto::Key> DeriveKey(
+                const std::string &) const = 0;
             virtual Callback Watch(Callback) = 0;
         };
 
@@ -44,6 +46,6 @@ namespace sloked {
         virtual bool Has(const std::string &) const = 0;
         virtual std::weak_ptr<Account> GetByName(const std::string &) const = 0;
     };
-}
+}  // namespace sloked
 
 #endif

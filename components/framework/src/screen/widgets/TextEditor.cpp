@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,18 +20,28 @@
 */
 
 #include "sloked/screen/widgets/TextEditor.h"
-#include "sloked/services/Cursor.h"
+
 #include "sloked/core/Locale.h"
 #include "sloked/screen/TaggedFrame.h"
+#include "sloked/services/Cursor.h"
 
 namespace sloked {
 
-    SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService, std::function<void(SlokedCursorClient &)> initClient,
-            std::unique_ptr<KgrPipe> renderService, std::unique_ptr<KgrPipe> notifyService,
-            SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger, SlokedBackgroundGraphics bg, SlokedForegroundGraphics fg)
-        : conv(encoding, SlokedLocale::SystemEncoding()), cursorClient(std::move(cursorService)),
-          renderClient(std::move(renderService), docId), notifyClient(std::move(notifyService), docId), tagger(tagger), background(bg),
-          foreground(fg), cursorOffset{0, 0}, renderCache([](const auto &, const auto &)->std::vector<KgrValue> { throw SlokedError("TextEditor: Unexpected cache miss"); }) {
+    SlokedTextEditor::SlokedTextEditor(
+        const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService,
+        std::function<void(SlokedCursorClient &)> initClient,
+        std::unique_ptr<KgrPipe> renderService,
+        std::unique_ptr<KgrPipe> notifyService,
+        SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger,
+        SlokedBackgroundGraphics bg, SlokedForegroundGraphics fg)
+        : conv(encoding, SlokedLocale::SystemEncoding()),
+          cursorClient(std::move(cursorService)),
+          renderClient(std::move(renderService), docId),
+          notifyClient(std::move(notifyService), docId), tagger(tagger),
+          background(bg), foreground(fg), cursorOffset{0, 0},
+          renderCache([](const auto &, const auto &) -> std::vector<KgrValue> {
+              throw SlokedError("TextEditor: Unexpected cache miss");
+          }) {
         if (initClient) {
             initClient(this->cursorClient);
         }
@@ -45,62 +55,63 @@ namespace sloked {
     bool SlokedTextEditor::ProcessInput(const SlokedKeyboardInput &cmd) {
         if (cmd.value.index() == 0) {
             this->cursorClient.Insert(conv.Convert(std::get<0>(cmd.value)));
-        } else switch (std::get<1>(cmd.value)) {
-            case SlokedControlKey::ArrowUp:
-                this->cursorClient.MoveUp();
-                if (this->updateListener) {
-                    this->updateListener();
-                }
-                break;
-            
-            case SlokedControlKey::ArrowDown:
-                this->cursorClient.MoveDown();
-                if (this->updateListener) {
-                    this->updateListener();
-                }
-                break;
-            
-            case SlokedControlKey::ArrowLeft:
-                this->cursorClient.MoveBackward();
-                if (this->updateListener) {
-                    this->updateListener();
-                }
-                break;
-            
-            case SlokedControlKey::ArrowRight:
-                this->cursorClient.MoveForward();
-                if (this->updateListener) {
-                    this->updateListener();
-                }
-                break;
+        } else
+            switch (std::get<1>(cmd.value)) {
+                case SlokedControlKey::ArrowUp:
+                    this->cursorClient.MoveUp();
+                    if (this->updateListener) {
+                        this->updateListener();
+                    }
+                    break;
 
-            case SlokedControlKey::Enter:
-                this->cursorClient.NewLine();
-                break;
+                case SlokedControlKey::ArrowDown:
+                    this->cursorClient.MoveDown();
+                    if (this->updateListener) {
+                        this->updateListener();
+                    }
+                    break;
 
-            case SlokedControlKey::Tab:
-                this->cursorClient.Insert("\t");
-                break;
+                case SlokedControlKey::ArrowLeft:
+                    this->cursorClient.MoveBackward();
+                    if (this->updateListener) {
+                        this->updateListener();
+                    }
+                    break;
 
-            case SlokedControlKey::Backspace:
-                this->cursorClient.DeleteBackward();
-                break;
+                case SlokedControlKey::ArrowRight:
+                    this->cursorClient.MoveForward();
+                    if (this->updateListener) {
+                        this->updateListener();
+                    }
+                    break;
 
-            case SlokedControlKey::Delete:
-                this->cursorClient.DeleteForward();
-                break;
-            
-            case SlokedControlKey::Home:
-                this->cursorClient.Undo();
-                break;
-            
-            case SlokedControlKey::End:
-                this->cursorClient.Redo();
-                break;
+                case SlokedControlKey::Enter:
+                    this->cursorClient.NewLine();
+                    break;
 
-            default:
-                return false;
-        }
+                case SlokedControlKey::Tab:
+                    this->cursorClient.Insert("\t");
+                    break;
+
+                case SlokedControlKey::Backspace:
+                    this->cursorClient.DeleteBackward();
+                    break;
+
+                case SlokedControlKey::Delete:
+                    this->cursorClient.DeleteForward();
+                    break;
+
+                case SlokedControlKey::Home:
+                    this->cursorClient.Undo();
+                    break;
+
+                case SlokedControlKey::End:
+                    this->cursorClient.Redo();
+                    break;
+
+                default:
+                    return false;
+            }
         return true;
     }
 
@@ -117,7 +128,9 @@ namespace sloked {
             this->cursorOffset.line = cursor.line;
         }
 
-        auto [firstLine, lastLine, partialRender] = this->renderClient.PartialRender(this->cursorOffset.line, pane.GetHeight() - 1);
+        auto [firstLine, lastLine, partialRender] =
+            this->renderClient.PartialRender(this->cursorOffset.line,
+                                             pane.GetHeight() - 1);
         this->renderCache.Insert(partialRender.begin(), partialRender.end());
         const auto &render = this->renderCache.Fetch(firstLine, lastLine);
         std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> lines;
@@ -127,13 +140,15 @@ namespace sloked {
             const auto &fragments = it->second.AsArray();
             for (const auto &fragment : fragments) {
                 auto tag = fragment.AsDictionary()["tag"].AsBoolean();
-                const auto &text = fragment.AsDictionary()["content"].AsString();
+                const auto &text =
+                    fragment.AsDictionary()["content"].AsString();
                 taggedLine.fragments.push_back({tag, text});
             }
             lines.emplace_back(std::move(taggedLine));
         }
 
-        SlokedTaggedTextFrame<bool> visualFrame(this->conv.GetDestination(), pane.GetFontProperties());
+        SlokedTaggedTextFrame<bool> visualFrame(this->conv.GetDestination(),
+                                                pane.GetFontProperties());
 
         auto realPosition = this->renderClient.RealPosition(cursor);
         if (!realPosition.has_value()) {
@@ -142,7 +157,11 @@ namespace sloked {
         auto currentLineOffset = cursor.line - this->cursorOffset.line;
         if (currentLineOffset < lines.size()) {
             const auto &currentLine = lines.at(currentLineOffset);
-            while (this->cursorOffset.column + visualFrame.GetMaxLength(currentLine, this->cursorOffset.column, pane.GetMaxWidth()) < realPosition.value().column) {
+            while (this->cursorOffset.column +
+                       visualFrame.GetMaxLength(currentLine,
+                                                this->cursorOffset.column,
+                                                pane.GetMaxWidth()) <
+                   realPosition.value().column) {
                 this->cursorOffset.column++;
             }
             if (realPosition.value().column < this->cursorOffset.column) {
@@ -159,7 +178,8 @@ namespace sloked {
         TextPosition::Line lineIdx{0};
         for (const auto &line : lines) {
             pane.SetPosition(lineIdx++, 0);
-            auto result = visualFrame.Slice(line, this->cursorOffset.column, pane.GetMaxWidth());
+            auto result = visualFrame.Slice(line, this->cursorOffset.column,
+                                            pane.GetMaxWidth());
             for (const auto &fragment : result.fragments) {
                 if (fragment.tag) {
                     pane.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
@@ -171,11 +191,13 @@ namespace sloked {
                 pane.Write(this->conv.ReverseConvert(fragment.content));
             }
         }
-        
-        pane.SetPosition(cursor.line - this->cursorOffset.line, realPosition.value().column - this->cursorOffset.column);
+
+        pane.SetPosition(
+            cursor.line - this->cursorOffset.line,
+            realPosition.value().column - this->cursorOffset.column);
     }
 
     void SlokedTextEditor::OnUpdate(std::function<void()> listener) {
         this->updateListener = listener;
     }
-}
+}  // namespace sloked

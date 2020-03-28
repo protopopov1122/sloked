@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,17 +23,16 @@
 #define SLOKED_SCREEN_WIDGETS_TEXTPANE_H_
 
 #include "sloked/screen/Character.h"
-#include "sloked/screen/Point.h"
 #include "sloked/screen/Component.h"
 #include "sloked/screen/Graphics.h"
+#include "sloked/screen/Point.h"
 
 namespace sloked {
 
     class SlokedTextPane {
      public:
-
         virtual ~SlokedTextPane() = default;
-    
+
         virtual void SetPosition(TextPosition::Line, TextPosition::Column) = 0;
         virtual void MoveUp(TextPosition::Line) = 0;
         virtual void MoveDown(TextPosition::Line) = 0;
@@ -53,6 +52,6 @@ namespace sloked {
         virtual void SetGraphicsMode(SlokedBackgroundGraphics) = 0;
         virtual void SetGraphicsMode(SlokedForegroundGraphics) = 0;
     };
-}
+}  // namespace sloked
 
 #endif

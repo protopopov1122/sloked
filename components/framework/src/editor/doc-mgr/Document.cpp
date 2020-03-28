@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,22 +20,30 @@
 */
 
 #include "sloked/editor/doc-mgr/Document.h"
+
 #include "sloked/text/TextView.h"
 
 namespace sloked {
 
-    SlokedEditorDocument::SlokedEditorDocument(const Encoding &encoding, std::unique_ptr<NewLine> newline)
+    SlokedEditorDocument::SlokedEditorDocument(const Encoding &encoding,
+                                               std::unique_ptr<NewLine> newline)
         : blockFactory(*newline), upstream(this->blockFactory, *newline),
-          encoding(std::cref(encoding)), newline(std::move(newline)), multiplexer(this->upstream.GetText(), encoding) {}
+          encoding(std::cref(encoding)), newline(std::move(newline)),
+          multiplexer(this->upstream.GetText(), encoding) {}
 
-    SlokedEditorDocument::SlokedEditorDocument(SlokedNamespace &ns, const SlokedPath &path, const Encoding &encoding, std::unique_ptr<NewLine> newline)
-        : blockFactory(*newline), upstream(ns, path, this->blockFactory, *newline),
-          encoding(encoding), newline(std::move(newline)), multiplexer(this->upstream.GetText(), encoding) {}
+    SlokedEditorDocument::SlokedEditorDocument(SlokedNamespace &ns,
+                                               const SlokedPath &path,
+                                               const Encoding &encoding,
+                                               std::unique_ptr<NewLine> newline)
+        : blockFactory(*newline),
+          upstream(ns, path, this->blockFactory, *newline), encoding(encoding),
+          newline(std::move(newline)),
+          multiplexer(this->upstream.GetText(), encoding) {}
 
     std::optional<SlokedPath> SlokedEditorDocument::GetUpstream() const {
         return this->upstream.GetUpstream();
     }
-    
+
     std::optional<std::string> SlokedEditorDocument::GetUpstreamURI() const {
         return this->upstream.GetUpstreamURI();
     }
@@ -60,15 +68,18 @@ namespace sloked {
         return this->multiplexer.NewStream();
     }
 
-    SlokedTransactionListenerManager &SlokedEditorDocument::GetTransactionListeners() {
+    SlokedTransactionListenerManager &
+        SlokedEditorDocument::GetTransactionListeners() {
         return this->multiplexer;
     }
 
-    void SlokedEditorDocument::AttachTagger(std::unique_ptr<SlokedTextTagger<TagType>> tagger) {
+    void SlokedEditorDocument::AttachTagger(
+        std::unique_ptr<SlokedTextTagger<TagType>> tagger) {
         this->tagger.ChangeTagger(std::move(tagger));
     }
 
-    SlokedTextTagger<SlokedEditorDocument::TagType> &SlokedEditorDocument::GetTagger() {
+    SlokedTextTagger<SlokedEditorDocument::TagType>
+        &SlokedEditorDocument::GetTagger() {
         return this->tagger;
     }
 
@@ -76,7 +87,8 @@ namespace sloked {
         this->upstream.Save();
     }
 
-    void SlokedEditorDocument::Save(SlokedNamespace &ns, const SlokedPath &path) {
+    void SlokedEditorDocument::Save(SlokedNamespace &ns,
+                                    const SlokedPath &path) {
         this->upstream.Save(ns, path, this->blockFactory, *this->newline);
     }
-}
+}  // namespace sloked

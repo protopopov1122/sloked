@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,28 +23,31 @@
 
 namespace sloked {
 
-    SlokedCharPreset::SlokedCharPreset()
-        : tab_width(4), tab(tab_width, U' ') {}
+    SlokedCharPreset::SlokedCharPreset() : tab_width(4), tab(tab_width, U' ') {}
 
-    std::size_t SlokedCharPreset::GetCharWidth(char32_t chr, std::size_t position) const {
+    std::size_t SlokedCharPreset::GetCharWidth(char32_t chr,
+                                               std::size_t position) const {
         if (chr != '\t') {
             return 1;
         } else {
             return this->tab_width - position % this->tab_width;
         }
     }
-    
-    std::pair<std::size_t, std::size_t> SlokedCharPreset::GetRealPosition(std::string_view str, std::size_t idx, const Encoding &encoding) const {
+
+    std::pair<std::size_t, std::size_t> SlokedCharPreset::GetRealPosition(
+        std::string_view str, std::size_t idx, const Encoding &encoding) const {
         std::pair<std::size_t, std::size_t> res{0, 0};
-        encoding.IterateCodepoints(str, [&](auto start, auto length, auto value) {
-            res.first = res.second;
-            res.second += GetCharWidth(value, res.first);
-            return idx--;
-        });
+        encoding.IterateCodepoints(
+            str, [&](auto start, auto length, auto value) {
+                res.first = res.second;
+                res.second += GetCharWidth(value, res.first);
+                return idx--;
+            });
         return res;
     }
 
-    std::string SlokedCharPreset::GetTab(const Encoding &encoding, std::size_t column) const {
+    std::string SlokedCharPreset::GetTab(const Encoding &encoding,
+                                         std::size_t column) const {
         return encoding.Encode(this->tab.substr(column % this->tab_width));
     }
 
@@ -57,4 +60,4 @@ namespace sloked {
         this->tab = std::u32string(this->tab_width, U' ');
         this->events.Emit(*this);
     }
-}
+}  // namespace sloked

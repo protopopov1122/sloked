@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,24 +22,26 @@
 #ifndef SLOKED_SERVICES_SCREENSIZE_H_
 #define SLOKED_SERVICES_SCREENSIZE_H_
 
-#include "sloked/services/Service.h"
-#include "sloked/kgr/Service.h"
-#include "sloked/kgr/Server.h"
-#include "sloked/screen/Size.h"
 #include <atomic>
+
+#include "sloked/kgr/Server.h"
+#include "sloked/kgr/Service.h"
+#include "sloked/screen/Size.h"
+#include "sloked/services/Service.h"
 
 namespace sloked {
 
     class SlokedScreenSizeNotificationService : public KgrService {
      public:
-        SlokedScreenSizeNotificationService(SlokedScreenSize &, KgrContextManager<KgrLocalContext> &);
+        SlokedScreenSizeNotificationService(
+            SlokedScreenSize &, KgrContextManager<KgrLocalContext> &);
         void Attach(std::unique_ptr<KgrPipe>) override;
-    
+
      private:
         SlokedScreenSize &size;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
-    
+
     class SlokedScreenSizeNotificationClient {
      public:
         using Callback = std::function<void(const TextPosition &)>;
@@ -52,6 +54,6 @@ namespace sloked {
         std::unique_ptr<KgrPipe> pipe;
         std::atomic<TextPosition> currentSize;
     };
-}
+}  // namespace sloked
 
 #endif

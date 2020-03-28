@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,14 +22,15 @@
 #ifndef SLOKED_SCREEN_TAGGEDFRAME_H_
 #define SLOKED_SCREEN_TAGGEDFRAME_H_
 
-#include "sloked/core/Position.h"
-#include "sloked/core/Encoding.h"
-#include "sloked/screen/Point.h"
-#include "sloked/screen/Character.h"
-#include <list>
-#include <vector>
-#include <string>
 #include <functional>
+#include <list>
+#include <string>
+#include <vector>
+
+#include "sloked/core/Encoding.h"
+#include "sloked/core/Position.h"
+#include "sloked/screen/Character.h"
+#include "sloked/screen/Point.h"
 
 namespace sloked {
 
@@ -45,10 +46,12 @@ namespace sloked {
             std::list<TaggedFragment> fragments;
         };
 
-        SlokedTaggedTextFrame(const Encoding &encoding, const SlokedFontProperties &fontProperties)
+        SlokedTaggedTextFrame(const Encoding &encoding,
+                              const SlokedFontProperties &fontProperties)
             : encoding(encoding), fontProperties(fontProperties) {}
 
-        TaggedLine Slice(const TaggedLine &input, TextPosition::Column offset, SlokedGraphicsPoint::Coordinate width) {
+        TaggedLine Slice(const TaggedLine &input, TextPosition::Column offset,
+                         SlokedGraphicsPoint::Coordinate width) {
             TaggedLine result;
             TextPosition::Column currentOffset{0};
             SlokedGraphicsPoint::Coordinate currentWidth{0};
@@ -56,9 +59,14 @@ namespace sloked {
                 if (currentWidth >= width) {
                     break;
                 }
-                
-                auto fragmentLength = this->encoding.CodepointCount(fragment.content);
-                auto [processed, processedWidth, processedLength] = this->Process(fragment.content, currentOffset < offset ? offset - currentOffset : 0, width - currentWidth);
+
+                auto fragmentLength =
+                    this->encoding.CodepointCount(fragment.content);
+                auto [processed, processedWidth, processedLength] =
+                    this->Process(
+                        fragment.content,
+                        currentOffset < offset ? offset - currentOffset : 0,
+                        width - currentWidth);
                 if (processedWidth > 0) {
                     currentWidth += processedWidth;
                     result.fragments.push_back({fragment.tag, processed});
@@ -68,15 +76,22 @@ namespace sloked {
             return result;
         }
 
-        TextPosition::Column GetMaxLength(const TaggedLine &input, TextPosition::Column offset, SlokedGraphicsPoint::Coordinate width) {
+        TextPosition::Column GetMaxLength(
+            const TaggedLine &input, TextPosition::Column offset,
+            SlokedGraphicsPoint::Coordinate width) {
             TextPosition::Column length{0}, currentOffset{0};
             SlokedGraphicsPoint::Coordinate currentWidth{0};
             for (const auto &fragment : input.fragments) {
                 if (currentWidth >= width) {
                     break;
                 }
-                auto fragmentLength = this->encoding.CodepointCount(fragment.content);
-                auto [processed, processedWidth, processedLength] = this->Process(fragment.content, currentOffset < offset ? offset - currentOffset : 0, width - currentWidth);
+                auto fragmentLength =
+                    this->encoding.CodepointCount(fragment.content);
+                auto [processed, processedWidth, processedLength] =
+                    this->Process(
+                        fragment.content,
+                        currentOffset < offset ? offset - currentOffset : 0,
+                        width - currentWidth);
                 if (processedWidth > 0) {
                     currentWidth += processedWidth;
                     length += processedLength;
@@ -87,13 +102,17 @@ namespace sloked {
         }
 
      private:
-        std::tuple<std::string_view, SlokedGraphicsPoint::Coordinate, TextPosition::Column> Process(std::string_view src, std::size_t skip, SlokedGraphicsPoint::Coordinate maxWidth) {
+        std::tuple<std::string_view, SlokedGraphicsPoint::Coordinate,
+                   TextPosition::Column>
+            Process(std::string_view src, std::size_t skip,
+                    SlokedGraphicsPoint::Coordinate maxWidth) {
             std::string_view result = src;
             SlokedGraphicsPoint::Coordinate width{0};
             TextPosition::Column totalLength{0};
             std::size_t totalLengthBytes{0};
 
-            this->encoding.IterateCodepoints(src, [&](auto start, auto length, auto codepoint) {
+            this->encoding.IterateCodepoints(src, [&](auto start, auto length,
+                                                      auto codepoint) {
                 if (skip > 0) {
                     result.remove_prefix(length);
                     skip--;
@@ -110,12 +129,12 @@ namespace sloked {
                 }
             });
             result.remove_suffix(result.size() - totalLengthBytes);
-            return { result, width, totalLength };
+            return {result, width, totalLength};
         }
 
         const Encoding &encoding;
         const SlokedFontProperties &fontProperties;
     };
-}
+}  // namespace sloked
 
 #endif

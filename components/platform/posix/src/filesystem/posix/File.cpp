@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,17 +20,20 @@
 */
 
 #include "sloked/filesystem/posix/File.h"
+
+#include <dirent.h>
+#include <fcntl.h>
+#include <ftw.h>
+#include <libgen.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include <cstdio>
+#include <cstring>
+
 #include "sloked/filesystem/posix/Reader.h"
 #include "sloked/filesystem/posix/View.h"
 #include "sloked/filesystem/posix/Writer.h"
-#include <cstdio>
-#include <cstring>
-#include <unistd.h>
-#include <dirent.h>
-#include <libgen.h>
-#include <ftw.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 
 namespace sloked {
 
@@ -38,8 +41,7 @@ namespace sloked {
 
     class DirectoryHandle {
      public:
-        DirectoryHandle(const std::string &path)
-            : dir(opendir(path.c_str())) {}
+        DirectoryHandle(const std::string &path) : dir(opendir(path.c_str())) {}
 
         ~DirectoryHandle() {
             closedir(this->dir);
@@ -57,8 +59,7 @@ namespace sloked {
         DIR *dir;
     };
 
-    SlokedPosixFile::SlokedPosixFile(const std::string &path)
-        : path(path) {}
+    SlokedPosixFile::SlokedPosixFile(const std::string &path) : path(path) {}
 
     bool SlokedPosixFile::IsFile() const {
         struct stat stats;
@@ -70,7 +71,8 @@ namespace sloked {
         return stat(this->path.c_str(), &stats) == 0 && S_ISDIR(stats.st_mode);
     }
 
-    bool SlokedPosixFile::HasPermission(SlokedFilesystemPermission permission) const {
+    bool SlokedPosixFile::HasPermission(
+        SlokedFilesystemPermission permission) const {
         std::unique_ptr<char[]> pathClone(new char[this->path.size() + 1]);
         strcpy(pathClone.get(), this->path.c_str());
         switch (permission) {
@@ -115,8 +117,8 @@ namespace sloked {
         return std::string{dirname(buffer.get())};
     }
 
-
-    static int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
+    static int unlink_cb(const char *fpath, const struct stat *sb, int typeflag,
+                         struct FTW *ftwbuf) {
         int rv = remove(fpath);
         return rv;
     }
@@ -172,8 +174,9 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedFile> SlokedPosixFile::GetFile(std::string_view name) const {
-        std::string path {this->path};
+    std::unique_ptr<SlokedFile> SlokedPosixFile::GetFile(
+        std::string_view name) const {
+        std::string path{this->path};
         path.push_back('/');
         path.append(name);
         return std::make_unique<SlokedPosixFile>(path);
@@ -181,7 +184,8 @@ namespace sloked {
 
     void SlokedPosixFile::ListFiles(FileVisitor visitor) const {
         DirectoryHandle directory(this->path);
-        for (dirent *entry = directory.Read(); entry != nullptr; entry = directory.Read()) {
+        for (dirent *entry = directory.Read(); entry != nullptr;
+             entry = directory.Read()) {
             std::string str(entry->d_name);
             if (str != ".." && str != ".") {
                 visitor(str);
@@ -189,14 +193,18 @@ namespace sloked {
         }
     }
 
-    static void TraverseDir(const std::string &dir, const SlokedFile::FileVisitor &visitor, bool includes_dirs) {
+    static void TraverseDir(const std::string &dir,
+                            const SlokedFile::FileVisitor &visitor,
+                            bool includes_dirs) {
         DirectoryHandle directory(dir);
-        for (dirent *entry = directory.Read(); entry != nullptr; entry = directory.Read()) {
+        for (dirent *entry = directory.Read(); entry != nullptr;
+             entry = directory.Read()) {
             std::string path(entry->d_name);
             if (path != ".." && path != ".") {
                 struct stat stats;
                 auto fullPath = dir + "/" + path;
-                bool is_directory = stat(fullPath.c_str(), &stats) == 0 && S_ISDIR(stats.st_mode);
+                bool is_directory = stat(fullPath.c_str(), &stats) == 0 &&
+                                    S_ISDIR(stats.st_mode);
                 if (!is_directory || includes_dirs) {
                     visitor(fullPath);
                 }
@@ -207,11 +215,12 @@ namespace sloked {
         }
     }
 
-    void SlokedPosixFile::Traverse(FileVisitor visitor, bool include_dirs) const {
+    void SlokedPosixFile::Traverse(FileVisitor visitor,
+                                   bool include_dirs) const {
         if (this->IsFile()) {
             visitor(this->path);
         } else {
             TraverseDir(this->path, visitor, include_dirs);
         }
     }
-}
+}  // namespace sloked

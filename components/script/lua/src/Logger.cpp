@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,6 +20,7 @@
 */
 
 #include "sloked/script/lua/Logger.h"
+
 #include "sloked/script/lua/Common.h"
 
 namespace sloked {
@@ -27,12 +28,15 @@ namespace sloked {
     static int SlokedLogger_Call(lua_State *state) {
         int top = lua_gettop(state);
         if (top < 1) {
-            return luaL_error(state, "sloked.logger(): Expected at least 1 argument");
+            return luaL_error(state,
+                              "sloked.logger(): Expected at least 1 argument");
         }
         try {
-            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(luaL_checkudata(state, 1, "sloked.logger"));
+            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(
+                luaL_checkudata(state, 1, "sloked.logger"));
             if (logger == nullptr) {
-                return luaL_error(state, "sloked.logger(): Expected sloked.logger");
+                return luaL_error(state,
+                                  "sloked.logger(): Expected sloked.logger");
             }
             auto entry = (**logger) << "";
             for (int i = 2; i <= top; i++) {
@@ -48,13 +52,16 @@ namespace sloked {
     static int SlokedLogger_To(lua_State *state) {
         int top = lua_gettop(state);
         if (top < 2) {
-            return luaL_error(state, "sloked.logger:to(): Expected at least 2 arguments");
+            return luaL_error(
+                state, "sloked.logger:to(): Expected at least 2 arguments");
         }
         try {
-            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(luaL_checkudata(state, 1, "sloked.logger"));
+            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(
+                luaL_checkudata(state, 1, "sloked.logger"));
             int level = lua_tointeger(state, 2);
             if (logger == nullptr) {
-                return luaL_error(state, "sloked.logger:to(): Expected sloked.logger");
+                return luaL_error(state,
+                                  "sloked.logger:to(): Expected sloked.logger");
             }
             auto entry = (*logger)->To(level);
             for (int i = 3; i <= top; i++) {
@@ -70,12 +77,15 @@ namespace sloked {
     static int SlokedLogger_Debug(lua_State *state) {
         int top = lua_gettop(state);
         if (top < 2) {
-            return luaL_error(state, "sloked.logger:debug(): Expected at least 1 argument");
+            return luaL_error(
+                state, "sloked.logger:debug(): Expected at least 1 argument");
         }
         try {
-            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(luaL_checkudata(state, 1, "sloked.logger"));
+            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(
+                luaL_checkudata(state, 1, "sloked.logger"));
             if (logger == nullptr) {
-                return luaL_error(state, "sloked.logger:debug(): Expected sloked.logger");
+                return luaL_error(
+                    state, "sloked.logger:debug(): Expected sloked.logger");
             }
             auto entry = (*logger)->Debug();
             for (int i = 2; i <= top; i++) {
@@ -90,12 +100,15 @@ namespace sloked {
     static int SlokedLogger_Info(lua_State *state) {
         int top = lua_gettop(state);
         if (top < 2) {
-            return luaL_error(state, "sloked.logger:info(): Expected at least 1 argument");
+            return luaL_error(
+                state, "sloked.logger:info(): Expected at least 1 argument");
         }
         try {
-            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(luaL_checkudata(state, 1, "sloked.logger"));
+            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(
+                luaL_checkudata(state, 1, "sloked.logger"));
             if (logger == nullptr) {
-                return luaL_error(state, "sloked.logger:info(): Expected sloked.logger");
+                return luaL_error(
+                    state, "sloked.logger:info(): Expected sloked.logger");
             }
             auto entry = (*logger)->Info();
             for (int i = 2; i <= top; i++) {
@@ -110,12 +123,15 @@ namespace sloked {
     static int SlokedLogger_Warning(lua_State *state) {
         int top = lua_gettop(state);
         if (top < 2) {
-            return luaL_error(state, "sloked.logger:warning(): Expected at least 1 argument");
+            return luaL_error(
+                state, "sloked.logger:warning(): Expected at least 1 argument");
         }
         try {
-            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(luaL_checkudata(state, 1, "sloked.logger"));
+            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(
+                luaL_checkudata(state, 1, "sloked.logger"));
             if (logger == nullptr) {
-                return luaL_error(state, "sloked.logger:warning(): Expected sloked.logger");
+                return luaL_error(
+                    state, "sloked.logger:warning(): Expected sloked.logger");
             }
             auto entry = (*logger)->Warning();
             for (int i = 2; i <= top; i++) {
@@ -130,12 +146,15 @@ namespace sloked {
     static int SlokedLogger_Error(lua_State *state) {
         int top = lua_gettop(state);
         if (top < 2) {
-            return luaL_error(state, "sloked.logger:error(): Expected at least 1 argument");
+            return luaL_error(
+                state, "sloked.logger:error(): Expected at least 1 argument");
         }
         try {
-            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(luaL_checkudata(state, 1, "sloked.logger"));
+            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(
+                luaL_checkudata(state, 1, "sloked.logger"));
             if (logger == nullptr) {
-                return luaL_error(state, "sloked.logger:error(): Expected sloked.logger");
+                return luaL_error(
+                    state, "sloked.logger:error(): Expected sloked.logger");
             }
             auto entry = (*logger)->Error();
             for (int i = 2; i <= top; i++) {
@@ -150,12 +169,16 @@ namespace sloked {
     static int SlokedLogger_Critical(lua_State *state) {
         int top = lua_gettop(state);
         if (top < 2) {
-            return luaL_error(state, "sloked.logger:critical(): Expected at least 1 argument");
+            return luaL_error(
+                state,
+                "sloked.logger:critical(): Expected at least 1 argument");
         }
         try {
-            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(luaL_checkudata(state, 1, "sloked.logger"));
+            SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(
+                luaL_checkudata(state, 1, "sloked.logger"));
             if (logger == nullptr) {
-                return luaL_error(state, "sloked.logger:to(): Expected sloked.logger");
+                return luaL_error(state,
+                                  "sloked.logger:to(): Expected sloked.logger");
             }
             auto entry = (*logger)->Critical();
             for (int i = 2; i <= top; i++) {
@@ -188,7 +211,8 @@ namespace sloked {
     }
 
     int SlokedLoggerToLua(SlokedLogger &loggerHandle, lua_State *state) {
-        SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(lua_newuserdata(state, sizeof(SlokedLogger *)));
+        SlokedLogger **logger = reinterpret_cast<SlokedLogger **>(
+            lua_newuserdata(state, sizeof(SlokedLogger *)));
         *logger = std::addressof(loggerHandle);
         if (luaL_newmetatable(state, "sloked.logger")) {
             lua_pushcfunction(state, SlokedLogger_Call);
@@ -213,4 +237,4 @@ namespace sloked {
         lua_setmetatable(state, -2);
         return 1;
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,14 +22,15 @@
 #ifndef SLOKED_NAMESPACE_OBJECT_H_
 #define SLOKED_NAMESPACE_OBJECT_H_
 
+#include <functional>
+#include <memory>
+#include <optional>
+#include <string>
+
 #include "sloked/Base.h"
 #include "sloked/core/IO.h"
 #include "sloked/core/Permission.h"
 #include "sloked/namespace/Path.h"
-#include <memory>
-#include <string>
-#include <functional>
-#include <optional>
 
 namespace sloked {
 
@@ -39,11 +40,7 @@ namespace sloked {
 
     class SlokedNamespaceObject {
      public:
-        enum class Type {
-            File,
-            Directory,
-            None
-        };
+        enum class Type { File, Directory, None };
 
         virtual ~SlokedNamespaceObject() = default;
         virtual Type GetType() const = 0;
@@ -59,12 +56,10 @@ namespace sloked {
         virtual std::unique_ptr<SlokedIOView> View() const = 0;
     };
 
-    enum class SlokedNamespacePermission {
-        Read = 0,
-        Write
-    };
+    enum class SlokedNamespacePermission { Read = 0, Write };
 
-    class SlokedNamespaceObjectHandle : public SlokedPermissionAuthority<SlokedNamespacePermission> {
+    class SlokedNamespaceObjectHandle
+        : public SlokedPermissionAuthority<SlokedNamespacePermission> {
      public:
         virtual ~SlokedNamespaceObjectHandle() = default;
         virtual std::optional<std::string> ToURI() const = 0;
@@ -77,17 +72,22 @@ namespace sloked {
 
     class SlokedNamespace {
      public:
-        using Visitor = std::function<void(const std::string &, SlokedNamespaceObject::Type)>;
+        using Visitor = std::function<void(const std::string &,
+                                           SlokedNamespaceObject::Type)>;
 
         virtual ~SlokedNamespace() = default;
-        virtual std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) = 0;
+        virtual std::unique_ptr<SlokedNamespaceObject> GetObject(
+            const SlokedPath &) = 0;
         virtual bool HasObject(const SlokedPath &) const = 0;
         virtual void Iterate(const SlokedPath &, Visitor) const = 0;
-        virtual void Traverse(const SlokedPath &, Visitor, bool = false) const = 0;
-        virtual std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(const SlokedPath &) = 0;
+        virtual void Traverse(const SlokedPath &, Visitor,
+                              bool = false) const = 0;
+        virtual std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(
+            const SlokedPath &) = 0;
     };
 
-    class SlokedNamespaceDirectory : public SlokedNamespace, public SlokedNamespaceObject {};
-}
+    class SlokedNamespaceDirectory : public SlokedNamespace,
+                                     public SlokedNamespaceObject {};
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,142 +22,149 @@
 #ifndef SLOKED_SERVICES_SERVICE_H_
 #define SLOKED_SERVICES_SERVICE_H_
 
-#include "sloked/kgr/local/Context.h"
+#include <condition_variable>
+#include <functional>
+#include <list>
+#include <map>
+#include <mutex>
+#include <queue>
+#include <utility>
+#include <variant>
+
 #include "sloked/core/Error.h"
 #include "sloked/kgr/Value.h"
+#include "sloked/kgr/local/Context.h"
 #include "sloked/sched/EventLoop.h"
 #include "sloked/sched/Scheduler.h"
-#include <utility>
-#include <map>
-#include <queue>
-#include <list>
-#include <functional>
-#include <variant>
-#include <mutex>
-#include <condition_variable>
 
 namespace sloked {
 
-	class SlokedServiceContext : public KgrLocalContext {
-	 public:
-		using KgrLocalContext::KgrLocalContext;
-		void Run() final;
-		void SetActivationListener(std::function<void()>) final;
-		State GetState() const final;
+    class SlokedServiceContext : public KgrLocalContext {
+     public:
+        using KgrLocalContext::KgrLocalContext;
+        void Run() final;
+        void SetActivationListener(std::function<void()>) final;
+        State GetState() const final;
 
-	 protected:
-		class Response {
-		 public:
-			Response(SlokedServiceContext &, const KgrValue &);
-			Response(const Response &);
-			Response(Response &&);
+     protected:
+        class Response {
+         public:
+            Response(SlokedServiceContext &, const KgrValue &);
+            Response(const Response &);
+            Response(Response &&);
 
-			Response &operator=(const Response &);
-			Response &operator=(const Response &&);
-			void Result(KgrValue &&);
-			void Error(KgrValue &&);
+            Response &operator=(const Response &);
+            Response &operator=(const Response &&);
+            void Result(KgrValue &&);
+            void Error(KgrValue &&);
 
-		 private:
-			std::reference_wrapper<SlokedServiceContext> ctx;
-			std::variant<std::reference_wrapper<const KgrValue>, KgrValue> id;
-		};
+         private:
+            std::reference_wrapper<SlokedServiceContext> ctx;
+            std::variant<std::reference_wrapper<const KgrValue>, KgrValue> id;
+        };
 
-		friend class Response;
-		using MethodHandler = std::function<void(const std::string &, const KgrValue &, Response &)>;
-	 	using Callback = std::function<void()>;
+        friend class Response;
+        using MethodHandler = std::function<void(const std::string &,
+                                                 const KgrValue &, Response &)>;
+        using Callback = std::function<void()>;
 
-		void BindMethod(const std::string &, MethodHandler);
+        void BindMethod(const std::string &, MethodHandler);
 
-		template <typename T>
-		void Defer(T &&task) {
-			this->eventLoop.Attach(std::forward<T>(task));
-		}
+        template <typename T>
+        void Defer(T &&task) {
+            this->eventLoop.Attach(std::forward<T>(task));
+        }
 
-		template <typename T>
-		void BindMethod(const std::string &method, void (T::*impl)(const std::string &, const KgrValue &, Response &)) {
-			this->BindMethod(method, [this, impl](const std::string &method, const KgrValue &params, Response &rsp) {
-				(static_cast<T *>(this)->*impl)(method, params, rsp);
-			});
-		}
+        template <typename T>
+        void BindMethod(const std::string &method,
+                        void (T::*impl)(const std::string &, const KgrValue &,
+                                        Response &)) {
+            this->BindMethod(
+                method, [this, impl](const std::string &method,
+                                     const KgrValue &params, Response &rsp) {
+                    (static_cast<T *>(this)->*impl)(method, params, rsp);
+                });
+        }
 
-		virtual void InvokeMethod(const std::string &, const KgrValue &, Response &);
-		virtual void HandleError(const SlokedError &, Response *);
+        virtual void InvokeMethod(const std::string &, const KgrValue &,
+                                  Response &);
+        virtual void HandleError(const SlokedError &, Response *);
 
-	 private:
-		void SendResponse(const KgrValue &, KgrValue &&);
-		void SendError(const KgrValue &, KgrValue &&);
+     private:
+        void SendResponse(const KgrValue &, KgrValue &&);
+        void SendError(const KgrValue &, KgrValue &&);
 
-		std::map<std::string, MethodHandler> methods;
-		SlokedDefaultEventLoop eventLoop;
-	};
+        std::map<std::string, MethodHandler> methods;
+        SlokedDefaultEventLoop eventLoop;
+    };
 
-	class SlokedServiceClient {
-	 public:
-	 	class Response {
-		 public:
-			Response(bool, KgrValue &&);
-			bool HasResult() const;
-			const KgrValue &GetResult() const;
-			const KgrValue &GetError() const;
+    class SlokedServiceClient {
+     public:
+        class Response {
+         public:
+            Response(bool, KgrValue &&);
+            bool HasResult() const;
+            const KgrValue &GetResult() const;
+            const KgrValue &GetError() const;
 
-		 private:
-			bool has_result;
-			KgrValue content;
-		};
+         private:
+            bool has_result;
+            KgrValue content;
+        };
 
-		class ResponseHandle {
-		 public:
-			ResponseHandle(int64_t, SlokedServiceClient &);
-			ResponseHandle(const ResponseHandle &) = delete;
-			ResponseHandle(ResponseHandle &&);
-			~ResponseHandle();
+        class ResponseHandle {
+         public:
+            ResponseHandle(int64_t, SlokedServiceClient &);
+            ResponseHandle(const ResponseHandle &) = delete;
+            ResponseHandle(ResponseHandle &&);
+            ~ResponseHandle();
 
-			ResponseHandle &operator=(const ResponseHandle &) = delete;
-			ResponseHandle &operator=(ResponseHandle &&);
+            ResponseHandle &operator=(const ResponseHandle &) = delete;
+            ResponseHandle &operator=(ResponseHandle &&);
 
-			void Drop();
-			Response Get();
-			std::optional<Response> GetOptional();
-			bool Has();
-			void Notify(std::function<void()>);
+            void Drop();
+            Response Get();
+            std::optional<Response> GetOptional();
+            bool Has();
+            void Notify(std::function<void()>);
 
-		 private:
-			int64_t id;
-			std::reference_wrapper<SlokedServiceClient> client;
-		};
+         private:
+            int64_t id;
+            std::reference_wrapper<SlokedServiceClient> client;
+        };
 
-		class ResponseWaiter {
-		 public:
-			ResponseWaiter(ResponseHandle);
-			void Wait(std::function<void(Response &)>);
+        class ResponseWaiter {
+         public:
+            ResponseWaiter(ResponseHandle);
+            void Wait(std::function<void(Response &)>);
 
-		 private:
-			std::mutex mtx;
-			std::queue<std::function<void(Response &)>> callbacks;
-			ResponseHandle handle;
-		};
+         private:
+            std::mutex mtx;
+            std::queue<std::function<void(Response &)>> callbacks;
+            ResponseHandle handle;
+        };
 
-		friend class ResponseHandle;
+        friend class ResponseHandle;
 
-		SlokedServiceClient(std::unique_ptr<KgrPipe>);
-		KgrPipe::Status GetStatus() const;
-		ResponseHandle Invoke(const std::string &, KgrValue &&);
-		void Close();
+        SlokedServiceClient(std::unique_ptr<KgrPipe>);
+        KgrPipe::Status GetStatus() const;
+        ResponseHandle Invoke(const std::string &, KgrValue &&);
+        void Close();
 
-	 private:
-	 	void SetCallback(int64_t, std::function<void()>);
-		void ClearHandle(int64_t);
-		bool Has(int64_t);
-		Response Get(int64_t);
-		void Drop(int64_t);
+     private:
+        void SetCallback(int64_t, std::function<void()>);
+        void ClearHandle(int64_t);
+        bool Has(int64_t);
+        Response Get(int64_t);
+        void Drop(int64_t);
 
-		std::unique_ptr<std::mutex> mtx;
-		std::unique_ptr<std::condition_variable> cv;
-		std::unique_ptr<KgrPipe> pipe;
-		int64_t nextId;
-		std::map<int64_t, std::queue<Response>> pending;
-		std::map<int64_t, std::function<void()>> callbacks;
-	};
-}
+        std::unique_ptr<std::mutex> mtx;
+        std::unique_ptr<std::condition_variable> cv;
+        std::unique_ptr<KgrPipe> pipe;
+        int64_t nextId;
+        std::map<int64_t, std::queue<Response>> pending;
+        std::map<int64_t, std::function<void()>> callbacks;
+    };
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,12 +20,15 @@
 */
 
 #include "sloked/screen/terminal/components/TextPaneComponent.h"
+
 #include "sloked/screen/terminal/components/TextPane.h"
 
 namespace sloked {
 
-    TerminalTextPaneComponent::TerminalTextPaneComponent(SlokedTerminal &term, std::unique_ptr<SlokedTextPaneWidget> widget)
-        : SlokedTextPaneComponent(Type::TextPane), term(term), widget(std::move(widget)), screen(term) {}
+    TerminalTextPaneComponent::TerminalTextPaneComponent(
+        SlokedTerminal &term, std::unique_ptr<SlokedTextPaneWidget> widget)
+        : SlokedTextPaneComponent(Type::TextPane), term(term),
+          widget(std::move(widget)), screen(term) {}
 
     void TerminalTextPaneComponent::Render() {
         if (this->widget) {
@@ -38,20 +41,22 @@ namespace sloked {
     }
 
     TextPosition TerminalTextPaneComponent::GetDimensions() {
-        return { this->term.GetHeight(), this->term.GetWidth() };
+        return {this->term.GetHeight(), this->term.GetWidth()};
     }
 
     void TerminalTextPaneComponent::OnUpdate(std::function<void()> listener) {
         this->widget->OnUpdate(std::move(listener));
     }
-    
-    const SlokedFontProperties &TerminalTextPaneComponent::GetFontProperties() const {
+
+    const SlokedFontProperties &TerminalTextPaneComponent::GetFontProperties()
+        const {
         return this->screen.GetFontProperties();
     }
-    
-    void TerminalTextPaneComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {
+
+    void TerminalTextPaneComponent::ProcessComponentInput(
+        const SlokedKeyboardInput &input) {
         if (this->widget) {
             this->widget->ProcessInput(input);
         }
     }
-}
+}  // namespace sloked

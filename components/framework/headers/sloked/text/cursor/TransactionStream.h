@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,13 +22,14 @@
 #ifndef SLOKED_TEXT_CURSOR_TRANSACTIONSTREAM_H_
 #define SLOKED_TEXT_CURSOR_TRANSACTIONSTREAM_H_
 
-#include "sloked/text/cursor/Transaction.h"
 #include <memory>
+
+#include "sloked/text/cursor/Transaction.h"
 
 namespace sloked {
 
     class SlokedTransactionStreamListener {
-        public:
+     public:
         virtual ~SlokedTransactionStreamListener() = default;
         virtual void OnCommit(const SlokedCursorTransaction &) = 0;
         virtual void OnRollback(const SlokedCursorTransaction &) = 0;
@@ -38,8 +39,10 @@ namespace sloked {
     class SlokedTransactionListenerManager {
      public:
         virtual ~SlokedTransactionListenerManager() = default;
-        virtual void AddListener(std::shared_ptr<SlokedTransactionStreamListener>) = 0;
-        virtual void RemoveListener(const SlokedTransactionStreamListener &) = 0;
+        virtual void AddListener(
+            std::shared_ptr<SlokedTransactionStreamListener>) = 0;
+        virtual void RemoveListener(
+            const SlokedTransactionStreamListener &) = 0;
         virtual void ClearListeners() = 0;
     };
 
@@ -57,6 +60,6 @@ namespace sloked {
         virtual void RemoveListener(const Listener &) = 0;
         virtual void ClearListeners() = 0;
     };
-}
+}  // namespace sloked
 
 #endif

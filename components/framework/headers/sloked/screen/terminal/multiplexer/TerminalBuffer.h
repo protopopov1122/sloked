@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,22 +22,24 @@
 #ifndef SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALBUFFER_H_
 #define SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALBUFFER_H_
 
-#include "sloked/core/Position.h"
-#include "sloked/core/Encoding.h"
-#include "sloked/core/CharPreset.h"
-#include "sloked/screen/terminal/Terminal.h"
-#include "sloked/screen/terminal/multiplexer/BufferedGraphics.h"
 #include <memory>
 #include <optional>
+
+#include "sloked/core/CharPreset.h"
+#include "sloked/core/Encoding.h"
+#include "sloked/core/Position.h"
+#include "sloked/screen/terminal/Terminal.h"
+#include "sloked/screen/terminal/multiplexer/BufferedGraphics.h"
 
 namespace sloked {
 
     class BufferedTerminal : public SlokedTerminal {
      public:
-        BufferedTerminal(SlokedTerminal &, const Encoding &, const SlokedCharPreset &);
+        BufferedTerminal(SlokedTerminal &, const Encoding &,
+                         const SlokedCharPreset &);
 
         void UpdateSize();
-    
+
         void SetPosition(Line, Column) override;
         void MoveUp(Line) override;
         void MoveDown(Line) override;
@@ -58,14 +60,14 @@ namespace sloked {
 
         bool UpdateDimensions() override;
         void RenderFrame() override;
-        
+
      private:
         void dump_buffer(std::u32string_view, std::size_t);
 
         struct Character {
             bool operator!=(const Character &other) {
                 return this->value != other.value ||
-                    !(this->graphics == other.graphics);
+                       !(this->graphics == other.graphics);
             }
             BufferedGraphicsMode graphics;
             char32_t value = '\0';
@@ -85,6 +87,6 @@ namespace sloked {
         Column width;
         Line height;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_THIRD_PARTY_LUA_PIPE_H_
 #define SLOKED_THIRD_PARTY_LUA_PIPE_H_
 
+#include <lua.hpp>
+#include <memory>
+
 #include "sloked/kgr/Pipe.h"
 #include "sloked/sched/EventLoop.h"
-#include <memory>
-#include <lua.hpp>
 
 namespace sloked {
 

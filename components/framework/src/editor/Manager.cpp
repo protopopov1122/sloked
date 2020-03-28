@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,38 +23,52 @@
 
 namespace sloked {
 
-    SlokedEditorManager::Parameters::Parameters(SlokedLogger &logger, SlokedRootNamespaceFactory &root)
-        : logger(logger), root(root), taggers{nullptr}, editors{nullptr}, crypto{nullptr}, compression{nullptr}, screenProviders{nullptr} {}
-    
-    SlokedEditorManager::Parameters &SlokedEditorManager::Parameters::SetTaggers(SlokedTextTaggerRegistry<int> &taggers) {
+    SlokedEditorManager::Parameters::Parameters(
+        SlokedLogger &logger, SlokedRootNamespaceFactory &root)
+        : logger(logger),
+          root(root), taggers{nullptr}, editors{nullptr}, crypto{nullptr},
+          compression{nullptr}, screenProviders{nullptr} {}
+
+    SlokedEditorManager::Parameters &
+        SlokedEditorManager::Parameters::SetTaggers(
+            SlokedTextTaggerRegistry<int> &taggers) {
         this->taggers = std::addressof(taggers);
         return *this;
     }
 
-    SlokedEditorManager::Parameters &SlokedEditorManager::Parameters::SetEditors(SlokedEditorManager::EditorFactory editors) {
+    SlokedEditorManager::Parameters &
+        SlokedEditorManager::Parameters::SetEditors(
+            SlokedEditorManager::EditorFactory editors) {
         this->editors = std::move(editors);
         return *this;
     }
 
-    SlokedEditorManager::Parameters &SlokedEditorManager::Parameters::SetCrypto(SlokedCrypto &crypto) {
+    SlokedEditorManager::Parameters &SlokedEditorManager::Parameters::SetCrypto(
+        SlokedCrypto &crypto) {
         this->crypto = std::addressof(crypto);
         return *this;
     }
 
-    SlokedEditorManager::Parameters &SlokedEditorManager::Parameters::SetComresssion(SlokedCompression &compression) {
+    SlokedEditorManager::Parameters &
+        SlokedEditorManager::Parameters::SetComresssion(
+            SlokedCompression &compression) {
         this->compression = std::addressof(compression);
         return *this;
     }
 
-    SlokedEditorManager::Parameters &SlokedEditorManager::Parameters::SetScreenProviders(SlokedScreenProviderFactory &provider) {
+    SlokedEditorManager::Parameters &
+        SlokedEditorManager::Parameters::SetScreenProviders(
+            SlokedScreenProviderFactory &provider) {
         this->screenProviders = std::addressof(provider);
         return *this;
     }
 
     SlokedEditorManager::SlokedEditorManager(Parameters prms)
-        : logger(prms.logger), namespaceFactory(prms.root), baseTaggers(prms.taggers),
-          editorFactory(std::move(prms.editors)), cryptoEngine(prms.crypto), compression(prms.compression), screenProviders(prms.screenProviders) {}
-        
+        : logger(prms.logger), namespaceFactory(prms.root),
+          baseTaggers(prms.taggers), editorFactory(std::move(prms.editors)),
+          cryptoEngine(prms.crypto), compression(prms.compression),
+          screenProviders(prms.screenProviders) {}
+
     void SlokedEditorManager::Spawn(const KgrValue &config) {
         const auto &editors = config.AsDictionary();
         for (const auto &kv : editors) {
@@ -63,12 +77,14 @@ namespace sloked {
     }
 
     void SlokedEditorManager::Close() {
-        for (auto it = this->editors.rbegin(); it != this->editors.rend(); ++it) {
+        for (auto it = this->editors.rbegin(); it != this->editors.rend();
+             ++it) {
             it->second->Close();
         }
     }
 
-    void SlokedEditorManager::Setup(SlokedEditorInstance &editor, const KgrValue &rawConfig) {
+    void SlokedEditorManager::Setup(SlokedEditorInstance &editor,
+                                    const KgrValue &rawConfig) {
         const auto &config = rawConfig.AsDictionary();
         if (config.Has("crypto") && this->cryptoEngine) {
             const auto &cryptoConfig = config["crypto"].AsDictionary();
@@ -76,12 +92,16 @@ namespace sloked {
         }
         if (config.Has("network")) {
             const auto &networkConfig = config["network"].AsDictionary();
-            if (networkConfig.Has("compression") && networkConfig["compression"].AsBoolean() && this->compression != nullptr) {
+            if (networkConfig.Has("compression") &&
+                networkConfig["compression"].AsBoolean() &&
+                this->compression != nullptr) {
                 editor.GetNetwork().CompressionLayer(*this->compression);
             }
             if (networkConfig.Has("buffering")) {
                 auto bufferingTimeout = networkConfig["buffering"].AsInt();
-                editor.GetNetwork().BufferingLayer(std::chrono::milliseconds(bufferingTimeout), editor.GetScheduler());
+                editor.GetNetwork().BufferingLayer(
+                    std::chrono::milliseconds(bufferingTimeout),
+                    editor.GetScheduler());
             }
         }
         this->SetupServer(editor, config["server"].AsDictionary());
@@ -118,21 +138,26 @@ namespace sloked {
         return this->editors.count(key) != 0;
     }
 
-    SlokedEditorInstance &SlokedEditorManager::Get(const std::string &key) const {
+    SlokedEditorInstance &SlokedEditorManager::Get(
+        const std::string &key) const {
         if (this->editors.count(key) != 0) {
             return *this->editors.at(key);
         } else {
-            throw SlokedError("EditorStartup: Editor \'" + key + "\' is not defined");
+            throw SlokedError("EditorStartup: Editor \'" + key +
+                              "\' is not defined");
         }
     }
 
-    void SlokedEditorManager::Enumerate(std::function<void(const std::string, SlokedEditorInstance &)> callback) const {
+    void SlokedEditorManager::Enumerate(
+        std::function<void(const std::string, SlokedEditorInstance &)> callback)
+        const {
         for (const auto &kv : this->editors) {
             callback(kv.first, *kv.second);
         }
     }
 
-    SlokedEditorInstance &SlokedEditorManager::Spawn(const std::string &key, const KgrValue &config) {
+    SlokedEditorInstance &SlokedEditorManager::Spawn(const std::string &key,
+                                                     const KgrValue &config) {
         if (this->editorFactory == nullptr) {
             throw SlokedError("EditorStartup: editor factory not defined");
         }
@@ -143,7 +168,8 @@ namespace sloked {
             this->editors.emplace(key, std::move(editor));
             return *this->editors.at(key);
         } else {
-            throw SlokedError("EditorStartup: Editor \'" + key + "\' is already defined");
+            throw SlokedError("EditorStartup: Editor \'" + key +
+                              "\' is already defined");
         }
     }
 
@@ -153,31 +179,42 @@ namespace sloked {
             editor.Close();
             this->editors.erase(key);
         } else {
-            throw SlokedError("EditorStartup: Editor \'" + key + "\' is not defined");
+            throw SlokedError("EditorStartup: Editor \'" + key +
+                              "\' is not defined");
         }
     }
 
-    void SlokedEditorManager::SetupCrypto(SlokedEditorInstance &editor, const KgrDictionary &cryptoConfig) {
+    void SlokedEditorManager::SetupCrypto(SlokedEditorInstance &editor,
+                                          const KgrDictionary &cryptoConfig) {
         std::unique_ptr<SlokedCrypto::Key> masterKey;
         editor.InitializeCrypto(*this->cryptoEngine);
-        masterKey = editor.GetCrypto().GetEngine().DeriveKey(cryptoConfig["masterPassword"].AsString(), cryptoConfig["salt"].AsString());
+        masterKey = editor.GetCrypto().GetEngine().DeriveKey(
+            cryptoConfig["masterPassword"].AsString(),
+            cryptoConfig["salt"].AsString());
         if (cryptoConfig.Has("authentication")) {
-            const auto &authConfig = cryptoConfig["authentication"].AsDictionary();
+            const auto &authConfig =
+                cryptoConfig["authentication"].AsDictionary();
             if (authConfig.Has("master")) {
                 const auto &masterConfig = authConfig["master"].AsDictionary();
-                this->SetupMasterAuth(editor, masterConfig, cryptoConfig["salt"].AsString());
+                this->SetupMasterAuth(editor, masterConfig,
+                                      cryptoConfig["salt"].AsString());
             } else if (authConfig.Has("slave")) {
                 const auto &slaveConfig = authConfig["slave"].AsDictionary();
-                this->SetupSlaveAuth(editor, slaveConfig, cryptoConfig["salt"].AsString());
+                this->SetupSlaveAuth(editor, slaveConfig,
+                                     cryptoConfig["salt"].AsString());
             }
         }
-        editor.GetNetwork().EncryptionLayer(editor.GetCrypto().GetEngine(), *masterKey);
-        editor.Attach(SlokedTypedDataHandle<SlokedCrypto::Key>::Wrap(std::move(masterKey)));
+        editor.GetNetwork().EncryptionLayer(editor.GetCrypto().GetEngine(),
+                                            *masterKey);
+        editor.Attach(SlokedTypedDataHandle<SlokedCrypto::Key>::Wrap(
+            std::move(masterKey)));
     }
 
-    static std::unique_ptr<SlokedNamedRestrictions> KgrToRestriction(const KgrDictionary &config) {
+    static std::unique_ptr<SlokedNamedRestrictions> KgrToRestriction(
+        const KgrDictionary &config) {
         std::vector<std::string> content;
-        bool whitelist = config.Has("whitelist") && config["whitelist"].AsBoolean();
+        bool whitelist =
+            config.Has("whitelist") && config["whitelist"].AsBoolean();
         for (const auto &entry : config["content"].AsArray()) {
             content.push_back(entry.AsString());
         }
@@ -188,20 +225,28 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorManager::SetupMasterAuth(SlokedEditorInstance &editor, const KgrDictionary &masterConfig, const std::string &salt) {
-        auto masterKey = editor.GetCrypto().GetEngine().DeriveKey(masterConfig["masterPassword"].AsString(), masterConfig["salt"].AsString());
+    void SlokedEditorManager::SetupMasterAuth(SlokedEditorInstance &editor,
+                                              const KgrDictionary &masterConfig,
+                                              const std::string &salt) {
+        auto masterKey = editor.GetCrypto().GetEngine().DeriveKey(
+            masterConfig["masterPassword"].AsString(),
+            masterConfig["salt"].AsString());
         auto &authMaster = editor.GetCrypto().SetupCredentialMaster(*masterKey);
-        editor.Attach(SlokedTypedDataHandle<SlokedCrypto::Key>::Wrap(std::move(masterKey)));
+        editor.Attach(SlokedTypedDataHandle<SlokedCrypto::Key>::Wrap(
+            std::move(masterKey)));
         editor.GetCrypto().SetupAuthenticator(salt);
         if (masterConfig.Has("users")) {
             for (const auto &usr : masterConfig["users"].AsArray()) {
                 const auto &userConfig = usr.AsDictionary();
-                auto userAccount = authMaster.New(userConfig["id"].AsString()).lock();
+                auto userAccount =
+                    authMaster.New(userConfig["id"].AsString()).lock();
                 if (userConfig.Has("restrictAccess")) {
-                    userAccount->SetAccessRestrictions(KgrToRestriction(userConfig["restrictAccess"].AsDictionary()));
+                    userAccount->SetAccessRestrictions(KgrToRestriction(
+                        userConfig["restrictAccess"].AsDictionary()));
                 }
                 if (userConfig.Has("restrictModification")) {
-                    userAccount->SetModificationRestrictions(KgrToRestriction(userConfig["restrictModification"].AsDictionary()));
+                    userAccount->SetModificationRestrictions(KgrToRestriction(
+                        userConfig["restrictModification"].AsDictionary()));
                 }
             }
         }
@@ -209,73 +254,93 @@ namespace sloked {
             auto userAccount = authMaster.EnableDefaultAccount(true).lock();
             const auto &userConfig = masterConfig["defaultUser"].AsDictionary();
             if (userConfig.Has("restrictAccess")) {
-                userAccount->SetAccessRestrictions(KgrToRestriction(userConfig["restrictAccess"].AsDictionary()));
+                userAccount->SetAccessRestrictions(KgrToRestriction(
+                    userConfig["restrictAccess"].AsDictionary()));
             }
             if (userConfig.Has("restrictModification")) {
-                userAccount->SetModificationRestrictions(KgrToRestriction(userConfig["restrictModification"].AsDictionary()));
+                userAccount->SetModificationRestrictions(KgrToRestriction(
+                    userConfig["restrictModification"].AsDictionary()));
             }
         } else {
             authMaster.EnableDefaultAccount(false);
         }
     }
 
-    void SlokedEditorManager::SetupSlaveAuth(SlokedEditorInstance &editor, const KgrDictionary &slaveConfig, const std::string &salt) {
+    void SlokedEditorManager::SetupSlaveAuth(SlokedEditorInstance &editor,
+                                             const KgrDictionary &slaveConfig,
+                                             const std::string &salt) {
         auto &authSlave = editor.GetCrypto().SetupCredentialSlave();
         editor.GetCrypto().SetupAuthenticator(salt);
         if (slaveConfig.Has("users")) {
             for (const auto &usr : slaveConfig["users"].AsArray()) {
                 const auto &userConfig = usr.AsDictionary();
-                authSlave.New(userConfig["id"].AsString(), userConfig["credentials"].AsString());
+                authSlave.New(userConfig["id"].AsString(),
+                              userConfig["credentials"].AsString());
             }
         }
     }
 
     static SlokedSocketAddress KgrToSocketAddress(const KgrDictionary &conf) {
-        return SlokedSocketAddress::Network {
+        return SlokedSocketAddress::Network{
             conf["host"].AsString(),
-            static_cast<uint16_t>(conf["port"].AsInt())
-        };
+            static_cast<uint16_t>(conf["port"].AsInt())};
     }
 
-    void SlokedEditorManager::SetupServer(SlokedEditorInstance &editor, const KgrDictionary &serverConfig) {
+    void SlokedEditorManager::SetupServer(SlokedEditorInstance &editor,
+                                          const KgrDictionary &serverConfig) {
         if (serverConfig.Has("slave")) {
             const auto &slaveConfig = serverConfig["slave"].AsDictionary();
-            auto socket = editor.GetNetwork().GetEngine().Connect(KgrToSocketAddress(slaveConfig["address"].AsDictionary()));
+            auto socket = editor.GetNetwork().GetEngine().Connect(
+                KgrToSocketAddress(slaveConfig["address"].AsDictionary()));
             editor.InitializeServer(std::move(socket));
             if (slaveConfig.Has("authorize")) {
-                editor.GetServer().AsRemoteServer().Authorize(slaveConfig["authorize"].AsString());
+                editor.GetServer().AsRemoteServer().Authorize(
+                    slaveConfig["authorize"].AsString());
             }
         } else {
             editor.InitializeServer();
         }
         if (serverConfig.Has("netServer")) {
-            auto address = KgrToSocketAddress(serverConfig["netServer"].AsDictionary());
+            auto address =
+                KgrToSocketAddress(serverConfig["netServer"].AsDictionary());
             if (editor.HasCrypto()) {
-                editor.GetServer().SpawnNetServer(editor.GetNetwork().GetEngine(), address, editor.GetIO(),
-                    &editor.GetCrypto().GetCredentialMaster(), &editor.GetCrypto().GetAuthenticator());
+                editor.GetServer().SpawnNetServer(
+                    editor.GetNetwork().GetEngine(), address, editor.GetIO(),
+                    &editor.GetCrypto().GetCredentialMaster(),
+                    &editor.GetCrypto().GetAuthenticator());
             } else {
-                editor.GetServer().SpawnNetServer(editor.GetNetwork().GetEngine(), address, editor.GetIO(),
+                editor.GetServer().SpawnNetServer(
+                    editor.GetNetwork().GetEngine(), address, editor.GetIO(),
                     nullptr, nullptr);
             }
         }
         if (serverConfig.Has("restrictAccess")) {
-            editor.GetServer().GetRestrictions().SetAccessRestrictions(KgrToRestriction(serverConfig["restrictAccess"].AsDictionary()));
+            editor.GetServer().GetRestrictions().SetAccessRestrictions(
+                KgrToRestriction(
+                    serverConfig["restrictAccess"].AsDictionary()));
         }
         if (serverConfig.Has("restrictModification")) {
-            editor.GetServer().GetRestrictions().SetModificationRestrictions(KgrToRestriction(serverConfig["restrictModification"].AsDictionary()));
+            editor.GetServer().GetRestrictions().SetModificationRestrictions(
+                KgrToRestriction(
+                    serverConfig["restrictModification"].AsDictionary()));
         }
         if (serverConfig.Has("services")) {
             const auto &serviceConfig = serverConfig["services"].AsDictionary();
-            auto &serviceProvider = editor.InitializeServiceProvider(std::make_unique<SlokedServiceDependencyDefaultProvider>(
-                this->logger, this->namespaceFactory.Build(), editor.GetCharPreset(), editor.GetServer().GetServer(), editor.GetContextManager(),
-                this->baseTaggers));
+            auto &serviceProvider = editor.InitializeServiceProvider(
+                std::make_unique<SlokedServiceDependencyDefaultProvider>(
+                    this->logger, this->namespaceFactory.Build(),
+                    editor.GetCharPreset(), editor.GetServer().GetServer(),
+                    editor.GetContextManager(), this->baseTaggers));
             if (serviceConfig.Has("root")) {
-                serviceProvider.GetNamespace().GetRoot().Mount(SlokedPath{"/"},
-                    serviceProvider.GetNamespace().GetMounter().Mount(SlokedUri::Parse(serviceConfig["root"].AsString())));
+                serviceProvider.GetNamespace().GetRoot().Mount(
+                    SlokedPath{"/"},
+                    serviceProvider.GetNamespace().GetMounter().Mount(
+                        SlokedUri::Parse(serviceConfig["root"].AsString())));
             }
             SlokedDefaultServicesFacade services(serviceProvider);
             for (const auto &service : serviceConfig["endpoints"].AsArray()) {
-                editor.GetServer().GetServer().Register(service.AsString(), services.Build(service.AsString()));
+                editor.GetServer().GetServer().Register(
+                    service.AsString(), services.Build(service.AsString()));
             }
         }
         if (serverConfig.Has("screen")) {
@@ -287,4 +352,4 @@ namespace sloked {
             }
         }
     }
-}
+}  // namespace sloked

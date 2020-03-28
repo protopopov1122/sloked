@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,7 +23,6 @@
 
 namespace sloked {
 
-
     KgrLocalContext::KgrLocalContext(std::unique_ptr<KgrPipe> pipe)
         : pipe(std::move(pipe)) {}
 
@@ -35,7 +34,7 @@ namespace sloked {
         if (this->pipe == nullptr) {
             return State::Destroyed;
         } else if (this->pipe->GetStatus() == KgrPipe::Status::Closed &&
-            this->pipe->Empty()) {
+                   this->pipe->Empty()) {
             return State::Finished;
         } else if (this->pipe->Empty()) {
             return State::Idle;
@@ -43,14 +42,15 @@ namespace sloked {
             return State::Pending;
         }
     }
-    
+
     void KgrLocalContext::Destroy() {
         this->pipe.reset();
     }
 
-    void KgrLocalContext::SetActivationListener(std::function<void()> callback) {
+    void KgrLocalContext::SetActivationListener(
+        std::function<void()> callback) {
         if (this->pipe) {
             this->pipe->SetMessageListener(std::move(callback));
         }
     }
-}
+}  // namespace sloked

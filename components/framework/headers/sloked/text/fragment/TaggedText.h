@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,13 +22,13 @@
 #ifndef SLOKED_TEXT_FRAGMENT_TAGGEDTEXT_H_
 #define SLOKED_TEXT_FRAGMENT_TAGGEDTEXT_H_
 
-#include "sloked/namespace/Path.h"
 #include "sloked/core/Encoding.h"
-#include "sloked/text/TextBlock.h"
-#include "sloked/text/fragment/FragmentMap.h"
 #include "sloked/core/Error.h"
-#include "sloked/text/cursor/TransactionStream.h"
 #include "sloked/core/Event.h"
+#include "sloked/namespace/Path.h"
+#include "sloked/text/TextBlock.h"
+#include "sloked/text/cursor/TransactionStream.h"
+#include "sloked/text/fragment/FragmentMap.h"
 
 namespace sloked {
 
@@ -38,7 +38,8 @@ namespace sloked {
         using ChangeListener = std::function<void(const TextPositionRange &)>;
         using Unbind = std::function<void()>;
         virtual ~SlokedTextTagger() = default;
-        virtual std::optional<TaggedTextFragment<T>> Get(const TextPosition &) = 0;
+        virtual std::optional<TaggedTextFragment<T>> Get(
+            const TextPosition &) = 0;
         virtual std::vector<TaggedTextFragment<T>> Get(TextPosition::Line) = 0;
         virtual Unbind OnChange(ChangeListener) = 0;
     };
@@ -46,12 +47,12 @@ namespace sloked {
     template <typename T>
     class SlokedTextProxyTagger : public SlokedTextTagger<T> {
      public:
-        SlokedTextProxyTagger(std::unique_ptr<SlokedTextTagger<T>> tagger = nullptr)
+        SlokedTextProxyTagger(
+            std::unique_ptr<SlokedTextTagger<T>> tagger = nullptr)
             : tagger(std::move(tagger)), unsubscribe{nullptr} {
             if (this->tagger) {
-                this->unsubscribe = this->tagger->OnChange([this](const auto &pos) {
-                    this->subscribers.Emit(pos);
-                });
+                this->unsubscribe = this->tagger->OnChange(
+                    [this](const auto &pos) { this->subscribers.Emit(pos); });
             }
         }
 
@@ -61,16 +62,16 @@ namespace sloked {
             }
         }
 
-        void ChangeTagger(std::unique_ptr<SlokedTextTagger<T>> tagger = nullptr) {
+        void ChangeTagger(
+            std::unique_ptr<SlokedTextTagger<T>> tagger = nullptr) {
             if (this->unsubscribe) {
                 this->unsubscribe();
                 this->unsubscribe = nullptr;
             }
             this->tagger = std::move(tagger);
             if (this->tagger) {
-                this->unsubscribe = this->tagger->OnChange([this](const auto &pos) {
-                    this->subscribers.Emit(pos);
-                });
+                this->unsubscribe = this->tagger->OnChange(
+                    [this](const auto &pos) { this->subscribers.Emit(pos); });
             }
         }
 
@@ -78,7 +79,8 @@ namespace sloked {
             return this->tagger != nullptr;
         }
 
-        std::optional<TaggedTextFragment<T>> Get(const TextPosition &pos) final {
+        std::optional<TaggedTextFragment<T>> Get(
+            const TextPosition &pos) final {
             if (this->tagger) {
                 return this->tagger->Get(pos);
             } else {
@@ -94,7 +96,8 @@ namespace sloked {
             }
         }
 
-        typename SlokedTextTagger<T>::Unbind OnChange(typename SlokedTextTagger<T>::ChangeListener subscriber) final {
+        typename SlokedTextTagger<T>::Unbind OnChange(
+            typename SlokedTextTagger<T>::ChangeListener subscriber) final {
             return this->subscribers.Listen(std::move(subscriber));
         }
 
@@ -119,7 +122,8 @@ namespace sloked {
     class SlokedTextTaggerFactory {
      public:
         virtual ~SlokedTextTaggerFactory() = default;
-        virtual std::unique_ptr<SlokedTextTagger<T>> Create(SlokedTaggableDocument &) const = 0;
+        virtual std::unique_ptr<SlokedTextTagger<T>> Create(
+            SlokedTaggableDocument &) const = 0;
     };
 
     template <typename T>
@@ -127,46 +131,56 @@ namespace sloked {
      public:
         virtual ~SlokedTextTaggerRegistry() = default;
         virtual bool Has(const std::string &id) const = 0;
-        virtual std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &, SlokedTaggableDocument &) const = 0;
-        virtual std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &, SlokedTaggableDocument &) const = 0;
+        virtual std::unique_ptr<SlokedTextTagger<T>> Create(
+            const std::string &, SlokedTaggableDocument &) const = 0;
+        virtual std::unique_ptr<SlokedTextTagger<T>> TryCreate(
+            const std::string &, SlokedTaggableDocument &) const = 0;
     };
 
     template <typename T>
     class SlokedDefaultTextTaggerRegistry : public SlokedTextTaggerRegistry<T> {
      public:
-        SlokedDefaultTextTaggerRegistry(SlokedTextTaggerRegistry<T> *base = nullptr)
+        SlokedDefaultTextTaggerRegistry(
+            SlokedTextTaggerRegistry<T> *base = nullptr)
             : base(base) {}
 
         bool Has(const std::string &id) const final {
-            return this->factories.count(id) != 0 ||    
-                (this->base != nullptr && this->base->Has(id));
+            return this->factories.count(id) != 0 ||
+                   (this->base != nullptr && this->base->Has(id));
         }
 
-        std::unique_ptr<SlokedTextTagger<T>> Create(const std::string &id, SlokedTaggableDocument &document) const final {
+        std::unique_ptr<SlokedTextTagger<T>> Create(
+            const std::string &id,
+            SlokedTaggableDocument &document) const final {
             if (this->factories.count(id) != 0) {
                 return this->factories.at(id)->Create(document);
             } else if (this->base != nullptr) {
                 return this->base->Create(id, document);
             } else {
-                throw SlokedError("TextTaggerRegistry: Unknown tagger \'" + id + "\'");
+                throw SlokedError("TextTaggerRegistry: Unknown tagger \'" + id +
+                                  "\'");
             }
         }
 
-        std::unique_ptr<SlokedTextTagger<T>> TryCreate(const std::string &id, SlokedTaggableDocument &document) const final {
+        std::unique_ptr<SlokedTextTagger<T>> TryCreate(
+            const std::string &id,
+            SlokedTaggableDocument &document) const final {
             if (this->Has(id)) {
                 return this->Create(id, document);
-            }  else {
+            } else {
                 return nullptr;
             }
         }
 
-        void Bind(const std::string &id, std::unique_ptr<SlokedTextTaggerFactory<T>> factory) {
+        void Bind(const std::string &id,
+                  std::unique_ptr<SlokedTextTaggerFactory<T>> factory) {
             this->factories.emplace(id, std::move(factory));
         }
 
      private:
         SlokedTextTaggerRegistry<T> *base;
-        std::map<std::string, std::unique_ptr<SlokedTextTaggerFactory<T>>> factories;
+        std::map<std::string, std::unique_ptr<SlokedTextTaggerFactory<T>>>
+            factories;
     };
 
     template <typename T>
@@ -179,15 +193,17 @@ namespace sloked {
                 emitter.Emit(pos);
             });
         }
-        
+
         ~SlokedCacheTaggedText() {
             if (this->unsubscribe) {
                 this->unsubscribe();
             }
         }
 
-        std::optional<TaggedTextFragment<T>> Get(const TextPosition &position) final {
-            if (!this->fragment.has_value() || !this->fragment.value().Includes(position)) {
+        std::optional<TaggedTextFragment<T>> Get(
+            const TextPosition &position) final {
+            if (!this->fragment.has_value() ||
+                !this->fragment.value().Includes(position)) {
                 this->fragment = this->tags.Get(position);
             }
             return this->fragment;
@@ -197,7 +213,8 @@ namespace sloked {
             return this->tags.Get(line);
         }
 
-        typename SlokedTextTagger<T>::Unbind OnChange(std::function<void(const TextPositionRange &)> callback) final {
+        typename SlokedTextTagger<T>::Unbind OnChange(
+            std::function<void(const TextPositionRange &)> callback) final {
             return this->emitter.Listen(std::move(callback));
         }
 
@@ -207,6 +224,6 @@ namespace sloked {
         typename SlokedTextTagger<T>::Unbind unsubscribe;
         SlokedEventEmitter<const TextPositionRange &> emitter;
     };
-}
+}  // namespace sloked
 
 #endif

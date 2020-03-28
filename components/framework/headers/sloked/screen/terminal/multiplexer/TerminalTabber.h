@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,11 +22,12 @@
 #ifndef SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALTABBER_H_
 #define SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALTABBER_H_
 
-#include "sloked/core/Indexed.h"
-#include "sloked/screen/terminal/Terminal.h"
-#include <vector>
 #include <memory>
 #include <optional>
+#include <vector>
+
+#include "sloked/core/Indexed.h"
+#include "sloked/screen/terminal/Terminal.h"
 
 namespace sloked {
 
@@ -35,7 +36,7 @@ namespace sloked {
         using TabId = std::size_t;
 
         TerminalTabber(SlokedTerminal &);
-        
+
         TabId GetTabCount() const;
         std::optional<TabId> GetCurrentTab() const;
         SlokedTerminal &GetTab(TabId) const;
@@ -46,12 +47,12 @@ namespace sloked {
         bool SelectTab(TabId);
         bool MoveTab(TabId, TabId);
         bool CloseTab(TabId);
-        
+
      private:
-        SlokedTerminal &term;   
+        SlokedTerminal &term;
         std::vector<std::shared_ptr<SlokedTerminal>> tabs;
         TabId current_tab;
     };
-}
+}  // namespace sloked
 
 #endif

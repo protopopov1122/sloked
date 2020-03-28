@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,10 +20,12 @@
 */
 
 #include "sloked/editor/Configuration.h"
-#include "sloked/kgr/Serialize.h"
-#include "sloked/kgr/Path.h"
-#include "sloked/core/Error.h"
+
 #include <fstream>
+
+#include "sloked/core/Error.h"
+#include "sloked/kgr/Path.h"
+#include "sloked/kgr/Serialize.h"
 
 namespace sloked {
 
@@ -37,7 +39,8 @@ namespace sloked {
         }
     }
 
-    SlokedConfiguration::SlokedConfiguration(std::initializer_list<KgrValue> layers)
+    SlokedConfiguration::SlokedConfiguration(
+        std::initializer_list<KgrValue> layers)
         : layers(layers) {}
 
     KgrValue SlokedConfiguration::Find(const std::string &query) const {
@@ -59,4 +62,4 @@ namespace sloked {
         }
         return false;
     }
-}
+}  // namespace sloked

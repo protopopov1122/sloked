@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,28 +22,30 @@
 #ifndef SLOKED_THIRD_PARTY_SCRIPT_LUA_H_
 #define SLOKED_THIRD_PARTY_SCRIPT_LUA_H_
 
-#include "sloked/script/ScriptEngine.h"
+#include <atomic>
+#include <map>
+#include <mutex>
+#include <string>
+#include <thread>
+
+#include "sloked/core/Logger.h"
 #include "sloked/core/Semaphore.h"
+#include "sloked/editor/EditorInstance.h"
 #include "sloked/sched/EventLoop.h"
 #include "sloked/sched/Scheduler.h"
-#include "sloked/core/Logger.h"
-#include "sloked/editor/EditorInstance.h"
+#include "sloked/script/ScriptEngine.h"
 #include "sloked/script/lua/Base.h"
-#include <string>
-#include <atomic>
-#include <thread>
-#include <mutex>
-#include <map>
 
 namespace sloked {
 
     class SlokedLuaEngine : public SlokedScriptEngine {
      public:
-        SlokedLuaEngine(SlokedEditorInstanceContainer &, SlokedSchedulerThread &, const std::string & = "");
+        SlokedLuaEngine(SlokedEditorInstanceContainer &,
+                        SlokedSchedulerThread &, const std::string & = "");
         ~SlokedLuaEngine();
         void Start(const std::string &) final;
         void Close() final;
-    
+
      private:
         void Run(const std::string &);
         void InitializePath();
@@ -60,6 +62,6 @@ namespace sloked {
         std::string path;
         SlokedLogger logger;
     };
-}
+}  // namespace sloked
 
 #endif

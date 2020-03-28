@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,22 +22,26 @@
 #ifndef SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALWINDOW_H_
 #define SLOKED_SCREEN_TERMINAL_MULTIPLEXER_TERMINALWINDOW_H_
 
+#include <functional>
+
+#include "sloked/core/CharPreset.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/terminal/Terminal.h"
-#include "sloked/core/CharPreset.h"
 #include "sloked/screen/terminal/multiplexer/BufferedGraphics.h"
-#include <functional>
 
 namespace sloked {
 
     class TerminalWindow : public SlokedTerminal {
      public:
-        TerminalWindow(SlokedTerminal &, const Encoding &, const SlokedCharPreset &, const TextPosition &, const TextPosition &);
+        TerminalWindow(SlokedTerminal &, const Encoding &,
+                       const SlokedCharPreset &, const TextPosition &,
+                       const TextPosition &);
 
         void Move(const TextPosition &);
         void Resize(const TextPosition &);
         const TextPosition &GetOffset() const;
-        TerminalWindow SubWindow(const TextPosition &, const TextPosition &) const;
+        TerminalWindow SubWindow(const TextPosition &,
+                                 const TextPosition &) const;
 
         void SetPosition(Line, Column) override;
         void MoveUp(Line) override;
@@ -69,6 +73,6 @@ namespace sloked {
         Line line;
         Column col;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,9 +22,10 @@
 #ifndef SLOKED_FACADE_SERVER_H_
 #define SLOKED_FACADE_SERVER_H_
 
+#include <variant>
+
 #include "sloked/editor/EditorServer.h"
 #include "sloked/kgr/net/MasterServer.h"
-#include <variant>
 
 namespace sloked {
 
@@ -41,7 +42,10 @@ namespace sloked {
         SlokedRemoteEditorServer &AsRemoteServer() const;
         KgrMasterNetServer &GetNetworkServer() const;
 
-        void SpawnNetServer(SlokedSocketFactory &, const SlokedSocketAddress &, SlokedIOPoller &, SlokedNamedRestrictionAuthority * = nullptr, SlokedAuthenticatorFactory * = nullptr);
+        void SpawnNetServer(SlokedSocketFactory &, const SlokedSocketAddress &,
+                            SlokedIOPoller &,
+                            SlokedNamedRestrictionAuthority * = nullptr,
+                            SlokedAuthenticatorFactory * = nullptr);
 
         KgrNamedServer &GetServer() final;
         SlokedNamedRestrictionTarget &GetRestrictions() final;
@@ -49,9 +53,11 @@ namespace sloked {
         void Close() final;
 
      private:
-        std::variant<std::unique_ptr<SlokedLocalEditorServer>, std::unique_ptr<SlokedRemoteEditorServer>> server;
+        std::variant<std::unique_ptr<SlokedLocalEditorServer>,
+                     std::unique_ptr<SlokedRemoteEditorServer>>
+            server;
         std::unique_ptr<KgrMasterNetServer> netServer;
     };
-}
+}  // namespace sloked
 
 #endif

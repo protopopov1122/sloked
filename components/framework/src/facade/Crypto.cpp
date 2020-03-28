@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,9 +23,10 @@
 
 namespace sloked {
 
-
     SlokedCryptoFacade::SlokedCryptoFacade(SlokedCrypto &crypto)
-        : crypto(crypto), credentials{std::unique_ptr<SlokedCredentialMaster>(nullptr)}, authenticator{} {}
+        : crypto(crypto), credentials{std::unique_ptr<SlokedCredentialMaster>(
+                              nullptr)},
+          authenticator{} {}
 
     SlokedCryptoFacade::~SlokedCryptoFacade() {
         this->authenticator = nullptr;
@@ -36,7 +37,8 @@ namespace sloked {
     }
 
     bool SlokedCryptoFacade::HasCredentialMaster() const {
-        return this->credentials.index() == 0 && std::get<0>(this->credentials) != nullptr;
+        return this->credentials.index() == 0 &&
+               std::get<0>(this->credentials) != nullptr;
     }
 
     SlokedCredentialMaster &SlokedCryptoFacade::GetCredentialMaster() const {
@@ -48,7 +50,8 @@ namespace sloked {
     }
 
     bool SlokedCryptoFacade::HasCredentialSlave() const {
-        return this->credentials.index() == 1 && std::get<1>(this->credentials) != nullptr;
+        return this->credentials.index() == 1 &&
+               std::get<1>(this->credentials) != nullptr;
     }
 
     SlokedCredentialSlave &SlokedCryptoFacade::GetCredentialSlave() const {
@@ -71,8 +74,10 @@ namespace sloked {
         }
     }
 
-    SlokedCredentialMaster &SlokedCryptoFacade::SetupCredentialMaster(SlokedCrypto::Key &key) {
-        auto master = std::make_unique<SlokedCredentialMaster>(this->crypto, key);
+    SlokedCredentialMaster &SlokedCryptoFacade::SetupCredentialMaster(
+        SlokedCrypto::Key &key) {
+        auto master =
+            std::make_unique<SlokedCredentialMaster>(this->crypto, key);
         auto &masterRef = *master;
         this->authenticator = nullptr;
         this->credentials = std::move(master);
@@ -87,14 +92,17 @@ namespace sloked {
         return slaveRef;
     }
 
-    SlokedAuthenticatorFactory &SlokedCryptoFacade::SetupAuthenticator(const std::string &salt) {
+    SlokedAuthenticatorFactory &SlokedCryptoFacade::SetupAuthenticator(
+        const std::string &salt) {
         if (this->HasCredentialMaster()) {
-            this->authenticator = std::make_unique<SlokedAuthenticatorFactory>(this->crypto, this->GetCredentialMaster(), salt);
+            this->authenticator = std::make_unique<SlokedAuthenticatorFactory>(
+                this->crypto, this->GetCredentialMaster(), salt);
         } else if (this->HasCredentialSlave()) {
-            this->authenticator = std::make_unique<SlokedAuthenticatorFactory>(this->crypto, this->GetCredentialSlave(), salt);
+            this->authenticator = std::make_unique<SlokedAuthenticatorFactory>(
+                this->crypto, this->GetCredentialSlave(), salt);
         } else {
             throw SlokedError("CryptoFacade: Credentials not defined");
         }
         return *this->authenticator;
     }
-}
+}  // namespace sloked

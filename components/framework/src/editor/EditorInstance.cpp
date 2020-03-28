@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,20 +20,24 @@
 */
 
 #include "sloked/editor/EditorInstance.h"
+
 #include "sloked/core/Error.h"
 #include "sloked/kgr/net/Config.h"
 #include "sloked/net/CryptoSocket.h"
 
 namespace sloked {
 
-    SlokedEditorInstance::SlokedEditorInstance(std::unique_ptr<SlokedIOPoll> ioPoll, SlokedSocketFactory &network)
+    SlokedEditorInstance::SlokedEditorInstance(
+        std::unique_ptr<SlokedIOPoll> ioPoll, SlokedSocketFactory &network)
         : running{false}, ioPoll(std::move(ioPoll)), network(network) {
-        this->ioPoller = std::make_unique<SlokedDefaultIOPollThread>(*this->ioPoll);
+        this->ioPoller =
+            std::make_unique<SlokedDefaultIOPollThread>(*this->ioPoll);
         this->closeables.Attach(*this->ioPoller);
         this->closeables.Attach(this->contextManager);
     }
 
-    SlokedCryptoFacade &SlokedEditorInstance::InitializeCrypto(SlokedCrypto &crypto) {
+    SlokedCryptoFacade &SlokedEditorInstance::InitializeCrypto(
+        SlokedCrypto &crypto) {
         if (this->running.load()) {
             throw SlokedError("EditorInstance: Already running");
         } else if (this->crypto != nullptr) {
@@ -50,13 +54,15 @@ namespace sloked {
         } else if (this->server != nullptr) {
             throw SlokedError("EditorInstance: Server already initialized");
         } else {
-            this->server = std::make_unique<SlokedServerFacade>(std::make_unique<SlokedLocalEditorServer>());
+            this->server = std::make_unique<SlokedServerFacade>(
+                std::make_unique<SlokedLocalEditorServer>());
             this->closeables.Attach(*this->server);
             return *this->server;
         }
     }
 
-    SlokedServerFacade &SlokedEditorInstance::InitializeServer(std::unique_ptr<SlokedSocket> socket) {
+    SlokedServerFacade &SlokedEditorInstance::InitializeServer(
+        std::unique_ptr<SlokedSocket> socket) {
         if (this->running.load()) {
             throw SlokedError("EditorInstance: Already running");
         } else if (this->server != nullptr) {
@@ -66,17 +72,22 @@ namespace sloked {
             if (this->crypto && this->crypto->HasAuthenticator()) {
                 auth = std::addressof(this->crypto->GetAuthenticator());
             }
-            this->server = std::make_unique<SlokedServerFacade>(std::make_unique<SlokedRemoteEditorServer>(std::move(socket), *this->ioPoller, auth));
+            this->server = std::make_unique<SlokedServerFacade>(
+                std::make_unique<SlokedRemoteEditorServer>(
+                    std::move(socket), *this->ioPoller, auth));
             this->closeables.Attach(*this->server);
             return *this->server;
         }
     }
 
-    SlokedServiceDependencyProvider &SlokedEditorInstance::InitializeServiceProvider(std::unique_ptr<SlokedServiceDependencyProvider> provider) {
+    SlokedServiceDependencyProvider &
+        SlokedEditorInstance::InitializeServiceProvider(
+            std::unique_ptr<SlokedServiceDependencyProvider> provider) {
         if (this->running.load()) {
             throw SlokedError("EditorInstance: Already running");
         } else if (this->serviceProvider != nullptr) {
-            throw SlokedError("EditorInstance: Service provider already initialized");
+            throw SlokedError(
+                "EditorInstance: Service provider already initialized");
         } else {
             this->serviceProvider = std::move(provider);
             this->closeables.Attach(*this->serviceProvider);
@@ -84,14 +95,17 @@ namespace sloked {
         }
     }
 
-    SlokedScreenServer &SlokedEditorInstance::InitializeScreen(SlokedScreenProviderFactory &providers, const SlokedUri &uri) {
+    SlokedScreenServer &SlokedEditorInstance::InitializeScreen(
+        SlokedScreenProviderFactory &providers, const SlokedUri &uri) {
         if (this->running.load()) {
             throw SlokedError("EditorInstance: Already running");
         } else if (this->screen != nullptr) {
             throw SlokedError("EditorInstance: Screen already initialized");
         } else {
             this->screenProvider = providers.Make(uri, this->GetCharPreset());
-            this->screen = std::make_unique<SlokedScreenServer>(this->GetServer().GetServer(), *this->screenProvider, this->GetContextManager());
+            this->screen = std::make_unique<SlokedScreenServer>(
+                this->GetServer().GetServer(), *this->screenProvider,
+                this->GetContextManager());
             this->closeables.Attach(*this->screen);
             return *this->screen;
         }
@@ -101,7 +115,8 @@ namespace sloked {
         this->closeables.Attach(closeable);
     }
 
-    void SlokedEditorInstance::Attach(std::unique_ptr<SlokedDataHandle> handle) {
+    void SlokedEditorInstance::Attach(
+        std::unique_ptr<SlokedDataHandle> handle) {
         this->handles.emplace_back(std::move(handle));
     }
 
@@ -118,7 +133,11 @@ namespace sloked {
             if (this->server) {
                 this->server->Start();
                 if (this->server->IsRemote()) {
-                    this->charPresetUpdater = std::make_unique<SlokedCharPresetClient>(this->server->GetServer().Connect("editor::parameters"), this->charPreset);
+                    this->charPresetUpdater =
+                        std::make_unique<SlokedCharPresetClient>(
+                            this->server->GetServer().Connect(
+                                "editor::parameters"),
+                            this->charPreset);
                 }
             }
             if (this->screen) {
@@ -180,7 +199,7 @@ namespace sloked {
     SlokedNetworkFacade &SlokedEditorInstance::GetNetwork() {
         return this->network;
     }
-    
+
     bool SlokedEditorInstance::HasCrypto() const {
         return this->crypto != nullptr;
     }
@@ -201,7 +220,8 @@ namespace sloked {
         }
     }
 
-    SlokedServiceDependencyProvider &SlokedEditorInstance::GetServiceProvider() {
+    SlokedServiceDependencyProvider &
+        SlokedEditorInstance::GetServiceProvider() {
         if (this->serviceProvider) {
             return *this->serviceProvider;
         } else {
@@ -221,7 +241,8 @@ namespace sloked {
         }
     }
 
-    KgrContextManager<KgrLocalContext> &SlokedEditorInstance::GetContextManager() {
+    KgrContextManager<KgrLocalContext>
+        &SlokedEditorInstance::GetContextManager() {
         return this->contextManager.GetManager();
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,10 +23,12 @@
 
 namespace sloked {
 
-    SlokedNamespaceDefaultDirectory::SlokedNamespaceDefaultDirectory(SlokedNamespace &ns, const SlokedPath &path)
+    SlokedNamespaceDefaultDirectory::SlokedNamespaceDefaultDirectory(
+        SlokedNamespace &ns, const SlokedPath &path)
         : ns(ns), path(path) {}
 
-    SlokedNamespaceObject::Type SlokedNamespaceDefaultDirectory::GetType() const {
+    SlokedNamespaceObject::Type SlokedNamespaceDefaultDirectory::GetType()
+        const {
         return Type::Directory;
     }
 
@@ -38,7 +40,8 @@ namespace sloked {
         return this;
     }
 
-    std::unique_ptr<SlokedNamespaceObject> SlokedNamespaceDefaultDirectory::GetObject(const SlokedPath &path) {
+    std::unique_ptr<SlokedNamespaceObject>
+        SlokedNamespaceDefaultDirectory::GetObject(const SlokedPath &path) {
         if (path.IsAbsolute()) {
             return this->ns.GetObject(path);
         } else {
@@ -46,15 +49,17 @@ namespace sloked {
         }
     }
 
-    bool SlokedNamespaceDefaultDirectory::HasObject(const SlokedPath &path) const {
+    bool SlokedNamespaceDefaultDirectory::HasObject(
+        const SlokedPath &path) const {
         if (path.IsAbsolute()) {
             return this->ns.HasObject(path);
         } else {
             return this->ns.HasObject(path.RelativeTo(this->path));
         }
     }
-    
-    void SlokedNamespaceDefaultDirectory::Iterate(const SlokedPath &path, Visitor visitor) const {
+
+    void SlokedNamespaceDefaultDirectory::Iterate(const SlokedPath &path,
+                                                  Visitor visitor) const {
         if (path.IsAbsolute()) {
             this->ns.Iterate(path, std::move(visitor));
         } else {
@@ -62,19 +67,23 @@ namespace sloked {
         }
     }
 
-    void SlokedNamespaceDefaultDirectory::Traverse(const SlokedPath &path, Visitor visitor, bool include_dirs) const {
+    void SlokedNamespaceDefaultDirectory::Traverse(const SlokedPath &path,
+                                                   Visitor visitor,
+                                                   bool include_dirs) const {
         if (path.IsAbsolute()) {
             this->ns.Traverse(path, std::move(visitor), include_dirs);
         } else {
-            this->ns.Traverse(path.RelativeTo(this->path), std::move(visitor), include_dirs);
+            this->ns.Traverse(path.RelativeTo(this->path), std::move(visitor),
+                              include_dirs);
         }
     }
-    
-    std::unique_ptr<SlokedNamespaceObjectHandle> SlokedNamespaceDefaultDirectory::GetHandle(const SlokedPath &path) {
+
+    std::unique_ptr<SlokedNamespaceObjectHandle>
+        SlokedNamespaceDefaultDirectory::GetHandle(const SlokedPath &path) {
         if (path.IsAbsolute()) {
             return this->ns.GetHandle(path);
         } else {
             return this->ns.GetHandle(path.RelativeTo(this->path));
         }
     }
-}
+}  // namespace sloked

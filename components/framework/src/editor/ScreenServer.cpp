@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,16 +20,20 @@
 */
 
 #include "sloked/editor/ScreenServer.h"
+
+#include "sloked/kgr/net/Config.h"
 #include "sloked/services/Screen.h"
 #include "sloked/services/ScreenInput.h"
 #include "sloked/services/ScreenSize.h"
 #include "sloked/services/TextPane.h"
-#include "sloked/kgr/net/Config.h"
 
 namespace sloked {
 
-    SlokedScreenServer::SlokedScreenServer(KgrNamedServer &server, SlokedScreenProvider &provider, KgrContextManager<KgrLocalContext> &contextManager)
-        : server(server), provider(provider), contextManager(contextManager), work{false} {}
+    SlokedScreenServer::SlokedScreenServer(
+        KgrNamedServer &server, SlokedScreenProvider &provider,
+        KgrContextManager<KgrLocalContext> &contextManager)
+        : server(server), provider(provider),
+          contextManager(contextManager), work{false} {}
 
     SlokedScreenServer::~SlokedScreenServer() {
         this->Close();
@@ -43,17 +47,37 @@ namespace sloked {
         return this->work.load();
     }
 
-    void SlokedScreenServer::Start(std::chrono::system_clock::duration timeout) {
+    void SlokedScreenServer::Start(
+        std::chrono::system_clock::duration timeout) {
         if (!this->work.exchange(true)) {
-            this->server.Register("screen::manager", std::make_unique<SlokedScreenService>(this->provider.GetScreen(),
-                this->provider.GetEncoding(), this->server.GetConnector("document::cursor"), this->server.GetConnector("document::render"), this->server.GetConnector("document::notify"), contextManager));
-            this->server.Register("screen::size.notify", std::make_unique<SlokedScreenSizeNotificationService>(provider.GetSize(), contextManager));
-            this->server.Register("screen::component::input.notify", std::make_unique<SlokedScreenInputNotificationService>(this->provider.GetScreen(), this->provider.GetEncoding(), contextManager));
-            this->server.Register("screen::component::input.forward", std::make_unique<SlokedScreenInputForwardingService>(this->provider.GetScreen(), this->provider.GetEncoding(), contextManager));
-            this->server.Register("screen::component::text.pane", std::make_unique<SlokedTextPaneService>(this->provider.GetScreen(), this->provider.GetEncoding(), contextManager));
-            this->worker = std::thread([this, timeout] {
-                this->Run(timeout);
-            });
+            this->server.Register(
+                "screen::manager",
+                std::make_unique<SlokedScreenService>(
+                    this->provider.GetScreen(), this->provider.GetEncoding(),
+                    this->server.GetConnector("document::cursor"),
+                    this->server.GetConnector("document::render"),
+                    this->server.GetConnector("document::notify"),
+                    contextManager));
+            this->server.Register(
+                "screen::size.notify",
+                std::make_unique<SlokedScreenSizeNotificationService>(
+                    provider.GetSize(), contextManager));
+            this->server.Register(
+                "screen::component::input.notify",
+                std::make_unique<SlokedScreenInputNotificationService>(
+                    this->provider.GetScreen(), this->provider.GetEncoding(),
+                    contextManager));
+            this->server.Register(
+                "screen::component::input.forward",
+                std::make_unique<SlokedScreenInputForwardingService>(
+                    this->provider.GetScreen(), this->provider.GetEncoding(),
+                    contextManager));
+            this->server.Register(
+                "screen::component::text.pane",
+                std::make_unique<SlokedTextPaneService>(
+                    this->provider.GetScreen(), this->provider.GetEncoding(),
+                    contextManager));
+            this->worker = std::thread([this, timeout] { this->Run(timeout); });
         }
     }
 
@@ -69,11 +93,9 @@ namespace sloked {
 
     void SlokedScreenServer::Run(std::chrono::system_clock::duration timeout) {
         this->provider.GetScreen().Lock([this](auto &screen) {
-            screen.OnUpdate([this] {
-                this->renderRequested = true;
-            });
+            screen.OnUpdate([this] { this->renderRequested = true; });
         });
-        
+
         this->renderRequested = true;
         while (work.load()) {
             if (this->renderRequested.load()) {
@@ -93,8 +115,7 @@ namespace sloked {
                 });
             }
         }
-        this->provider.GetScreen().Lock([](auto &screen) {
-            screen.OnUpdate(nullptr);
-        });
+        this->provider.GetScreen().Lock(
+            [](auto &screen) { screen.OnUpdate(nullptr); });
     }
-}
+}  // namespace sloked

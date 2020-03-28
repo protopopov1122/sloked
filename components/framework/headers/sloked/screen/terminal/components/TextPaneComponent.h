@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,25 +22,26 @@
 #ifndef SLOKED_SCREEN_TERMINAL_COMPONENTS_TEXTPANECOMPONENT_H_
 #define SLOKED_SCREEN_TERMINAL_COMPONENTS_TEXTPANECOMPONENT_H_
 
-#include "sloked/screen/terminal/Terminal.h"
-#include "sloked/screen/widgets/TextPaneWidget.h"
-#include "sloked/screen/components/TextPane.h"
-#include "sloked/screen/terminal/components/TextPane.h"
 #include <memory>
+
+#include "sloked/screen/components/TextPane.h"
+#include "sloked/screen/terminal/Terminal.h"
+#include "sloked/screen/terminal/components/TextPane.h"
+#include "sloked/screen/widgets/TextPaneWidget.h"
 
 namespace sloked {
 
     class TerminalTextPaneComponent : public SlokedTextPaneComponent {
      public:
-        TerminalTextPaneComponent(SlokedTerminal &, std::unique_ptr<SlokedTextPaneWidget>);
-        
+        TerminalTextPaneComponent(SlokedTerminal &,
+                                  std::unique_ptr<SlokedTextPaneWidget>);
+
         void Render() override;
         void UpdateDimensions() override;
         TextPosition GetDimensions() override;
         void OnUpdate(std::function<void()>) override;
         const SlokedFontProperties &GetFontProperties() const override;
 
-        
      protected:
         using SlokedTextPaneComponent::SlokedTextPaneComponent;
         void ProcessComponentInput(const SlokedKeyboardInput &) override;
@@ -50,6 +51,6 @@ namespace sloked {
         std::unique_ptr<SlokedTextPaneWidget> widget;
         TerminalTextPane screen;
     };
-}
+}  // namespace sloked
 
 #endif

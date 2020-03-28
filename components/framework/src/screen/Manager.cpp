@@ -1,10 +1,10 @@
 #include "sloked/screen/Manager.h"
+
 #include <algorithm>
 
 namespace sloked {
 
-    SlokedScreenManager::SlokedScreenManager()
-        : running{false} {}
+    SlokedScreenManager::SlokedScreenManager() : running{false} {}
 
     bool SlokedScreenManager::IsRunning() const {
         return this->running.load();
@@ -12,9 +12,7 @@ namespace sloked {
 
     void SlokedScreenManager::Start(Duration timeout) {
         if (!this->running.exchange(true)) {
-            this->worker = std::thread([this, timeout] {
-                this->Run(timeout);
-            });
+            this->worker = std::thread([this, timeout] { this->Run(timeout); });
         }
     }
 
@@ -35,9 +33,13 @@ namespace sloked {
 
     void SlokedScreenManager::Detach(Renderable &renderable) {
         std::unique_lock lock(this->mtx);
-        this->renderables.erase(std::remove_if(this->renderables.begin(), this->renderables.end(), [&](auto other) {
-            return std::addressof(renderable) == std::addressof(other.get());
-        }), this->renderables.end());
+        this->renderables.erase(
+            std::remove_if(this->renderables.begin(), this->renderables.end(),
+                           [&](auto other) {
+                               return std::addressof(renderable) ==
+                                      std::addressof(other.get());
+                           }),
+            this->renderables.end());
     }
 
     void SlokedScreenManager::Run(Duration timeout) {
@@ -49,4 +51,4 @@ namespace sloked {
             this->cv.wait_for(lock, timeout);
         }
     }
-}
+}  // namespace sloked

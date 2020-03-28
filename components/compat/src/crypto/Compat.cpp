@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -21,7 +21,9 @@
 
 #include "sloked/crypto/Compat.h"
 
-#if defined(SLOKED_FEATURE_CRYPTO) && !(defined(SLOKED_FEATURE_CRYPTO_BOTAN) || defined(SLOKED_FEATURE_CRYPTO_OPENSSL))
+#if defined(SLOKED_FEATURE_CRYPTO) &&         \
+    !(defined(SLOKED_FEATURE_CRYPTO_BOTAN) || \
+      defined(SLOKED_FEATURE_CRYPTO_OPENSSL))
 #error "Build system error: crypto engine is not defined"
 #endif
 
@@ -34,7 +36,7 @@ namespace sloked {
         static SlokedBotanCrypto crypto;
         return crypto;
     }
-}
+}  // namespace sloked
 
 #elif defined(SLOKED_FEATURE_CRYPTO_OPENSSL)
 #include "sloked/crypto/openssl/OpenSSL.h"
@@ -45,7 +47,7 @@ namespace sloked {
         static SlokedOpenSSLCrypto crypto;
         return crypto;
     }
-}
+}  // namespace sloked
 
 #else
 namespace sloked {
@@ -53,5 +55,5 @@ namespace sloked {
     SlokedCrypto &SlokedCryptoCompat::GetCrypto() {
         throw SlokedError("Compat: Crypto not supported");
     }
-}
+}  // namespace sloked
 #endif

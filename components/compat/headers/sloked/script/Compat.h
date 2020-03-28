@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,9 +22,9 @@
 #ifndef SLOKED_SCRIPT_COMPAT_H_
 #define SLOKED_SCRIPT_COMPAT_H_
 
-#include "sloked/script/ScriptEngine.h"
-#include "sloked/sched/Scheduler.h"
 #include "sloked/editor/EditorInstance.h"
+#include "sloked/sched/Scheduler.h"
+#include "sloked/script/ScriptEngine.h"
 
 namespace sloked {
 
@@ -38,8 +38,10 @@ namespace sloked {
 #endif
         }
 
-        static std::unique_ptr<SlokedScriptEngine> GetEngine(SlokedEditorInstanceContainer &, SlokedSchedulerThread &, const std::string &);
+        static std::unique_ptr<SlokedScriptEngine> GetEngine(
+            SlokedEditorInstanceContainer &, SlokedSchedulerThread &,
+            const std::string &);
     };
-}
+}  // namespace sloked
 
 #endif

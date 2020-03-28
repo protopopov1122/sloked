@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,13 +22,15 @@
 #ifndef SLOKED_SCRIPT_LUA_EDITOR_H_
 #define SLOKED_SCRIPT_LUA_EDITOR_H_
 
-#include "sloked/sched/EventLoop.h"
-#include "sloked/editor/EditorInstance.h"
 #include <lua.hpp>
+
+#include "sloked/editor/EditorInstance.h"
+#include "sloked/sched/EventLoop.h"
 
 namespace sloked {
 
-    int SlokedEditorToLua(SlokedEventLoop &, lua_State *, SlokedEditorInstance &);
+    int SlokedEditorToLua(SlokedEventLoop &, lua_State *,
+                          SlokedEditorInstance &);
 }
 
 #endif

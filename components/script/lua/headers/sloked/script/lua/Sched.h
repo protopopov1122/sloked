@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,13 +22,15 @@
 #ifndef SLOKED_THIRD_PARTY_SCRIPT_LUA_SCHED_H_
 #define SLOKED_THIRD_PARTY_SCRIPT_LUA_SCHED_H_
 
-#include "sloked/sched/Scheduler.h"
-#include "sloked/sched/EventLoop.h"
 #include <lua.hpp>
+
+#include "sloked/sched/EventLoop.h"
+#include "sloked/sched/Scheduler.h"
 
 namespace sloked {
 
-    int SlokedSchedToLua(SlokedSchedulerThread &, SlokedEventLoop &, lua_State *);
+    int SlokedSchedToLua(SlokedSchedulerThread &, SlokedEventLoop &,
+                         lua_State *);
 }
 
 #endif

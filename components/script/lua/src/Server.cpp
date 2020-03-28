@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,22 +20,27 @@
 */
 
 #include "sloked/script/lua/Server.h"
-#include "sloked/script/lua/Pipe.h"
-#include "sloked/script/lua/Common.h"
+
 #include "sloked/core/Error.h"
+#include "sloked/script/lua/Common.h"
+#include "sloked/script/lua/Pipe.h"
 
 namespace sloked {
 
     static int SlokedServer_Connect(lua_State *state) {
         int top = lua_gettop(state);
         if (top != 2) {
-            return luaL_error(state, "sloked.server.connect: Expected 2 arguments");
+            return luaL_error(state,
+                              "sloked.server.connect: Expected 2 arguments");
         }
         try {
-            SlokedEventLoop &eventLoop = *reinterpret_cast<SlokedEventLoop *>(lua_touserdata(state, lua_upvalueindex(1)));
-            KgrNamedServer **srvPtr = reinterpret_cast<KgrNamedServer **>(luaL_checkudata(state, 1, "sloked.server"));
+            SlokedEventLoop &eventLoop = *reinterpret_cast<SlokedEventLoop *>(
+                lua_touserdata(state, lua_upvalueindex(1)));
+            KgrNamedServer **srvPtr = reinterpret_cast<KgrNamedServer **>(
+                luaL_checkudata(state, 1, "sloked.server"));
             if (srvPtr == nullptr) {
-                return luaL_error(state, "sloked.server.connect: Expected sloked.server");
+                return luaL_error(
+                    state, "sloked.server.connect: Expected sloked.server");
             }
             KgrNamedServer &srv = **srvPtr;
             std::string serviceName{lua_tostring(state, 2)};
@@ -50,8 +55,10 @@ namespace sloked {
         }
     }
 
-    int SlokedServerToLua(SlokedEventLoop &eventLoop, lua_State *state, KgrNamedServer &srv) {
-        KgrNamedServer **srvPtr = reinterpret_cast<KgrNamedServer **>(lua_newuserdata(state, sizeof(KgrNamedServer *)));
+    int SlokedServerToLua(SlokedEventLoop &eventLoop, lua_State *state,
+                          KgrNamedServer &srv) {
+        KgrNamedServer **srvPtr = reinterpret_cast<KgrNamedServer **>(
+            lua_newuserdata(state, sizeof(KgrNamedServer *)));
         *srvPtr = std::addressof(srv);
         if (luaL_newmetatable(state, "sloked.server")) {
             lua_newtable(state);
@@ -63,4 +70,4 @@ namespace sloked {
         lua_setmetatable(state, -2);
         return 1;
     }
-}
+}  // namespace sloked

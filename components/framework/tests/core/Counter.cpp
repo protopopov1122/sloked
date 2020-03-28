@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -19,11 +19,13 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "catch2/catch.hpp"
 #include "sloked/core/Counter.h"
-#include <thread>
-#include <mutex>
+
 #include <condition_variable>
+#include <mutex>
+#include <thread>
+
+#include "catch2/catch.hpp"
 
 using namespace sloked;
 
@@ -67,15 +69,17 @@ TEST_CASE("Counter invokes callback on modification") {
         flag = false;
     }
     counter.Decrement();
-    
+
     lock.unlock();
     helper.join();
-    REQUIRE(counterHist == std::vector<int>{ 1, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 });
+    REQUIRE(counterHist == std::vector<int>{1,  1, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+                                            10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  0});
 }
 
 TEST_CASE("Counter handler modify counter") {
     SlokedCounter<int> counter;
-    SlokedCounter<int>::Handle handle{counter}, handle2{counter}, handle3{counter};
+    SlokedCounter<int>::Handle handle{counter}, handle2{counter},
+        handle3{counter};
     SlokedCounter<int>::Handle handle4 = handle;
     SlokedCounter<int>::Handle handle5 = std::move(handle2);
     std::vector<int> counterHist;
@@ -105,5 +109,5 @@ TEST_CASE("Counter handler modify counter") {
     handle5.Reset();
     cv.wait(lock);
     helper.join();
-    REQUIRE(counterHist == std::vector<int>{ 4, 4, 3, 2, 1, 0 });
+    REQUIRE(counterHist == std::vector<int>{4, 4, 3, 2, 1, 0});
 }

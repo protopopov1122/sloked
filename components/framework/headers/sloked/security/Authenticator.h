@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,8 +22,8 @@
 #ifndef SLOKED_SECUTIRY_AUTHENTICATOR_H_
 #define SLOKED_SECUTIRY_AUTHENTICATOR_H_
 
-#include "sloked/net/Socket.h"
 #include "sloked/core/Crypto.h"
+#include "sloked/net/Socket.h"
 #include "sloked/security/Provider.h"
 
 namespace sloked {
@@ -31,7 +31,8 @@ namespace sloked {
     class SlokedBaseAuthenticator {
      public:
         using Challenge = uint32_t;
-        SlokedBaseAuthenticator(SlokedCrypto &, SlokedCredentialProvider &, std::string, SlokedSocketEncryption *);
+        SlokedBaseAuthenticator(SlokedCrypto &, SlokedCredentialProvider &,
+                                std::string, SlokedSocketEncryption *);
         virtual ~SlokedBaseAuthenticator();
         bool IsLoggedIn() const;
         std::string GetAccount() const;
@@ -51,7 +52,9 @@ namespace sloked {
 
     class SlokedMasterAuthenticator : public SlokedBaseAuthenticator {
      public:
-        SlokedMasterAuthenticator(SlokedCrypto &, SlokedCredentialProvider &, std::string, SlokedSocketEncryption * = nullptr);
+        SlokedMasterAuthenticator(SlokedCrypto &, SlokedCredentialProvider &,
+                                  std::string,
+                                  SlokedSocketEncryption * = nullptr);
         ~SlokedMasterAuthenticator();
         Challenge InitiateLogin();
         bool ContinueLogin(const std::string &, const std::string &);
@@ -65,7 +68,9 @@ namespace sloked {
     class SlokedSlaveAuthenticator : public SlokedBaseAuthenticator {
      public:
         using Challenge = SlokedMasterAuthenticator::Challenge;
-        SlokedSlaveAuthenticator(SlokedCrypto &, SlokedCredentialProvider &, std::string, SlokedSocketEncryption * = nullptr);
+        SlokedSlaveAuthenticator(SlokedCrypto &, SlokedCredentialProvider &,
+                                 std::string,
+                                 SlokedSocketEncryption * = nullptr);
         ~SlokedSlaveAuthenticator();
         std::string InitiateLogin(const std::string, Challenge);
         void ContinueLogin(const std::string &);
@@ -74,15 +79,18 @@ namespace sloked {
 
     class SlokedAuthenticatorFactory {
      public:
-        SlokedAuthenticatorFactory(SlokedCrypto &, SlokedCredentialProvider &, std::string);
-        std::unique_ptr<SlokedMasterAuthenticator> NewMaster(SlokedSocketEncryption * = nullptr);
-        std::unique_ptr<SlokedSlaveAuthenticator> NewSlave(SlokedSocketEncryption * = nullptr);
+        SlokedAuthenticatorFactory(SlokedCrypto &, SlokedCredentialProvider &,
+                                   std::string);
+        std::unique_ptr<SlokedMasterAuthenticator> NewMaster(
+            SlokedSocketEncryption * = nullptr);
+        std::unique_ptr<SlokedSlaveAuthenticator> NewSlave(
+            SlokedSocketEncryption * = nullptr);
 
      private:
         SlokedCrypto &crypto;
         SlokedCredentialProvider &provider;
         std::string salt;
     };
-}
+}  // namespace sloked
 
 #endif

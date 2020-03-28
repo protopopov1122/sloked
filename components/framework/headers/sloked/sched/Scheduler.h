@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,25 +22,27 @@
 #ifndef SLOKED_SCHED_SCHEDULER_H_
 #define SLOKED_SCHED_SCHEDULER_H_
 
-#include "sloked/core/Counter.h"
-#include "sloked/core/Closeable.h"
-#include <map>
 #include <atomic>
-#include <utility>
 #include <chrono>
-#include <functional>
-#include <atomic>
 #include <condition_variable>
+#include <functional>
+#include <list>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <queue>
-#include <list>
+#include <utility>
+
+#include "sloked/core/Closeable.h"
+#include "sloked/core/Counter.h"
 
 namespace sloked {
 
     class SlokedSchedulerThread {
      public:
-        using TimePoint = std::chrono::time_point<std::chrono::system_clock, std::chrono::system_clock::duration>;
+        using TimePoint =
+            std::chrono::time_point<std::chrono::system_clock,
+                                    std::chrono::system_clock::duration>;
         using TimeDiff = std::chrono::system_clock::duration;
         using Callback = std::function<void()>;
 
@@ -59,7 +61,8 @@ namespace sloked {
         virtual void Defer(std::function<void()>) = 0;
     };
 
-    class SlokedDefaultSchedulerThread : public SlokedSchedulerThread, public SlokedCloseable {
+    class SlokedDefaultSchedulerThread : public SlokedSchedulerThread,
+                                         public SlokedCloseable {
      public:
         class TimerTask : public SlokedSchedulerThread::TimerTask {
          public:
@@ -70,10 +73,10 @@ namespace sloked {
             bool Pending() const final;
             const TimePoint &GetTime() const final;
             void Cancel() final;
-            
 
          private:
-            TimerTask(SlokedDefaultSchedulerThread &, TimePoint, Callback, std::optional<TimeDiff> = {});
+            TimerTask(SlokedDefaultSchedulerThread &, TimePoint, Callback,
+                      std::optional<TimeDiff> = {});
             void NextInterval();
 
             SlokedDefaultSchedulerThread &sched;
@@ -89,9 +92,12 @@ namespace sloked {
         void Start();
         void Close() final;
 
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> At(TimePoint, Callback) final;
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> Sleep(TimeDiff, Callback) final;
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> Interval(TimeDiff, Callback) final;
+        std::shared_ptr<SlokedSchedulerThread::TimerTask> At(TimePoint,
+                                                             Callback) final;
+        std::shared_ptr<SlokedSchedulerThread::TimerTask> Sleep(TimeDiff,
+                                                                Callback) final;
+        std::shared_ptr<SlokedSchedulerThread::TimerTask> Interval(
+            TimeDiff, Callback) final;
         void Defer(std::function<void()>) final;
 
      private:
@@ -101,7 +107,8 @@ namespace sloked {
 
         void Run();
 
-        std::map<TimerTask *, std::shared_ptr<TimerTask>, TimerTaskCompare> tasks;
+        std::map<TimerTask *, std::shared_ptr<TimerTask>, TimerTaskCompare>
+            tasks;
         std::queue<std::function<void()>> deferred;
         std::atomic<bool> work;
         SlokedCounter<std::size_t> timer_thread;
@@ -113,9 +120,12 @@ namespace sloked {
      public:
         SlokedScheduledTaskPool(SlokedSchedulerThread &);
         ~SlokedScheduledTaskPool();
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> At(TimePoint, Callback) final;
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> Sleep(TimeDiff, Callback) final;
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> Interval(TimeDiff, Callback) final;
+        std::shared_ptr<SlokedSchedulerThread::TimerTask> At(TimePoint,
+                                                             Callback) final;
+        std::shared_ptr<SlokedSchedulerThread::TimerTask> Sleep(TimeDiff,
+                                                                Callback) final;
+        std::shared_ptr<SlokedSchedulerThread::TimerTask> Interval(
+            TimeDiff, Callback) final;
         void Defer(std::function<void()>) final;
         void CollectGarbage();
         void DropAll();
@@ -125,6 +135,6 @@ namespace sloked {
         std::mutex mtx;
         std::list<std::shared_ptr<SlokedSchedulerThread::TimerTask>> tasks;
     };
-}
+}  // namespace sloked
 
 #endif

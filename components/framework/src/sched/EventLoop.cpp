@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,6 +20,7 @@
 */
 
 #include "sloked/sched/EventLoop.h"
+
 #include "sloked/core/Error.h"
 
 namespace sloked {
@@ -40,7 +41,8 @@ namespace sloked {
         if (this->execute) {
             this->execute();
         } else {
-            throw SlokedError("DynamicDeferredTask: Not awaited before execution");
+            throw SlokedError(
+                "DynamicDeferredTask: Not awaited before execution");
         }
     }
 
@@ -55,7 +57,8 @@ namespace sloked {
         }
     }
 
-    void SlokedDefaultEventLoop::Attach(std::unique_ptr<SlokedDeferredTask> task) {
+    void SlokedDefaultEventLoop::Attach(
+        std::unique_ptr<SlokedDeferredTask> task) {
         std::unique_lock lock(this->mtx);
         int64_t taskId = this->nextId++;
         this->deferred.emplace(taskId, std::move(task));
@@ -63,11 +66,10 @@ namespace sloked {
         lock.unlock();
         taskRef.Wait([this, taskId] {
             std::unique_lock lock(this->mtx);
-            std::shared_ptr<SlokedDeferredTask> task = std::move(this->deferred[taskId]);
+            std::shared_ptr<SlokedDeferredTask> task =
+                std::move(this->deferred[taskId]);
             this->deferred.erase(taskId);
-            this->pending.push_back([task = std::move(task)] {
-                task->Run();
-            });
+            this->pending.push_back([task = std::move(task)] { task->Run(); });
             if (this->notification) {
                 this->notification();
             }
@@ -93,4 +95,4 @@ namespace sloked {
         std::unique_lock lock(this->mtx);
         this->notification = std::move(callback);
     }
-}
+}  // namespace sloked

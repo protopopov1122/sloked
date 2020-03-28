@@ -1,8 +1,8 @@
 #ifndef SLOKED_SCREEN_COMPONENTS_TEXTPANE_H_
 #define SLOKED_SCREEN_COMPONENTS_TEXTPANE_H_
 
-#include "sloked/screen/Component.h"
 #include "sloked/screen/Character.h"
+#include "sloked/screen/Component.h"
 
 namespace sloked {
 
@@ -13,6 +13,6 @@ namespace sloked {
      protected:
         using SlokedScreenComponent::SlokedScreenComponent;
     };
-}
+}  // namespace sloked
 
 #endif

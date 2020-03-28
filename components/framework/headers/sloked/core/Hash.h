@@ -1,15 +1,17 @@
 #ifndef SLOKED_CORE_HASH_H_
 #define SLOKED_CORE_HASH_H_
 
-#include "sloked/Base.h"
-#include <cinttypes>
-#include <array>
 #include <algorithm>
+#include <array>
+#include <cinttypes>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
     class SlokedCrc32 {
         using LookupTable_t = std::array<uint32_t, 256>;
+
      public:
         using Checksum = uint32_t;
 
@@ -21,13 +23,16 @@ namespace sloked {
                 for (std::size_t n = 0; n < table.size(); n++) {
                     auto checksum = n;
                     for (auto i = 0; i < 8; i++) {
-                        checksum = (checksum >> 1) ^ ((checksum & 0x1u) ? reversed_polynomial : 0);
+                        checksum =
+                            (checksum >> 1) ^
+                            ((checksum & 0x1u) ? reversed_polynomial : 0);
                     }
                     table[n] = checksum;
                 }
                 return table;
-            }();
-            
+            }
+            ();
+
             Checksum checksum{0xffffffffuL};
             for (auto it = begin; it != end; ++it) {
                 const auto byte = *it;
@@ -38,6 +43,6 @@ namespace sloked {
             return checksum;
         }
     };
-}
+}  // namespace sloked
 
 #endif

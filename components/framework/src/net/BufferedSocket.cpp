@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,8 +23,12 @@
 
 namespace sloked {
 
-    SlokedBufferedSocket::SlokedBufferedSocket(std::unique_ptr<SlokedSocket> socket, std::chrono::system_clock::duration timeout, SlokedSchedulerThread &sched)
-        : socket(std::move(socket)), timeout(std::move(timeout)), sched(sched), task{nullptr} {}
+    SlokedBufferedSocket::SlokedBufferedSocket(
+        std::unique_ptr<SlokedSocket> socket,
+        std::chrono::system_clock::duration timeout,
+        SlokedSchedulerThread &sched)
+        : socket(std::move(socket)), timeout(std::move(timeout)),
+          sched(sched), task{nullptr} {}
 
     bool SlokedBufferedSocket::Valid() {
         return this->socket->Valid();
@@ -38,7 +42,8 @@ namespace sloked {
         return this->socket->Available();
     }
 
-    bool SlokedBufferedSocket::Wait(std::chrono::system_clock::duration timeout) {
+    bool SlokedBufferedSocket::Wait(
+        std::chrono::system_clock::duration timeout) {
         return this->socket->Wait(std::move(timeout));
     }
 
@@ -52,11 +57,11 @@ namespace sloked {
 
     void SlokedBufferedSocket::Write(SlokedSpan<const uint8_t> data) {
         std::unique_lock lock(this->mtx);
-        this->buffer.insert(buffer.end(), data.Data(), data.Data() + data.Size());
+        this->buffer.insert(buffer.end(), data.Data(),
+                            data.Data() + data.Size());
         if (this->task == nullptr || !this->task->Pending()) {
-            this->task = this->sched.Sleep(this->timeout, [this] {
-                this->Flush();
-            });
+            this->task =
+                this->sched.Sleep(this->timeout, [this] { this->Flush(); });
         }
     }
 
@@ -64,9 +69,8 @@ namespace sloked {
         std::unique_lock lock(this->mtx);
         this->buffer.push_back(byte);
         if (this->task == nullptr || !this->task->Pending()) {
-            this->task = this->sched.Sleep(this->timeout, [this] {
-                this->Flush();
-            });
+            this->task =
+                this->sched.Sleep(this->timeout, [this] { this->Flush(); });
         }
     }
 
@@ -81,12 +85,17 @@ namespace sloked {
     void SlokedBufferedSocket::Flush() {
         std::unique_lock lock(this->mtx);
         this->task->Cancel();
-        this->socket->Write(SlokedSpan(this->buffer.data(), this->buffer.size()));
+        this->socket->Write(
+            SlokedSpan(this->buffer.data(), this->buffer.size()));
         this->buffer.clear();
     }
 
-    SlokedBufferedServerSocket::SlokedBufferedServerSocket(std::unique_ptr<SlokedServerSocket> serverSocket, std::chrono::system_clock::duration timeout, SlokedSchedulerThread &sched)
-        : serverSocket(std::move(serverSocket)), timeout(std::move(timeout)), sched(sched) {}
+    SlokedBufferedServerSocket::SlokedBufferedServerSocket(
+        std::unique_ptr<SlokedServerSocket> serverSocket,
+        std::chrono::system_clock::duration timeout,
+        SlokedSchedulerThread &sched)
+        : serverSocket(std::move(serverSocket)), timeout(std::move(timeout)),
+          sched(sched) {}
 
     bool SlokedBufferedServerSocket::Valid() {
         return this->serverSocket->Valid();
@@ -100,22 +109,34 @@ namespace sloked {
         this->serverSocket->Close();
     }
 
-    std::unique_ptr<SlokedSocket> SlokedBufferedServerSocket::Accept(std::chrono::system_clock::duration timeout) {
-        return std::make_unique<SlokedBufferedSocket>(this->serverSocket->Accept(std::move(timeout)), this->timeout, this->sched);
+    std::unique_ptr<SlokedSocket> SlokedBufferedServerSocket::Accept(
+        std::chrono::system_clock::duration timeout) {
+        return std::make_unique<SlokedBufferedSocket>(
+            this->serverSocket->Accept(std::move(timeout)), this->timeout,
+            this->sched);
     }
 
-    std::unique_ptr<SlokedIOAwaitable> SlokedBufferedServerSocket::Awaitable() const {
+    std::unique_ptr<SlokedIOAwaitable> SlokedBufferedServerSocket::Awaitable()
+        const {
         return this->serverSocket->Awaitable();
     }
 
-    SlokedBufferedSocketFactory::SlokedBufferedSocketFactory(SlokedSocketFactory &socketFactory, std::chrono::system_clock::duration timeout, SlokedSchedulerThread &sched)
-        : socketFactory(socketFactory), timeout(std::move(timeout)), sched(sched) {}
+    SlokedBufferedSocketFactory::SlokedBufferedSocketFactory(
+        SlokedSocketFactory &socketFactory,
+        std::chrono::system_clock::duration timeout,
+        SlokedSchedulerThread &sched)
+        : socketFactory(socketFactory), timeout(std::move(timeout)),
+          sched(sched) {}
 
-    std::unique_ptr<SlokedSocket> SlokedBufferedSocketFactory::Connect(const SlokedSocketAddress &addr) {
-        return std::make_unique<SlokedBufferedSocket>(this->socketFactory.Connect(addr), this->timeout, this->sched);
+    std::unique_ptr<SlokedSocket> SlokedBufferedSocketFactory::Connect(
+        const SlokedSocketAddress &addr) {
+        return std::make_unique<SlokedBufferedSocket>(
+            this->socketFactory.Connect(addr), this->timeout, this->sched);
     }
 
-    std::unique_ptr<SlokedServerSocket> SlokedBufferedSocketFactory::Bind(const SlokedSocketAddress &addr) {
-        return std::make_unique<SlokedBufferedServerSocket>(this->socketFactory.Bind(addr), this->timeout, this->sched);
+    std::unique_ptr<SlokedServerSocket> SlokedBufferedSocketFactory::Bind(
+        const SlokedSocketAddress &addr) {
+        return std::make_unique<SlokedBufferedServerSocket>(
+            this->socketFactory.Bind(addr), this->timeout, this->sched);
     }
-}
+}  // namespace sloked

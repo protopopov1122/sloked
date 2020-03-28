@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,12 +22,13 @@
 #ifndef SLOKED_SCHED_EVENTLOOP_H_
 #define SLOKED_SCHED_EVENTLOOP_H_
 
-#include "sloked/core/Error.h"
 #include <functional>
-#include <vector>
-#include <memory>
 #include <map>
+#include <memory>
 #include <mutex>
+#include <vector>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
@@ -38,9 +39,10 @@ namespace sloked {
         virtual void Run() = 0;
     };
 
-
     class SlokedDynamicDeferredTask : public SlokedDeferredTask {
-        using Callback = std::function<std::function<void()>(std::function<void()>)>;
+        using Callback =
+            std::function<std::function<void()>(std::function<void()>)>;
+
      public:
         SlokedDynamicDeferredTask(Callback);
         void Wait(std::function<void()>) final;
@@ -68,7 +70,7 @@ namespace sloked {
         bool HasPending() const final;
         void Notify(std::function<void()>) final;
         void Run();
-    
+
      private:
         mutable std::mutex mtx;
         std::vector<std::function<void()>> pending;
@@ -76,6 +78,6 @@ namespace sloked {
         std::map<int64_t, std::unique_ptr<SlokedDeferredTask>> deferred;
         std::function<void()> notification;
     };
-}
+}  // namespace sloked
 
 #endif

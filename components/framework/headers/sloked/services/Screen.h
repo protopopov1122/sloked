@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,23 +22,26 @@
 #ifndef SLOKED_SERVICES_SCREEN_H_
 #define SLOKED_SERVICES_SCREEN_H_
 
-#include "sloked/services/Service.h"
-#include "sloked/kgr/Service.h"
-#include "sloked/kgr/Server.h"
+#include "sloked/core/Encoding.h"
 #include "sloked/core/Monitor.h"
+#include "sloked/editor/doc-mgr/DocumentSet.h"
+#include "sloked/kgr/Server.h"
+#include "sloked/kgr/Service.h"
 #include "sloked/screen/Component.h"
 #include "sloked/screen/Splitter.h"
-#include "sloked/core/Encoding.h"
-#include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/screen/components/ComponentHandle.h"
+#include "sloked/services/Service.h"
 
 namespace sloked {
 
     class SlokedScreenService : public KgrService {
      public:
-        SlokedScreenService(SlokedMonitor<SlokedScreenComponent &> &, const Encoding &, KgrServer::Connector, KgrServer::Connector, KgrServer::Connector, KgrContextManager<KgrLocalContext> &);
+        SlokedScreenService(SlokedMonitor<SlokedScreenComponent &> &,
+                            const Encoding &, KgrServer::Connector,
+                            KgrServer::Connector, KgrServer::Connector,
+                            KgrContextManager<KgrLocalContext> &);
         void Attach(std::unique_ptr<KgrPipe>) override;
-    
+
      private:
         SlokedMonitor<SlokedScreenComponent &> &root;
         const Encoding &encoding;
@@ -56,7 +59,9 @@ namespace sloked {
             bool NewMultiplexer(const std::string &) const;
             bool NewSplitter(const std::string &, Splitter::Direction) const;
             bool NewTabber(const std::string &) const;
-            bool NewTextEditor(const std::string &, SlokedEditorDocumentSet::DocumentId, const std::string & = "") const;
+            bool NewTextEditor(const std::string &,
+                               SlokedEditorDocumentSet::DocumentId,
+                               const std::string & = "") const;
 
          private:
             SlokedServiceClient &client;
@@ -66,7 +71,9 @@ namespace sloked {
         class MultiplexerClient {
          public:
             MultiplexerClient(SlokedServiceClient &, std::function<void()>);
-            std::optional<std::string> NewWindow(const std::string &, const TextPosition &, const TextPosition &) const;
+            std::optional<std::string> NewWindow(const std::string &,
+                                                 const TextPosition &,
+                                                 const TextPosition &) const;
             std::size_t GetWindowCount(const std::string &) const;
             std::optional<std::string> GetFocus(const std::string &) const;
             std::optional<bool> WindowHasFocus(const std::string &) const;
@@ -83,15 +90,20 @@ namespace sloked {
         class SplitterClient {
          public:
             SplitterClient(SlokedServiceClient &, std::function<void()>);
-            std::optional<std::string> NewWindow(const std::string &, const Splitter::Constraints &) const;
-            std::optional<std::string> NewWindow(const std::string &, SlokedComponentWindow::Id, const Splitter::Constraints &) const;
+            std::optional<std::string> NewWindow(
+                const std::string &, const Splitter::Constraints &) const;
+            std::optional<std::string> NewWindow(
+                const std::string &, SlokedComponentWindow::Id,
+                const Splitter::Constraints &) const;
             std::size_t GetWindowCount(const std::string &) const;
             std::optional<std::string> GetFocus(const std::string &) const;
             std::optional<bool> WindowHasFocus(const std::string &) const;
             bool SetFocus(const std::string &) const;
             bool Close(const std::string &) const;
-            std::optional<std::string> MoveWindow(const std::string &, SlokedComponentWindow::Id) const;
-            bool UpdateWindowConstraints(const std::string &, const Splitter::Constraints &) const;
+            std::optional<std::string> MoveWindow(
+                const std::string &, SlokedComponentWindow::Id) const;
+            bool UpdateWindowConstraints(const std::string &,
+                                         const Splitter::Constraints &) const;
 
          private:
             SlokedServiceClient &client;
@@ -100,22 +112,25 @@ namespace sloked {
 
         class TabberClient {
          public:
-            TabberClient(SlokedServiceClient &,std::function<void()>);
+            TabberClient(SlokedServiceClient &, std::function<void()>);
             std::optional<std::string> NewWindow(const std::string &) const;
-            std::optional<std::string> NewWindow(const std::string &, SlokedComponentWindow::Id) const;
+            std::optional<std::string> NewWindow(
+                const std::string &, SlokedComponentWindow::Id) const;
             std::size_t GetWindowCount(const std::string &) const;
             std::optional<std::string> GetFocus(const std::string &) const;
             std::optional<bool> WindowHasFocus(const std::string &) const;
             bool SetFocus(const std::string &) const;
             bool Close(const std::string &) const;
-            std::optional<std::string> MoveWindow(const std::string &, SlokedComponentWindow::Id) const;
+            std::optional<std::string> MoveWindow(
+                const std::string &, SlokedComponentWindow::Id) const;
 
          private:
             SlokedServiceClient &client;
             std::function<void()> preventDeadlock;
         };
 
-        SlokedScreenClient(std::unique_ptr<KgrPipe>, std::function<bool()> = nullptr);
+        SlokedScreenClient(std::unique_ptr<KgrPipe>,
+                           std::function<bool()> = nullptr);
 
      private:
         void PreventDeadlock();
@@ -128,6 +143,6 @@ namespace sloked {
         const SplitterClient Splitter;
         const TabberClient Tabber;
     };
-}
+}  // namespace sloked
 
 #endif

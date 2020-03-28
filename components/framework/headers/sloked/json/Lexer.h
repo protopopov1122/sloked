@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,23 +22,17 @@
 #ifndef SLOKED_JSON_LEXER_H_
 #define SLOKED_JSON_LEXER_H_
 
-#include "sloked/json/Position.h"
-#include <variant>
-#include <string>
-#include <optional>
 #include <iosfwd>
+#include <optional>
+#include <string>
+#include <variant>
+
+#include "sloked/json/Position.h"
 
 namespace sloked {
 
     struct JsonLexem {
-        enum class Type {
-            Integer,
-            Number,
-            String,
-            Boolean,
-            Null,
-            Symbol
-        };
+        enum class Type { Integer, Number, String, Boolean, Null, Symbol };
 
         enum class Symbol {
             OpeningBrace,
@@ -75,6 +69,6 @@ namespace sloked {
         std::string_view current_line;
         JsonSourcePosition position;
     };
-}
+}  // namespace sloked
 
 #endif

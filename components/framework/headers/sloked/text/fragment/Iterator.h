@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -34,7 +34,8 @@ namespace sloked {
         virtual std::optional<TaggedTextFragment<T>> Next() = 0;
         virtual void Rewind(const TextPosition &) = 0;
         virtual const TextPosition &GetPosition() const = 0;
-        virtual Unbind OnChange(std::function<void(const TextPositionRange &)>) = 0;
+        virtual Unbind OnChange(
+            std::function<void(const TextPositionRange &)>) = 0;
     };
 
     template <typename T>
@@ -56,7 +57,8 @@ namespace sloked {
             }
         }
 
-        std::optional<TaggedTextFragment<T>> Get(const TextPosition &pos) final {
+        std::optional<TaggedTextFragment<T>> Get(
+            const TextPosition &pos) final {
             while (!(pos < this->current)) {
                 this->NextFragment();
             }
@@ -77,10 +79,11 @@ namespace sloked {
             return tags;
         }
 
-        typename SlokedTextTagger<T>::Unbind OnChange(std::function<void(const TextPositionRange &)> callback) final {
+        typename SlokedTextTagger<T>::Unbind OnChange(
+            std::function<void(const TextPositionRange &)> callback) final {
             return this->emitter.Listen(std::move(callback));
         }
-    
+
      private:
         void NextFragment() {
             auto fragment = this->tagger.Next();
@@ -98,6 +101,6 @@ namespace sloked {
         typename SlokedTextTagger<T>::Unbind unsubscribe;
         SlokedEventEmitter<const TextPositionRange &> emitter;
     };
-}
+}  // namespace sloked
 
 #endif

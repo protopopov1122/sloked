@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,16 +22,17 @@
 #ifndef SLOKED_CORE_INDEXED_H_
 #define SLOKED_CORE_INDEXED_H_
 
-#include "sloked/Base.h"
-#include <utility>
 #include <cinttypes>
+#include <utility>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
     template <typename T, typename I = std::size_t>
     struct SlokedIndexed {
         SlokedIndexed(I index, T &&value)
-            : index(index), value(std::forward<T>(value)){}
+            : index(index), value(std::forward<T>(value)) {}
 
         operator T &() {
             return this->value;
@@ -40,6 +41,6 @@ namespace sloked {
         I index;
         T value;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,15 +20,17 @@
 */
 
 #include "sloked/net/PosixSocket.h"
+
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include "sloked/core/Error.h"
 #include "sloked/core/Scope.h"
 #include "sloked/core/posix/Time.h"
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/tcp.h>
-#include <netinet/in.h>
 
 namespace sloked {
 
@@ -36,13 +38,12 @@ namespace sloked {
         return fd >= 0;
     }
 
-    SlokedPosixSocket::SlokedPosixSocket(int fd)
-        : socket(fd) {
-        
+    SlokedPosixSocket::SlokedPosixSocket(int fd) : socket(fd) {
+
         int one = 1;
         setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
     }
-        
+
     SlokedPosixSocket::SlokedPosixSocket(SlokedPosixSocket &&socket) {
         this->socket = socket.socket;
         socket.socket = InvalidSocket;
@@ -54,7 +55,8 @@ namespace sloked {
         }
     }
 
-    SlokedPosixSocket &SlokedPosixSocket::operator=(SlokedPosixSocket &&socket) {
+    SlokedPosixSocket &SlokedPosixSocket::operator=(
+        SlokedPosixSocket &&socket) {
         if (IsSocketValid(this->socket)) {
             close(this->socket);
         }
@@ -97,7 +99,7 @@ namespace sloked {
             fd_set rfds;
             FD_ZERO(&rfds);
             FD_SET(this->socket, &rfds);
-            
+
             DurationToTimeval(timeout, tv);
             return select(this->socket + 1, &rfds, nullptr, nullptr, &tv) > 0;
         } else {
@@ -163,12 +165,12 @@ namespace sloked {
         return std::make_unique<SlokedPosixAwaitable>(this->socket);
     }
 
-    SlokedPosixServerSocket::SlokedPosixServerSocket(int fd)
-        : socket(fd) {}
+    SlokedPosixServerSocket::SlokedPosixServerSocket(int fd) : socket(fd) {}
 
-    SlokedPosixServerSocket::SlokedPosixServerSocket(SlokedPosixServerSocket &&socket) {
+    SlokedPosixServerSocket::SlokedPosixServerSocket(
+        SlokedPosixServerSocket &&socket) {
         this->socket = socket.socket;
-        socket.socket = InvalidSocket; 
+        socket.socket = InvalidSocket;
     }
 
     SlokedPosixServerSocket::~SlokedPosixServerSocket() {
@@ -177,7 +179,8 @@ namespace sloked {
         }
     }
 
-    SlokedPosixServerSocket &SlokedPosixServerSocket::operator=(SlokedPosixServerSocket &&socket) {
+    SlokedPosixServerSocket &SlokedPosixServerSocket::operator=(
+        SlokedPosixServerSocket &&socket) {
         if (IsSocketValid(this->socket)) {
             close(this->socket);
         }
@@ -203,7 +206,9 @@ namespace sloked {
             auto res = listen(this->socket, MaxQueueLength);
             if (res != 0) {
                 this->Close();
-                throw SlokedError("PosixServerSocket: Error starting server \'" + std::to_string(errno) + "\'");
+                throw SlokedError(
+                    "PosixServerSocket: Error starting server \'" +
+                    std::to_string(errno) + "\'");
             }
         } else {
             throw SlokedError("PosixServerSocket: Invalid socket");
@@ -217,16 +222,18 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedSocket> SlokedPosixServerSocket::Accept(std::chrono::system_clock::duration timeout) {
+    std::unique_ptr<SlokedSocket> SlokedPosixServerSocket::Accept(
+        std::chrono::system_clock::duration timeout) {
         int socket = InvalidSocket;
         if (timeout != std::chrono::system_clock::duration::zero()) {
             struct timeval tv;
             fd_set rfds;
             FD_ZERO(&rfds);
             FD_SET(this->socket, &rfds);
-            
+
             DurationToTimeval(timeout, tv);
-            auto result = select(this->socket + 1, &rfds, nullptr, nullptr, &tv);
+            auto result =
+                select(this->socket + 1, &rfds, nullptr, nullptr, &tv);
             if (result > 0) {
                 socket = accept(this->socket, nullptr, nullptr);
             }
@@ -240,53 +247,57 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedIOAwaitable> SlokedPosixServerSocket::Awaitable() const {
+    std::unique_ptr<SlokedIOAwaitable> SlokedPosixServerSocket::Awaitable()
+        const {
         return std::make_unique<SlokedPosixAwaitable>(this->socket);
     }
 
-    std::unique_ptr<SlokedSocket> SlokedPosixSocketFactory::Connect(const SlokedSocketAddress &addr) {
+    std::unique_ptr<SlokedSocket> SlokedPosixSocketFactory::Connect(
+        const SlokedSocketAddress &addr) {
         const auto &host = addr.AsNetwork().host;
         const auto &port = addr.AsNetwork().port;
         // Resolve hostname
         struct addrinfo *result = nullptr;
         struct addrinfo hints {
-            0,
-            AF_UNSPEC,
-            SOCK_STREAM,
-            IPPROTO_TCP,
-            0,
-            nullptr,
-            nullptr,
-            nullptr
+            0, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, 0, nullptr, nullptr, nullptr
         };
         int err = getaddrinfo(host.c_str(), nullptr, &hints, &result);
         if (err != 0 || result == nullptr) {
-            throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; address resolution error: " + std::to_string(err));
+            throw SlokedError(
+                "PosixSocket: Error connecting to " + host + ":" +
+                std::to_string(port) +
+                "; address resolution error: " + std::to_string(err));
         }
-        OnDestroy freeResult([&result] {
-            freeaddrinfo(result);
-        });
+        OnDestroy freeResult([&result] { freeaddrinfo(result); });
         // Open a socket
-        int fd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+        int fd =
+            socket(result->ai_family, result->ai_socktype, result->ai_protocol);
         if (!IsSocketValid(fd)) {
-            throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; socket opening error: " + std::to_string(errno));
+            throw SlokedError(
+                "PosixSocket: Error connecting to " + host + ":" +
+                std::to_string(port) +
+                "; socket opening error: " + std::to_string(errno));
         }
         // Connect to the socket through one of resolutions
         for (auto res = result; res != nullptr; res = res->ai_next) {
             switch (result->ai_family) {
                 case AF_INET: {
-                    sockaddr_in addr = *reinterpret_cast<sockaddr_in *>(result->ai_addr);
+                    sockaddr_in addr =
+                        *reinterpret_cast<sockaddr_in *>(result->ai_addr);
                     addr.sin_port = htons(port);
-                    err = connect(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+                    err = connect(fd, reinterpret_cast<sockaddr *>(&addr),
+                                  sizeof(addr));
                     if (err == 0) {
                         return std::make_unique<SlokedPosixSocket>(fd);
                     }
                 } break;
 
                 case AF_INET6: {
-                    sockaddr_in6 addr = *reinterpret_cast<sockaddr_in6 *>(result->ai_addr);
+                    sockaddr_in6 addr =
+                        *reinterpret_cast<sockaddr_in6 *>(result->ai_addr);
                     addr.sin6_port = htons(port);
-                    err = connect(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+                    err = connect(fd, reinterpret_cast<sockaddr *>(&addr),
+                                  sizeof(addr));
                     if (err == 0) {
                         return std::make_unique<SlokedPosixSocket>(fd);
                     }
@@ -297,65 +308,77 @@ namespace sloked {
             }
             if (err != 0) {
                 close(fd);
-                throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; connection error: " + std::to_string(errno));
+                throw SlokedError(
+                    "PosixSocket: Error connecting to " + host + ":" +
+                    std::to_string(port) +
+                    "; connection error: " + std::to_string(errno));
             }
         }
         close(fd);
-        throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; unsupported AF");
+        throw SlokedError("PosixSocket: Error connecting to " + host + ":" +
+                          std::to_string(port) + "; unsupported AF");
     }
 
-    std::unique_ptr<SlokedServerSocket> SlokedPosixSocketFactory::Bind(const SlokedSocketAddress &addr) {
+    std::unique_ptr<SlokedServerSocket> SlokedPosixSocketFactory::Bind(
+        const SlokedSocketAddress &addr) {
         const auto &host = addr.AsNetwork().host;
         const auto &port = addr.AsNetwork().port;
         // Resolve hostname
         struct addrinfo *result = nullptr;
         struct addrinfo hints {
-            0,
-            AF_UNSPEC,
-            SOCK_STREAM,
-            IPPROTO_TCP,
-            0,
-            nullptr,
-            nullptr,
-            nullptr
+            0, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, 0, nullptr, nullptr, nullptr
         };
         int err = getaddrinfo(host.c_str(), nullptr, &hints, &result);
         if (err != 0 || result == nullptr) {
-            throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; address resolution error: " + std::to_string(err));
+            throw SlokedError(
+                "PosixSocket: Error connecting to " + host + ":" +
+                std::to_string(port) +
+                "; address resolution error: " + std::to_string(err));
         }
-        OnDestroy freeResult([&result] {
-            freeaddrinfo(result);
-        });
+        OnDestroy freeResult([&result] { freeaddrinfo(result); });
         // Open a socket
-        int fd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+        int fd =
+            socket(result->ai_family, result->ai_socktype, result->ai_protocol);
         if (!IsSocketValid(fd)) {
-            throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; socket opening error: " + std::to_string(errno));
+            throw SlokedError(
+                "PosixSocket: Error connecting to " + host + ":" +
+                std::to_string(port) +
+                "; socket opening error: " + std::to_string(errno));
         }
         const int Enable = 1;
         setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &Enable, sizeof(Enable));
         // Bind to the socket
         switch (result->ai_family) {
             case AF_INET: {
-                sockaddr_in addr = *reinterpret_cast<sockaddr_in *>(result->ai_addr);
+                sockaddr_in addr =
+                    *reinterpret_cast<sockaddr_in *>(result->ai_addr);
                 addr.sin_port = htons(port);
-                err = bind(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+                err =
+                    bind(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
             } break;
 
             case AF_INET6: {
-                sockaddr_in6 addr = *reinterpret_cast<sockaddr_in6 *>(result->ai_addr);
+                sockaddr_in6 addr =
+                    *reinterpret_cast<sockaddr_in6 *>(result->ai_addr);
                 addr.sin6_port = htons(port);
-                err = bind(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+                err =
+                    bind(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
             } break;
 
             default:
                 close(fd);
-                throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; unsupported AF: " + std::to_string(result->ai_family));
+                throw SlokedError(
+                    "PosixSocket: Error connecting to " + host + ":" +
+                    std::to_string(port) +
+                    "; unsupported AF: " + std::to_string(result->ai_family));
         }
         if (err != 0) {
             close(fd);
-            throw SlokedError("PosixSocket: Error connecting to " + host + ":" + std::to_string(port) + "; binding error: " + std::to_string(errno));
+            throw SlokedError("PosixSocket: Error connecting to " + host + ":" +
+                              std::to_string(port) +
+                              "; binding error: " + std::to_string(errno));
         }
         // Build an instance of the server
         return std::make_unique<SlokedPosixServerSocket>(fd);
     }
-}
+}  // namespace sloked

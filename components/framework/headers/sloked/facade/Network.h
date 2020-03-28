@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_FACADE_NETWORK_H_
 #define SLOKED_FACADE_NETWORK_H_
 
-#include "sloked/net/Socket.h"
-#include "sloked/core/Compression.h"
-#include "sloked/sched/Scheduler.h"
 #include <stack>
+
+#include "sloked/core/Compression.h"
+#include "sloked/net/Socket.h"
+#include "sloked/sched/Scheduler.h"
 
 namespace sloked {
 
@@ -37,7 +38,8 @@ namespace sloked {
 
         bool HasLayers() const;
         void PopLayer();
-        void BufferingLayer(std::chrono::system_clock::duration, SlokedSchedulerThread &);
+        void BufferingLayer(std::chrono::system_clock::duration,
+                            SlokedSchedulerThread &);
         void CompressionLayer(SlokedCompression &);
         void EncryptionLayer(SlokedCrypto &, SlokedCrypto::Key &);
 
@@ -45,6 +47,6 @@ namespace sloked {
         SlokedSocketFactory &baseEngine;
         std::stack<std::unique_ptr<SlokedSocketFactory>> layers;
     };
-}
+}  // namespace sloked
 
 #endif

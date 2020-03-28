@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,13 +22,14 @@
 #ifndef SLOKED_THIRD_PARTY_LUA_COMMON_H_
 #define SLOKED_THIRD_PARTY_LUA_COMMON_H_
 
-#include "sloked/sched/EventLoop.h"
 #include <lua.hpp>
+
+#include "sloked/sched/EventLoop.h"
 
 namespace sloked {
 
     void DropLuaStack(lua_State *, int);
-    
+
     class LuaValueHandle {
      public:
         LuaValueHandle(lua_State *, SlokedEventLoop &);
@@ -42,6 +43,6 @@ namespace sloked {
     };
 
     std::function<void()> LuaCallback(lua_State *, SlokedEventLoop &);
-}
+}  // namespace sloked
 
 #endif

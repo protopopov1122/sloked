@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_CORE_SEMAPHORE_H_
 #define SLOKED_CORE_SEMAPHORE_H_
 
-#include "sloked/Base.h"
-#include <mutex>
-#include <condition_variable>
 #include <cinttypes>
+#include <condition_variable>
+#include <mutex>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -35,12 +36,12 @@ namespace sloked {
         void Notify();
         void Wait();
         void WaitAll();
-    
+
      private:
         std::mutex mtx;
         std::condition_variable cv;
         uint32_t counter;
     };
-}
+}  // namespace sloked
 
 #endif

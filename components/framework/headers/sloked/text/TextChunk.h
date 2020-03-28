@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,14 +22,15 @@
 #ifndef SLOKED_TEXT_TEXTCHUNK_H_
 #define SLOKED_TEXT_TEXTCHUNK_H_
 
-#include "sloked/core/AVL.h"
-#include "sloked/core/RangeMap.h"
-#include "sloked/core/NewLine.h"
-#include "sloked/text/TextBlock.h"
-#include <map>
-#include <limits>
-#include <optional>
 #include <iosfwd>
+#include <limits>
+#include <map>
+#include <optional>
+
+#include "sloked/core/AVL.h"
+#include "sloked/core/NewLine.h"
+#include "sloked/core/RangeMap.h"
+#include "sloked/text/TextBlock.h"
 
 namespace sloked {
 
@@ -39,22 +40,25 @@ namespace sloked {
      public:
         TextChunkFactory(const NewLine &);
         std::unique_ptr<TextBlock> make(std::string_view) const override;
-    
+
      private:
         const NewLine &newline;
     };
 
-    class TextChunk : public TextBlockImpl<TextChunk>, public AVLNode<TextChunk> {
+    class TextChunk : public TextBlockImpl<TextChunk>,
+                      public AVLNode<TextChunk> {
      public:
         TextChunk(const NewLine &, std::string_view, std::size_t = 0);
-        TextChunk(const NewLine &, std::unique_ptr<TextChunk>, std::optional<std::string>, std::unique_ptr<TextChunk>, std::size_t = 0);
+        TextChunk(const NewLine &, std::unique_ptr<TextChunk>,
+                  std::optional<std::string>, std::unique_ptr<TextChunk>,
+                  std::size_t = 0);
 
         std::size_t GetLastLine() const override;
         std::size_t GetTotalLength() const override;
         std::string_view GetLine(std::size_t) const override;
         bool Empty() const override;
         void Visit(std::size_t, std::size_t, Visitor) const override;
-        
+
         void SetLine(std::size_t, std::string_view) override;
         void EraseLine(std::size_t) override;
         void InsertLine(std::size_t, std::string_view) override;
@@ -70,7 +74,7 @@ namespace sloked {
      protected:
         void AvlSwapContent(TextChunk &) override;
         void AvlUpdate() override;
-        
+
      private:
         template <typename Line, typename Offset, typename Length>
         class Map;
@@ -92,10 +96,12 @@ namespace sloked {
     template <typename Line, typename Offset, typename Length = Offset>
     class TextChunk::Map {
      public:
-        Map(const std::optional<std::string> &content, TextChunk *begin, TextChunk *end, const NewLine & newline)
+        Map(const std::optional<std::string> &content, TextChunk *begin,
+            TextChunk *end, const NewLine &newline)
             : lines(0), last_line(0), total_length(0) {
             if (begin && !begin->Empty()) {
-                this->assign(0, begin->GetLastLine(), AtBegin, begin->GetTotalLength());
+                this->assign(0, begin->GetLastLine(), AtBegin,
+                             begin->GetTotalLength());
                 this->last_line = begin->GetLastLine();
                 this->total_length = begin->GetTotalLength();
             }
@@ -106,19 +112,24 @@ namespace sloked {
                 }
                 Offset start_offset = 0;
                 this->total_length += content.value().size();
-                newline.Iterate(content.value(), [&](std::size_t i, std::size_t width) {
-                    this->assign(this->last_line, this->last_line, start_offset, i - start_offset);
-                    this->last_line++;
-                    start_offset = i + width;
-                });
-                this->assign(this->last_line, this->last_line, start_offset, content.value().size() - start_offset);
+                newline.Iterate(
+                    content.value(), [&](std::size_t i, std::size_t width) {
+                        this->assign(this->last_line, this->last_line,
+                                     start_offset, i - start_offset);
+                        this->last_line++;
+                        start_offset = i + width;
+                    });
+                this->assign(this->last_line, this->last_line, start_offset,
+                             content.value().size() - start_offset);
             }
 
             if (end && !end->Empty()) {
                 if (content.has_value() || (begin && !begin->Empty())) {
                     this->last_line++;
                 }
-                this->assign(this->last_line, this->last_line + end->GetLastLine(), AtEnd, end->GetTotalLength());
+                this->assign(this->last_line,
+                             this->last_line + end->GetLastLine(), AtEnd,
+                             end->GetTotalLength());
                 this->last_line += end->GetLastLine();
                 this->total_length += end->GetTotalLength();
             }
@@ -148,8 +159,10 @@ namespace sloked {
             }
         }
 
-        static constexpr Offset MaxOffset = std::numeric_limits<Offset>::max() - 3;
-        static constexpr Offset AtBegin = std::numeric_limits<Offset>::max() - 2;
+        static constexpr Offset MaxOffset =
+            std::numeric_limits<Offset>::max() - 3;
+        static constexpr Offset AtBegin =
+            std::numeric_limits<Offset>::max() - 2;
         static constexpr Offset AtEnd = std::numeric_limits<Offset>::max() - 1;
         static constexpr Offset NotFound = std::numeric_limits<Offset>::max();
 
@@ -162,6 +175,6 @@ namespace sloked {
         Line last_line;
         Length total_length;
     };
-}
+}  // namespace sloked
 
 #endif

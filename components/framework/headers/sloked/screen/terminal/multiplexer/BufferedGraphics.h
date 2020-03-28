@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,11 +22,12 @@
 #ifndef SLOKED_SCREEN_TERMINAL_MULTIPLEXER_BUFFEREDGRAPHICS_H_
 #define SLOKED_SCREEN_TERMINAL_MULTIPLEXER_BUFFEREDGRAPHICS_H_
 
-#include "sloked/screen/Graphics.h"
-#include <set>
-#include <optional>
 #include <bitset>
 #include <limits>
+#include <optional>
+#include <set>
+
+#include "sloked/screen/Graphics.h"
 
 namespace sloked {
 
@@ -40,14 +41,16 @@ namespace sloked {
         bool operator!=(const BufferedGraphicsMode &) const;
 
      private:
-        static constexpr auto TextSize = static_cast<int>(SlokedTextGraphics::Concealed) + 1;
+        static constexpr auto TextSize =
+            static_cast<int>(SlokedTextGraphics::Concealed) + 1;
         static_assert(TextSize < 32);
         uint_fast32_t text{0};
         uint_fast32_t background = None;
         uint_fast32_t foreground = None;
 
-        static constexpr std::size_t None = std::numeric_limits<uint32_t>::max();
+        static constexpr std::size_t None =
+            std::numeric_limits<uint32_t>::max();
     };
-}
+}  // namespace sloked
 
 #endif

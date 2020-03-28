@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,9 +22,10 @@
 #ifndef SLOKED_SCREEN_PANGO_BASE_H_
 #define SLOKED_SCREEN_PANGO_BASE_H_
 
-#include "sloked/Base.h"
+#include <pango-1.0/pango/pangocairo.h>
 #include <pangomm-1.4/pangomm.h>
 #include <pangomm-1.4/pangomm/init.h>
-#include <pango-1.0/pango/pangocairo.h>
+
+#include "sloked/Base.h"
 
 #endif

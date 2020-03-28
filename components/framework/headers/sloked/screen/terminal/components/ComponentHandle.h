@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,27 +22,30 @@
 #ifndef SLOKED_SCREEN_TERMINAL_COMPONENTS_COMPONENTHANDLE_H_
 #define SLOKED_SCREEN_TERMINAL_COMPONENTS_COMPONENTHANDLE_H_
 
-#include "sloked/core/Encoding.h"
+#include <memory>
+
 #include "sloked/core/CharPreset.h"
+#include "sloked/core/Encoding.h"
 #include "sloked/screen/components/ComponentHandle.h"
 #include "sloked/screen/terminal/Terminal.h"
 #include "sloked/screen/terminal/components/TextPaneComponent.h"
-#include <memory>
 
 namespace sloked {
 
     class TerminalComponentHandle : public SlokedComponentHandle {
      public:
-        TerminalComponentHandle(SlokedTerminal &, const Encoding &, const SlokedCharPreset &);
+        TerminalComponentHandle(SlokedTerminal &, const Encoding &,
+                                const SlokedCharPreset &);
 
         void Render() override;
         void UpdateDimensions() override;
         TextPosition GetDimensions() override;
         void OnUpdate(std::function<void()>) override;
-        
+
         bool HasComponent() const override;
         SlokedScreenComponent &GetComponent() const override;
-        SlokedTextPaneComponent &NewTextPane(std::unique_ptr<SlokedTextPaneWidget>) override;
+        SlokedTextPaneComponent &NewTextPane(
+            std::unique_ptr<SlokedTextPaneWidget>) override;
         SlokedSplitterComponent &NewSplitter(Splitter::Direction) override;
         SlokedTabberComponent &NewTabber() override;
         SlokedMultiplexerComponent &NewMultiplexer() override;
@@ -58,6 +61,6 @@ namespace sloked {
         std::unique_ptr<SlokedScreenComponent> component;
         std::function<void()> updateListener;
     };
-}
+}  // namespace sloked
 
 #endif

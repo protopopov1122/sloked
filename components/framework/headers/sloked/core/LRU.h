@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,17 +22,17 @@
 #ifndef SLOKED_CORE_LRU_H_
 #define SLOKED_CORE_LRU_H_
 
-#include "sloked/core/Error.h"
 #include <map>
 #include <queue>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
     template <typename Key, typename Value, typename Less = std::less<Key>>
     class SlokedLRUCache {
      public:
-        SlokedLRUCache(std::size_t capacity)
-            : capacity{capacity} {}
+        SlokedLRUCache(std::size_t capacity) : capacity{capacity} {}
 
         void Insert(const Key &key, const Value &value) {
             while (this->cache.size() > this->capacity) {
@@ -75,8 +75,8 @@ namespace sloked {
      private:
         std::size_t capacity;
         std::map<Key, Value, Less> cache;
-        std::queue<Key> lru; 
+        std::queue<Key> lru;
     };
-}
+}  // namespace sloked
 
 #endif

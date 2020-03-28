@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,17 +20,19 @@
 */
 
 #include "sloked/screen/components/ComponentTree.h"
+
+#include "sloked/core/Error.h"
 #include "sloked/screen/components/MultiplexerComponent.h"
 #include "sloked/screen/components/SplitterComponent.h"
 #include "sloked/screen/components/TabberComponent.h"
-#include "sloked/core/Error.h"
 
 namespace sloked {
 
-    SlokedScreenComponent &SlokedComponentTree::Traverse(SlokedScreenComponent &root, const SlokedPath &path) {
+    SlokedScreenComponent &SlokedComponentTree::Traverse(
+        SlokedScreenComponent &root, const SlokedPath &path) {
         if (!path.Components().empty()) {
             std::string front = path.Components().front();
-            if (front == "." ) {
+            if (front == ".") {
                 if (path.Components().size() > 1) {
                     front = path.Components()[1];
                 } else {
@@ -40,31 +42,38 @@ namespace sloked {
                 throw SlokedError("Component traverse: '..' is unaccessible");
             }
             if (root.GetType() == SlokedScreenComponent::Type::Handle) {
-                return SlokedComponentTree::Traverse(root.AsHandle().GetComponent(), path);
+                return SlokedComponentTree::Traverse(
+                    root.AsHandle().GetComponent(), path);
             }
             SlokedPath tail = path.Tail(1);
             if (front == "self") {
                 return SlokedComponentTree::Traverse(root, tail);
             }
             std::size_t id = std::stoull(front);
-            switch (root.GetType()) {                
+            switch (root.GetType()) {
                 case SlokedScreenComponent::Type::Multiplexer: {
                     auto &multiplexer = root.AsMultiplexer();
                     auto win = multiplexer.GetWindow(id);
                     if (win) {
-                        return SlokedComponentTree::Traverse(win->GetComponent(), tail);
+                        return SlokedComponentTree::Traverse(
+                            win->GetComponent(), tail);
                     } else {
-                        throw SlokedError("Component traverse: unaccessible component \'" + path.ToString() + "\'");
+                        throw SlokedError(
+                            "Component traverse: unaccessible component \'" +
+                            path.ToString() + "\'");
                     }
                 }
-                
+
                 case SlokedScreenComponent::Type::Splitter: {
                     auto &splitter = root.AsSplitter();
                     auto win = splitter.GetWindow(id);
                     if (win) {
-                        return SlokedComponentTree::Traverse(win->GetComponent(), tail);
+                        return SlokedComponentTree::Traverse(
+                            win->GetComponent(), tail);
                     } else {
-                        throw SlokedError("Component traverse: unaccessible component \'" + path.ToString() + "\'");
+                        throw SlokedError(
+                            "Component traverse: unaccessible component \'" +
+                            path.ToString() + "\'");
                     }
                 }
 
@@ -72,19 +81,24 @@ namespace sloked {
                     auto &tabber = root.AsTabber();
                     auto win = tabber.GetWindow(id);
                     if (win) {
-                        return SlokedComponentTree::Traverse(win->GetComponent(), tail);
+                        return SlokedComponentTree::Traverse(
+                            win->GetComponent(), tail);
                     } else {
-                        throw SlokedError("Component traverse: unaccessible component \'" + path.ToString() + "\'");
+                        throw SlokedError(
+                            "Component traverse: unaccessible component \'" +
+                            path.ToString() + "\'");
                     }
                 }
 
                 case SlokedScreenComponent::Type::TextPane:
-                    throw SlokedError("Component traverse: text pane is not traversable");
-                
+                    throw SlokedError(
+                        "Component traverse: text pane is not traversable");
+
                 default:
-                    throw SlokedError("Component traverse: component type is not traversable");
+                    throw SlokedError("Component traverse: component type is "
+                                      "not traversable");
             }
         }
         return root;
     }
-}
+}  // namespace sloked

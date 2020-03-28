@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -29,33 +29,35 @@ namespace sloked {
 
     template <typename T>
     class SlokedFragmentUpdater : public SlokedTransactionStream::Listener {
-    public:
-        SlokedFragmentUpdater(const TextBlockView &text, SlokedTextTagIterator<T> &tags, const Encoding &encoding)
+     public:
+        SlokedFragmentUpdater(const TextBlockView &text,
+                              SlokedTextTagIterator<T> &tags,
+                              const Encoding &encoding)
             : text(text), tags(tags), encoding(encoding) {}
 
         void OnCommit(const SlokedCursorTransaction &trans) override {
             auto realPos = trans.GetPosition();
-            TextPosition pos{realPos.line > 0 ? realPos.line - 1 : 0 , 0};
+            TextPosition pos{realPos.line > 0 ? realPos.line - 1 : 0, 0};
             this->tags.Rewind(pos);
         }
 
         void OnRollback(const SlokedCursorTransaction &trans) override {
             auto realPos = trans.GetPosition();
-            TextPosition pos{realPos.line > 0 ? realPos.line - 1 : 0 , 0};
+            TextPosition pos{realPos.line > 0 ? realPos.line - 1 : 0, 0};
             this->tags.Rewind(pos);
         }
 
         void OnRevert(const SlokedCursorTransaction &trans) override {
             auto realPos = trans.GetPosition();
-            TextPosition pos{realPos.line > 0 ? realPos.line - 1 : 0 , 0};
+            TextPosition pos{realPos.line > 0 ? realPos.line - 1 : 0, 0};
             this->tags.Rewind(pos);
         }
 
-    private:
+     private:
         const TextBlockView &text;
         SlokedTextTagIterator<T> &tags;
         const Encoding &encoding;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,17 +22,16 @@
 #ifndef SLOKED_CORE_RINGBUFFER_H_
 #define SLOKED_CORE_RINGBUFFER_H_
 
-#include "sloked/core/Error.h"
 #include <type_traits>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
-    enum class SlokedRingBufferType {
-        Static,
-        Dynamic
-    };
+    enum class SlokedRingBufferType { Static, Dynamic };
 
-    template <typename T, SlokedRingBufferType BufferType = SlokedRingBufferType::Static>
+    template <typename T,
+              SlokedRingBufferType BufferType = SlokedRingBufferType::Static>
     class SlokedRingBuffer {
         static constexpr std::size_t Padding = 1;
         using AlignedType = std::aligned_storage_t<sizeof(T), alignof(T)>;
@@ -43,7 +42,9 @@ namespace sloked {
         using DiffType = int64_t;
 
         template <typename Self>
-        class AbstractIterator : public std::iterator<std::input_iterator_tag, T, IndexType, const T *, const T> {
+        class AbstractIterator
+            : public std::iterator<std::input_iterator_tag, T, IndexType,
+                                   const T *, const T> {
          public:
             using Ring = SlokedRingBuffer<T, BufferType>;
             friend Ring;
@@ -84,11 +85,18 @@ namespace sloked {
 
             DiffType operator-(const Self &other) {
                 if (std::addressof(this->ring) == std::addressof(other.ring)) {
-                    auto currentAbs = ring.total_capacity - this->ring.available_distance(this->ring.head, this->idx);
-                    auto otherAbs = ring.total_capacity - this->ring.available_distance(this->ring.head, other.idx);
-                    return static_cast<DiffType>(currentAbs) - static_cast<DiffType>(otherAbs);
+                    auto currentAbs =
+                        ring.total_capacity - this->ring.available_distance(
+                                                  this->ring.head, this->idx);
+                    auto otherAbs =
+                        ring.total_capacity - this->ring.available_distance(
+                                                  this->ring.head, other.idx);
+                    return static_cast<DiffType>(currentAbs) -
+                           static_cast<DiffType>(otherAbs);
                 } else {
-                    throw SlokedError("RingBufferIterator: Can't calculate difference between different ring iterators");
+                    throw SlokedError(
+                        "RingBufferIterator: Can't calculate difference "
+                        "between different ring iterators");
                 }
             }
 
@@ -107,36 +115,47 @@ namespace sloked {
             }
 
             bool operator==(const Self &other) const {
-                return std::addressof(this->ring) == std::addressof(other.ring) &&
-                    this->idx == other.idx;
+                return std::addressof(this->ring) ==
+                           std::addressof(other.ring) &&
+                       this->idx == other.idx;
             }
 
             bool operator!=(const Self &other) const {
-                return !static_cast<const Self *>(this)->Self::operator==(other);
+                return !static_cast<const Self *>(this)->Self::operator==(
+                    other);
             }
 
             bool operator<(const Self &other) const {
                 if (std::addressof(this->ring) == std::addressof(other.ring)) {
-                    auto currentAbs = ring.total_capacity - this->ring.available_distance(this->ring.head, this->idx);
-                    auto otherAbs = ring.total_capacity - this->ring.available_distance(this->ring.head, other.idx);
+                    auto currentAbs =
+                        ring.total_capacity - this->ring.available_distance(
+                                                  this->ring.head, this->idx);
+                    auto otherAbs =
+                        ring.total_capacity - this->ring.available_distance(
+                                                  this->ring.head, other.idx);
                     return currentAbs < otherAbs;
                 } else {
-                    throw SlokedError("RingBufferIterator: Can't calculate difference between different ring iterators");
+                    throw SlokedError(
+                        "RingBufferIterator: Can't calculate difference "
+                        "between different ring iterators");
                 }
             }
 
             bool operator<=(const Self &other) const {
-                return static_cast<const Self *>(this)->Self::operator==(other) ||
-                    static_cast<const Self *>(this)->Self::operator<(other);
+                return static_cast<const Self *>(this)->Self::operator==(
+                           other) ||
+                       static_cast<const Self *>(this)->Self::operator<(other);
             }
 
             bool operator>(const Self &other) const {
-                return !static_cast<const Self *>(this)->Self::operator<=(other);
+                return !static_cast<const Self *>(this)->Self::operator<=(
+                    other);
             }
 
             bool operator>=(const Self &other) const {
-                return static_cast<const Self *>(this)->Self::operator==(other) ||
-                    static_cast<const Self *>(this)->Self::operator>(other);
+                return static_cast<const Self *>(this)->Self::operator==(
+                           other) ||
+                       static_cast<const Self *>(this)->Self::operator>(other);
             }
 
             const T &operator*() const {
@@ -181,9 +200,11 @@ namespace sloked {
             this->deallocate(this->buffer);
         }
 
-        SlokedRingBuffer& operator=(const SlokedRingBuffer<T, BufferType> &) = delete;
-        
-        SlokedRingBuffer& operator=(const SlokedRingBuffer<T, BufferType> &&ring) {
+        SlokedRingBuffer &operator=(const SlokedRingBuffer<T, BufferType> &) =
+            delete;
+
+        SlokedRingBuffer &operator=(
+            const SlokedRingBuffer<T, BufferType> &&ring) {
             this->pop_front(this->size());
             this->deallocate(this->buffer);
             this->buffer = ring.buffer;
@@ -206,7 +227,8 @@ namespace sloked {
         }
 
         IndexType size() const {
-            return this->total_capacity - this->available_distance(this->head, this->tail);
+            return this->total_capacity -
+                   this->available_distance(this->head, this->tail);
         }
 
         IndexType capacity() const {
@@ -231,19 +253,22 @@ namespace sloked {
             if (this->empty()) {
                 throw SlokedError("RingBuffer: Empty buffer");
             }
-            return *reinterpret_cast<T *>(&this->buffer[this->shift_backward(this->tail, 1)]);
+            return *reinterpret_cast<T *>(
+                &this->buffer[this->shift_backward(this->tail, 1)]);
         }
 
         T &back() {
             if (this->empty()) {
                 throw SlokedError("RingBuffer: Empty buffer");
             }
-            return *reinterpret_cast<T *>(&this->buffer[this->shift_backward(this->tail, 1)]);
+            return *reinterpret_cast<T *>(
+                &this->buffer[this->shift_backward(this->tail, 1)]);
         }
 
         const T &at(IndexType idx) const {
             if (idx < this->size()) {
-                return *reinterpret_cast<T *>(&this->buffer[this->shift_forward(this->head, idx)]);
+                return *reinterpret_cast<T *>(
+                    &this->buffer[this->shift_forward(this->head, idx)]);
             } else {
                 throw SlokedError("RingBuffer: Index out of bounds");
             }
@@ -251,7 +276,8 @@ namespace sloked {
 
         T &at(IndexType idx) {
             if (idx < this->size()) {
-                return *reinterpret_cast<T *>(&this->buffer[this->shift_forward(this->head, idx)]);
+                return *reinterpret_cast<T *>(
+                    &this->buffer[this->shift_forward(this->head, idx)]);
             } else {
                 throw SlokedError("RingBuffer: Index out of bounds");
             }
@@ -281,7 +307,8 @@ namespace sloked {
 
         void emplace_back(T &&element) {
             this->ensure_available(1);
-            this->construct(this->buffer + this->tail, std::forward<T>(element));
+            this->construct(this->buffer + this->tail,
+                            std::forward<T>(element));
             this->tail = this->shift_forward(this->tail, 1);
         }
 
@@ -320,7 +347,8 @@ namespace sloked {
         template <typename I>
         I collect(IndexType count, I inserter) {
             if (count > this->size()) {
-                throw SlokedError("RingBuffer: Can't collect more than buffer size");
+                throw SlokedError(
+                    "RingBuffer: Can't collect more than buffer size");
             }
             while (count--) {
                 inserter++ = this->front();
@@ -337,18 +365,19 @@ namespace sloked {
      private:
         void construct(AlignedType *dest, T &&src) const {
             if constexpr (std::is_move_constructible_v<T>) {
-                new(dest) T(std::forward<T>(src));
+                new (dest) T(std::forward<T>(src));
             } else {
-                new(dest) T(src);
+                new (dest) T(src);
             }
         }
 
         void construct(AlignedType *dest, const T &src) const {
-            new(dest) T(src);
+            new (dest) T(src);
         }
 
         AlignedType *allocate(std::size_t sz) const {
-            return reinterpret_cast<AlignedType *>(operator new(sizeof(AlignedType) * sz));
+            return reinterpret_cast<AlignedType *>(operator new(
+                sizeof(AlignedType) * sz));
         }
 
         void deallocate(AlignedType *ptr) const {
@@ -359,7 +388,8 @@ namespace sloked {
             auto nextBuffer = this->allocate(nextCapacity);
             if (this->head <= this->tail) {
                 IndexType nextIdx = 0;
-                for (auto idx = this->head; idx < this->tail; ++idx, ++nextIdx) {
+                for (auto idx = this->head; idx < this->tail;
+                     ++idx, ++nextIdx) {
                     auto &prev = *reinterpret_cast<T *>(&this->buffer[idx]);
                     this->construct(nextBuffer + nextIdx, std::move(prev));
                     reinterpret_cast<T *>(std::addressof(prev))->T::~T();
@@ -371,7 +401,8 @@ namespace sloked {
                 this->tail = nextIdx;
             } else {
                 IndexType nextIdx = 0;
-                for (auto idx = this->head; idx < this->total_capacity; ++idx, ++nextIdx) {
+                for (auto idx = this->head; idx < this->total_capacity;
+                     ++idx, ++nextIdx) {
                     auto &prev = *reinterpret_cast<T *>(&this->buffer[idx]);
                     this->construct(nextBuffer + nextIdx, std::move(prev));
                     reinterpret_cast<T *>(std::addressof(prev))->T::~T();
@@ -392,7 +423,8 @@ namespace sloked {
         void ensure_available(IndexType sz) {
             if constexpr (BufferType == SlokedRingBufferType::Static) {
                 if (sz > this->available()) {
-                    throw SlokedError("RingBuffer: Can't allocate requested amount");
+                    throw SlokedError(
+                        "RingBuffer: Can't allocate requested amount");
                 }
             } else if (sz > this->available()) {
                 auto nextCapacity = this->total_capacity * 3 / 2 + Padding;
@@ -401,16 +433,16 @@ namespace sloked {
         }
 
         IndexType available_distance(IndexType first, IndexType second) const {
-            return first <= second
-                ? this->total_capacity - (second - first)
-                : first - second;
+            return first <= second ? this->total_capacity - (second - first)
+                                   : first - second;
         }
 
         IndexType shift(IndexType base, DiffType index) const {
             if (index > 0) {
                 return this->shift_forward(base, static_cast<IndexType>(index));
             } else if (index < 0) {
-                return this->shift_backward(base, static_cast<IndexType>(std::abs(index)));
+                return this->shift_backward(
+                    base, static_cast<IndexType>(std::abs(index)));
             } else {
                 return base;
             }
@@ -435,6 +467,6 @@ namespace sloked {
         IndexType tail;
         IndexType total_capacity;
     };
-}
+}  // namespace sloked
 
 #endif

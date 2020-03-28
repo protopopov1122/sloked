@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,23 +22,22 @@
 #ifndef SLOKED_CORE_COUNTER_H_
 #define SLOKED_CORE_COUNTER_H_
 
-#include "sloked/Base.h"
 #include <atomic>
 #include <condition_variable>
-#include <mutex>
 #include <functional>
+#include <mutex>
 #include <utility>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
     template <typename T>
     class SlokedCounter {
      public:
-        SlokedCounter()
-            : counter(T{0}) {}
+        SlokedCounter() : counter(T{0}) {}
 
-        SlokedCounter(T value)
-            : counter(value) {}
+        SlokedCounter(T value) : counter(value) {}
 
         void Increment() {
             this->counter++;
@@ -53,9 +52,7 @@ namespace sloked {
         void Wait(std::function<bool(T)> cond) {
             std::unique_lock<std::mutex> lock(mutex);
             if (!cond(this->counter.load())) {
-                this->cv.wait(lock, [&] {
-                    return cond(this->counter.load());
-                });
+                this->cv.wait(lock, [&] { return cond(this->counter.load()); });
             }
         }
 
@@ -65,13 +62,11 @@ namespace sloked {
 
         class Handle {
          public:
-            Handle(SlokedCounter<T> &counter)
-                : counter(&counter) {
+            Handle(SlokedCounter<T> &counter) : counter(&counter) {
                 this->counter->Increment();
             }
 
-            Handle(const Handle &handle)
-                : counter(handle.counter) {
+            Handle(const Handle &handle) : counter(handle.counter) {
                 if (this->counter) {
                     this->counter->Increment();
                 }
@@ -123,6 +118,6 @@ namespace sloked {
         std::mutex mutex;
         std::condition_variable cv;
     };
-}
+}  // namespace sloked
 
 #endif

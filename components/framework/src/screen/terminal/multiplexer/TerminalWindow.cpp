@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,13 +20,19 @@
 */
 
 #include "sloked/screen/terminal/multiplexer/TerminalWindow.h"
-#include "sloked/core/Encoding.h"
+
 #include "sloked/core/CharPreset.h"
+#include "sloked/core/Encoding.h"
 
 namespace sloked {
 
-    TerminalWindow::TerminalWindow(SlokedTerminal &term, const Encoding &encoding, const SlokedCharPreset &charPreset, const TextPosition &offset, const TextPosition &size)
-        : term(term), encoding(encoding), charPreset(charPreset), offset(offset), size(size), line(0), col(0) {}
+    TerminalWindow::TerminalWindow(SlokedTerminal &term,
+                                   const Encoding &encoding,
+                                   const SlokedCharPreset &charPreset,
+                                   const TextPosition &offset,
+                                   const TextPosition &size)
+        : term(term), encoding(encoding), charPreset(charPreset),
+          offset(offset), size(size), line(0), col(0) {}
 
     void TerminalWindow::Move(const TextPosition &position) {
         this->offset = position;
@@ -40,16 +46,19 @@ namespace sloked {
         return this->offset;
     }
 
-    TerminalWindow TerminalWindow::SubWindow(const TextPosition &offset, const TextPosition &size) const {
+    TerminalWindow TerminalWindow::SubWindow(const TextPosition &offset,
+                                             const TextPosition &size) const {
         return TerminalWindow(this->term, this->encoding, this->charPreset,
-            TextPosition{this->offset.line + offset.line, this->offset.column + offset.column},
-            size);
+                              TextPosition{this->offset.line + offset.line,
+                                           this->offset.column + offset.column},
+                              size);
     }
 
     void TerminalWindow::SetPosition(Line y, Column x) {
         this->line = std::min(y, this->size.line - 1);
         this->col = std::min(x, this->size.column - 1);
-        this->term.SetPosition(this->offset.line + this->line, this->offset.column + this->col);
+        this->term.SetPosition(this->offset.line + this->line,
+                               this->offset.column + this->col);
     }
 
     void TerminalWindow::MoveUp(Line l) {
@@ -81,7 +90,8 @@ namespace sloked {
     }
 
     void TerminalWindow::ClearScreen() {
-        for (std::size_t y = this->offset.line; y < this->offset.line + this->size.line; y++) {
+        for (std::size_t y = this->offset.line;
+             y < this->offset.line + this->size.line; y++) {
             this->term.SetPosition(y, this->offset.column);
             this->term.ClearChars(this->size.column);
         }
@@ -109,12 +119,15 @@ namespace sloked {
         const auto size = this->size;
         auto currentLine = this->line;
         auto currentColumn = this->col;
-        for (Encoding::Iterator it{}; this->encoding.Iterate(it, str, length);) {
-            if (currentLine >= size.line || currentLine + offset.line >= terminal_height) {
+        for (Encoding::Iterator it{};
+             this->encoding.Iterate(it, str, length);) {
+            if (currentLine >= size.line ||
+                currentLine + offset.line >= terminal_height) {
                 break;
             }
             if (it.value ^ U'\n') {
-                auto curWidth = this->charPreset.GetCharWidth(it.value, currentColumn);
+                auto curWidth =
+                    this->charPreset.GetCharWidth(it.value, currentColumn);
                 if (currentColumn + curWidth < size.column) {
                     lineLength += it.length;
                     currentColumn += curWidth;
@@ -124,7 +137,8 @@ namespace sloked {
                 lineStart = it.start + it.length;
                 lineLength = 0;
                 this->ClearChars(size.column - currentColumn - 1);
-                if (currentLine + 1 >= size.line || currentLine + offset.line >= terminal_height) {
+                if (currentLine + 1 >= size.line ||
+                    currentLine + offset.line >= terminal_height) {
                     break;
                 } else {
                     this->SetPosition(currentLine + 1, 0);
@@ -159,4 +173,4 @@ namespace sloked {
     void TerminalWindow::Flush(bool f) {
         this->term.Flush(f);
     }
-}
+}  // namespace sloked

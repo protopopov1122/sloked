@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,15 +22,16 @@
 #ifndef SLOKED_KGR_NET_INTERFACE_H_
 #define SLOKED_KGR_NET_INTERFACE_H_
 
+#include <chrono>
+#include <condition_variable>
+#include <functional>
+#include <map>
+#include <mutex>
+#include <queue>
+
+#include "sloked/core/RingBuffer.h"
 #include "sloked/kgr/Value.h"
 #include "sloked/net/Socket.h"
-#include "sloked/core/RingBuffer.h"
-#include <functional>
-#include <mutex>
-#include <condition_variable>
-#include <queue>
-#include <chrono>
-#include <map>
 
 namespace sloked {
 
@@ -80,19 +81,23 @@ namespace sloked {
 
         KgrNetInterface(std::unique_ptr<SlokedSocket>);
         virtual ~KgrNetInterface() = default;
-        bool Wait(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) const;
+        bool Wait(std::chrono::system_clock::duration =
+                      std::chrono::system_clock::duration::zero()) const;
         std::size_t Available() const;
         bool Valid() const;
         void Receive();
         void Process(std::size_t = 0);
         ResponseHandle Invoke(const std::string &, const KgrValue &);
         void Close();
-        void BindMethod(const std::string &, std::function<void(const std::string &, const KgrValue &, Responder &)>);
+        void BindMethod(const std::string &,
+                        std::function<void(const std::string &,
+                                           const KgrValue &, Responder &)>);
         std::unique_ptr<SlokedIOAwaitable> Awaitable() const;
         SlokedSocketEncryption *GetEncryption();
 
      protected:
-        virtual void InvokeMethod(const std::string &, const KgrValue &, Responder &);
+        virtual void InvokeMethod(const std::string &, const KgrValue &,
+                                  Responder &);
 
      private:
         void Write(const KgrValue &);
@@ -107,9 +112,12 @@ namespace sloked {
         std::map<int64_t, std::queue<Response>> responses;
         std::mutex response_mtx;
         std::condition_variable response_cv;
-        std::map<std::string, std::function<void(const std::string &, const KgrValue &, Responder &)>> methods;
+        std::map<std::string,
+                 std::function<void(const std::string &, const KgrValue &,
+                                    Responder &)>>
+            methods;
         std::mutex write_mtx;
     };
-}
+}  // namespace sloked
 
 #endif

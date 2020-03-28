@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -21,18 +21,19 @@
 
 #include "sloked/namespace/Compat.h"
 
-
 #ifdef SLOKED_PLATFORM_POSIX
 #include "sloked/namespace/posix/Environment.h"
 #include "sloked/namespace/posix/Filesystem.h"
 
 namespace sloked {
 
-    std::unique_ptr<SlokedFilesystemAdapter> SlokedNamespaceCompat::NewFilesystem(const std::string &path) {
+    std::unique_ptr<SlokedFilesystemAdapter>
+        SlokedNamespaceCompat::NewFilesystem(const std::string &path) {
         return std::make_unique<SlokedPosixFilesystemAdapter>(path);
     }
 
-    std::unique_ptr<SlokedFilesystemAdapter> SlokedNamespaceCompat::NewRootFilesystem() {
+    std::unique_ptr<SlokedFilesystemAdapter>
+        SlokedNamespaceCompat::NewRootFilesystem() {
         return std::make_unique<SlokedPosixFilesystemAdapter>("/");
     }
 
@@ -43,7 +44,7 @@ namespace sloked {
     SlokedPath SlokedNamespaceCompat::GetHomeDir() {
         return SlokedPosixNamespaceEnvironment::HomeDir();
     }
-}
+}  // namespace sloked
 #else
 #error "Build system error: Platform not defined"
 #endif

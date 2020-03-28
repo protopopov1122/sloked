@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,7 +22,8 @@
 #include "sloked/services/DocumentNotify.h"
 
 namespace sloked {
-    class SlokedDocumentNotifyListener : public SlokedTransactionStreamListener {
+    class SlokedDocumentNotifyListener
+        : public SlokedTransactionStreamListener {
      public:
         SlokedDocumentNotifyListener(std::function<void()> listener)
             : listener(std::move(listener)) {}
@@ -45,18 +46,22 @@ namespace sloked {
 
     class SlokedDocumentNotifyContext : public KgrLocalContext {
      public:
-        SlokedDocumentNotifyContext(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet &documents)
-            : KgrLocalContext(std::move(pipe)), documents(documents), taggerUnsubscribe{nullptr} {
-            this->notifier = std::make_shared<SlokedDocumentNotifyListener>([this] {
-                this->pipe->Write(KgrDictionary {
-                    { "source", "content" }
+        SlokedDocumentNotifyContext(std::unique_ptr<KgrPipe> pipe,
+                                    SlokedEditorDocumentSet &documents)
+            : KgrLocalContext(std::move(pipe)),
+              documents(documents), taggerUnsubscribe{nullptr} {
+            this->notifier =
+                std::make_shared<SlokedDocumentNotifyListener>([this] {
+                    this->pipe->Write(KgrDictionary{{"source", "content"}});
                 });
-            });
         }
 
         virtual ~SlokedDocumentNotifyContext() {
             if (this->document.has_value()) {
-                this->document.value().GetObject().GetTransactionListeners().RemoveListener(*this->notifier);
+                this->document.value()
+                    .GetObject()
+                    .GetTransactionListeners()
+                    .RemoveListener(*this->notifier);
             }
             if (this->taggerUnsubscribe) {
                 this->taggerUnsubscribe();
@@ -69,7 +74,10 @@ namespace sloked {
                 auto docId = msg["document"].AsInt();
                 auto tagger = msg["tagger"].AsBoolean();
                 if (this->document.has_value()) {
-                    this->document.value().GetObject().GetTransactionListeners().RemoveListener(*this->notifier);
+                    this->document.value()
+                        .GetObject()
+                        .GetTransactionListeners()
+                        .RemoveListener(*this->notifier);
                 }
                 if (this->taggerUnsubscribe) {
                     this->taggerUnsubscribe();
@@ -77,29 +85,35 @@ namespace sloked {
                 }
                 this->document = this->documents.OpenDocument(docId);
                 if (this->document.has_value()) {
-                    this->document.value().GetObject().GetTransactionListeners().AddListener(this->notifier);
+                    this->document.value()
+                        .GetObject()
+                        .GetTransactionListeners()
+                        .AddListener(this->notifier);
                     if (tagger) {
-                        this->taggerUnsubscribe = this->document.value().GetObject().GetTagger().OnChange([this](const auto &pos) {
-                            this->pipe->Write(KgrDictionary {
-                                { "source", "tagger" },
-                                {
-                                    "payload", KgrDictionary {
-                                        {
-                                            "start", KgrDictionary {
-                                                { "line", static_cast<int64_t>(pos.start.line) },
-                                                { "column", static_cast<int64_t>(pos.start.column) }
-                                            }
-                                        },
-                                        {
-                                            "end", KgrDictionary {
-                                                { "line", static_cast<int64_t>(pos.end.line) },
-                                                { "column", static_cast<int64_t>(pos.end.column) }
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                        });
+                        this->taggerUnsubscribe =
+                            this->document.value()
+                                .GetObject()
+                                .GetTagger()
+                                .OnChange([this](const auto &pos) {
+                                    this->pipe->Write(KgrDictionary{
+                                        {"source", "tagger"},
+                                        {"payload",
+                                         KgrDictionary{
+                                             {"start",
+                                              KgrDictionary{
+                                                  {"line", static_cast<int64_t>(
+                                                               pos.start.line)},
+                                                  {"column",
+                                                   static_cast<int64_t>(
+                                                       pos.start.column)}}},
+                                             {"end",
+                                              KgrDictionary{
+                                                  {"line", static_cast<int64_t>(
+                                                               pos.end.line)},
+                                                  {"column",
+                                                   static_cast<int64_t>(
+                                                       pos.end.column)}}}}}});
+                                });
                     }
                 }
             }
@@ -109,26 +123,32 @@ namespace sloked {
         SlokedEditorDocumentSet &documents;
         std::optional<SlokedEditorDocumentSet::Document> document;
         std::shared_ptr<SlokedDocumentNotifyListener> notifier;
-        SlokedTextTagger<SlokedEditorDocument::TagType>::Unbind taggerUnsubscribe;
+        SlokedTextTagger<SlokedEditorDocument::TagType>::Unbind
+            taggerUnsubscribe;
     };
 
-    SlokedDocumentNotifyService::SlokedDocumentNotifyService(SlokedEditorDocumentSet &documents, KgrContextManager<KgrLocalContext> &ctxManager)
+    SlokedDocumentNotifyService::SlokedDocumentNotifyService(
+        SlokedEditorDocumentSet &documents,
+        KgrContextManager<KgrLocalContext> &ctxManager)
         : documents(documents), contextManager(ctxManager) {}
 
     void SlokedDocumentNotifyService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedDocumentNotifyContext>(std::move(pipe), this->documents);
+        auto ctx = std::make_unique<SlokedDocumentNotifyContext>(
+            std::move(pipe), this->documents);
         this->contextManager.Attach(std::move(ctx));
     }
 
-    SlokedDocumentNotifyClient::SlokedDocumentNotifyClient(std::unique_ptr<KgrPipe> pipe, SlokedEditorDocumentSet::DocumentId docId, bool taggerNotifications)
+    SlokedDocumentNotifyClient::SlokedDocumentNotifyClient(
+        std::unique_ptr<KgrPipe> pipe,
+        SlokedEditorDocumentSet::DocumentId docId, bool taggerNotifications)
         : pipe(std::move(pipe)) {
-        this->pipe->Write(KgrDictionary {
-            { "document", static_cast<int64_t>(docId) },
-            { "tagger", taggerNotifications }
-        });
+        this->pipe->Write(
+            KgrDictionary{{"document", static_cast<int64_t>(docId)},
+                          {"tagger", taggerNotifications}});
     }
 
-    void SlokedDocumentNotifyClient::OnUpdate(std::function<void(const Notification &)> listener) {
+    void SlokedDocumentNotifyClient::OnUpdate(
+        std::function<void(const Notification &)> listener) {
         this->pipe->SetMessageListener([this, listener] {
             while (!this->pipe->Empty()) {
                 auto msg = this->pipe->Read().AsDictionary();
@@ -136,18 +156,24 @@ namespace sloked {
                     listener({});
                 } else if (msg["source"].AsString() == "tagger") {
                     const auto &payload = msg["payload"].AsDictionary();
-                    listener(TextPositionRange {
-                        TextPosition {
-                            static_cast<TextPosition::Line>(payload["start"].AsDictionary()["line"].AsInt()),
-                            static_cast<TextPosition::Column>(payload["start"].AsDictionary()["column"].AsInt())
-                        },
-                        TextPosition {
-                            static_cast<TextPosition::Line>(payload["end"].AsDictionary()["line"].AsInt()),
-                            static_cast<TextPosition::Column>(payload["end"].AsDictionary()["column"].AsInt())
-                        }
-                    });
+                    listener(TextPositionRange{
+                        TextPosition{static_cast<TextPosition::Line>(
+                                         payload["start"]
+                                             .AsDictionary()["line"]
+                                             .AsInt()),
+                                     static_cast<TextPosition::Column>(
+                                         payload["start"]
+                                             .AsDictionary()["column"]
+                                             .AsInt())},
+                        TextPosition{
+                            static_cast<TextPosition::Line>(
+                                payload["end"].AsDictionary()["line"].AsInt()),
+                            static_cast<TextPosition::Column>(
+                                payload["end"]
+                                    .AsDictionary()["column"]
+                                    .AsInt())}});
                 }
             }
         });
     }
-}
+}  // namespace sloked

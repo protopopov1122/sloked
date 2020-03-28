@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,13 +23,16 @@
 
 namespace sloked {
 
-    TransactionBatch::TransactionBatch(SlokedTransactionStream &stream, const Encoding &encoding)
+    TransactionBatch::TransactionBatch(SlokedTransactionStream &stream,
+                                       const Encoding &encoding)
         : stream(stream), encoding(encoding) {}
 
-    TextPosition TransactionBatch::Commit(const SlokedCursorTransaction &trans) {
+    TextPosition TransactionBatch::Commit(
+        const SlokedCursorTransaction &trans) {
         this->rollback.clear();
         this->batch.push_back(trans);
-        this->TriggerListeners(&SlokedTransactionStream::Listener::OnCommit, trans);
+        this->TriggerListeners(&SlokedTransactionStream::Listener::OnCommit,
+                               trans);
         auto pos = trans.GetPosition();
         auto patch = trans.CommitPatch(this->encoding);
         if (patch.Has(pos)) {
@@ -49,7 +52,8 @@ namespace sloked {
             auto trans = this->batch.back();
             this->rollback.push_back(trans);
             this->batch.pop_back();
-            this->TriggerListeners(&SlokedTransactionStream::Listener::OnRollback, trans);
+            this->TriggerListeners(
+                &SlokedTransactionStream::Listener::OnRollback, trans);
             return trans.GetPosition();
         }
         return TextPosition{};
@@ -64,7 +68,8 @@ namespace sloked {
             auto trans = this->rollback.back();
             this->batch.push_back(trans);
             this->rollback.pop_back();
-            this->TriggerListeners(&SlokedTransactionStream::Listener::OnRevert, trans);
+            this->TriggerListeners(&SlokedTransactionStream::Listener::OnRevert,
+                                   trans);
             auto patch = trans.CommitPatch(this->encoding);
             auto pos = trans.GetPosition();
             if (patch.Has(pos)) {
@@ -78,10 +83,8 @@ namespace sloked {
     }
 
     void TransactionBatch::Finish() {
-        this->stream.Commit(SlokedCursorTransaction {
-            this->batch
-        });
+        this->stream.Commit(SlokedCursorTransaction{this->batch});
         this->batch.clear();
         this->rollback.clear();
     }
-}
+}  // namespace sloked

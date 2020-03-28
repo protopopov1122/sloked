@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,6 +20,7 @@
 */
 
 #include "sloked/screen/sdl/Event.h"
+
 #include "sloked/core/Error.h"
 
 namespace sloked {
@@ -54,15 +55,14 @@ namespace sloked {
 
     class SlokedSDLEventBroker::GlobalQueue : public SlokedSDLEventQueue {
      public:
-        GlobalQueue(SlokedSDLEventBroker &broker)
-            : broker(broker) {}
-        
+        GlobalQueue(SlokedSDLEventBroker &broker) : broker(broker) {}
+
         bool HasEvents() const final {
             std::unique_lock lock(this->broker.mtx);
             this->broker.PollEvents();
             return !this->broker.globalQueue.empty();
         }
-        
+
         SDL_Event NextEvent() final {
             std::unique_lock lock(this->broker.mtx);
             this->broker.PollEvents();
@@ -87,7 +87,8 @@ namespace sloked {
             if (this->broker.windows.count(id) == 0) {
                 this->broker.windows.emplace(id, std::queue<SDL_Event>{});
             } else {
-                throw SlokedError("SDLEventBroker: Window queue already registered");
+                throw SlokedError(
+                    "SDLEventBroker: Window queue already registered");
             }
         }
 
@@ -106,11 +107,12 @@ namespace sloked {
             std::unique_lock lock(this->broker.mtx);
             this->broker.PollEvents();
             if (!this->broker.windows.at(this->winId).empty()) {
-                auto event = std::move(this->broker.windows.at(this->winId).front());
+                auto event =
+                    std::move(this->broker.windows.at(this->winId).front());
                 this->broker.windows.at(this->winId).pop();
                 return event;
             } else {
-                throw SlokedError("SDLEventQueue: No pending events");       
+                throw SlokedError("SDLEventQueue: No pending events");
             }
         }
 
@@ -124,10 +126,11 @@ namespace sloked {
 
     SlokedSDLEventBroker::~SlokedSDLEventBroker() = default;
 
-    std::unique_ptr<SlokedSDLEventQueue> SlokedSDLEventBroker::Subscribe(WindowID id) {
+    std::unique_ptr<SlokedSDLEventQueue> SlokedSDLEventBroker::Subscribe(
+        WindowID id) {
         return std::make_unique<WindowQueue>(*this, id);
     }
-    
+
     SlokedSDLEventQueue &SlokedSDLEventBroker::Common() {
         return *this->global;
     }
@@ -165,11 +168,11 @@ namespace sloked {
                 case SDL_MOUSEWHEEL:
                     this->AttachEvent(event.wheel.windowID, std::move(event));
                     break;
-                
+
                 case SDL_TEXTEDITING:
                     this->AttachEvent(event.edit.windowID, std::move(event));
                     break;
-                
+
                 case SDL_TEXTINPUT:
                     this->AttachEvent(event.text.windowID, std::move(event));
                     break;
@@ -196,4 +199,4 @@ namespace sloked {
             this->globalQueue.push(std::move(evt));
         }
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -19,15 +19,18 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/core/Error.h"
 #include "sloked/screen/terminal/multiplexer/TerminalTabber.h"
+
 #include <functional>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
     class TerminalTab : public SlokedTerminal {
      public:
-        TerminalTab(std::function<bool(const TerminalTab *)> is_current, SlokedTerminal &term)
+        TerminalTab(std::function<bool(const TerminalTab *)> is_current,
+                    SlokedTerminal &term)
             : is_current(is_current), term(term) {}
 
         void SetPosition(Line l, Column c) override {
@@ -129,7 +132,7 @@ namespace sloked {
     TerminalTabber::TabId TerminalTabber::GetTabCount() const {
         return this->tabs.size();
     }
-    
+
     std::optional<TerminalTabber::TabId> TerminalTabber::GetCurrentTab() const {
         if (this->current_tab < this->tabs.size()) {
             return this->current_tab;
@@ -147,32 +150,38 @@ namespace sloked {
     }
 
     TextPosition TerminalTabber::GetDimensions() {
-        return { this->term.GetHeight(), this->term.GetWidth() };
+        return {this->term.GetHeight(), this->term.GetWidth()};
     }
 
-    SlokedIndexed<SlokedTerminal &, TerminalTabber::TabId>  TerminalTabber::NewTab() {
-        auto tab = std::make_shared<TerminalTab>([this](auto tabPtr) {
-            if (this->current_tab < this->tabs.size()) {
-                return tabPtr == this->tabs.at(this->current_tab).get();
-            } else {
-                return false;
-            }
-        }, this->term);
+    SlokedIndexed<SlokedTerminal &, TerminalTabber::TabId>
+        TerminalTabber::NewTab() {
+        auto tab = std::make_shared<TerminalTab>(
+            [this](auto tabPtr) {
+                if (this->current_tab < this->tabs.size()) {
+                    return tabPtr == this->tabs.at(this->current_tab).get();
+                } else {
+                    return false;
+                }
+            },
+            this->term);
         this->tabs.push_back(tab);
         return {this->tabs.size() - 1, *tab};
     }
 
-    SlokedIndexed<SlokedTerminal &, TerminalTabber::TabId>  TerminalTabber::NewTab(TabId idx) {
+    SlokedIndexed<SlokedTerminal &, TerminalTabber::TabId>
+        TerminalTabber::NewTab(TabId idx) {
         if (idx > this->tabs.size()) {
             throw SlokedError("Invalid tab index " + std::to_string(idx));
         }
-        auto tab = std::make_shared<TerminalTab>([this](auto tabPtr) {
-            if (this->current_tab < this->tabs.size()) {
-                return tabPtr == this->tabs.at(this->current_tab).get();
-            } else {
-                return false;
-            }
-        }, this->term);
+        auto tab = std::make_shared<TerminalTab>(
+            [this](auto tabPtr) {
+                if (this->current_tab < this->tabs.size()) {
+                    return tabPtr == this->tabs.at(this->current_tab).get();
+                } else {
+                    return false;
+                }
+            },
+            this->term);
         this->tabs.insert(this->tabs.begin() + idx, tab);
         return {idx, *tab};
     }
@@ -189,7 +198,8 @@ namespace sloked {
     bool TerminalTabber::MoveTab(TabId src, TabId dst) {
         if (src < this->tabs.size() && dst < this->tabs.size()) {
             if (src < dst) {
-                this->tabs.insert(this->tabs.begin() + dst + 1, this->tabs.at(src));
+                this->tabs.insert(this->tabs.begin() + dst + 1,
+                                  this->tabs.at(src));
                 this->tabs.erase(this->tabs.begin() + src);
             } else if (src > dst) {
                 this->tabs.insert(this->tabs.begin() + dst, this->tabs.at(src));
@@ -209,4 +219,4 @@ namespace sloked {
             return false;
         }
     }
-}
+}  // namespace sloked

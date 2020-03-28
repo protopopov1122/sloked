@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,17 +22,15 @@
 #ifndef SLOKED_KGR_PIPE_H_
 #define SLOKED_KGR_PIPE_H_
 
-#include "sloked/kgr/Value.h"
 #include <functional>
+
+#include "sloked/kgr/Value.h"
 
 namespace sloked {
 
     class KgrPipe {
      public:
-        enum class Status {
-            Open,
-            Closed
-        };
+        enum class Status { Open, Closed };
 
         virtual ~KgrPipe() = default;
         virtual Status GetStatus() const = 0;
@@ -51,6 +49,6 @@ namespace sloked {
         virtual void Write(KgrValue &&) = 0;
         virtual bool WriteNX(KgrValue &&) = 0;
     };
-}
+}  // namespace sloked
 
 #endif

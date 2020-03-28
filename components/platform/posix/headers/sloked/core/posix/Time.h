@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,22 +22,29 @@
 #ifndef SLOKED_CORE_POSIX_TIME_H_
 #define SLOKED_CORE_POSIX_TIME_H_
 
-#include "sloked/Base.h"
-#include <chrono>
 #include <sys/time.h>
+
+#include <chrono>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
     template <typename T>
     void DurationToTimeval(const T &src, struct timeval &tv) {
-        if (src  > std::chrono::seconds(1)) {
-            tv.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(src).count();
-            tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(src - std::chrono::seconds(tv.tv_sec)).count();
+        if (src > std::chrono::seconds(1)) {
+            tv.tv_sec =
+                std::chrono::duration_cast<std::chrono::seconds>(src).count();
+            tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(
+                             src - std::chrono::seconds(tv.tv_sec))
+                             .count();
         } else {
             tv.tv_sec = 0;
-            tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(src).count();
+            tv.tv_usec =
+                std::chrono::duration_cast<std::chrono::microseconds>(src)
+                    .count();
         }
     }
-}
+}  // namespace sloked
 
 #endif

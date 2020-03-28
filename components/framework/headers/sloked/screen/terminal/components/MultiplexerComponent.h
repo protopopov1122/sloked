@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,71 +22,78 @@
 #ifndef SLOKED_SCREEN_TERMINAL_COMPONENTS_MULTIPLEXERCOMPONENT_H_
 #define SLOKED_SCREEN_TERMINAL_COMPONENTS_MULTIPLEXERCOMPONENT_H_
 
-#include "sloked/screen/components/MultiplexerComponent.h"
-#include "sloked/screen/terminal/multiplexer/TerminalWindow.h"
-#include "sloked/screen/terminal/components/ComponentHandle.h"
+#include <list>
 #include <map>
 #include <memory>
-#include <list>
+
+#include "sloked/screen/components/MultiplexerComponent.h"
+#include "sloked/screen/terminal/components/ComponentHandle.h"
+#include "sloked/screen/terminal/multiplexer/TerminalWindow.h"
 
 namespace sloked {
 
-   class TerminalMultiplexerComponent : public SlokedMultiplexerComponent {
-    public:
-      TerminalMultiplexerComponent(SlokedTerminal &, const Encoding &, const SlokedCharPreset &);
-      virtual ~TerminalMultiplexerComponent();
+    class TerminalMultiplexerComponent : public SlokedMultiplexerComponent {
+     public:
+        TerminalMultiplexerComponent(SlokedTerminal &, const Encoding &,
+                                     const SlokedCharPreset &);
+        virtual ~TerminalMultiplexerComponent();
 
-      std::shared_ptr<Window> GetFocus() const override;
-      std::shared_ptr<Window> GetWindow(Window::Id) const override;
-      std::size_t GetWindowCount() const override;
+        std::shared_ptr<Window> GetFocus() const override;
+        std::shared_ptr<Window> GetWindow(Window::Id) const override;
+        std::size_t GetWindowCount() const override;
 
-      std::shared_ptr<Window> NewWindow(const TextPosition &, const TextPosition &) override;
+        std::shared_ptr<Window> NewWindow(const TextPosition &,
+                                          const TextPosition &) override;
 
-      void Render() override;
-      void UpdateDimensions() override;
-      TextPosition GetDimensions() override;
-      void OnUpdate(std::function<void()>) override;
+        void Render() override;
+        void UpdateDimensions() override;
+        TextPosition GetDimensions() override;
+        void OnUpdate(std::function<void()>) override;
 
-    protected:
-      void ProcessComponentInput(const SlokedKeyboardInput &) override;
-        
-    private:
-      class TerminalMultiplexerWindow : public Window {
-       public:
-         TerminalMultiplexerWindow(Id, std::unique_ptr<TerminalComponentHandle>, std::unique_ptr<TerminalWindow>, TerminalMultiplexerComponent &);
-         virtual ~TerminalMultiplexerWindow();
+     protected:
+        void ProcessComponentInput(const SlokedKeyboardInput &) override;
 
-         bool IsOpened() const override;
-         bool HasFocus() const override;
-         SlokedComponentHandle &GetComponent() const override;
-         Id GetId() const override;
+     private:
+        class TerminalMultiplexerWindow : public Window {
+         public:
+            TerminalMultiplexerWindow(Id,
+                                      std::unique_ptr<TerminalComponentHandle>,
+                                      std::unique_ptr<TerminalWindow>,
+                                      TerminalMultiplexerComponent &);
+            virtual ~TerminalMultiplexerWindow();
 
-         void SetFocus() override;
-         void Move(const TextPosition &) override;
-         void Resize(const TextPosition &) override;
-         void Close() override;
+            bool IsOpened() const override;
+            bool HasFocus() const override;
+            SlokedComponentHandle &GetComponent() const override;
+            Id GetId() const override;
 
-         void Render();
-         void Update();
-         void ProcessInput(const SlokedKeyboardInput &);
+            void SetFocus() override;
+            void Move(const TextPosition &) override;
+            void Resize(const TextPosition &) override;
+            void Close() override;
 
-       private:
-         Id id;
-         std::unique_ptr<TerminalComponentHandle> component;
-         std::unique_ptr<TerminalWindow> window;
-         TerminalMultiplexerComponent &root;
-      };
+            void Render();
+            void Update();
+            void ProcessInput(const SlokedKeyboardInput &);
 
-      friend class TerminalMultiplexerWindow;
+         private:
+            Id id;
+            std::unique_ptr<TerminalComponentHandle> component;
+            std::unique_ptr<TerminalWindow> window;
+            TerminalMultiplexerComponent &root;
+        };
 
-      SlokedTerminal &terminal;
-      const Encoding &encoding;
-      const SlokedCharPreset &charPreset;
-      std::map<Window::Id, std::shared_ptr<TerminalMultiplexerWindow>> windows;
-      std::list<Window::Id> focus;
-      Window::Id nextId;
-      std::function<void()> updateListener;
-   };
-}
+        friend class TerminalMultiplexerWindow;
+
+        SlokedTerminal &terminal;
+        const Encoding &encoding;
+        const SlokedCharPreset &charPreset;
+        std::map<Window::Id, std::shared_ptr<TerminalMultiplexerWindow>>
+            windows;
+        std::list<Window::Id> focus;
+        Window::Id nextId;
+        std::function<void()> updateListener;
+    };
+}  // namespace sloked
 
 #endif

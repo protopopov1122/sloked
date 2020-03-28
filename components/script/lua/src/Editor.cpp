@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,28 +20,31 @@
 */
 
 #include "sloked/script/lua/Editor.h"
+
 #include "sloked/script/lua/Server.h"
 
 namespace sloked {
 
     struct SlokedAppHandle {
-        SlokedAppHandle(SlokedEditorInstance &app)
-            : app(app) {}
+        SlokedAppHandle(SlokedEditorInstance &app) : app(app) {}
 
         SlokedEditorInstance &app;
     };
 
     static int SlokedApp_GC(lua_State *state) {
-        SlokedAppHandle *appHandle = reinterpret_cast<SlokedAppHandle *>(lua_touserdata(state, 1));
+        SlokedAppHandle *appHandle =
+            reinterpret_cast<SlokedAppHandle *>(lua_touserdata(state, 1));
         if (appHandle != nullptr) {
             appHandle->~SlokedAppHandle();
         }
         return 0;
     }
 
-    int SlokedEditorToLua(SlokedEventLoop &eventLoop, lua_State *state, SlokedEditorInstance &app) {
-        SlokedAppHandle *appHandle = reinterpret_cast<SlokedAppHandle *>(lua_newuserdata(state, sizeof(SlokedAppHandle)));
-        new(appHandle) SlokedAppHandle(app);
+    int SlokedEditorToLua(SlokedEventLoop &eventLoop, lua_State *state,
+                          SlokedEditorInstance &app) {
+        SlokedAppHandle *appHandle = reinterpret_cast<SlokedAppHandle *>(
+            lua_newuserdata(state, sizeof(SlokedAppHandle)));
+        new (appHandle) SlokedAppHandle(app);
         if (luaL_newmetatable(state, "sloked.editor")) {
             lua_pushcfunction(state, SlokedApp_GC);
             lua_setfield(state, -2, "__gc");
@@ -53,4 +56,4 @@ namespace sloked {
         lua_setmetatable(state, -2);
         return 1;
     }
-}
+}  // namespace sloked

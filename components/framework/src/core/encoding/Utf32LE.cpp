@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -38,7 +38,8 @@ namespace sloked {
             }
         }
 
-        std::pair<std::size_t, std::size_t> GetCodepoint(std::string_view view, std::size_t idx) const override {
+        std::pair<std::size_t, std::size_t> GetCodepoint(
+            std::string_view view, std::size_t idx) const override {
             bool validView = view.size() % 4 == 0;
             if (validView && idx * 4 < view.size()) {
                 return std::make_pair(idx * 4, 4);
@@ -49,29 +50,33 @@ namespace sloked {
             }
         }
 
-        std::optional<std::size_t> GetCodepointByOffset(std::string_view str, std::size_t symbol_offset) const override {
+        std::optional<std::size_t> GetCodepointByOffset(
+            std::string_view str, std::size_t symbol_offset) const override {
             if (symbol_offset >= str.size()) {
                 return {};
             }
             return symbol_offset / 4;
         }
 
-        bool IterateCodepoints(std::string_view view, std::function<bool(std::size_t, std::size_t, char32_t)> iter) const override {
+        bool IterateCodepoints(
+            std::string_view view,
+            std::function<bool(std::size_t, std::size_t, char32_t)> iter)
+            const override {
             if (view.size() % 4 != 0) {
                 throw SlokedError("UTF-32LE: Invalid length");
             }
             bool res = true;
             for (std::size_t i = 0; i < view.size() / 4 && res; i++) {
-                char32_t chr = view[4 * i]
-                    | (view[4 * i + 1] << 8)
-                    | (view[4 * i + 2] << 16)
-                    | (view[4 * i + 3] << 24);
+                char32_t chr = view[4 * i] | (view[4 * i + 1] << 8) |
+                               (view[4 * i + 2] << 16) |
+                               (view[4 * i + 3] << 24);
                 res = iter(i * 4, 4, chr);
             }
             return res;
         }
 
-        bool Iterate(Iterator &iter, std::string_view string, std::size_t length) const override {
+        bool Iterate(Iterator &iter, std::string_view string,
+                     std::size_t length) const override {
             if (length % 4 != 0) {
                 throw SlokedError("UTF-32LE: Invalid length");
             }
@@ -83,20 +88,17 @@ namespace sloked {
             }
 
             iter.length = 4;
-            iter.value = string[iter.start]
-                | (string[iter.start + 1] << 8)
-                | (string[iter.start + 2] << 16)
-                | (string[iter.start + 3] << 24);
+            iter.value = string[iter.start] | (string[iter.start + 1] << 8) |
+                         (string[iter.start + 2] << 16) |
+                         (string[iter.start + 3] << 24);
             return true;
         }
 
         std::string Encode(char32_t chr) const override {
-            char buffer[] = {
-                static_cast<char>(chr & 0xff),
-                static_cast<char>((chr >> 8) & 0xff),
-                static_cast<char>((chr >> 16) & 0xff),
-                static_cast<char>((chr >> 24) & 0xff)
-            };
+            char buffer[] = {static_cast<char>(chr & 0xff),
+                             static_cast<char>((chr >> 8) & 0xff),
+                             static_cast<char>((chr >> 16) & 0xff),
+                             static_cast<char>((chr >> 24) & 0xff)};
             return std::string(buffer, 4);
         }
 
@@ -113,16 +115,18 @@ namespace sloked {
 
         std::string Encode(std::u32string_view u32str) const override {
             constexpr std::size_t MaxStaticBuffer = 16;
-            if (u32str.size() < MaxStaticBuffer){
+            if (u32str.size() < MaxStaticBuffer) {
                 char buffer[MaxStaticBuffer * 4];
                 return std::string(buffer, EncodeImpl(buffer, u32str) - buffer);
             } else {
                 std::unique_ptr<char[]> buffer(new char[u32str.size() * 4]);
-                return std::string(buffer.get(), EncodeImpl(buffer.get(), u32str) - buffer.get());
+                return std::string(
+                    buffer.get(),
+                    EncodeImpl(buffer.get(), u32str) - buffer.get());
             }
         }
     };
-    
+
     static Utf32LEEncoding utf32Encoding;
     const Encoding &Encoding::Utf32LE = utf32Encoding;
-}
+}  // namespace sloked

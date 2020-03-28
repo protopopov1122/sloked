@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,17 +20,21 @@
 */
 
 #include "sloked/sched/ThreadManager.h"
-#include "sloked/core/Error.h"
+
 #include <chrono>
 #include <thread>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
     static constexpr std::chrono::seconds PollTimeout{5};
     static constexpr unsigned int MaxInactivity = 12;
 
-    SlokedDefaultThreadManager::SlokedDefaultThreadManager(std::size_t max_workers)
-        : active{true}, max_workers{max_workers}, total_workers{0}, available_workers{0} {}
+    SlokedDefaultThreadManager::SlokedDefaultThreadManager(
+        std::size_t max_workers)
+        : active{true}, max_workers{max_workers}, total_workers{0},
+          available_workers{0} {}
 
     SlokedDefaultThreadManager::~SlokedDefaultThreadManager() {
         this->Shutdown();
@@ -42,7 +46,9 @@ namespace sloked {
             throw SlokedError("ThreadManager: Shutting down");
         }
         this->pending.push(std::move(task));
-        if ((this->total_workers.Load() < this->max_workers || this->max_workers == 0) && this->available_workers == 0) {
+        if ((this->total_workers.Load() < this->max_workers ||
+             this->max_workers == 0) &&
+            this->available_workers == 0) {
             this->SpawnWorker();
         }
         this->task_cv.notify_all();
@@ -71,7 +77,8 @@ namespace sloked {
     }
 
     void SlokedDefaultThreadManager::ProcessWorker() {
-        for (unsigned int counter = 0; this->active.load() && counter < MaxInactivity; counter++) {
+        for (unsigned int counter = 0;
+             this->active.load() && counter < MaxInactivity; counter++) {
             std::unique_lock lock(this->task_mtx);
             if (!this->pending.empty()) {
                 this->available_workers--;
@@ -89,4 +96,4 @@ namespace sloked {
             this->task_cv.wait_for(lock, PollTimeout);
         }
     }
-}
+}  // namespace sloked

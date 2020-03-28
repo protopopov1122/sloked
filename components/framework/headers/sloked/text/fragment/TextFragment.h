@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -29,9 +29,11 @@ namespace sloked {
     template <typename T>
     class TaggedTextFragment {
      public:
-        TaggedTextFragment(const TextPosition &start, const TextPosition &length, T &&tag)
+        TaggedTextFragment(const TextPosition &start,
+                           const TextPosition &length, T &&tag)
             : start(start), length(length), tag(std::forward<T>(tag)) {
-            this->end = TextPosition{this->start.line + this->length.line, this->start.column + this->length.column};
+            this->end = TextPosition{this->start.line + this->length.line,
+                                     this->start.column + this->length.column};
         }
 
         const TextPosition &GetStart() const {
@@ -51,8 +53,7 @@ namespace sloked {
         }
 
         bool Includes(const TextPosition &pos) const {
-            return (this->start < pos || this->start == pos) &&
-                pos < this->end;
+            return (this->start < pos || this->start == pos) && pos < this->end;
         }
 
         bool Includes(TextPosition::Line line) const {
@@ -63,7 +64,7 @@ namespace sloked {
             const TextPosition &selfEnd = this->GetEnd();
             const TextPosition &otherEnd = other.GetEnd();
             return (this->start <= other.start && other.start < selfEnd) ||
-                (other.start <= this->start && this->start < otherEnd);
+                   (other.start <= this->start && this->start < otherEnd);
         }
 
         bool operator<(const TaggedTextFragment<T> &other) const {
@@ -71,10 +72,8 @@ namespace sloked {
         }
 
         bool operator==(const TaggedTextFragment<T> &other) const {
-            return this->start == other.start &&
-                this->length == other.length &&
-                this->end == other.end &&
-                this->tag == other.tag;
+            return this->start == other.start && this->length == other.length &&
+                   this->end == other.end && this->tag == other.tag;
         }
 
         bool operator!=(const TaggedTextFragment<T> &other) const {
@@ -87,6 +86,6 @@ namespace sloked {
         TextPosition end;
         T tag;
     };
-}
+}  // namespace sloked
 
 #endif

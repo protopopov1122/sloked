@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,9 +22,10 @@
 #ifndef SLOKED_SCREEN_KEYBOARD_H_
 #define SLOKED_SCREEN_KEYBOARD_H_
 
-#include "sloked/Base.h"
-#include <variant>
 #include <string>
+#include <variant>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -78,9 +79,9 @@ namespace sloked {
     };
 
     struct SlokedKeyboardInput {
-      std::variant<std::string, SlokedControlKey> value;
-      bool alt;
+        std::variant<std::string, SlokedControlKey> value;
+        bool alt;
     };
-}
+}  // namespace sloked
 
 #endif

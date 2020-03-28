@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,14 +22,18 @@
 #ifndef SLOKED_TEXT_TEXTBLOCKHANDLE_H_
 #define SLOKED_TEXT_TEXTBLOCKHANDLE_H_
 
-#include "sloked/text/TextChunk.h"
 #include <variant>
+
+#include "sloked/text/TextChunk.h"
 
 namespace sloked {
 
     class TextBlockHandle : public TextBlockImpl<TextBlockHandle> {
      public:
-        TextBlockHandle(std::string_view, std::map<std::size_t, std::pair<std::size_t, std::size_t>>, const TextBlockFactory &);
+        TextBlockHandle(
+            std::string_view,
+            std::map<std::size_t, std::pair<std::size_t, std::size_t>>,
+            const TextBlockFactory &);
 
         std::size_t GetLastLine() const override;
         std::size_t GetTotalLength() const override;
@@ -42,8 +46,9 @@ namespace sloked {
         void InsertLine(std::size_t, std::string_view) override;
         void Optimize() override;
 
-        friend std::ostream &operator<<(std::ostream &, const TextBlockHandle &);
-    
+        friend std::ostream &operator<<(std::ostream &,
+                                        const TextBlockHandle &);
+
      private:
         void open_block() const;
 
@@ -55,6 +60,6 @@ namespace sloked {
         mutable std::variant<view, std::unique_ptr<TextBlock>> content;
         const TextBlockFactory &factory;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -26,12 +26,14 @@ namespace sloked {
 
     SlokedPosixFileWriter::SlokedPosixFileWriter(FILE *file)
         : SlokedPosixFileIO(file) {}
-    
+
     std::size_t SlokedPosixFileWriter::Write(std::string_view str) {
-        // ftruncate(fileno(this->file), ftell(this->file) + sizeof(std::string_view::value_type) * str.size());
-        return fwrite(str.data(), sizeof(std::string_view::value_type), str.size(), this->file);
+        // ftruncate(fileno(this->file), ftell(this->file) +
+        // sizeof(std::string_view::value_type) * str.size());
+        return fwrite(str.data(), sizeof(std::string_view::value_type),
+                      str.size(), this->file);
     }
-    
+
     bool SlokedPosixFileWriter::Write(Char chr) {
         return fputc(chr, this->file) != EOF;
     }
@@ -39,4 +41,4 @@ namespace sloked {
     bool SlokedPosixFileWriter::Flush() {
         return fflush(this->file) != EOF;
     }
-}
+}  // namespace sloked

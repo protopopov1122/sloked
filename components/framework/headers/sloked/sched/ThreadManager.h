@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,14 +22,15 @@
 #ifndef SLOKED_SCHED_THREADMANAGER_H_
 #define SLOKED_SCHED_THREADMANAGER_H_
 
-#include "sloked/core/Counter.h"
-#include <functional>
-#include <future>
-#include <exception>
-#include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <exception>
+#include <functional>
+#include <future>
+#include <mutex>
 #include <queue>
+
+#include "sloked/core/Counter.h"
 
 namespace sloked {
 
@@ -43,10 +44,11 @@ namespace sloked {
         virtual ~SlokedThreadManager() = default;
         virtual void Spawn(Task) = 0;
         virtual void Shutdown() = 0;
-    
+
         template <typename T, typename E = std::enable_if_t<!std::is_void_v<T>>>
         std::future<T> Spawn(Producer<T> producer) {
-            std::shared_ptr<std::promise<T>> promise = std::make_shared<std::promise<T>>();
+            std::shared_ptr<std::promise<T>> promise =
+                std::make_shared<std::promise<T>>();
             this->Spawn([producer = std::move(producer), promise] {
                 try {
                     promise->set_value(producer());
@@ -80,6 +82,6 @@ namespace sloked {
         SlokedCounter<std::size_t> total_workers;
         std::size_t available_workers;
     };
-}
+}  // namespace sloked
 
 #endif

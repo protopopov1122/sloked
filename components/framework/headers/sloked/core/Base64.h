@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_CORE_BASE64_H_
 #define SLOKED_CORE_BASE64_H_
 
-#include "sloked/Base.h"
+#include <cinttypes>
 #include <string>
 #include <vector>
-#include <cinttypes>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -38,9 +39,10 @@ namespace sloked {
 
         template <typename T>
         static std::string Encode(const T *begin, const T *end) {
-            return SlokedBase64::Encode(reinterpret_cast<Iterator>(begin), reinterpret_cast<Iterator>(end));
+            return SlokedBase64::Encode(reinterpret_cast<Iterator>(begin),
+                                        reinterpret_cast<Iterator>(end));
         }
     };
-}
+}  // namespace sloked
 
 #endif

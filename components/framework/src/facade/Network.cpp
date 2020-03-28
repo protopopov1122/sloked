@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,9 +20,10 @@
 */
 
 #include "sloked/facade/Network.h"
+
 #include "sloked/net/BufferedSocket.h"
-#include "sloked/net/CryptoSocket.h"
 #include "sloked/net/CompressedSocket.h"
+#include "sloked/net/CryptoSocket.h"
 
 namespace sloked {
 
@@ -53,15 +54,21 @@ namespace sloked {
         }
     }
 
-    void SlokedNetworkFacade::BufferingLayer(std::chrono::system_clock::duration timeout, SlokedSchedulerThread &sched) {
-        this->layers.push(std::make_unique<SlokedBufferedSocketFactory>(this->GetEngine(), std::move(timeout), sched));
-    }
-    
-    void SlokedNetworkFacade::CompressionLayer(SlokedCompression &compression) {
-        this->layers.push(std::make_unique<SlokedCompressedSocketFactory>(this->GetEngine(), compression));
+    void SlokedNetworkFacade::BufferingLayer(
+        std::chrono::system_clock::duration timeout,
+        SlokedSchedulerThread &sched) {
+        this->layers.push(std::make_unique<SlokedBufferedSocketFactory>(
+            this->GetEngine(), std::move(timeout), sched));
     }
 
-    void SlokedNetworkFacade::EncryptionLayer(SlokedCrypto &crypto, SlokedCrypto::Key &key) {
-        this->layers.push(std::make_unique<SlokedCryptoSocketFactory>(this->GetEngine(), crypto, key));
+    void SlokedNetworkFacade::CompressionLayer(SlokedCompression &compression) {
+        this->layers.push(std::make_unique<SlokedCompressedSocketFactory>(
+            this->GetEngine(), compression));
     }
-}
+
+    void SlokedNetworkFacade::EncryptionLayer(SlokedCrypto &crypto,
+                                              SlokedCrypto::Key &key) {
+        this->layers.push(std::make_unique<SlokedCryptoSocketFactory>(
+            this->GetEngine(), crypto, key));
+    }
+}  // namespace sloked

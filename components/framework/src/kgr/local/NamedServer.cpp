@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,6 +20,7 @@
 */
 
 #include "sloked/kgr/local/NamedServer.h"
+
 #include "sloked/core/Error.h"
 
 namespace sloked {
@@ -27,7 +28,8 @@ namespace sloked {
     KgrLocalNamedServer::KgrLocalNamedServer(KgrServer &server)
         : server(server) {}
 
-    std::unique_ptr<KgrPipe> KgrLocalNamedServer::Connect(const std::string &name) {
+    std::unique_ptr<KgrPipe> KgrLocalNamedServer::Connect(
+        const std::string &name) {
         std::unique_lock<std::mutex> lock(this->mtx);
         if (this->names.count(name) != 0) {
             return this->server.Connect(this->names.at(name));
@@ -36,19 +38,20 @@ namespace sloked {
         }
     }
 
-    KgrLocalNamedServer::Connector KgrLocalNamedServer::GetConnector(const std::string &name) {
+    KgrLocalNamedServer::Connector KgrLocalNamedServer::GetConnector(
+        const std::string &name) {
         std::unique_lock<std::mutex> lock(this->mtx);
-        return [this, name]() {
-            return this->Connect(name);
-        };
+        return [this, name]() { return this->Connect(name); };
     }
-    
-    void KgrLocalNamedServer::Register(const std::string &name, std::unique_ptr<KgrService> service) {
+
+    void KgrLocalNamedServer::Register(const std::string &name,
+                                       std::unique_ptr<KgrService> service) {
         std::unique_lock<std::mutex> lock(this->mtx);
         if (this->names.count(name) == 0) {
             this->names[name] = this->server.Register(std::move(service));
         } else {
-            throw SlokedError("KgrNamedServer: Name \'" + name + "\' already exists");
+            throw SlokedError("KgrNamedServer: Name \'" + name +
+                              "\' already exists");
         }
     }
 
@@ -67,4 +70,4 @@ namespace sloked {
             throw SlokedError("KgrNamedServer: Unknown name \'" + name + "\'");
         }
     }
-}
+}  // namespace sloked

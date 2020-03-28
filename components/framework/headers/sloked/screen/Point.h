@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,8 +22,9 @@
 #ifndef SLOKED_SCREEN_POINT_H_
 #define SLOKED_SCREEN_POINT_H_
 
-#include "sloked/Base.h"
 #include <cinttypes>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -42,6 +43,6 @@ namespace sloked {
         static const SlokedGraphicsPoint Min;
         static const SlokedGraphicsPoint Max;
     };
-}
+}  // namespace sloked
 
 #endif

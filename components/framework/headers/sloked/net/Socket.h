@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,15 +22,16 @@
 #ifndef SLOKED_NET_SOCKET_H_
 #define SLOKED_NET_SOCKET_H_
 
-#include "sloked/core/Span.h"
-#include "sloked/core/Scope.h"
-#include "sloked/core/awaitable/Awaitable.h"
-#include "sloked/core/Crypto.h"
-#include <vector>
-#include <optional>
-#include <memory>
 #include <chrono>
+#include <memory>
+#include <optional>
 #include <variant>
+#include <vector>
+
+#include "sloked/core/Crypto.h"
+#include "sloked/core/Scope.h"
+#include "sloked/core/Span.h"
+#include "sloked/core/awaitable/Awaitable.h"
 
 namespace sloked {
 
@@ -52,7 +53,8 @@ namespace sloked {
         virtual bool Valid() = 0;
         virtual void Close() = 0;
         virtual std::size_t Available() = 0;
-        virtual bool Wait(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) = 0;
+        virtual bool Wait(std::chrono::system_clock::duration =
+                              std::chrono::system_clock::duration::zero()) = 0;
         virtual std::optional<uint8_t> Read() = 0;
         virtual std::vector<uint8_t> Read(std::size_t) = 0;
         virtual void Write(SlokedSpan<const uint8_t>) = 0;
@@ -75,7 +77,9 @@ namespace sloked {
         virtual bool Valid() = 0;
         virtual void Start() = 0;
         virtual void Close() = 0;
-        virtual std::unique_ptr<SlokedSocket> Accept(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) = 0;
+        virtual std::unique_ptr<SlokedSocket> Accept(
+            std::chrono::system_clock::duration =
+                std::chrono::system_clock::duration::zero()) = 0;
         virtual std::unique_ptr<SlokedIOAwaitable> Awaitable() const = 0;
 
      protected:
@@ -106,12 +110,14 @@ namespace sloked {
         SlokedSocketFactory &operator=(const SlokedSocketFactory &) = delete;
         SlokedSocketFactory &operator=(SlokedSocketFactory &&) = delete;
 
-        virtual std::unique_ptr<SlokedSocket> Connect(const SlokedSocketAddress &) = 0;
-        virtual std::unique_ptr<SlokedServerSocket> Bind(const SlokedSocketAddress &) = 0;
+        virtual std::unique_ptr<SlokedSocket> Connect(
+            const SlokedSocketAddress &) = 0;
+        virtual std::unique_ptr<SlokedServerSocket> Bind(
+            const SlokedSocketAddress &) = 0;
 
      protected:
         SlokedSocketFactory() = default;
     };
-}
+}  // namespace sloked
 
 #endif

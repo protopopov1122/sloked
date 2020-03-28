@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,8 +20,10 @@
 */
 
 #include "sloked/compression/Zlib.h"
-#include "sloked/core/Error.h"
+
 #include <zlib.h>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
@@ -31,7 +33,7 @@ namespace sloked {
     };
 
     SlokedZlibCompression::ZlibCompressor::ZlibCompressor(Level level)
-        : state(std::make_unique<State>()){
+        : state(std::make_unique<State>()) {
         this->state->compress.zalloc = Z_NULL;
         this->state->compress.zfree = Z_NULL;
         this->state->compress.opaque = Z_NULL;
@@ -44,7 +46,7 @@ namespace sloked {
             case DefaultLevel:
                 deflateInit(&this->state->compress, Z_DEFAULT_COMPRESSION);
                 break;
-            
+
             case MinLevel:
                 deflateInit(&this->state->compress, Z_NO_COMPRESSION);
                 break;
@@ -58,7 +60,6 @@ namespace sloked {
                 }
                 break;
         }
-        
 
         this->state->decompress.zalloc = Z_NULL;
         this->state->decompress.zfree = Z_NULL;
@@ -76,18 +77,22 @@ namespace sloked {
         inflateEnd(&this->state->decompress);
     }
 
-    SlokedZlibCompression::Compressor::Data SlokedZlibCompression::ZlibCompressor::Compress(SlokedSpan<const uint8_t> input) {
+    SlokedZlibCompression::Compressor::Data
+        SlokedZlibCompression::ZlibCompressor::Compress(
+            SlokedSpan<const uint8_t> input) {
         Data output;
-        output.insert(output.end(), deflateBound(&this->state->compress, input.Size()), 0);
+        output.insert(output.end(),
+                      deflateBound(&this->state->compress, input.Size()), 0);
 
         this->state->compress.avail_in = input.Size();
         this->state->compress.next_in = (Bytef *) input.Data();
         this->state->compress.avail_out = (uInt) output.size();
-        this->state->compress.next_out = (Bytef *)output.data();
+        this->state->compress.next_out = (Bytef *) output.data();
 
         auto err = deflate(&this->state->compress, Z_FINISH);
         if (err == Z_STREAM_END) {
-            output.erase(output.begin() + this->state->compress.total_out, output.end());
+            output.erase(output.begin() + this->state->compress.total_out,
+                         output.end());
             deflateReset(&this->state->compress);
             return output;
         } else {
@@ -96,14 +101,16 @@ namespace sloked {
         }
     }
 
-    SlokedZlibCompression::Compressor::Data SlokedZlibCompression::ZlibCompressor::Decompress(SlokedSpan<const uint8_t> input, std::size_t size) {
+    SlokedZlibCompression::Compressor::Data
+        SlokedZlibCompression::ZlibCompressor::Decompress(
+            SlokedSpan<const uint8_t> input, std::size_t size) {
         Data output;
         output.insert(output.end(), size, 0);
 
         this->state->decompress.avail_in = (uInt) input.Size();
         this->state->decompress.next_in = (Bytef *) input.Data();
         this->state->decompress.avail_out = (uInt) size;
-        this->state->decompress.next_out = (Bytef *)output.data();
+        this->state->decompress.next_out = (Bytef *) output.data();
 
         auto err = inflate(&this->state->decompress, Z_NO_FLUSH);
         inflateReset(&this->state->decompress);
@@ -114,7 +121,8 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedZlibCompression::Compressor> SlokedZlibCompression::NewCompressor(Level level) {
+    std::unique_ptr<SlokedZlibCompression::Compressor>
+        SlokedZlibCompression::NewCompressor(Level level) {
         return std::make_unique<ZlibCompressor>(level);
     }
-}
+}  // namespace sloked

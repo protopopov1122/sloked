@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -31,9 +31,13 @@ namespace sloked {
 
     class SlokedTerminalScreenProvider : public SlokedScreenProvider {
      public:
-        SlokedTerminalScreenProvider(SlokedTerminal &, const Encoding &, const SlokedCharPreset &, SlokedTerminalInputSource &, SlokedScreenSize &);
+        SlokedTerminalScreenProvider(SlokedTerminal &, const Encoding &,
+                                     const SlokedCharPreset &,
+                                     SlokedTerminalInputSource &,
+                                     SlokedScreenSize &);
         void Render(std::function<void(SlokedScreenComponent &)>) final;
-        std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration) final;
+        std::vector<SlokedKeyboardInput> ReceiveInput(
+            std::chrono::system_clock::duration) final;
         SlokedMonitor<SlokedScreenComponent &> &GetScreen() final;
         SlokedScreenSize &GetSize() final;
         const Encoding &GetEncoding() final;
@@ -46,6 +50,6 @@ namespace sloked {
         SlokedTerminalInputSource &inputSource;
         SlokedScreenSize &screenSize;
     };
-}
+}  // namespace sloked
 
 #endif

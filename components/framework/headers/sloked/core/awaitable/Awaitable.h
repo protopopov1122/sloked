@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,11 +22,12 @@
 #ifndef SLOKED_CORE_AWAITABLE_AWAITABLE_H_
 #define SLOKED_CORE_AWAITABLE_AWAITABLE_H_
 
-#include "sloked/Base.h"
+#include <chrono>
 #include <cinttypes>
 #include <functional>
 #include <memory>
-#include <chrono>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -41,9 +42,11 @@ namespace sloked {
      public:
         virtual ~SlokedIOPoll() = default;
         virtual SlokedIOAwaitable::SystemId GetSystemId() const = 0;
-        virtual std::function<void()> Attach(std::unique_ptr<SlokedIOAwaitable>, std::function<void()>) = 0;
-        virtual void Await(std::chrono::system_clock::duration = std::chrono::system_clock::duration::zero()) = 0;
+        virtual std::function<void()> Attach(std::unique_ptr<SlokedIOAwaitable>,
+                                             std::function<void()>) = 0;
+        virtual void Await(std::chrono::system_clock::duration =
+                               std::chrono::system_clock::duration::zero()) = 0;
     };
-}
+}  // namespace sloked
 
 #endif

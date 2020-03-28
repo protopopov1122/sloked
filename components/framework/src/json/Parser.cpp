@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,8 +20,10 @@
 */
 
 #include "sloked/json/Parser.h"
-#include "sloked/core/Error.h"
+
 #include <sstream>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
@@ -29,7 +31,7 @@ namespace sloked {
         : lexer(lexer), buffer_offset{0}, buffer_size{0} {
         this->Shift();
     }
-    
+
     std::unique_ptr<JsonASTNode> JsonDefaultParser::Parse() {
         return this->NextValue();
     }
@@ -58,7 +60,8 @@ namespace sloked {
         JsonSourcePosition position = this->lexem.value().position;
         this->Shift();
         std::vector<std::shared_ptr<JsonASTNode>> elements;
-        while (this->lexem.has_value() && !this->IsSymbol(JsonLexem::Symbol::ClosingBracket)) {
+        while (this->lexem.has_value() &&
+               !this->IsSymbol(JsonLexem::Symbol::ClosingBracket)) {
             auto element = this->NextValue();
             if (element) {
                 elements.push_back(std::move(element));
@@ -72,10 +75,11 @@ namespace sloked {
                 this->ThrowError("Expected \']\'|\',\'");
             }
         }
-        
+
         if (this->IsSymbol(JsonLexem::Symbol::ClosingBracket)) {
             this->Shift();
-            return std::make_unique<JsonArrayNode>(std::move(elements), position);
+            return std::make_unique<JsonArrayNode>(std::move(elements),
+                                                   position);
         } else {
             this->ThrowError("Expected \']\'");
         }
@@ -93,7 +97,8 @@ namespace sloked {
         JsonSourcePosition position = this->lexem.value().position;
         this->Shift();
         std::map<std::string, std::unique_ptr<JsonASTNode>> members;
-        while (this->lexem.has_value() && !this->IsSymbol(JsonLexem::Symbol::ClosingBrace)) {
+        while (this->lexem.has_value() &&
+               !this->IsSymbol(JsonLexem::Symbol::ClosingBrace)) {
             if (!this->HasString()) {
                 this->ThrowError("Expected string literal");
             }
@@ -119,7 +124,8 @@ namespace sloked {
 
         if (this->IsSymbol(JsonLexem::Symbol::ClosingBrace)) {
             this->Shift();
-            return std::make_unique<JsonObjectNode>(std::move(members), position);
+            return std::make_unique<JsonObjectNode>(std::move(members),
+                                                    position);
         } else {
             this->ThrowError("Expected \'}\'");
         }
@@ -127,7 +133,7 @@ namespace sloked {
 
     bool JsonDefaultParser::HasConstant() const {
         return this->lexem.has_value() &&
-            this->lexem.value().type != JsonLexem::Type::Symbol;
+               this->lexem.value().type != JsonLexem::Type::Symbol;
     }
 
     std::unique_ptr<JsonASTNode> JsonDefaultParser::NextConstant() {
@@ -137,14 +143,15 @@ namespace sloked {
 
         JsonSourcePosition position = this->lexem.value().position;
         if (this->HasString()) {
-            return std::make_unique<JsonConstantNode>(this->NextString(), position);
+            return std::make_unique<JsonConstantNode>(this->NextString(),
+                                                      position);
         } else if (this->HasInteger()) {
             return this->NextInteger();
         } else if (this->lexem.value().type == JsonLexem::Type::Boolean) {
             auto value = std::get<bool>(this->lexem.value().value);
             this->Shift();
             return std::make_unique<JsonConstantNode>(value, position);
-        } else  if (this->lexem.value().type == JsonLexem::Type::Null) {
+        } else if (this->lexem.value().type == JsonLexem::Type::Null) {
             this->Shift();
             return std::make_unique<JsonConstantNode>(position);
         } else if (this->HasNumber()) {
@@ -156,7 +163,7 @@ namespace sloked {
 
     bool JsonDefaultParser::HasInteger() const {
         return this->lexem.has_value() &&
-            this->lexem.value().type == JsonLexem::Type::Integer;
+               this->lexem.value().type == JsonLexem::Type::Integer;
     }
 
     std::unique_ptr<JsonASTNode> JsonDefaultParser::NextInteger() {
@@ -172,7 +179,7 @@ namespace sloked {
 
     bool JsonDefaultParser::HasNumber() const {
         return this->lexem.has_value() &&
-            this->lexem.value().type == JsonLexem::Type::Number;
+               this->lexem.value().type == JsonLexem::Type::Number;
     }
 
     std::unique_ptr<JsonASTNode> JsonDefaultParser::NextNumber() {
@@ -188,7 +195,7 @@ namespace sloked {
 
     bool JsonDefaultParser::HasString() const {
         return this->lexem.has_value() &&
-            this->lexem.value().type == JsonLexem::Type::String;
+               this->lexem.value().type == JsonLexem::Type::String;
     }
 
     std::string JsonDefaultParser::NextString() {
@@ -208,7 +215,8 @@ namespace sloked {
             while (this->buffer_size < BufferSize) {
                 auto lexem = this->lexer.Next();
                 if (lexem.has_value()) {
-                    this->buffer[this->buffer_size++] = std::move(lexem.value());
+                    this->buffer[this->buffer_size++] =
+                        std::move(lexem.value());
                 } else {
                     break;
                 }
@@ -223,11 +231,12 @@ namespace sloked {
 
     bool JsonDefaultParser::IsSymbol(JsonLexem::Symbol symbol) const {
         return this->lexem.has_value() &&
-            this->lexem.value().type == JsonLexem::Type::Symbol &&
-            std::get<JsonLexem::Symbol>(this->lexem.value().value) == symbol;
+               this->lexem.value().type == JsonLexem::Type::Symbol &&
+               std::get<JsonLexem::Symbol>(this->lexem.value().value) == symbol;
     }
 
-    [[noreturn]] void JsonDefaultParser::ThrowError(std::string_view msg) const {
+    [[noreturn]] void JsonDefaultParser::ThrowError(
+        std::string_view msg) const {
         std::stringstream ss;
         ss << "JSON Parser: Error \'" << msg << "\'";
         if (this->lexem.has_value()) {
@@ -240,4 +249,4 @@ namespace sloked {
         }
         throw SlokedError(ss.str());
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,15 +22,15 @@
 #ifndef SLOKED_FACADE_SERVICES_H_
 #define SLOKED_FACADE_SERVICES_H_
 
-#include "sloked/kgr/local/Context.h"
-#include "sloked/kgr/ctx-manager/RunnableContextManager.h"
-#include "sloked/core/Logger.h"
-#include "sloked/kgr/NamedServer.h"
-#include "sloked/namespace/Mount.h"
 #include "sloked/core/CharPreset.h"
-#include "sloked/text/fragment/TaggedText.h"
+#include "sloked/core/Logger.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
+#include "sloked/kgr/NamedServer.h"
+#include "sloked/kgr/ctx-manager/RunnableContextManager.h"
+#include "sloked/kgr/local/Context.h"
+#include "sloked/namespace/Mount.h"
 #include "sloked/namespace/Root.h"
+#include "sloked/text/fragment/TaggedText.h"
 
 namespace sloked {
 
@@ -46,9 +46,14 @@ namespace sloked {
         virtual SlokedEditorDocumentSet &GetDocuments() = 0;
     };
 
-    class SlokedServiceDependencyDefaultProvider : public SlokedServiceDependencyProvider {
+    class SlokedServiceDependencyDefaultProvider
+        : public SlokedServiceDependencyProvider {
      public:
-        SlokedServiceDependencyDefaultProvider(SlokedLogger &, std::unique_ptr<SlokedRootNamespace>, const SlokedCharPreset &, KgrNamedServer &, KgrContextManager<KgrLocalContext> &, SlokedTextTaggerRegistry<int> * = nullptr);
+        SlokedServiceDependencyDefaultProvider(
+            SlokedLogger &, std::unique_ptr<SlokedRootNamespace>,
+            const SlokedCharPreset &, KgrNamedServer &,
+            KgrContextManager<KgrLocalContext> &,
+            SlokedTextTaggerRegistry<int> * = nullptr);
         KgrContextManager<KgrLocalContext> &GetContextManager() override;
         SlokedTextTaggerRegistry<int> &GetTaggers() override;
         SlokedLogger &GetLogger() override;
@@ -85,8 +90,10 @@ namespace sloked {
         std::unique_ptr<KgrService> Build(const std::string &) final;
 
      private:
-        std::map<std::string, std::function<std::unique_ptr<KgrService>(SlokedServiceDependencyProvider &)>> builders;
+        std::map<std::string, std::function<std::unique_ptr<KgrService>(
+                                  SlokedServiceDependencyProvider &)>>
+            builders;
     };
-}
+}  // namespace sloked
 
 #endif

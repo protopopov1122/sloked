@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,21 +23,25 @@
 #define SLOKED_SCREEN_WIDGETS_TEXTEDITOR_H_
 
 #include "sloked/core/Encoding.h"
+#include "sloked/core/OrderedCache.h"
+#include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/screen/widgets/TextPane.h"
 #include "sloked/screen/widgets/TextPaneWidget.h"
-#include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentNotify.h"
 #include "sloked/services/TextRender.h"
-#include "sloked/core/OrderedCache.h"
 
 namespace sloked {
 
     class SlokedTextEditor : public SlokedTextPaneWidget {
      public:
-        SlokedTextEditor(const Encoding &, std::unique_ptr<KgrPipe>, std::function<void(SlokedCursorClient &)>, std::unique_ptr<KgrPipe>,
-          std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, const std::string &,
-          SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black, SlokedForegroundGraphics = SlokedForegroundGraphics::White);
+        SlokedTextEditor(
+            const Encoding &, std::unique_ptr<KgrPipe>,
+            std::function<void(SlokedCursorClient &)>, std::unique_ptr<KgrPipe>,
+            std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId,
+            const std::string &,
+            SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black,
+            SlokedForegroundGraphics = SlokedForegroundGraphics::White);
 
         bool ProcessInput(const SlokedKeyboardInput &) override;
         void Render(SlokedTextPane &) override;
@@ -55,6 +59,6 @@ namespace sloked {
         TextPosition cursorOffset;
         SlokedOrderedCache<TextPosition::Line, KgrValue> renderCache;
     };
-}
+}  // namespace sloked
 
 #endif

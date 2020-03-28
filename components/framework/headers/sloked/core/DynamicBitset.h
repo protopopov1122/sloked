@@ -1,15 +1,17 @@
 #ifndef SLOKED_CORE_DYNAMICBITSET_H_
 #define SLOKED_CORE_DYNAMICBITSET_H_
 
-#include "sloked/Base.h"
-#include <vector>
 #include <cinttypes>
 #include <climits>
+#include <vector>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
     class SlokedDynamicBitset {
         using Integer = uint64_t;
+
      public:
         static constexpr std::size_t MinWidth = sizeof(Integer) * CHAR_BIT;
         SlokedDynamicBitset();
@@ -21,6 +23,6 @@ namespace sloked {
      private:
         std::vector<Integer> bits;
     };
-}
+}  // namespace sloked
 
 #endif

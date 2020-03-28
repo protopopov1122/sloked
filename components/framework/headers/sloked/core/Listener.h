@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_CORE_LISTENER_H_
 #define SLOKED_CORE_LISTENER_H_
 
-#include "sloked/Base.h"
+#include <algorithm>
 #include <memory>
 #include <vector>
-#include <algorithm>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -33,15 +34,17 @@ namespace sloked {
     class SlokedListenerManager : public virtual P {
      public:
         virtual ~SlokedListenerManager() = default;
-        
+
         void AddListener(std::shared_ptr<T> listener) override {
             this->listeners.push_back(listener);
         }
 
         void RemoveListener(const T &listener) override {
-            this->listeners.erase(std::remove_if(this->listeners.begin(), this->listeners.end(), [&](const auto &l) {
-                return l.get() == &listener;
-            }), this->listeners.end());
+            this->listeners.erase(
+                std::remove_if(
+                    this->listeners.begin(), this->listeners.end(),
+                    [&](const auto &l) { return l.get() == &listener; }),
+                this->listeners.end());
         }
 
         void ClearListeners() override {
@@ -59,6 +62,6 @@ namespace sloked {
      private:
         std::vector<std::shared_ptr<T>> listeners;
     };
-}
+}  // namespace sloked
 
 #endif

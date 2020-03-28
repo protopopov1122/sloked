@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,15 +22,17 @@
 #ifndef SLOKED_EDITOR_MANAGER_H_
 #define SLOKED_EDITOR_MANAGER_H_
 
+#include "sloked/core/Compression.h"
 #include "sloked/editor/EditorInstance.h"
 #include "sloked/namespace/Root.h"
-#include "sloked/core/Compression.h"
 
 namespace sloked {
 
-    class SlokedEditorManager : public SlokedCloseable, public SlokedEditorInstanceContainer {
+    class SlokedEditorManager : public SlokedCloseable,
+                                public SlokedEditorInstanceContainer {
      public:
-        using EditorFactory = std::function<std::unique_ptr<SlokedEditorInstance>()>;
+        using EditorFactory =
+            std::function<std::unique_ptr<SlokedEditorInstance>()>;
         class Parameters {
          public:
             Parameters(SlokedLogger &, SlokedRootNamespaceFactory &);
@@ -41,6 +43,7 @@ namespace sloked {
             Parameters &SetScreenProviders(SlokedScreenProviderFactory &);
 
             friend class SlokedEditorManager;
+
          private:
             SlokedLogger &logger;
             SlokedRootNamespaceFactory &root;
@@ -63,16 +66,20 @@ namespace sloked {
 
         bool Has(const std::string &) const final;
         SlokedEditorInstance &Get(const std::string &) const final;
-        void Enumerate(std::function<void(const std::string, SlokedEditorInstance &)>) const final;
-        SlokedEditorInstance &Spawn(const std::string &, const KgrValue &) final;
+        void Enumerate(std::function<void(const std::string,
+                                          SlokedEditorInstance &)>) const final;
+        SlokedEditorInstance &Spawn(const std::string &,
+                                    const KgrValue &) final;
         void Shutdown(const std::string &) final;
 
      private:
         void SetupCrypto(SlokedEditorInstance &, const KgrDictionary &);
-        void SetupMasterAuth(SlokedEditorInstance &, const KgrDictionary &, const std::string &);
-        void SetupSlaveAuth(SlokedEditorInstance &, const KgrDictionary &, const std::string &);
+        void SetupMasterAuth(SlokedEditorInstance &, const KgrDictionary &,
+                             const std::string &);
+        void SetupSlaveAuth(SlokedEditorInstance &, const KgrDictionary &,
+                            const std::string &);
         void SetupServer(SlokedEditorInstance &, const KgrDictionary &);
-        
+
         std::map<std::string, std::unique_ptr<SlokedEditorInstance>> editors;
         SlokedLogger &logger;
         SlokedRootNamespaceFactory &namespaceFactory;
@@ -82,6 +89,6 @@ namespace sloked {
         SlokedCompression *compression;
         SlokedScreenProviderFactory *screenProviders;
     };
-}
+}  // namespace sloked
 
 #endif

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,10 +23,12 @@
 
 namespace sloked {
 
-    SlokedServerFacade::SlokedServerFacade(std::unique_ptr<SlokedLocalEditorServer> srv)
+    SlokedServerFacade::SlokedServerFacade(
+        std::unique_ptr<SlokedLocalEditorServer> srv)
         : server(std::move(srv)) {}
 
-    SlokedServerFacade::SlokedServerFacade(std::unique_ptr<SlokedRemoteEditorServer> srv)
+    SlokedServerFacade::SlokedServerFacade(
+        std::unique_ptr<SlokedRemoteEditorServer> srv)
         : server(std::move(srv)) {}
 
     bool SlokedServerFacade::IsLocal() const {
@@ -65,9 +67,14 @@ namespace sloked {
         }
     }
 
-    void SlokedServerFacade::SpawnNetServer(SlokedSocketFactory &socketFactory, const SlokedSocketAddress &addr, SlokedIOPoller &io, SlokedNamedRestrictionAuthority *restrictions, SlokedAuthenticatorFactory *authFactory) {
+    void SlokedServerFacade::SpawnNetServer(
+        SlokedSocketFactory &socketFactory, const SlokedSocketAddress &addr,
+        SlokedIOPoller &io, SlokedNamedRestrictionAuthority *restrictions,
+        SlokedAuthenticatorFactory *authFactory) {
         if (this->netServer == nullptr) {
-            this->netServer = std::make_unique<KgrMasterNetServer>(this->GetServer(), socketFactory.Bind(addr), io, restrictions, authFactory);
+            this->netServer = std::make_unique<KgrMasterNetServer>(
+                this->GetServer(), socketFactory.Bind(addr), io, restrictions,
+                authFactory);
         } else {
             throw SlokedError("Editor: network server already spawned");
         }
@@ -80,7 +87,7 @@ namespace sloked {
             return this->AsRemoteServer().GetServer();
         }
     }
-    
+
     SlokedNamedRestrictionTarget &SlokedServerFacade::GetRestrictions() {
         if (this->IsLocal()) {
             return this->AsLocalServer().GetRestrictions();
@@ -88,7 +95,7 @@ namespace sloked {
             return this->AsRemoteServer().GetRestrictions();
         }
     }
-    
+
     void SlokedServerFacade::Start() {
         if (this->IsLocal()) {
             this->AsLocalServer().Start();
@@ -110,4 +117,4 @@ namespace sloked {
             this->AsRemoteServer().Close();
         }
     }
-}
+}  // namespace sloked

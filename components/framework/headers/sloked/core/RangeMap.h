@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,15 +22,16 @@
 #ifndef SLOKED_CORE_RANGEMAP_H_
 #define SLOKED_CORE_RANGEMAP_H_
 
+#include <limits>
+#include <map>
+#include <optional>
+
 #include "sloked/Base.h"
 #include "sloked/core/Error.h"
-#include <map>
-#include <limits>
-#include <optional>
 
 namespace sloked {
 
-    template<typename Key, typename Value>
+    template <typename Key, typename Value>
     class RangeMap {
      public:
         RangeMap(const Key &minKey = std::numeric_limits<Key>::lowest())
@@ -46,7 +47,8 @@ namespace sloked {
         RangeMap &operator=(RangeMap &&) = default;
 
         const Value &At(const Key &key) const {
-            const std::optional<Value> &range = std::prev(this->ranges.upper_bound(key))->second;
+            const std::optional<Value> &range =
+                std::prev(this->ranges.upper_bound(key))->second;
             if (range.has_value()) {
                 return range.value();
             } else {
@@ -78,31 +80,35 @@ namespace sloked {
                 insertAtBegin = true;
             }
             std::optional<Value> outerRangeTail = std::prev(rangeEnd)->second;
-            
+
             this->ranges.erase(rangeBegin, rangeEnd);
-            
+
             if (!insertAtBegin && outerRangeBegin == rangesEnd) {
-                this->ranges.insert(outerRangeBegin, std::make_pair(begin, value));
+                this->ranges.insert(outerRangeBegin,
+                                    std::make_pair(begin, value));
             } else if (!insertAtBegin && !(outerRangeBegin->second == value)) {
-                this->ranges.insert(std::next(outerRangeBegin), std::make_pair(begin, value));
+                this->ranges.insert(std::next(outerRangeBegin),
+                                    std::make_pair(begin, value));
             } else if (insertAtBegin) {
-                this->ranges.insert_or_assign(this->ranges.begin(), begin, value);
+                this->ranges.insert_or_assign(this->ranges.begin(), begin,
+                                              value);
             }
 
             if ((rangeEnd == rangesEnd ||
-                !(std::prev(rangeEnd)->second == outerRangeTail)) &&
+                 !(std::prev(rangeEnd)->second == outerRangeTail)) &&
                 !(outerRangeTail == value)) {
-                this->ranges.insert(rangeEnd, std::make_pair(end, outerRangeTail));
+                this->ranges.insert(rangeEnd,
+                                    std::make_pair(end, outerRangeTail));
             }
         }
 
      private:
-        using RangeIterator = typename std::map<Key, std::optional<Value>>::const_iterator;
+        using RangeIterator =
+            typename std::map<Key, std::optional<Value>>::const_iterator;
 
         const Key minKey;
         std::map<Key, std::optional<Value>> ranges;
     };
-}
-
+}  // namespace sloked
 
 #endif

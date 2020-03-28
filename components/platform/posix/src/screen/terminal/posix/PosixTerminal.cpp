@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,81 +20,81 @@
 */
 
 #include "sloked/screen/terminal/posix/PosixTerminal.h"
-#include "sloked/core/String.h"
-#include "sloked/core/posix/Time.h"
-#include <optional>
-#include <map>
-#include <array>
-#include <cassert>
+
+#include <sys/ioctl.h>
 #include <termcap.h>
 #include <termios.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
+
+#include <array>
+#include <cassert>
+#include <map>
+#include <optional>
+
+#include "sloked/core/String.h"
+#include "sloked/core/posix/Time.h"
 
 namespace sloked {
 
-    static const std::vector<std::pair<std::string, SlokedControlKey>> TermcapSpecialKeys = {
-        { "ku", SlokedControlKey::ArrowUp },
-        { "kd", SlokedControlKey::ArrowDown },
-        { "kr", SlokedControlKey::ArrowRight },
-        { "kl", SlokedControlKey::ArrowLeft },
-        { "kb", SlokedControlKey::Backspace },
-        { "kD", SlokedControlKey::Delete },
-        { "kI", SlokedControlKey::Insert },
-        { "kN", SlokedControlKey::PageDown },
-        { "kP", SlokedControlKey::PageUp },
-        { "kh", SlokedControlKey::Home },
-        { "k1", SlokedControlKey::F1 },
-        { "k2", SlokedControlKey::F2 },
-        { "k3", SlokedControlKey::F3 },
-        { "k4", SlokedControlKey::F4 },
-        { "k5", SlokedControlKey::F5 },
-        { "k6", SlokedControlKey::F6 },
-        { "k7", SlokedControlKey::F7 },
-        { "k8", SlokedControlKey::F8 },
-        { "k9", SlokedControlKey::F9 },
-        { "k;", SlokedControlKey::F10 },
-        { "F1", SlokedControlKey::F11 },
-        { "F2", SlokedControlKey::F12 }
-    };
+    static const std::vector<std::pair<std::string, SlokedControlKey>>
+        TermcapSpecialKeys = {{"ku", SlokedControlKey::ArrowUp},
+                              {"kd", SlokedControlKey::ArrowDown},
+                              {"kr", SlokedControlKey::ArrowRight},
+                              {"kl", SlokedControlKey::ArrowLeft},
+                              {"kb", SlokedControlKey::Backspace},
+                              {"kD", SlokedControlKey::Delete},
+                              {"kI", SlokedControlKey::Insert},
+                              {"kN", SlokedControlKey::PageDown},
+                              {"kP", SlokedControlKey::PageUp},
+                              {"kh", SlokedControlKey::Home},
+                              {"k1", SlokedControlKey::F1},
+                              {"k2", SlokedControlKey::F2},
+                              {"k3", SlokedControlKey::F3},
+                              {"k4", SlokedControlKey::F4},
+                              {"k5", SlokedControlKey::F5},
+                              {"k6", SlokedControlKey::F6},
+                              {"k7", SlokedControlKey::F7},
+                              {"k8", SlokedControlKey::F8},
+                              {"k9", SlokedControlKey::F9},
+                              {"k;", SlokedControlKey::F10},
+                              {"F1", SlokedControlKey::F11},
+                              {"F2", SlokedControlKey::F12}};
 
     static const std::map<std::string, std::string> CompatConversions = {
-        { "\033OA", "\033[A" },
-        { "\033OB", "\033[B" },
-        { "\033OC", "\033[C" },
-        { "\033OD", "\033[D" },
-        { "\033OH", "\033[H" }
-    };
-    
+        {"\033OA", "\033[A"},
+        {"\033OB", "\033[B"},
+        {"\033OC", "\033[C"},
+        {"\033OD", "\033[D"},
+        {"\033OH", "\033[H"}};
+
     static const std::map<char, SlokedControlKey> ControlKeys = {
-        { '\000', SlokedControlKey::CtrlSpace },
-        { '\001', SlokedControlKey::CtrlA },
-        { '\002', SlokedControlKey::CtrlB },
-        { '\004', SlokedControlKey::CtrlD },
-        { '\005', SlokedControlKey::CtrlE },
-        { '\006', SlokedControlKey::CtrlF },
-        { '\007', SlokedControlKey::CtrlG },
-        { '\010', SlokedControlKey::CtrlH },
-        { '\013', SlokedControlKey::CtrlK },
-        { '\014', SlokedControlKey::CtrlL },
-        { '\016', SlokedControlKey::CtrlN },
-        { '\017', SlokedControlKey::CtrlO },
-        { '\020', SlokedControlKey::CtrlP },
-        { '\022', SlokedControlKey::CtrlR },
-        { '\024', SlokedControlKey::CtrlT },
-        { '\025', SlokedControlKey::CtrlU },
-        { '\026', SlokedControlKey::CtrlV },
-        { '\027', SlokedControlKey::CtrlW },
-        { '\030', SlokedControlKey::CtrlX },
-        { '\031', SlokedControlKey::CtrlY },
+        {'\000', SlokedControlKey::CtrlSpace},
+        {'\001', SlokedControlKey::CtrlA},
+        {'\002', SlokedControlKey::CtrlB},
+        {'\004', SlokedControlKey::CtrlD},
+        {'\005', SlokedControlKey::CtrlE},
+        {'\006', SlokedControlKey::CtrlF},
+        {'\007', SlokedControlKey::CtrlG},
+        {'\010', SlokedControlKey::CtrlH},
+        {'\013', SlokedControlKey::CtrlK},
+        {'\014', SlokedControlKey::CtrlL},
+        {'\016', SlokedControlKey::CtrlN},
+        {'\017', SlokedControlKey::CtrlO},
+        {'\020', SlokedControlKey::CtrlP},
+        {'\022', SlokedControlKey::CtrlR},
+        {'\024', SlokedControlKey::CtrlT},
+        {'\025', SlokedControlKey::CtrlU},
+        {'\026', SlokedControlKey::CtrlV},
+        {'\027', SlokedControlKey::CtrlW},
+        {'\030', SlokedControlKey::CtrlX},
+        {'\031', SlokedControlKey::CtrlY},
     };
 
     struct PosixTerminal::State {
-        State(FILE *fd, FILE *input)
-            :  fd(fd), input(input) {
+        State(FILE *fd, FILE *input) : fd(fd), input(input) {
             tcgetattr(fileno(this->fd), &this->out_state);
             tcgetattr(fileno(this->input), &this->in_state);
-            termios out_state {this->out_state}, in_state {this->in_state};
+            termios out_state{this->out_state}, in_state{this->in_state};
             out_state.c_lflag &= ~ECHO;
             in_state.c_lflag &= (~ICANON & ~ECHO);
             tcsetattr(fileno(this->fd), TCSANOW, &out_state);
@@ -134,7 +134,8 @@ namespace sloked {
         std::map<std::string, std::string> cache;
     };
 
-    std::optional<SlokedControlKey> collectControlKey(PosixTerminal::Termcap &termcap, std::string &input, bool &altPressed) {
+    std::optional<SlokedControlKey> collectControlKey(
+        PosixTerminal::Termcap &termcap, std::string &input, bool &altPressed) {
         for (const auto &specialKey : TermcapSpecialKeys) {
             const char *str = termcap.GetString(specialKey.first);
             if (str == nullptr) {
@@ -144,7 +145,8 @@ namespace sloked {
             if (starts_with(input, value)) {
                 input.erase(0, value.size());
                 return specialKey.second;
-            } else if (CompatConversions.count(value) && starts_with(input, CompatConversions.at(value))) {
+            } else if (CompatConversions.count(value) &&
+                       starts_with(input, CompatConversions.at(value))) {
                 input.erase(0, CompatConversions.at(value).size());
                 return specialKey.second;
             }
@@ -155,13 +157,13 @@ namespace sloked {
             input.erase(0, 1);
             return ControlKeys.at(chr);
         }
-        
+
         switch (input[0]) {
             case '\b':
             case 127:
                 input.erase(0, 1);
                 return SlokedControlKey::Backspace;
-                
+
             case '\t':
                 input.erase(0, 1);
                 return SlokedControlKey::Tab;
@@ -189,8 +191,7 @@ namespace sloked {
     PosixTerminal::PosixTerminal(FILE *fd, FILE *input)
         : state(std::make_unique<State>(fd, input)),
           termcap(std::make_unique<Termcap>(std::string(getenv("TERM")))),
-          disable_flush(false),
-          width(0), height(0) {
+          disable_flush(false), width(0), height(0) {
         auto str = this->termcap->GetString("ti");
         if (str != nullptr) {
             fprintf(this->state->fd, "%s", str);
@@ -324,7 +325,8 @@ namespace sloked {
 
     void PosixTerminal::Write(std::string_view str) {
         if (!this->disable_flush) {
-            fprintf(this->state->fd, "%*s", static_cast<int>(str.size()), str.data());
+            fprintf(this->state->fd, "%*s", static_cast<int>(str.size()),
+                    str.data());
             fflush(this->state->fd);
         } else {
             this->buffer.append(str);
@@ -368,8 +370,10 @@ namespace sloked {
         bool altPressed = false;
         while (!view.empty()) {
             bool prevAlt = altPressed;
-            auto specialKey = collectControlKey(*this->termcap, view, altPressed);
-            if (!prevAlt && altPressed) { // Alt keycode is detected skip to get the next input chunk
+            auto specialKey =
+                collectControlKey(*this->termcap, view, altPressed);
+            if (!prevAlt && altPressed) {  // Alt keycode is detected skip to
+                                           // get the next input chunk
                 continue;
             }
             if (specialKey.has_value()) {
@@ -377,7 +381,8 @@ namespace sloked {
                     input.push_back(SlokedKeyboardInput{buf, false});
                     buf.clear();
                 }
-                input.push_back(SlokedKeyboardInput{specialKey.value(), altPressed});
+                input.push_back(
+                    SlokedKeyboardInput{specialKey.value(), altPressed});
             } else if (!view.empty()) {
                 buf.push_back(view[0]);
                 view.erase(0, 1);
@@ -391,7 +396,8 @@ namespace sloked {
     }
 
     void PosixTerminal::SetGraphicsMode(SlokedTextGraphics mode) {
-        constexpr auto GraphicModeCount = static_cast<int>(SlokedTextGraphics::Concealed) + 1;
+        constexpr auto GraphicModeCount =
+            static_cast<int>(SlokedTextGraphics::Concealed) + 1;
         static auto GraphicsModes = []() {
             std::array<std::string, GraphicModeCount> modes;
             for (std::size_t i = 0; i < modes.size(); i++) {
@@ -406,7 +412,7 @@ namespace sloked {
                 break;
 
             case SlokedTextGraphics::Bold:
-                imode =  1;
+                imode = 1;
                 break;
 
             case SlokedTextGraphics::Underscore:
@@ -418,7 +424,7 @@ namespace sloked {
                 break;
 
             case SlokedTextGraphics::Reverse:
-                imode =  7;
+                imode = 7;
                 break;
 
             case SlokedTextGraphics::Concealed:
@@ -426,7 +432,8 @@ namespace sloked {
                 break;
         }
         if (!this->disable_flush) {
-            fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(imode));
+            fprintf(this->state->fd, "\033[%um",
+                    static_cast<unsigned int>(imode));
         } else {
             this->buffer.append("\033[");
             this->buffer.append(GraphicsModes[imode]);
@@ -436,7 +443,8 @@ namespace sloked {
 
     void PosixTerminal::SetGraphicsMode(SlokedBackgroundGraphics mode) {
         constexpr auto GraphicModeOffset = 40;
-        constexpr auto GraphicModeCount = static_cast<int>(SlokedBackgroundGraphics::White) + 1;
+        constexpr auto GraphicModeCount =
+            static_cast<int>(SlokedBackgroundGraphics::White) + 1;
         static auto GraphicsModes = []() {
             std::array<std::string, GraphicModeCount> modes;
             for (std::size_t i = 0; i < modes.size(); i++) {
@@ -445,7 +453,8 @@ namespace sloked {
             return modes;
         }();
         if (!this->disable_flush) {
-            fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(mode) + GraphicModeOffset);
+            fprintf(this->state->fd, "\033[%um",
+                    static_cast<unsigned int>(mode) + GraphicModeOffset);
         } else {
             this->buffer.append("\033[");
             this->buffer.append(GraphicsModes[static_cast<unsigned int>(mode)]);
@@ -455,7 +464,8 @@ namespace sloked {
 
     void PosixTerminal::SetGraphicsMode(SlokedForegroundGraphics mode) {
         constexpr auto GraphicModeOffset = 30;
-        constexpr auto GraphicModeCount = static_cast<int>(SlokedForegroundGraphics::White) + 1;
+        constexpr auto GraphicModeCount =
+            static_cast<int>(SlokedForegroundGraphics::White) + 1;
         static auto GraphicsModes = []() {
             std::array<std::string, GraphicModeCount> modes;
             for (std::size_t i = 0; i < modes.size(); i++) {
@@ -464,7 +474,8 @@ namespace sloked {
             return modes;
         }();
         if (!this->disable_flush) {
-            fprintf(this->state->fd, "\033[%um", static_cast<unsigned int>(mode) + GraphicModeOffset);
+            fprintf(this->state->fd, "\033[%um",
+                    static_cast<unsigned int>(mode) + GraphicModeOffset);
         } else {
             this->buffer.append("\033[");
             this->buffer.append(GraphicsModes[static_cast<unsigned int>(mode)]);
@@ -491,4 +502,4 @@ namespace sloked {
             this->disable_flush = true;
         }
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,11 +22,12 @@
 #ifndef SLOKED_FACADE_CRYPTO_H_
 #define SLOKED_FACADE_CRYPTO_H_
 
+#include <variant>
+
 #include "sloked/core/Crypto.h"
+#include "sloked/security/Authenticator.h"
 #include "sloked/security/Master.h"
 #include "sloked/security/Slave.h"
-#include "sloked/security/Authenticator.h"
-#include <variant>
 
 namespace sloked {
 
@@ -48,9 +49,11 @@ namespace sloked {
 
      private:
         SlokedCrypto &crypto;
-        std::variant<std::unique_ptr<SlokedCredentialMaster>, std::unique_ptr<SlokedCredentialSlave>> credentials;
+        std::variant<std::unique_ptr<SlokedCredentialMaster>,
+                     std::unique_ptr<SlokedCredentialSlave>>
+            credentials;
         std::unique_ptr<SlokedAuthenticatorFactory> authenticator;
     };
-}
+}  // namespace sloked
 
 #endif

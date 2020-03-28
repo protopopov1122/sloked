@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,32 +22,37 @@
 #ifndef SLOKED_NAMESPACE_VIRTUAL_H_
 #define SLOKED_NAMESPACE_VIRTUAL_H_
 
-#include "sloked/namespace/Object.h"
-#include "sloked/namespace/Mount.h"
 #include <map>
+
+#include "sloked/namespace/Mount.h"
+#include "sloked/namespace/Object.h"
 
 namespace sloked {
 
     class SlokedDefaultVirtualNamespace : public SlokedMountableNamespace {
      public:
-        SlokedDefaultVirtualNamespace(std::unique_ptr<SlokedNamespace>, const SlokedPath & = SlokedPath("/"));
+        SlokedDefaultVirtualNamespace(std::unique_ptr<SlokedNamespace>,
+                                      const SlokedPath & = SlokedPath("/"));
 
-        void Mount(const SlokedPath &, std::unique_ptr<SlokedNamespace>) override;
+        void Mount(const SlokedPath &,
+                   std::unique_ptr<SlokedNamespace>) override;
         std::vector<SlokedPath> Mounted() const override;
         void Umount(const SlokedPath &) override;
 
-        std::unique_ptr<SlokedNamespaceObject> GetObject(const SlokedPath &) override;
+        std::unique_ptr<SlokedNamespaceObject> GetObject(
+            const SlokedPath &) override;
         bool HasObject(const SlokedPath &) const override;
         void Iterate(const SlokedPath &, Visitor) const override;
         void Traverse(const SlokedPath &, Visitor, bool = false) const override;
-        std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(const SlokedPath &) override;
+        std::unique_ptr<SlokedNamespaceObjectHandle> GetHandle(
+            const SlokedPath &) override;
 
         friend class SlokedVirtualObjectHandle;
 
      private:
         struct Entry {
             std::unique_ptr<SlokedNamespace> ns;
-            SlokedPath path {"/"};
+            SlokedPath path{"/"};
             std::map<std::string, Entry> subentries;
         };
 
@@ -57,6 +62,6 @@ namespace sloked {
 
         Entry root;
     };
-}
+}  // namespace sloked
 
 #endif

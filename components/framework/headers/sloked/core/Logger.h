@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,11 +22,12 @@
 #ifndef SLOKED_CORE_LOGGER_H_
 #define SLOKED_CORE_LOGGER_H_
 
-#include "sloked/core/RangeMap.h"
-#include <memory>
-#include <sstream>
 #include <chrono>
 #include <functional>
+#include <memory>
+#include <sstream>
+
+#include "sloked/core/RangeMap.h"
 
 #define SlokedLoggerTag __FILE__
 
@@ -34,11 +35,17 @@ namespace sloked {
 
     class SlokedLoggingSink {
      public:
-        using Formatter = std::function<std::string(const std::string &, const std::string &, std::chrono::time_point<std::chrono::system_clock>, const std::string &)>;
+        using Formatter = std::function<std::string(
+            const std::string &, const std::string &,
+            std::chrono::time_point<std::chrono::system_clock>,
+            const std::string &)>;
         virtual ~SlokedLoggingSink() = default;
-        virtual void Log(const std::string &, const std::string &, std::chrono::time_point<std::chrono::system_clock>, const std::string &) = 0;
+        virtual void Log(const std::string &, const std::string &,
+                         std::chrono::time_point<std::chrono::system_clock>,
+                         const std::string &) = 0;
 
-        static std::unique_ptr<SlokedLoggingSink> TextFile(const std::string &, Formatter);
+        static std::unique_ptr<SlokedLoggingSink> TextFile(const std::string &,
+                                                           Formatter);
         static std::unique_ptr<SlokedLoggingSink> Null();
         static Formatter TabularFormat(uint8_t, uint8_t, uint8_t);
     };
@@ -61,7 +68,7 @@ namespace sloked {
         SlokedLoggingSink &Sink(Level) const final;
 
         static SlokedLoggingManager Global;
-        
+
      private:
         RangeMap<Level, std::shared_ptr<SlokedLoggingSink>> logLevels;
         std::map<Level, std::string> levelNames;
@@ -103,7 +110,9 @@ namespace sloked {
             std::stringstream content;
         };
 
-        SlokedLogger(const std::string &, SlokedLogging::Level = SlokedLogLevel::Info, SlokedLogging & = SlokedLoggingManager::Global);
+        SlokedLogger(const std::string &,
+                     SlokedLogging::Level = SlokedLogLevel::Info,
+                     SlokedLogging & = SlokedLoggingManager::Global);
 
         Entry To(SlokedLogging::Level) const;
         Entry Debug() const;
@@ -114,7 +123,8 @@ namespace sloked {
 
         template <typename T>
         Entry operator<<(const T &value) const {
-            Entry entry(this->logging.GetLevel(this->defaultLevel), this->tag, this->logging.Sink(this->defaultLevel));
+            Entry entry(this->logging.GetLevel(this->defaultLevel), this->tag,
+                        this->logging.Sink(this->defaultLevel));
             entry << value;
             return entry;
         }
@@ -124,6 +134,6 @@ namespace sloked {
         SlokedLogging::Level defaultLevel;
         SlokedLogging &logging;
     };
-}
+}  // namespace sloked
 
 #endif

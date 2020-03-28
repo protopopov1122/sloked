@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,11 +22,12 @@
 #ifndef SLOKED_SCREEN_SDL_EVENT_H_
 #define SLOKED_SCREEN_SDL_EVENT_H_
 
-#include "sloked/screen/sdl/Base.h"
-#include <memory>
 #include <map>
-#include <queue>
+#include <memory>
 #include <mutex>
+#include <queue>
+
+#include "sloked/screen/sdl/Base.h"
 
 namespace sloked {
 
@@ -44,6 +45,7 @@ namespace sloked {
         void EnableText(bool = true) const;
 
         static SlokedSDLGlobalEventQueue &Get();
+
      private:
         SlokedSDLGlobalEventQueue();
     };
@@ -73,6 +75,6 @@ namespace sloked {
         std::queue<SDL_Event> globalQueue;
         std::map<WindowID, std::queue<SDL_Event>> windows;
     };
-}
+}  // namespace sloked
 
 #endif

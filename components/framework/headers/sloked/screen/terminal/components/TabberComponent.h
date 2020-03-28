@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,20 +22,22 @@
 #ifndef SLOKED_SCREEN_TERMINAL_COMPONENTS_TABBERCOMPONENT_H_
 #define SLOKED_SCREEN_TERMINAL_COMPONENTS_TABBERCOMPONENT_H_
 
+#include <memory>
+#include <vector>
+
 #include "sloked/core/CharPreset.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/screen/components/TabberComponent.h"
 #include "sloked/screen/terminal/Terminal.h"
-#include "sloked/screen/terminal/multiplexer/TerminalTabber.h"
 #include "sloked/screen/terminal/components/ComponentHandle.h"
-#include <vector>
-#include <memory>
+#include "sloked/screen/terminal/multiplexer/TerminalTabber.h"
 
 namespace sloked {
 
     class TerminalTabberComponent : public SlokedTabberComponent {
      public:
-        TerminalTabberComponent(SlokedTerminal &, const Encoding &, const SlokedCharPreset &);
+        TerminalTabberComponent(SlokedTerminal &, const Encoding &,
+                                const SlokedCharPreset &);
 
         std::size_t GetWindowCount() const override;
         std::shared_ptr<Window> GetFocus() const override;
@@ -51,11 +53,12 @@ namespace sloked {
 
      protected:
         void ProcessComponentInput(const SlokedKeyboardInput &) override;
-        
+
      private:
         class TerminalTabberWindow : public Window {
          public:
-            TerminalTabberWindow(Id, std::unique_ptr<TerminalComponentHandle>, TerminalTabberComponent &);
+            TerminalTabberWindow(Id, std::unique_ptr<TerminalComponentHandle>,
+                                 TerminalTabberComponent &);
             bool IsOpened() const override;
             bool HasFocus() const override;
             SlokedComponentHandle &GetComponent() const override;
@@ -84,6 +87,6 @@ namespace sloked {
         std::vector<std::shared_ptr<TerminalTabberWindow>> components;
         std::function<void()> updateListener;
     };
-}
+}  // namespace sloked
 
 #endif

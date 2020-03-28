@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -26,7 +26,8 @@
 
 namespace sloked {
 
-    class SlokedPosixFileWriter : public SlokedPosixFileIO, public SlokedIOWriter {
+    class SlokedPosixFileWriter : public SlokedPosixFileIO,
+                                  public SlokedIOWriter {
      public:
         SlokedPosixFileWriter(FILE *);
         SlokedPosixFileWriter(SlokedPosixFileWriter &&) = default;
@@ -36,6 +37,6 @@ namespace sloked {
         bool Write(Char) override;
         bool Flush() override;
     };
-}
+}  // namespace sloked
 
 #endif

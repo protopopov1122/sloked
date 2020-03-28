@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -71,16 +71,18 @@ namespace sloked {
             return count;
         }
 
-        std::pair<std::size_t, std::size_t> GetCodepoint(std::string_view str, std::size_t idx) const override {
-#define ASSERT_WIDTH(x) do { \
-                if (i + (x) - 1 >= str.size()) { \
-                    return std::make_pair(0, 0); \
-                } \
-            } while (false)
+        std::pair<std::size_t, std::size_t> GetCodepoint(
+            std::string_view str, std::size_t idx) const override {
+#define ASSERT_WIDTH(x)                  \
+    do {                                 \
+        if (i + (x) -1 >= str.size()) {  \
+            return std::make_pair(0, 0); \
+        }                                \
+    } while (false)
             for (std::size_t i = 0; i < str.size();) {
                 char current = str[i];
                 std::size_t width = 0;
-                if ((current & 0xc0) != 0xc0){
+                if ((current & 0xc0) != 0xc0) {
                     width = 1;
                     ASSERT_WIDTH(width);
                 } else if ((current & 0xe0) != 0xe0) {
@@ -103,60 +105,63 @@ namespace sloked {
             return std::make_pair(0, 0);
         }
 
-        std::optional<std::size_t> GetCodepointByOffset(std::string_view str, std::size_t symbol_offset) const override {
+        std::optional<std::size_t> GetCodepointByOffset(
+            std::string_view str, std::size_t symbol_offset) const override {
             if (symbol_offset >= str.size()) {
                 return {};
             }
             std::optional<std::size_t> value;
             std::size_t idx = 0;
-            this->IterateCodepoints(str, [&](std::size_t offset, std::size_t length, char32_t chr) {
-                if (offset > symbol_offset) {
-                    value = idx - 1;
-                    return false;
-                } else if (offset == symbol_offset) {
-                    value = idx;
-                    return false;
-                }
-                idx++;
-                return true;
-            });
+            this->IterateCodepoints(
+                str, [&](std::size_t offset, std::size_t length, char32_t chr) {
+                    if (offset > symbol_offset) {
+                        value = idx - 1;
+                        return false;
+                    } else if (offset == symbol_offset) {
+                        value = idx;
+                        return false;
+                    }
+                    idx++;
+                    return true;
+                });
             return value;
         }
 
-        bool IterateCodepoints(std::string_view str, std::function<bool(std::size_t, std::size_t, char32_t)> callback) const override {
+        bool IterateCodepoints(
+            std::string_view str,
+            std::function<bool(std::size_t, std::size_t, char32_t)> callback)
+            const override {
             bool res = true;
             const std::size_t string_len = str.size();
-#define ASSERT_WIDTH(x) do { \
-                            if (i + (x) > string_len) { \
-                                return false; \
-                            } \
-                        } while (false)
+#define ASSERT_WIDTH(x)             \
+    do {                            \
+        if (i + (x) > string_len) { \
+            return false;           \
+        }                           \
+    } while (false)
             char32_t result;
             uint_fast8_t width;
             for (std::size_t i = 0; i < string_len;) {
                 uint_fast8_t current = str[i];
-                if ((current & 0xc0) ^ 0xc0){
+                if ((current & 0xc0) ^ 0xc0) {
                     width = 1;
                     ASSERT_WIDTH(width);
                     result = current;
                 } else if ((current & 0xe0) ^ 0xe0) {
                     width = 2;
                     ASSERT_WIDTH(width);
-                    result = ((current & 0x1f) << 6)
-                        | (str[i + 1] & 0x3f);
+                    result = ((current & 0x1f) << 6) | (str[i + 1] & 0x3f);
                 } else if ((current & 0xf0) ^ 0xf0) {
                     width = 3;
                     ASSERT_WIDTH(width);
-                    result = ((current & 0xf) << 12)
-                        | ((str[i + 1] & 0x3f) << 6)
-                        | (str[i + 2] & 0x3f);
+                    result = ((current & 0xf) << 12) |
+                             ((str[i + 1] & 0x3f) << 6) | (str[i + 2] & 0x3f);
                 } else {
                     width = 4;
                     ASSERT_WIDTH(width);
-                    result = ((current & 0x7) << 18)
-                        | ((str[i + 1] & 0x3f) << 12)
-                        | ((str[i + 2] & 0x3f) << 6)
-                        | (str[i + 3] & 0x3f);
+                    result = ((current & 0x7) << 18) |
+                             ((str[i + 1] & 0x3f) << 12) |
+                             ((str[i + 2] & 0x3f) << 6) | (str[i + 3] & 0x3f);
                 }
                 if (!callback(i, width, result)) {
                     break;
@@ -167,47 +172,49 @@ namespace sloked {
             return res;
         }
 
-        bool Iterate(Iterator &iter, std::string_view string, std::size_t length) const override {
+        bool Iterate(Iterator &iter, std::string_view string,
+                     std::size_t length) const override {
             iter.start += iter.length;
             if (iter.start == length) {
                 return false;
             }
-#define ASSERT_WIDTH(x) do { \
-                            if (iter.start + (x) > length) { \
-                                return false; \
-                            } \
-                        } while (false)
+#define ASSERT_WIDTH(x)                  \
+    do {                                 \
+        if (iter.start + (x) > length) { \
+            return false;                \
+        }                                \
+    } while (false)
             auto string_data = string.data();
             uint_fast8_t current = string_data[iter.start];
-            if ((current & 0xc0) != 0xc0){
+            if ((current & 0xc0) != 0xc0) {
                 iter.length = 1;
                 ASSERT_WIDTH(1);
                 iter.value = current;
             } else if ((current & 0xe0) != 0xe0) {
                 iter.length = 2;
                 ASSERT_WIDTH(2);
-                iter.value = ((current & 0x1f) << 6)
-                    | (string_data[iter.start + 1] & 0x3f);
+                iter.value = ((current & 0x1f) << 6) |
+                             (string_data[iter.start + 1] & 0x3f);
             } else if ((current & 0xf0) != 0xf0) {
                 iter.length = 3;
                 ASSERT_WIDTH(3);
-                iter.value = ((current & 0xf) << 12)
-                    | ((string_data[iter.start + 1] & 0x3f) << 6)
-                    | (string_data[iter.start + 2] & 0x3f);
+                iter.value = ((current & 0xf) << 12) |
+                             ((string_data[iter.start + 1] & 0x3f) << 6) |
+                             (string_data[iter.start + 2] & 0x3f);
             } else {
                 iter.length = 4;
                 ASSERT_WIDTH(4);
-                iter.value = ((current & 0x7) << 18)
-                    | ((string_data[iter.start + 1] & 0x3f) << 12)
-                    | ((string_data[iter.start + 2] & 0x3f) << 6)
-                    | (string_data[iter.start + 3] & 0x3f);
+                iter.value = ((current & 0x7) << 18) |
+                             ((string_data[iter.start + 1] & 0x3f) << 12) |
+                             ((string_data[iter.start + 2] & 0x3f) << 6) |
+                             (string_data[iter.start + 3] & 0x3f);
             }
             return true;
 #undef ASSERT_WIDTH
         }
 
         std::string Encode(char32_t chr) const override {
-            char buffer[5] {0};
+            char buffer[5]{0};
             Char32ToUtf8(buffer, chr);
             return std::string(buffer);
         }
@@ -221,16 +228,18 @@ namespace sloked {
 
         std::string Encode(std::u32string_view u32str) const override {
             constexpr std::size_t MaxStaticBuffer = 64;
-            if (u32str.size() < MaxStaticBuffer){
+            if (u32str.size() < MaxStaticBuffer) {
                 char buffer[MaxStaticBuffer * 4];
                 return std::string(buffer, EncodeImpl(buffer, u32str) - buffer);
             } else {
                 std::unique_ptr<char[]> buffer(new char[u32str.size() * 4]);
-                return std::string(buffer.get(), EncodeImpl(buffer.get(), u32str) - buffer.get());
+                return std::string(
+                    buffer.get(),
+                    EncodeImpl(buffer.get(), u32str) - buffer.get());
             }
         }
     };
 
     static Utf8Encoding utf8Encoding;
     const Encoding &Encoding::Utf8 = utf8Encoding;
-}
+}  // namespace sloked

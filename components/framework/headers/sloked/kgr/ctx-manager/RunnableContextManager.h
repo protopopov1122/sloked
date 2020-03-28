@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,19 +22,21 @@
 #ifndef SLOKED_KGR_LOCAL_CTX_MANAGER_RUNNABLECONTEXTMANAGER_H_
 #define SLOKED_KGR_LOCAL_CTX_MANAGER_RUNNABLECONTEXTMANAGER_H_
 
-#include "sloked/core/Closeable.h"
-#include "sloked/kgr/ContextManager.h"
-#include "sloked/core/Runnable.h"
-#include <mutex>
-#include <thread>
+#include <atomic>
 #include <condition_variable>
 #include <list>
-#include <atomic>
+#include <mutex>
+#include <thread>
+
+#include "sloked/core/Closeable.h"
+#include "sloked/core/Runnable.h"
+#include "sloked/kgr/ContextManager.h"
 
 namespace sloked {
 
     template <typename T>
-    class KgrRunnableContextManager : public KgrContextManager<T>, public SlokedRunnable {
+    class KgrRunnableContextManager : public KgrContextManager<T>,
+                                      public SlokedRunnable {
      public:
         bool HasPendingActions() const {
             for (auto &ctx : this->contexts) {
@@ -75,7 +77,7 @@ namespace sloked {
                 if ((*it)->GetState() == KgrServiceContext::State::Pending) {
                     (*it)->Run();
                 }
-                
+
                 std::unique_lock<std::mutex> lock(this->contexts_mtx);
                 auto current_it = it;
                 ++it;
@@ -89,7 +91,7 @@ namespace sloked {
                 }
             }
         }
-    
+
      private:
         std::list<std::unique_ptr<T>> contexts;
         std::mutex contexts_mtx;
@@ -99,8 +101,7 @@ namespace sloked {
     template <typename T>
     class KgrRunnableContextManagerHandle : public SlokedCloseable {
      public:
-        KgrRunnableContextManagerHandle()
-            : work(false), notifications(0) {
+        KgrRunnableContextManagerHandle() : work(false), notifications(0) {
             this->manager.SetActivationListener([&]() {
                 std::unique_lock<std::mutex> lock(this->notificationMutex);
                 this->notifications++;
@@ -123,8 +124,11 @@ namespace sloked {
             this->work = true;
             this->managerThread = std::thread([&]() {
                 while (this->work.load()) {
-                    std::unique_lock<std::mutex> notificationLock(this->notificationMutex);
-                    while (!this->manager.HasPendingActions() && this->work.load() && this->notifications.load() == 0) {
+                    std::unique_lock<std::mutex> notificationLock(
+                        this->notificationMutex);
+                    while (!this->manager.HasPendingActions() &&
+                           this->work.load() &&
+                           this->notifications.load() == 0) {
                         this->notificationCV.wait(notificationLock);
                     }
                     this->notifications = 0;
@@ -151,6 +155,6 @@ namespace sloked {
         std::condition_variable notificationCV;
         std::thread managerThread;
     };
-}
+}  // namespace sloked
 
 #endif

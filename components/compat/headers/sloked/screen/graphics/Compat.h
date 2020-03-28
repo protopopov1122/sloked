@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,8 +22,8 @@
 #ifndef SLOKED_SCREEN_GRAPHICS_COMPAT_H_
 #define SLOKED_SCREEN_GRAPHICS_COMPAT_H_
 
-#include "sloked/screen/graphics/GUI.h"
 #include "sloked/screen/Manager.h"
+#include "sloked/screen/graphics/GUI.h"
 
 namespace sloked {
 
@@ -37,8 +37,9 @@ namespace sloked {
 #endif
         }
 
-        static std::unique_ptr<SlokedGraphicalComponents> GetGraphics(SlokedScreenManager &);
+        static std::unique_ptr<SlokedGraphicalComponents> GetGraphics(
+            SlokedScreenManager &);
     };
-}
+}  // namespace sloked
 
 #endif

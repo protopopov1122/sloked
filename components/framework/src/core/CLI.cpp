@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -20,14 +20,17 @@
 */
 
 #include "sloked/core/CLI.h"
+
+#include <cassert>
+#include <set>
+
 #include "sloked/core/String.h"
 #include "sloked/kgr/Path.h"
-#include <set>
-#include <cassert>
 
 namespace sloked {
 
-    SlokedCLIArgumentIterator::SlokedCLIArgumentIterator(std::size_t argc, const char **argv)
+    SlokedCLIArgumentIterator::SlokedCLIArgumentIterator(std::size_t argc,
+                                                         const char **argv)
         : argc(argc), argv(argv) {}
 
     bool SlokedCLIArgumentIterator::HasNext() const {
@@ -43,29 +46,23 @@ namespace sloked {
         }
     }
 
-    SlokedCLIValue::SlokedCLIValue(int64_t value)
-        : value(value) {}
-        
-    SlokedCLIValue::SlokedCLIValue(double value)
-        : value(value) {}
+    SlokedCLIValue::SlokedCLIValue(int64_t value) : value(value) {}
 
-    SlokedCLIValue::SlokedCLIValue(bool value)
-        : value(value) {}
+    SlokedCLIValue::SlokedCLIValue(double value) : value(value) {}
 
-    SlokedCLIValue::SlokedCLIValue(std::string_view value)
-        : value(value) {}
+    SlokedCLIValue::SlokedCLIValue(bool value) : value(value) {}
 
-    SlokedCLIValue::SlokedCLIValue(const std::string & value)
-        : value(value) {}
+    SlokedCLIValue::SlokedCLIValue(std::string_view value) : value(value) {}
 
-    SlokedCLIValue::SlokedCLIValue(const char * value)
-        : value(value) {}
+    SlokedCLIValue::SlokedCLIValue(const std::string &value) : value(value) {}
+
+    SlokedCLIValue::SlokedCLIValue(const char *value) : value(value) {}
 
     SlokedCLIValue::Type SlokedCLIValue::GetType() const {
         switch (this->value.GetType()) {
             case KgrValueType::Integer:
                 return Type::Integer;
-            
+
             case KgrValueType::Number:
                 return Type::Float;
 
@@ -105,7 +102,8 @@ namespace sloked {
 
     bool SlokedCLIOption::Export(KgrValue &root) {
         if (this->path.has_value() && this->value.has_value()) {
-            KgrPath::Assign(root, this->path.value(), this->value.value().GetValue());
+            KgrPath::Assign(root, this->path.value(),
+                            this->value.value().GetValue());
             return true;
         } else {
             return false;
@@ -126,7 +124,8 @@ namespace sloked {
     }
 
     bool SlokedCLI::Has(char key) const {
-        return this->shortOptions.count(key) != 0 && !this->shortOptions.at(key)->Empty();
+        return this->shortOptions.count(key) != 0 &&
+               !this->shortOptions.at(key)->Empty();
     }
 
     std::size_t SlokedCLI::ArgCount() const {
@@ -144,12 +143,15 @@ namespace sloked {
     }
 
     const SlokedCLIOption &SlokedCLI::operator[](char key) const {
-        if (this->shortOptions.count(key) != 0 && !this->shortOptions.at(key)->Empty()) {
+        if (this->shortOptions.count(key) != 0 &&
+            !this->shortOptions.at(key)->Empty()) {
             return *this->shortOptions.at(key);
         } else if (this->shortOptions.count(key) == 0) {
-            throw SlokedError("CLI: Undefined option '-" + std::string(1, key) + "'");
+            throw SlokedError("CLI: Undefined option '-" + std::string(1, key) +
+                              "'");
         } else {
-            throw SlokedError("CLI: Undefined '-" + std::string(1, key) + "' value");
+            throw SlokedError("CLI: Undefined '-" + std::string(1, key) +
+                              "' value");
         }
     }
 
@@ -157,7 +159,8 @@ namespace sloked {
         if (idx < this->arguments.size()) {
             return this->arguments.at(idx);
         } else {
-            throw SlokedError("CLI: Argument " + std::to_string(idx) + " is out of range");
+            throw SlokedError("CLI: Argument " + std::to_string(idx) +
+                              " is out of range");
         }
     }
 
@@ -187,14 +190,17 @@ namespace sloked {
             }
         }
         // Check mandatory options
-        for (auto &kv : this->options) {   
+        for (auto &kv : this->options) {
             if (kv.second->IsMandatory() && kv.second->Empty()) {
-                throw SlokedError("CLI: Mandatory \'--" + kv.first + "\' is not defined");
+                throw SlokedError("CLI: Mandatory \'--" + kv.first +
+                                  "\' is not defined");
             }
         }
-        for (auto &kv : this->shortOptions) {   
+        for (auto &kv : this->shortOptions) {
             if (kv.second->IsMandatory() && kv.second->Empty()) {
-                throw SlokedError("CLI: Mandatory \'-" + std::string{1, kv.first} + "\' is not defined");
+                throw SlokedError("CLI: Mandatory \'-" +
+                                  std::string{1, kv.first} +
+                                  "\' is not defined");
             }
         }
     }
@@ -202,13 +208,13 @@ namespace sloked {
     KgrValue SlokedCLI::Export() const {
         KgrValue root = KgrDictionary{};
         std::set<SlokedCLIOption *> processed;
-        for (auto &kv : this->shortOptions) {   
+        for (auto &kv : this->shortOptions) {
             if (processed.count(kv.second.get()) == 0) {
                 kv.second->Export(root);
                 processed.insert(kv.second.get());
             }
         }
-        for (auto &kv : this->options) {   
+        for (auto &kv : this->options) {
             if (processed.count(kv.second.get()) == 0) {
                 kv.second->Export(root);
                 processed.insert(kv.second.get());
@@ -216,7 +222,7 @@ namespace sloked {
         }
         return root;
     }
-    
+
     void SlokedCLI::Initialize(const KgrValue &config) {
         const auto &options = config.AsArray();
         for (const auto &option : options) {
@@ -226,22 +232,29 @@ namespace sloked {
                     const auto &val = option.AsDictionary()["value"];
                     switch (val.GetType()) {
                         case KgrValueType::Integer:
-                            return SlokedCLIOption{this->Option<int64_t>(val.AsInt())};
+                            return SlokedCLIOption{
+                                this->Option<int64_t>(val.AsInt())};
 
                         case KgrValueType::Number:
-                            return SlokedCLIOption{this->Option<double>(val.AsNumber())};
+                            return SlokedCLIOption{
+                                this->Option<double>(val.AsNumber())};
 
                         case KgrValueType::Boolean:
-                            return SlokedCLIOption{this->Option<bool>(val.AsBoolean())};
+                            return SlokedCLIOption{
+                                this->Option<bool>(val.AsBoolean())};
 
                         case KgrValueType::String:
-                            return SlokedCLIOption{this->Option<std::string>(std::string{val.AsString()})};
+                            return SlokedCLIOption{this->Option<std::string>(
+                                std::string{val.AsString()})};
 
                         default:
-                            throw SlokedError("CLI: Unsupported default value of \'" + list + "\'");
+                            throw SlokedError(
+                                "CLI: Unsupported default value of \'" + list +
+                                "\'");
                     }
                 } else {
-                    const auto &strType = option.AsDictionary()["type"].AsString();
+                    const auto &strType =
+                        option.AsDictionary()["type"].AsString();
                     if (strType == "int") {
                         return SlokedCLIOption{this->Option<int64_t>()};
                     } else if (strType == "number") {
@@ -251,7 +264,8 @@ namespace sloked {
                     } else if (strType == "string") {
                         return SlokedCLIOption{this->Option<std::string>()};
                     } else {
-                        throw SlokedError("CLI: Unsupported option type \'" + list + "\'");   
+                        throw SlokedError("CLI: Unsupported option type \'" +
+                                          list + "\'");
                     }
                 }
             })();
@@ -269,44 +283,48 @@ namespace sloked {
         }
     }
 
-    static bool ParseOptionValue(SlokedCLIOption &option, std::string_view arg, SlokedCLIArgumentIterator &args) {
-            switch (option.Type()) {
-                case SlokedCLIValue::Type::Integer: {
-                    std::string value{!arg.empty() ? arg : args.Next()};
-                    long long int_value;
-                    try {
-                        int_value = std::stoll(value);
-                    } catch (const std::invalid_argument &ex) {
-                        throw SlokedError("CLI: Error converting '" + value + "' to integer");
-                    }
-                    option.Set(int_value);
-                } break;
+    static bool ParseOptionValue(SlokedCLIOption &option, std::string_view arg,
+                                 SlokedCLIArgumentIterator &args) {
+        switch (option.Type()) {
+            case SlokedCLIValue::Type::Integer: {
+                std::string value{!arg.empty() ? arg : args.Next()};
+                long long int_value;
+                try {
+                    int_value = std::stoll(value);
+                } catch (const std::invalid_argument &ex) {
+                    throw SlokedError("CLI: Error converting '" + value +
+                                      "' to integer");
+                }
+                option.Set(int_value);
+            } break;
 
-                case SlokedCLIValue::Type::Float: {
-                    std::string value{!arg.empty() ? arg : args.Next()};
-                    double float_value;
-                    try {
-                        float_value = std::stod(value);
-                    } catch (const std::invalid_argument &ex) {
-                        throw SlokedError("CLI: Error converting '" + value + "' to float");
-                    }
-                    option.Set(float_value);
-                } break;
+            case SlokedCLIValue::Type::Float: {
+                std::string value{!arg.empty() ? arg : args.Next()};
+                double float_value;
+                try {
+                    float_value = std::stod(value);
+                } catch (const std::invalid_argument &ex) {
+                    throw SlokedError("CLI: Error converting '" + value +
+                                      "' to float");
+                }
+                option.Set(float_value);
+            } break;
 
-                case SlokedCLIValue::Type::Boolean:
-                    option.Set(true);
-                    return true;
+            case SlokedCLIValue::Type::Boolean:
+                option.Set(true);
+                return true;
 
-                case SlokedCLIValue::Type::String: {
-                    std::string value{!arg.empty() ? arg : args.Next()};
-                    option.Set(value);
-                    return false;
-                } break;
-            }
-            return false;
+            case SlokedCLIValue::Type::String: {
+                std::string value{!arg.empty() ? arg : args.Next()};
+                option.Set(value);
+                return false;
+            } break;
+        }
+        return false;
     }
 
-    void SlokedCLI::ParseOption(std::string_view arg, SlokedCLIArgumentIterator &args) {
+    void SlokedCLI::ParseOption(std::string_view arg,
+                                SlokedCLIArgumentIterator &args) {
         auto pos = arg.find('=');
         std::string key{pos != arg.npos ? arg.substr(0, pos) : arg};
         arg.remove_prefix(key.size());
@@ -321,12 +339,14 @@ namespace sloked {
         ParseOptionValue(option, arg, args);
     }
 
-    void SlokedCLI::ParseShortOption(std::string_view arg, SlokedCLIArgumentIterator &args) {
+    void SlokedCLI::ParseShortOption(std::string_view arg,
+                                     SlokedCLIArgumentIterator &args) {
         while (!arg.empty()) {
             char key = arg[0];
             arg.remove_prefix(1);
             if (this->shortOptions.count(key) == 0) {
-                throw SlokedError("CLI: Unknown option '-" + std::string(1, key) + "'");
+                throw SlokedError("CLI: Unknown option '-" +
+                                  std::string(1, key) + "'");
             }
             auto &option = *this->shortOptions.at(key);
             if (!ParseOptionValue(option, arg, args)) {
@@ -335,55 +355,67 @@ namespace sloked {
         }
     }
 
-    void SlokedCLI::DefineImpl(std::string_view allKeys, std::shared_ptr<SlokedCLIOption> option) {
+    void SlokedCLI::DefineImpl(std::string_view allKeys,
+                               std::shared_ptr<SlokedCLIOption> option) {
         while (!allKeys.empty()) {
             auto keyEnd = allKeys.find(',');
-            auto key = allKeys.substr(0, keyEnd != allKeys.npos ? keyEnd : allKeys.size());
-            allKeys.remove_prefix(keyEnd != allKeys.npos ? keyEnd + 1 : allKeys.size());
+            auto key = allKeys.substr(
+                0, keyEnd != allKeys.npos ? keyEnd : allKeys.size());
+            allKeys.remove_prefix(keyEnd != allKeys.npos ? keyEnd + 1
+                                                         : allKeys.size());
             if (starts_with(key, "--")) {
                 key.remove_prefix(2);
                 std::string optionKey{key};
                 if (this->options.count(optionKey) == 0) {
                     this->options.emplace(optionKey, option);
                 } else {
-                    throw SlokedError("CLI: Duplicate option '--" + optionKey + "'");
+                    throw SlokedError("CLI: Duplicate option '--" + optionKey +
+                                      "'");
                 }
             } else if (starts_with(key, "-") && key.size() == 2) {
                 if (this->shortOptions.count(key[1]) == 0) {
                     this->shortOptions.emplace(key[1], option);
                 } else {
-                    throw SlokedError("CLI: Duplicate option '" + std::string(1, key[1]) + "'");
+                    throw SlokedError("CLI: Duplicate option '" +
+                                      std::string(1, key[1]) + "'");
                 }
             } else {
-                throw SlokedError("CLI: Malformed option definition " + std::string(key));
+                throw SlokedError("CLI: Malformed option definition " +
+                                  std::string(key));
             }
         }
     }
 
-    std::vector<std::shared_ptr<SlokedCLIOption>> SlokedCLI::FindKeys(std::string_view allKeys) {
+    std::vector<std::shared_ptr<SlokedCLIOption>> SlokedCLI::FindKeys(
+        std::string_view allKeys) {
         std::vector<std::shared_ptr<SlokedCLIOption>> result;
         while (!allKeys.empty()) {
             auto keyEnd = allKeys.find(',');
-            auto key = allKeys.substr(0, keyEnd != allKeys.npos ? keyEnd : allKeys.size());
-            allKeys.remove_prefix(keyEnd != allKeys.npos ? keyEnd + 1 : allKeys.size());
+            auto key = allKeys.substr(
+                0, keyEnd != allKeys.npos ? keyEnd : allKeys.size());
+            allKeys.remove_prefix(keyEnd != allKeys.npos ? keyEnd + 1
+                                                         : allKeys.size());
             if (starts_with(key, "--")) {
                 key.remove_prefix(2);
                 std::string optionKey{key};
                 if (this->options.count(optionKey) != 0) {
                     result.push_back(this->options.at(optionKey));
                 } else {
-                    throw SlokedError("CLI: Unknown option '--" + optionKey + "'");
+                    throw SlokedError("CLI: Unknown option '--" + optionKey +
+                                      "'");
                 }
             } else if (starts_with(key, "-") && key.size() == 2) {
                 if (this->shortOptions.count(key[1]) != 0) {
-                   result.push_back(this->shortOptions.at(key[1]));
+                    result.push_back(this->shortOptions.at(key[1]));
                 } else {
-                    throw SlokedError("CLI: Unknown option '" + std::string(1, key[1]) + "'");
+                    throw SlokedError("CLI: Unknown option '" +
+                                      std::string(1, key[1]) + "'");
                 }
             } else {
-                throw SlokedError("CLI: Malformed option definition " + std::string(key));
+                throw SlokedError("CLI: Malformed option definition " +
+                                  std::string(key));
             }
         }
         return result;
     }
-}
+}  // namespace sloked

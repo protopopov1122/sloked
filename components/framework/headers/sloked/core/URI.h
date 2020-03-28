@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,11 +22,12 @@
 #ifndef SLOKED_CORE_URI_H_
 #define SLOKED_CORE_URI_H_
 
-#include "sloked/Base.h"
-#include <string>
-#include <optional>
 #include <iosfwd>
 #include <map>
+#include <optional>
+#include <string>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -50,7 +51,6 @@ namespace sloked {
             const std::optional<Port> &GetPort() const;
             Authority &SetPort(std::optional<Port>);
 
-
             friend std::ostream &operator<<(std::ostream &, const Authority &);
 
          private:
@@ -69,13 +69,15 @@ namespace sloked {
             bool Empty() const;
 
             friend std::ostream &operator<<(std::ostream &, const Query &);
-        
+
          private:
             std::map<std::string, std::string> prms;
         };
 
         explicit SlokedUri(std::string, std::string = "");
-        explicit SlokedUri(std::string, Authority, std::string = "", std::optional<Query> = {}, std::optional<std::string> = {});
+        explicit SlokedUri(std::string, Authority, std::string = "",
+                           std::optional<Query> = {},
+                           std::optional<std::string> = {});
         SlokedUri(const SlokedUri &) = default;
         SlokedUri(SlokedUri &&) = default;
 
@@ -107,6 +109,6 @@ namespace sloked {
         std::optional<Query> query;
         std::optional<std::string> fragment;
     };
-}
+}  // namespace sloked
 
 #endif

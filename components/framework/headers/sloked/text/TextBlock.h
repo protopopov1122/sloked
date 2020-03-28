@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,12 +22,13 @@
 #ifndef SLOKED_TEXT_TEXTBLOCK_H_
 #define SLOKED_TEXT_TEXTBLOCK_H_
 
-#include "sloked/Base.h"
-#include <string>
-#include <memory>
 #include <cinttypes>
-#include <iosfwd>
 #include <functional>
+#include <iosfwd>
+#include <memory>
+#include <string>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
@@ -43,7 +44,8 @@ namespace sloked {
         virtual bool Empty() const = 0;
         virtual void Visit(std::size_t, std::size_t, Visitor) const;
 
-        friend std::ostream &operator<<(std::ostream &os, const TextBlockView &block) {
+        friend std::ostream &operator<<(std::ostream &os,
+                                        const TextBlockView &block) {
             return block.dump(os);
         }
 
@@ -72,6 +74,6 @@ namespace sloked {
         virtual ~TextBlockFactory() = default;
         virtual std::unique_ptr<TextBlock> make(std::string_view) const = 0;
     };
-}
+}  // namespace sloked
 
 #endif

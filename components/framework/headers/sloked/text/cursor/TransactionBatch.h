@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -27,8 +27,11 @@
 
 namespace sloked {
 
-    class TransactionBatch : public virtual SlokedTransactionStream,
-                             public SlokedListenerManager<SlokedTransactionStream::Listener, SlokedCursorTransaction, SlokedTransactionStream> {
+    class TransactionBatch
+        : public virtual SlokedTransactionStream,
+          public SlokedListenerManager<SlokedTransactionStream::Listener,
+                                       SlokedCursorTransaction,
+                                       SlokedTransactionStream> {
      public:
         TransactionBatch(SlokedTransactionStream &, const Encoding &);
         TextPosition Commit(const SlokedCursorTransaction &) override;
@@ -44,6 +47,6 @@ namespace sloked {
         std::vector<SlokedCursorTransaction> batch;
         std::vector<SlokedCursorTransaction> rollback;
     };
-}
+}  // namespace sloked
 
 #endif

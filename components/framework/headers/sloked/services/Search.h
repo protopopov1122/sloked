@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,21 +22,22 @@
 #ifndef SLOKED_SERVICES_SEARCH_H_
 #define SLOKED_SERVICES_SEARCH_H_
 
-#include "sloked/services/Service.h"
-#include "sloked/kgr/NamedServer.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
+#include "sloked/kgr/NamedServer.h"
+#include "sloked/services/Service.h"
 
 namespace sloked {
 
     class SlokedSearchService : public KgrService {
      public:
-        SlokedSearchService(SlokedEditorDocumentSet &, KgrContextManager<KgrLocalContext> &);
+        SlokedSearchService(SlokedEditorDocumentSet &,
+                            KgrContextManager<KgrLocalContext> &);
         void Attach(std::unique_ptr<KgrPipe>) override;
 
      private:
         SlokedEditorDocumentSet &documents;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
-}
+}  // namespace sloked
 
 #endif

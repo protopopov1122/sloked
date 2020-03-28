@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_SCREEN_TERMINAL_TERMINALSIZE_H_
 #define SLOKED_SCREEN_TERMINAL_TERMINALSIZE_H_
 
+#include <map>
+#include <mutex>
+
 #include "sloked/screen/Size.h"
 #include "sloked/screen/terminal/Terminal.h"
-#include <mutex>
-#include <map>
 
 namespace sloked {
 
@@ -34,9 +35,7 @@ namespace sloked {
      public:
         SlokedTerminalSize(SlokedTerminal &terminal)
             : terminal(terminal), nextId{0} {
-            this->unsubscribe = T::Bind([this] {
-                this->Trigger();
-            });
+            this->unsubscribe = T::Bind([this] { this->Trigger(); });
         }
 
         ~SlokedTerminalSize() {
@@ -46,10 +45,7 @@ namespace sloked {
         }
 
         TextPosition GetScreenSize() const {
-            return {
-                this->terminal.GetHeight(),
-                this->terminal.GetWidth()
-            };
+            return {this->terminal.GetHeight(), this->terminal.GetWidth()};
         }
 
         std::function<void()> Listen(Listener listener) {
@@ -69,20 +65,21 @@ namespace sloked {
             this->terminal.UpdateDimensions();
             auto size = this->GetScreenSize();
             std::unique_lock lock(this->mtx);
-            for (auto it = this->listeners.begin(); it != this->listeners.end();) {
+            for (auto it = this->listeners.begin();
+                 it != this->listeners.end();) {
                 auto current = it++;
                 lock.unlock();
                 current->second(size);
                 lock.lock();
             }
         }
-        
+
         SlokedTerminal &terminal;
         std::mutex mtx;
         int64_t nextId;
         std::map<int64_t, Listener> listeners;
         std::function<void()> unsubscribe;
     };
-}
+}  // namespace sloked
 
 #endif

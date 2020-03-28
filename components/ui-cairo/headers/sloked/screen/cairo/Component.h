@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,10 +22,11 @@
 #ifndef SLOKED_SCREEN_CAIRO_COMPONENT_H_
 #define SLOKED_SCREEN_CAIRO_COMPONENT_H_
 
-#include "sloked/screen/cairo/Base.h"
-#include "sloked/screen/Keyboard.h"
-#include "sloked/screen/graphics/Base.h"
 #include <vector>
+
+#include "sloked/screen/Keyboard.h"
+#include "sloked/screen/cairo/Base.h"
+#include "sloked/screen/graphics/Base.h"
 
 namespace sloked {
 
@@ -36,9 +37,10 @@ namespace sloked {
         virtual ~SlokedCairoScreenComponent() = default;
         virtual bool CheckUpdates() = 0;
         virtual void ProcessInput(std::vector<SlokedKeyboardInput>) = 0;
-        virtual void SetTarget(const Cairo::RefPtr<Cairo::Surface> &, Dimensions) = 0;
+        virtual void SetTarget(const Cairo::RefPtr<Cairo::Surface> &,
+                               Dimensions) = 0;
         virtual Dimensions GetSize() const = 0;
     };
-}
+}  // namespace sloked
 
 #endif

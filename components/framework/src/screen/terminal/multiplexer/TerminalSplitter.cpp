@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -19,10 +19,12 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/core/Error.h"
 #include "sloked/screen/terminal/multiplexer/TerminalSplitter.h"
+
 #include <cassert>
 #include <iostream>
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
@@ -32,11 +34,14 @@ namespace sloked {
             : max(max), value(max), fraction(1.0f) {}
 
         unsigned int Next(const Splitter::Constraints &constraints) {
-            unsigned int current = this->value * (constraints.GetDimensions() / this->fraction);
-            if (current > constraints.GetMaximum() && constraints.GetMaximum() > 0) {
+            unsigned int current =
+                this->value * (constraints.GetDimensions() / this->fraction);
+            if (current > constraints.GetMaximum() &&
+                constraints.GetMaximum() > 0) {
                 current = constraints.GetMaximum();
             }
-            if (current > this->value || (current == 0 && constraints.GetDimensions() > 0.0f)) {
+            if (current > this->value ||
+                (current == 0 && constraints.GetDimensions() > 0.0f)) {
                 throw SlokedError("Layout error: insufficent space");
             }
             this->value -= current;
@@ -50,8 +55,12 @@ namespace sloked {
         float fraction;
     };
 
-    TerminalSplitter::TerminalSplitter(SlokedTerminal &term, Splitter::Direction dir, const Encoding &encoding, const SlokedCharPreset &charPreset)
-        : term(term), direction(dir), encoding(encoding), charPreset(charPreset) {}
+    TerminalSplitter::TerminalSplitter(SlokedTerminal &term,
+                                       Splitter::Direction dir,
+                                       const Encoding &encoding,
+                                       const SlokedCharPreset &charPreset)
+        : term(term), direction(dir), encoding(encoding),
+          charPreset(charPreset) {}
 
     unsigned int TerminalSplitter::GetMinimum() const {
         unsigned int min = 0;
@@ -77,7 +86,8 @@ namespace sloked {
         return this->direction;
     }
 
-    const Splitter::Constraints &TerminalSplitter::GetConstraints(WinId idx) const {
+    const Splitter::Constraints &TerminalSplitter::GetConstraints(
+        WinId idx) const {
         if (idx < this->windows.size()) {
             return this->windows.at(idx).second;
         } else {
@@ -85,26 +95,34 @@ namespace sloked {
         }
     }
 
-    SlokedIndexed<SlokedTerminal &, TerminalSplitter::WinId> TerminalSplitter::NewTerminal(const Splitter::Constraints &constraints) {
+    SlokedIndexed<SlokedTerminal &, TerminalSplitter::WinId>
+        TerminalSplitter::NewTerminal(
+            const Splitter::Constraints &constraints) {
         TextPosition zero{0, 0};
-        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charPreset, zero, zero);
+        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding,
+                                                    charPreset, zero, zero);
         this->windows.push_back(std::make_pair(win, constraints));
         this->Update();
         return {this->windows.size() - 1, *win};
     }
 
-    SlokedIndexed<SlokedTerminal &, TerminalSplitter::WinId> TerminalSplitter::NewTerminal(WinId idx, const Splitter::Constraints &constraints) {
+    SlokedIndexed<SlokedTerminal &, TerminalSplitter::WinId>
+        TerminalSplitter::NewTerminal(
+            WinId idx, const Splitter::Constraints &constraints) {
         if (idx > this->windows.size()) {
             throw SlokedError("Incorrect window index " + std::to_string(idx));
         }
         TextPosition zero{0, 0};
-        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding, charPreset, zero, zero);
-        this->windows.insert(this->windows.begin() + idx, std::make_pair(win, constraints));
+        auto win = std::make_shared<TerminalWindow>(this->term, this->encoding,
+                                                    charPreset, zero, zero);
+        this->windows.insert(this->windows.begin() + idx,
+                             std::make_pair(win, constraints));
         this->Update();
         return {idx, *win};
     }
 
-    bool TerminalSplitter::UpdateConstraints(WinId idx, const Splitter::Constraints &constraints) {
+    bool TerminalSplitter::UpdateConstraints(
+        WinId idx, const Splitter::Constraints &constraints) {
         if (idx < this->windows.size()) {
             this->windows[idx].second = constraints;
             this->Update();
@@ -117,10 +135,12 @@ namespace sloked {
     bool TerminalSplitter::Move(WinId src, WinId dst) {
         if (src < this->windows.size() && dst < this->windows.size()) {
             if (src < dst) {
-                this->windows.insert(this->windows.begin() + dst + 1, this->windows.at(src));
+                this->windows.insert(this->windows.begin() + dst + 1,
+                                     this->windows.at(src));
                 this->windows.erase(this->windows.begin() + src);
             } else if (src > dst) {
-                this->windows.insert(this->windows.begin() + dst, this->windows.at(src));
+                this->windows.insert(this->windows.begin() + dst,
+                                     this->windows.at(src));
                 this->windows.erase(this->windows.begin() + src + 1);
             }
             return true;
@@ -141,11 +161,11 @@ namespace sloked {
     void TerminalSplitter::Update() {
         this->term.UpdateDimensions();
         unsigned int max = this->direction == Splitter::Direction::Horizontal
-            ? this->term.GetWidth()
-            : this->term.GetHeight();
+                               ? this->term.GetWidth()
+                               : this->term.GetHeight();
         unsigned int dim = this->direction == Splitter::Direction::Horizontal
-            ? this->term.GetHeight()
-            : this->term.GetWidth();
+                               ? this->term.GetHeight()
+                               : this->term.GetWidth();
         if (max < this->GetMinimum()) {
             throw SlokedError("Layout error: insufficent space");
         }
@@ -181,6 +201,6 @@ namespace sloked {
     }
 
     TextPosition TerminalSplitter::GetDimensions() {
-        return { this->term.GetHeight(), this->term.GetWidth() };
+        return {this->term.GetHeight(), this->term.GetWidth()};
     }
-}
+}  // namespace sloked

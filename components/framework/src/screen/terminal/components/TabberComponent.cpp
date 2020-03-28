@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -19,14 +19,17 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/core/Error.h"
 #include "sloked/screen/terminal/components/TabberComponent.h"
+
+#include "sloked/core/Error.h"
 
 namespace sloked {
 
-    TerminalTabberComponent::TerminalTabberWindow::TerminalTabberWindow(Id id, std::unique_ptr<TerminalComponentHandle> component, TerminalTabberComponent &root)
+    TerminalTabberComponent::TerminalTabberWindow::TerminalTabberWindow(
+        Id id, std::unique_ptr<TerminalComponentHandle> component,
+        TerminalTabberComponent &root)
         : id(id), component(std::move(component)), root(root) {}
-    
+
     bool TerminalTabberComponent::TerminalTabberWindow::IsOpened() const {
         return this->component != nullptr;
     }
@@ -35,7 +38,8 @@ namespace sloked {
         return this->id == this->root.tabber.GetCurrentTab();
     }
 
-    SlokedComponentHandle &TerminalTabberComponent::TerminalTabberWindow::GetComponent() const {
+    SlokedComponentHandle &
+        TerminalTabberComponent::TerminalTabberWindow::GetComponent() const {
         if (this->component) {
             return *this->component;
         } else {
@@ -43,7 +47,8 @@ namespace sloked {
         }
     }
 
-    TerminalTabberComponent::TerminalTabberWindow::Id TerminalTabberComponent::TerminalTabberWindow::GetId() const {
+    TerminalTabberComponent::TerminalTabberWindow::Id
+        TerminalTabberComponent::TerminalTabberWindow::GetId() const {
         return this->id;
     }
 
@@ -68,13 +73,19 @@ namespace sloked {
                 throw SlokedError("Invalid window index");
             }
             if (this->id < newId) {
-                this->root.components.insert(this->root.components.begin() + newId + 1, this->root.components.at(this->id));
-                this->root.components.erase(this->root.components.begin() + this->id);
+                this->root.components.insert(
+                    this->root.components.begin() + newId + 1,
+                    this->root.components.at(this->id));
+                this->root.components.erase(this->root.components.begin() +
+                                            this->id);
             } else if (this->id > newId) {
-                this->root.components.insert(this->root.components.begin() + newId, this->root.components.at(this->id));
-                this->root.components.erase(this->root.components.begin() + this->id + 1);
+                this->root.components.insert(
+                    this->root.components.begin() + newId,
+                    this->root.components.at(this->id));
+                this->root.components.erase(this->root.components.begin() +
+                                            this->id + 1);
             }
-            
+
             for (std::size_t i = 0; i < this->root.components.size(); i++) {
                 this->root.components.at(i)->id = i;
             }
@@ -88,7 +99,8 @@ namespace sloked {
 
     void TerminalTabberComponent::TerminalTabberWindow::Close() {
         if (this->component) {
-            this->root.components.erase(this->root.components.begin() + this->id);
+            this->root.components.erase(this->root.components.begin() +
+                                        this->id);
             this->root.tabber.CloseTab(this->id);
             this->component = nullptr;
             if (this->root.updateListener) {
@@ -111,20 +123,25 @@ namespace sloked {
         }
     }
 
-    void TerminalTabberComponent::TerminalTabberWindow::ProcessInput(const SlokedKeyboardInput &input) {
+    void TerminalTabberComponent::TerminalTabberWindow::ProcessInput(
+        const SlokedKeyboardInput &input) {
         if (this->component) {
             this->component->ProcessInput(input);
         }
     }
 
-    TerminalTabberComponent::TerminalTabberComponent(SlokedTerminal &term, const Encoding &encoding, const SlokedCharPreset &charPreset)
-        : SlokedTabberComponent(Type::Tabber), tabber(term), encoding(encoding), charPreset(charPreset) {}
+    TerminalTabberComponent::TerminalTabberComponent(
+        SlokedTerminal &term, const Encoding &encoding,
+        const SlokedCharPreset &charPreset)
+        : SlokedTabberComponent(Type::Tabber), tabber(term), encoding(encoding),
+          charPreset(charPreset) {}
 
     std::size_t TerminalTabberComponent::GetWindowCount() const {
         return this->components.size();
     }
 
-    std::shared_ptr<TerminalTabberComponent::Window> TerminalTabberComponent::GetFocus() const {
+    std::shared_ptr<TerminalTabberComponent::Window>
+        TerminalTabberComponent::GetFocus() const {
         auto tabId = this->tabber.GetCurrentTab();
         if (tabId.has_value()) {
             return this->components.at(tabId.value());
@@ -133,7 +150,8 @@ namespace sloked {
         }
     }
 
-    std::shared_ptr<TerminalTabberComponent::Window> TerminalTabberComponent::GetWindow(Window::Id idx) const {
+    std::shared_ptr<TerminalTabberComponent::Window>
+        TerminalTabberComponent::GetWindow(Window::Id idx) const {
         if (idx < this->components.size()) {
             return this->components.at(idx);
         } else {
@@ -141,10 +159,13 @@ namespace sloked {
         }
     }
 
-    std::shared_ptr<TerminalTabberComponent::Window> TerminalTabberComponent::NewWindow() {
+    std::shared_ptr<TerminalTabberComponent::Window>
+        TerminalTabberComponent::NewWindow() {
         auto term = this->tabber.NewTab();
-        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charPreset);
-        auto window = std::make_shared<TerminalTabberWindow>(term.index, std::move(component), *this);
+        auto component = std::make_unique<TerminalComponentHandle>(
+            term.value, this->encoding, this->charPreset);
+        auto window = std::make_shared<TerminalTabberWindow>(
+            term.index, std::move(component), *this);
         window->GetComponent().OnUpdate(this->updateListener);
         this->components.push_back(window);
         if (this->updateListener) {
@@ -153,10 +174,13 @@ namespace sloked {
         return window;
     }
 
-    std::shared_ptr<TerminalTabberComponent::Window> TerminalTabberComponent::NewWindow(Window::Id idx) {
+    std::shared_ptr<TerminalTabberComponent::Window>
+        TerminalTabberComponent::NewWindow(Window::Id idx) {
         auto term = this->tabber.NewTab(idx);
-        auto component = std::make_unique<TerminalComponentHandle>(term.value, this->encoding, this->charPreset);
-        auto window = std::make_shared<TerminalTabberWindow>(term.index, std::move(component), *this);
+        auto component = std::make_unique<TerminalComponentHandle>(
+            term.value, this->encoding, this->charPreset);
+        auto window = std::make_shared<TerminalTabberWindow>(
+            term.index, std::move(component), *this);
         window->GetComponent().OnUpdate(this->updateListener);
         this->components.insert(this->components.begin() + idx, window);
         for (std::size_t i = 0; i < this->components.size(); i++) {
@@ -192,10 +216,11 @@ namespace sloked {
         }
     }
 
-    void TerminalTabberComponent::ProcessComponentInput(const SlokedKeyboardInput &input) {
+    void TerminalTabberComponent::ProcessComponentInput(
+        const SlokedKeyboardInput &input) {
         auto idx = this->tabber.GetCurrentTab();
         if (idx.has_value() && idx < this->components.size()) {
             this->components.at(idx.value())->ProcessInput(input);
         }
     }
-}
+}  // namespace sloked

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,8 +22,9 @@
 #ifndef SLOKED_THIRD_PARTY_SCRIPT_LUA_LOGGER_H_
 #define SLOKED_THIRD_PARTY_SCRIPT_LUA_LOGGER_H_
 
-#include "sloked/core/Logger.h"
 #include <lua.hpp>
+
+#include "sloked/core/Logger.h"
 
 namespace sloked {
 

@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -22,12 +22,13 @@
 #ifndef SLOKED_CORE_NEWLINE_H_
 #define SLOKED_CORE_NEWLINE_H_
 
+#include <functional>
+#include <iosfwd>
+#include <memory>
+#include <string>
+
 #include "sloked/Base.h"
 #include "sloked/core/Encoding.h"
-#include <string>
-#include <functional>
-#include <memory>
-#include <iosfwd>
 
 namespace sloked {
 
@@ -50,12 +51,13 @@ namespace sloked {
         const std::size_t Width;
         static std::unique_ptr<NewLine> LF(const Encoding &);
         static std::unique_ptr<NewLine> CRLF(const Encoding &);
-        static std::unique_ptr<NewLine> Create(const std::string &, const Encoding &);
-    
+        static std::unique_ptr<NewLine> Create(const std::string &,
+                                               const Encoding &);
+
      private:
         friend std::ostream &operator<<(std::ostream &, const NewLine &);
         std::string symbol;
     };
-}
+}  // namespace sloked
 
 #endif

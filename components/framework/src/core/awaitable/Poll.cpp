@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -23,7 +23,6 @@
 
 namespace sloked {
 
-
     SlokedDefaultIOPollThread::SlokedDefaultIOPollThread(SlokedIOPoll &poll)
         : poll(poll), work(false), nextId{0} {}
 
@@ -31,7 +30,8 @@ namespace sloked {
         this->Close();
     }
 
-    void SlokedDefaultIOPollThread::Start(std::chrono::system_clock::duration timeout) {
+    void SlokedDefaultIOPollThread::Start(
+        std::chrono::system_clock::duration timeout) {
         if (this->work.exchange(true)) {
             return;
         }
@@ -45,7 +45,8 @@ namespace sloked {
                 std::unique_lock queueLock(this->queueMtx);
                 if (!this->awaitableQueue.empty()) {
                     for (auto &kv : this->awaitableQueue) {
-                        this->awaitables.emplace(kv.first, std::move(kv.second));
+                        this->awaitables.emplace(kv.first,
+                                                 std::move(kv.second));
                     }
                     this->awaitableQueue.clear();
                 }
@@ -68,19 +69,21 @@ namespace sloked {
         }
     }
 
-    SlokedDefaultIOPollThread::Handle SlokedDefaultIOPollThread::Attach(std::unique_ptr<Awaitable> awaitable) {
+    SlokedDefaultIOPollThread::Handle SlokedDefaultIOPollThread::Attach(
+        std::unique_ptr<Awaitable> awaitable) {
         std::unique_lock lock(this->queueMtx);
         auto id = this->nextId++;
         this->awaitableQueue.emplace(id, std::move(awaitable));
-        auto detacher = this->poll.Attach(this->awaitableQueue.at(id)->GetAwaitable(), [this, id] {
-            if (this->awaitables.count(id) != 0) {
-                this->awaitables.at(id)->Process(true);
-            }
-        });
+        auto detacher = this->poll.Attach(
+            this->awaitableQueue.at(id)->GetAwaitable(), [this, id] {
+                if (this->awaitables.count(id) != 0) {
+                    this->awaitables.at(id)->Process(true);
+                }
+            });
         return Handle([this, id, detacher = std::move(detacher)] {
             detacher();
             std::unique_lock lock(this->queueMtx);
             this->removalQueue.push_back(id);
         });
     }
-}
+}  // namespace sloked

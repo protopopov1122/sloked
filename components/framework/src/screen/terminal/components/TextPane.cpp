@@ -6,8 +6,8 @@
   This file is part of Sloked project.
 
   Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as published by
-  the Free Software Foundation.
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
 
 
   Sloked is distributed in the hope that it will be useful,
@@ -35,11 +35,13 @@ namespace sloked {
     };
 
     TerminalTextPane::TerminalTextPane(SlokedTerminal &term)
-        : term(term), fontProperties(std::make_unique<TerminalVisualPreset>()) {}
+        : term(term), fontProperties(std::make_unique<TerminalVisualPreset>()) {
+    }
 
     TerminalTextPane::~TerminalTextPane() = default;
 
-    void TerminalTextPane::SetPosition(TextPosition::Line line, TextPosition::Column column) {
+    void TerminalTextPane::SetPosition(TextPosition::Line line,
+                                       TextPosition::Column column) {
         this->term.SetPosition(line, column);
     }
 
@@ -68,7 +70,8 @@ namespace sloked {
     }
 
     void TerminalTextPane::ClearArea(TextPosition range) {
-        for (SlokedGraphicsPoint::Coordinate line = 0; line < range.line; line++) {
+        for (SlokedGraphicsPoint::Coordinate line = 0; line < range.line;
+             line++) {
             this->term.MoveDown(1);
             this->term.ClearChars(range.column);
         }
@@ -102,4 +105,4 @@ namespace sloked {
     void TerminalTextPane::SetGraphicsMode(SlokedForegroundGraphics m) {
         this->term.SetGraphicsMode(m);
     }
-}
+}  // namespace sloked
