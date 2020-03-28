@@ -35,7 +35,9 @@ namespace sloked {
 
     class SlokedTextEditor : public SlokedTextPaneWidget {
      public:
-        SlokedTextEditor(const Encoding &, std::unique_ptr<KgrPipe>, std::function<void(SlokedCursorClient &)>, std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, const std::string &, SlokedBackgroundGraphics = SlokedBackgroundGraphics::White);
+        SlokedTextEditor(const Encoding &, std::unique_ptr<KgrPipe>, std::function<void(SlokedCursorClient &)>, std::unique_ptr<KgrPipe>,
+          std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId, const std::string &,
+          SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black, SlokedForegroundGraphics = SlokedForegroundGraphics::White);
 
         bool ProcessInput(const SlokedKeyboardInput &) override;
         void Render(SlokedTextPane &) override;
@@ -48,6 +50,7 @@ namespace sloked {
         SlokedDocumentNotifyClient notifyClient;
         std::string tagger;
         SlokedBackgroundGraphics background;
+        SlokedForegroundGraphics foreground;
         std::function<void()> updateListener;
         TextPosition cursorOffset;
         SlokedOrderedCache<TextPosition::Line, KgrValue> renderCache;

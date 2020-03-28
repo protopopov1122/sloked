@@ -253,7 +253,7 @@ class SlokedDemoRootNamespaceFactory : public SlokedRootNamespaceFactory {
     }
 };
 
-class SlokedDemoScreenBasis : public SlokedScreenProvider {
+class SlokedGraphicalScreenBasis : public SlokedScreenProvider {
  public:
     struct GUI {
         GUI(int width, int height)
@@ -276,7 +276,7 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
         std::unique_ptr<SlokedGraphicalTerminalWindow> terminal;
     };
 
-    SlokedDemoScreenBasis(const SlokedCharPreset &charPreset)
+    SlokedGraphicalScreenBasis(const SlokedCharPreset &charPreset)
         : gui(1024, 960),
           console(gui.GetTerminal(), Encoding::Get("system"), charPreset),
           provider(console, Encoding::Get("system"), charPreset, gui.GetTerminal(), gui.GetTerminal().GetTerminalSize()) {}
@@ -307,10 +307,49 @@ class SlokedDemoScreenBasis : public SlokedScreenProvider {
     SlokedTerminalScreenProvider provider;
 };
 
+class SlokedConsoleScreenBasis : public SlokedScreenProvider {
+ public:
+    SlokedConsoleScreenBasis(const SlokedCharPreset &charPreset)
+        : terminal(*SlokedTerminalCompat::GetSystemTerminal()),
+          size(terminal),
+          console(terminal, Encoding::Get("system"), charPreset),
+          provider(console, Encoding::Get("system"), charPreset, terminal, size) {}
+        
+    void Render(std::function<void(SlokedScreenComponent &)> fn) final {
+        this->provider.Render(std::move(fn));
+    }
+
+    std::vector<SlokedKeyboardInput> ReceiveInput(std::chrono::system_clock::duration timeout) final {
+        return this->provider.ReceiveInput(timeout);
+    }
+
+    SlokedMonitor<SlokedScreenComponent &> &GetScreen() final {
+        return this->provider.GetScreen();
+    }
+
+    SlokedScreenSize &GetSize() final {
+        return this->provider.GetSize();
+    }
+
+    const Encoding &GetEncoding() final {
+        return this->provider.GetEncoding();
+    }
+
+ private:
+    SlokedDuplexTerminal &terminal;
+    SlokedTerminalSize<SlokedTerminalResizeListener> size;
+    BufferedTerminal console;
+    SlokedTerminalScreenProvider provider;
+};
+
 class SlokedDemoScreenFactory : public SlokedScreenProviderFactory {
  public:
     std::unique_ptr<SlokedScreenProvider> Make(const SlokedUri &, const SlokedCharPreset &charPreset) final {
-        return std::make_unique<SlokedDemoScreenBasis>(charPreset);
+        if constexpr (SlokedGraphicsCompat::HasGraphics()) {
+            return std::make_unique<SlokedGraphicalScreenBasis>(charPreset);
+        } else{
+            return std::make_unique<SlokedConsoleScreenBasis>(charPreset);
+        }
     }
 };
 

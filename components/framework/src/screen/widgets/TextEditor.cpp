@@ -27,9 +27,11 @@
 namespace sloked {
 
     SlokedTextEditor::SlokedTextEditor(const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService, std::function<void(SlokedCursorClient &)> initClient,
-        std::unique_ptr<KgrPipe> renderService, std::unique_ptr<KgrPipe> notifyService, SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger, SlokedBackgroundGraphics bg)
-        : conv(encoding, SlokedLocale::SystemEncoding()), cursorClient(std::move(cursorService)), renderClient(std::move(renderService), docId), notifyClient(std::move(notifyService), docId), tagger(tagger), background(bg),
-          cursorOffset{0, 0}, renderCache([](const auto &, const auto &)->std::vector<KgrValue> { throw SlokedError("TextEditor: Unexpected cache miss"); }) {
+            std::unique_ptr<KgrPipe> renderService, std::unique_ptr<KgrPipe> notifyService,
+            SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger, SlokedBackgroundGraphics bg, SlokedForegroundGraphics fg)
+        : conv(encoding, SlokedLocale::SystemEncoding()), cursorClient(std::move(cursorService)),
+          renderClient(std::move(renderService), docId), notifyClient(std::move(notifyService), docId), tagger(tagger), background(bg),
+          foreground(fg), cursorOffset{0, 0}, renderCache([](const auto &, const auto &)->std::vector<KgrValue> { throw SlokedError("TextEditor: Unexpected cache miss"); }) {
         if (initClient) {
             initClient(this->cursorClient);
         }
@@ -150,6 +152,7 @@ namespace sloked {
 
         pane.SetGraphicsMode(SlokedTextGraphics::Off);
         pane.SetGraphicsMode(this->background);
+        pane.SetGraphicsMode(this->foreground);
         pane.ClearScreen();
         pane.SetPosition(0, 0);
 
@@ -163,6 +166,7 @@ namespace sloked {
                 } else {
                     pane.SetGraphicsMode(SlokedTextGraphics::Off);
                     pane.SetGraphicsMode(this->background);
+                    pane.SetGraphicsMode(this->foreground);
                 }
                 pane.Write(this->conv.ReverseConvert(fragment.content));
             }
