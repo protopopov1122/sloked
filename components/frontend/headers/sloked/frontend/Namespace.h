@@ -19,28 +19,31 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCRIPT_SCRIPTENGINE_H_
-#define SLOKED_SCRIPT_SCRIPTENGINE_H_
+#ifndef SLOKED_FRONTEND_NAMESPACE_H_
+#define SLOKED_FRONTEND_NAMESPACE_H_
 
-#include "sloked/core/Closeable.h"
-#include "sloked/editor/EditorInstance.h"
-#include "sloked/kgr/NamedServer.h"
-#include "sloked/sched/Scheduler.h"
+#include "sloked/namespace/Root.h"
+#include "sloked/namespace/Virtual.h"
 
 namespace sloked {
 
-    class SlokedScriptEngine : public SlokedCloseable {
+    class SlokedFrontendRootNamespace : public SlokedRootNamespace {
      public:
-        virtual ~SlokedScriptEngine() = default;
-        virtual void Start(const std::string &) = 0;
+        SlokedFrontendRootNamespace();
+        SlokedPathResolver &GetResolver() final;
+        SlokedMountableNamespace &GetRoot() final;
+        SlokedNamespaceMounter &GetMounter() final;
+
+     private:
+        SlokedDefaultVirtualNamespace root;
+        SlokedDefaultNamespaceMounter mounter;
+        SlokedPathResolver resolver;
     };
 
-    class SlokedScriptEngineFactory {
+    class SlokedFrontendRootNamespaceFactory
+        : public SlokedRootNamespaceFactory {
      public:
-        virtual ~SlokedScriptEngineFactory() = default;
-        virtual std::unique_ptr<SlokedScriptEngine> Make(
-            SlokedEditorInstanceContainer &, SlokedSchedulerThread &,
-            const std::string &) = 0;
+        std::unique_ptr<SlokedRootNamespace> Build() const final;
     };
 }  // namespace sloked
 

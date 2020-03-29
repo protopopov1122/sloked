@@ -19,28 +19,23 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCRIPT_SCRIPTENGINE_H_
-#define SLOKED_SCRIPT_SCRIPTENGINE_H_
+#ifndef SLOKED_EDITOR_PLUGIN_H_
+#define SLOKED_EDITOR_PLUGIN_H_
 
+#include "sloked/core/CLI.h"
 #include "sloked/core/Closeable.h"
-#include "sloked/editor/EditorInstance.h"
-#include "sloked/kgr/NamedServer.h"
-#include "sloked/sched/Scheduler.h"
+#include "sloked/core/Logger.h"
+#include "sloked/editor/Configuration.h"
+#include "sloked/editor/Manager.h"
+#include "sloked/editor/doc-mgr/Document.h"
+#include "sloked/text/fragment/TaggedText.h"
 
 namespace sloked {
 
-    class SlokedScriptEngine : public SlokedCloseable {
+    class SlokedCorePlugin {
      public:
-        virtual ~SlokedScriptEngine() = default;
-        virtual void Start(const std::string &) = 0;
-    };
-
-    class SlokedScriptEngineFactory {
-     public:
-        virtual ~SlokedScriptEngineFactory() = default;
-        virtual std::unique_ptr<SlokedScriptEngine> Make(
-            SlokedEditorInstanceContainer &, SlokedSchedulerThread &,
-            const std::string &) = 0;
+        virtual ~SlokedCorePlugin() = default;
+        virtual int Start(int, const char **, SlokedEditorManager &) = 0;
     };
 }  // namespace sloked
 

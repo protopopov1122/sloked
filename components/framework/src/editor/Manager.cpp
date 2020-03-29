@@ -24,17 +24,11 @@
 namespace sloked {
 
     SlokedEditorManager::Parameters::Parameters(
-        SlokedLogger &logger, SlokedRootNamespaceFactory &root)
-        : logger(logger),
-          root(root), taggers{nullptr}, editors{nullptr}, crypto{nullptr},
+        SlokedLogger &logger, SlokedRootNamespaceFactory &root,
+        SlokedConfigurationLoader &configLoader)
+        : logger(logger), root(root),
+          configurationLoader(configLoader), editors{nullptr}, crypto{nullptr},
           compression{nullptr}, screenProviders{nullptr} {}
-
-    SlokedEditorManager::Parameters &
-        SlokedEditorManager::Parameters::SetTaggers(
-            SlokedTextTaggerRegistry<int> &taggers) {
-        this->taggers = std::addressof(taggers);
-        return *this;
-    }
 
     SlokedEditorManager::Parameters &
         SlokedEditorManager::Parameters::SetEditors(
@@ -63,11 +57,19 @@ namespace sloked {
         return *this;
     }
 
+    SlokedEditorManager::Parameters &
+        SlokedEditorManager::Parameters::SetScriptEngineFactory(
+            SlokedScriptEngineFactory &factory) {
+        this->scriptEngines = std::addressof(factory);
+        return *this;
+    }
+
     SlokedEditorManager::SlokedEditorManager(Parameters prms)
         : logger(prms.logger), namespaceFactory(prms.root),
-          baseTaggers(prms.taggers), editorFactory(std::move(prms.editors)),
-          cryptoEngine(prms.crypto), compression(prms.compression),
-          screenProviders(prms.screenProviders) {}
+          configurationLoader(prms.configurationLoader),
+          editorFactory(std::move(prms.editors)), cryptoEngine(prms.crypto),
+          compression(prms.compression), screenProviders(prms.screenProviders),
+          scriptEngines(prms.scriptEngines) {}
 
     void SlokedEditorManager::Spawn(const KgrValue &config) {
         const auto &editors = config.AsDictionary();
@@ -114,8 +116,18 @@ namespace sloked {
         }
     }
 
-    bool SlokedEditorManager::HasBaseTaggers() const {
-        return this->baseTaggers != nullptr;
+    SlokedDefaultTextTaggerRegistry<SlokedEditorDocument::TagType>
+        &SlokedEditorManager::GetBaseTaggers() {
+        return this->baseTaggers;
+    }
+
+    const SlokedTextTaggerRegistry<SlokedEditorDocument::TagType>
+        &SlokedEditorManager::GetBaseTaggers() const {
+        return this->baseTaggers;
+    }
+
+    SlokedConfigurationLoader &SlokedEditorManager::GetConfigurationLoader() {
+        return this->configurationLoader;
     }
 
     bool SlokedEditorManager::HasEditorFactory() const {
@@ -132,6 +144,15 @@ namespace sloked {
 
     bool SlokedEditorManager::HasScreen() const {
         return this->screenProviders != nullptr;
+    }
+
+    std::unique_ptr<SlokedScriptEngine> SlokedEditorManager::NewScriptEngine(
+        SlokedSchedulerThread &sched, const std::string &path) {
+        if (this->scriptEngines) {
+            return this->scriptEngines->Make(*this, sched, path);
+        } else {
+            return nullptr;
+        }
     }
 
     bool SlokedEditorManager::Has(const std::string &key) const {
@@ -330,7 +351,7 @@ namespace sloked {
                 std::make_unique<SlokedServiceDependencyDefaultProvider>(
                     this->logger, this->namespaceFactory.Build(),
                     editor.GetCharPreset(), editor.GetServer().GetServer(),
-                    editor.GetContextManager(), this->baseTaggers));
+                    editor.GetContextManager(), &this->baseTaggers));
             if (serviceConfig.Has("root")) {
                 serviceProvider.GetNamespace().GetRoot().Mount(
                     SlokedPath{"/"},

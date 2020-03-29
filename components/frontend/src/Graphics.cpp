@@ -1,0 +1,152 @@
+/*
+  SPDX-License-Identifier: LGPL-3.0
+
+  Copyright (c) 2019-2020 Jevgenijs Protopopovs
+
+  This file is part of Sloked project.
+
+  Sloked is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
+
+
+  Sloked is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+  along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include "sloked/frontend/Graphics.h"
+
+#include "sloked/core/Error.h"
+#include "sloked/editor/terminal/ScreenProvider.h"
+#include "sloked/screen/graphics/Compat.h"
+#include "sloked/screen/terminal/Compat.h"
+#include "sloked/screen/terminal/TerminalResize.h"
+#include "sloked/screen/terminal/TerminalSize.h"
+#include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
+
+namespace sloked {
+
+    class SlokedGraphicalFrontendScreen : public SlokedScreenProvider {
+     public:
+        struct GUI {
+            GUI(int width, int height)
+                : gui(SlokedGraphicsCompat::GetGraphics(this->screenMgr)),
+                  terminal(
+                      gui->OpenTerminal({{width, height}, "Monospace 10"})) {
+                this->screenMgr.Start(std::chrono::milliseconds(50));
+            }
+
+            ~GUI() {
+                this->screenMgr.Stop();
+                this->terminal->Close();
+            }
+
+            SlokedGraphicalTerminal &GetTerminal() {
+                return this->terminal->GetTerminal();
+            }
+
+            SlokedScreenManager screenMgr;
+            std::unique_ptr<SlokedGraphicalComponents> gui;
+            std::unique_ptr<SlokedGraphicalTerminalWindow> terminal;
+        };
+
+        SlokedGraphicalFrontendScreen(const SlokedCharPreset &charPreset)
+            : gui(1024, 960),
+              console(gui.GetTerminal(), gui.GetTerminal().GetEncoding(),
+                      charPreset),
+              provider(console, gui.GetTerminal().GetEncoding(), charPreset,
+                       gui.GetTerminal(), gui.GetTerminal().GetTerminalSize()) {
+        }
+
+        void Render(std::function<void(SlokedScreenComponent &)> fn) final {
+            this->provider.Render(std::move(fn));
+        }
+
+        std::vector<SlokedKeyboardInput> ReceiveInput(
+            std::chrono::system_clock::duration timeout) final {
+            return this->provider.ReceiveInput(timeout);
+        }
+
+        SlokedMonitor<SlokedScreenComponent &> &GetScreen() final {
+            return this->provider.GetScreen();
+        }
+
+        SlokedScreenSize &GetSize() final {
+            return this->provider.GetSize();
+        }
+
+        const Encoding &GetEncoding() final {
+            return this->provider.GetEncoding();
+        }
+
+     private:
+        GUI gui;
+        BufferedTerminal console;
+        SlokedTerminalScreenProvider provider;
+    };
+
+    class SlokedTerminalFrontendScreen : public SlokedScreenProvider {
+     public:
+        SlokedTerminalFrontendScreen(const SlokedCharPreset &charPreset)
+            : terminal(*SlokedTerminalCompat::GetSystemTerminal()),
+              size(terminal),
+              console(terminal, Encoding::Get("system"), charPreset),
+              provider(console, Encoding::Get("system"), charPreset, terminal,
+                       size) {}
+
+        void Render(std::function<void(SlokedScreenComponent &)> fn) final {
+            this->provider.Render(std::move(fn));
+        }
+
+        std::vector<SlokedKeyboardInput> ReceiveInput(
+            std::chrono::system_clock::duration timeout) final {
+            return this->provider.ReceiveInput(timeout);
+        }
+
+        SlokedMonitor<SlokedScreenComponent &> &GetScreen() final {
+            return this->provider.GetScreen();
+        }
+
+        SlokedScreenSize &GetSize() final {
+            return this->provider.GetSize();
+        }
+
+        const Encoding &GetEncoding() final {
+            return this->provider.GetEncoding();
+        }
+
+     private:
+        SlokedDuplexTerminal &terminal;
+        SlokedTerminalSize<SlokedTerminalResizeListener> size;
+        BufferedTerminal console;
+        SlokedTerminalScreenProvider provider;
+    };
+
+    std::unique_ptr<SlokedScreenProvider> SlokedFrontendScreenFactory::Make(
+        const SlokedUri &uri, const SlokedCharPreset &charPreset) {
+        if (uri.GetScheme() == "terminal") {
+            return std::make_unique<SlokedTerminalFrontendScreen>(charPreset);
+        } else if (uri.GetScheme() == "graphics") {
+            const auto &query = uri.GetQuery();
+            if constexpr (SlokedGraphicsCompat::HasGraphics()) {
+                return std::make_unique<SlokedGraphicalFrontendScreen>(
+                    charPreset);
+            } else if (query.has_value() && query.value().Has("fallback") &&
+                       query.value().Get("fallback") == "terminal") {
+                return std::make_unique<SlokedTerminalFrontendScreen>(
+                    charPreset);
+            } else {
+                throw SlokedError(
+                    "Screen: Graphical screen unavailable without fallback");
+            }
+        } else {
+            throw SlokedError("Screen: Unknown screen provider \'" +
+                              uri.GetScheme() + "\'");
+        }
+    }
+}  // namespace sloked
