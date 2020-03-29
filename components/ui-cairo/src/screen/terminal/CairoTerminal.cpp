@@ -242,6 +242,10 @@ namespace sloked {
         return this->screenSize;
     }
 
+    const Encoding &SlokedCairoTerminal::GetEncoding() const {
+        return Encoding::Get("UTF-8");
+    }
+
     bool SlokedCairoTerminal::CheckUpdates() {
         return this->updated.exchange(false);
     }

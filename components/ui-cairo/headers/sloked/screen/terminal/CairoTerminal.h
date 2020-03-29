@@ -48,6 +48,7 @@ namespace sloked {
         const Mode &GetDefaultMode() const final;
         void SetDefaultMode(const Mode &) final;
         SlokedScreenSize &GetTerminalSize() final;
+        const Encoding &GetEncoding() const final;
 
         bool CheckUpdates() final;
         void ProcessInput(std::vector<SlokedKeyboardInput>) final;

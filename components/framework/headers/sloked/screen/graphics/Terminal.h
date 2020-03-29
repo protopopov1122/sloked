@@ -22,6 +22,7 @@
 #ifndef SLOKED_SCREEN_GRAPHICS_TERMINAL_H_
 #define SLOKED_SCREEN_GRAPHICS_TERMINAL_H_
 
+#include "sloked/core/Encoding.h"
 #include "sloked/screen/Size.h"
 #include "sloked/screen/graphics/Window.h"
 #include "sloked/screen/terminal/Terminal.h"
@@ -43,6 +44,7 @@ namespace sloked {
         virtual const Mode &GetDefaultMode() const = 0;
         virtual void SetDefaultMode(const Mode &) = 0;
         virtual SlokedScreenSize &GetTerminalSize() = 0;
+        virtual const Encoding &GetEncoding() const = 0;
     };
 
     class SlokedGraphicalTerminalWindow : public SlokedAbstractGraphicalWindow {
