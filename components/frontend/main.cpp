@@ -291,9 +291,9 @@ class SlokedGraphicalScreenBasis : public SlokedScreenProvider {
     };
 
     SlokedGraphicalScreenBasis(const SlokedCharPreset &charPreset)
-        : gui(1024, 960),
-          console(gui.GetTerminal(), Encoding::Get("system"), charPreset),
-          provider(console, Encoding::Get("system"), charPreset,
+        : gui(1024, 960), console(gui.GetTerminal(),
+                                  gui.GetTerminal().GetEncoding(), charPreset),
+          provider(console, gui.GetTerminal().GetEncoding(), charPreset,
                    gui.GetTerminal(), gui.GetTerminal().GetTerminalSize()) {}
 
     void Render(std::function<void(SlokedScreenComponent &)> fn) final {
