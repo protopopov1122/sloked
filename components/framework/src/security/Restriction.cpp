@@ -39,7 +39,9 @@ namespace sloked {
         : prefixes(std::move(prefixes)) {}
 
     bool SlokedNamedWhitelist::IsAllowed(const SlokedPath &name) const {
-        return ContainsPrefix(name, this->prefixes);
+        return ContainsPrefix(
+            name.IsAbsolute() ? name : name.RelativeTo(name.Root()),
+            this->prefixes);
     }
 
     std::unique_ptr<SlokedNamedWhitelist> SlokedNamedWhitelist::Make(
@@ -51,7 +53,9 @@ namespace sloked {
         : prefixes(prefixes) {}
 
     bool SlokedNamedBlacklist::IsAllowed(const SlokedPath &name) const {
-        return !ContainsPrefix(name, this->prefixes);
+        return !ContainsPrefix(
+            name.IsAbsolute() ? name : name.RelativeTo(name.Root()),
+            this->prefixes);
     }
 
     std::unique_ptr<SlokedNamedBlacklist> SlokedNamedBlacklist::Make(

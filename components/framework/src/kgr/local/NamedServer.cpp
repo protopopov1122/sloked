@@ -30,9 +30,10 @@ namespace sloked {
 
     std::unique_ptr<KgrPipe> KgrLocalNamedServer::Connect(
         const SlokedPath &name) {
+        auto absPath = name.IsAbsolute() ? name : name.RelativeTo(name.Root());
         std::unique_lock<std::mutex> lock(this->mtx);
-        if (this->names.count(name) != 0) {
-            return this->server.Connect(this->names.at(name));
+        if (this->names.count(absPath) != 0) {
+            return this->server.Connect(this->names.at(absPath));
         } else {
             throw SlokedError("KgrNamedServer: Unknown name \'" +
                               name.ToString() + "\'");
@@ -47,9 +48,10 @@ namespace sloked {
 
     void KgrLocalNamedServer::Register(const SlokedPath &name,
                                        std::unique_ptr<KgrService> service) {
+        auto absPath = name.IsAbsolute() ? name : name.RelativeTo(name.Root());
         std::unique_lock<std::mutex> lock(this->mtx);
-        if (this->names.count(name) == 0) {
-            this->names.emplace(name,
+        if (this->names.count(absPath) == 0) {
+            this->names.emplace(absPath,
                                 this->server.Register(std::move(service)));
         } else {
             throw SlokedError("KgrNamedServer: Name \'" + name.ToString() +
@@ -58,16 +60,18 @@ namespace sloked {
     }
 
     bool KgrLocalNamedServer::Registered(const SlokedPath &name) {
+        auto absPath = name.IsAbsolute() ? name : name.RelativeTo(name.Root());
         std::unique_lock<std::mutex> lock(this->mtx);
-        return this->names.count(name) != 0;
+        return this->names.count(absPath) != 0;
     }
 
     void KgrLocalNamedServer::Deregister(const SlokedPath &name) {
+        auto absPath = name.IsAbsolute() ? name : name.RelativeTo(name.Root());
         std::unique_lock<std::mutex> lock(this->mtx);
-        if (this->names.count(name) != 0) {
-            auto srvId = this->names.at(name);
+        if (this->names.count(absPath) != 0) {
+            auto srvId = this->names.at(absPath);
             this->server.Deregister(srvId);
-            this->names.erase(name);
+            this->names.erase(absPath);
         } else {
             throw SlokedError("KgrNamedServer: Unknown name \'" +
                               name.ToString() + "\'");

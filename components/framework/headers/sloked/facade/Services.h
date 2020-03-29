@@ -90,8 +90,8 @@ namespace sloked {
         std::unique_ptr<KgrService> Build(const std::string &) final;
 
      private:
-        std::map<std::string, std::function<std::unique_ptr<KgrService>(
-                                  SlokedServiceDependencyProvider &)>>
+        std::map<SlokedPath, std::function<std::unique_ptr<KgrService>(
+                                 SlokedServiceDependencyProvider &)>>
             builders;
     };
 }  // namespace sloked

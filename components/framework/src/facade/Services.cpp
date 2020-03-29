@@ -135,8 +135,12 @@ namespace sloked {
 
     std::unique_ptr<KgrService> SlokedDefaultServicesFacade::Build(
         const std::string &id) {
-        if (this->builders.count(id) != 0) {
-            return this->builders.at(id)(this->provider);
+        SlokedPath path{id};
+        if (!path.IsAbsolute()) {
+            path = path.RelativeTo(path.Root());
+        }
+        if (this->builders.count(path) != 0) {
+            return this->builders.at(path)(this->provider);
         } else {
             return nullptr;
         }
