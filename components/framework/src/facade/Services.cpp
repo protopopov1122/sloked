@@ -37,7 +37,8 @@ namespace sloked {
             std::unique_ptr<SlokedRootNamespace> rootNamespace,
             const SlokedCharPreset &charPreset, KgrNamedServer &server,
             KgrContextManager<KgrLocalContext> &contextManager,
-            SlokedTextTaggerRegistry<int> *baseTaggers)
+            SlokedTextTaggerRegistry<SlokedEditorDocument::TagType>
+                *baseTaggers)
         : logger(logger), rootNamespace(std::move(rootNamespace)),
           charPreset(charPreset), server(server),
           documents(this->rootNamespace->GetRoot()),
@@ -48,7 +49,7 @@ namespace sloked {
         return this->contextManager;
     }
 
-    SlokedTextTaggerRegistry<int>
+    SlokedTextTaggerRegistry<SlokedEditorDocument::TagType>
         &SlokedServiceDependencyDefaultProvider::GetTaggers() {
         return this->taggers;
     }

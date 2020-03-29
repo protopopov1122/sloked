@@ -38,7 +38,8 @@ namespace sloked {
      public:
         virtual ~SlokedServiceDependencyProvider() = default;
         virtual KgrContextManager<KgrLocalContext> &GetContextManager() = 0;
-        virtual SlokedTextTaggerRegistry<int> &GetTaggers() = 0;
+        virtual SlokedTextTaggerRegistry<SlokedEditorDocument::TagType>
+            &GetTaggers() = 0;
         virtual SlokedLogger &GetLogger() = 0;
         virtual SlokedRootNamespace &GetNamespace() = 0;
         virtual const SlokedCharPreset &GetCharPreset() = 0;
@@ -53,9 +54,11 @@ namespace sloked {
             SlokedLogger &, std::unique_ptr<SlokedRootNamespace>,
             const SlokedCharPreset &, KgrNamedServer &,
             KgrContextManager<KgrLocalContext> &,
-            SlokedTextTaggerRegistry<int> * = nullptr);
+            SlokedTextTaggerRegistry<SlokedEditorDocument::TagType> * =
+                nullptr);
         KgrContextManager<KgrLocalContext> &GetContextManager() override;
-        SlokedTextTaggerRegistry<int> &GetTaggers() override;
+        SlokedTextTaggerRegistry<SlokedEditorDocument::TagType> &GetTaggers()
+            override;
         SlokedLogger &GetLogger() override;
         SlokedRootNamespace &GetNamespace() override;
         const SlokedCharPreset &GetCharPreset() override;
@@ -70,7 +73,7 @@ namespace sloked {
         KgrNamedServer &server;
         SlokedEditorDocumentSet documents;
         KgrContextManager<KgrLocalContext> &contextManager;
-        SlokedDefaultTextTaggerRegistry<int> taggers;
+        SlokedDefaultTextTaggerRegistry<SlokedEditorDocument::TagType> taggers;
     };
 
     class SlokedAbstractServicesFacade {

@@ -141,7 +141,8 @@ namespace sloked {
                              this->document->text.GetLastLine() - begin + 1)),
                 [&](auto line) {
                     std::optional<std::pair<
-                        std::string, std::optional<TaggedTextFragment<int>>>>
+                        std::string, std::optional<TaggedTextFragment<
+                                         SlokedEditorDocument::TagType>>>>
                         back;
                     KgrArray fragments;
                     TextPosition::Column columnIdx{0};
@@ -149,7 +150,8 @@ namespace sloked {
                     auto lineTags = this->document->tags.Get(lineIdx);
                     std::string buffer{};
                     buffer.reserve(line.size());
-                    const TaggedTextFragment<int> *current{nullptr};
+                    const TaggedTextFragment<SlokedEditorDocument::TagType>
+                        *current{nullptr};
                     auto iter = lineTags.begin();
                     const auto length = line.size();
                     for (Encoding::Iterator it{};

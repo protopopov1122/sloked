@@ -35,7 +35,8 @@
 
 namespace sloked {
 
-    class TestFragment : public SlokedTextTagIterator<int> {
+    class TestFragment
+        : public SlokedTextTagIterator<SlokedEditorDocument::TagType> {
         class DocumentListener : public SlokedTransactionStreamListener {
          public:
             DocumentListener(
@@ -80,7 +81,8 @@ namespace sloked {
             this->listeners.RemoveListener(*this->listener);
         }
 
-        std::optional<TaggedTextFragment<int>> Next() override {
+        std::optional<TaggedTextFragment<SlokedEditorDocument::TagType>> Next()
+            override {
             if (this->cache.empty()) {
                 this->ParseLine();
             }
@@ -122,18 +124,19 @@ namespace sloked {
                 0,
                 this->encoding.GetCodepoint(currentLine, this->current.column)
                     .first);
-            this->encoding.IterateCodepoints(currentLine, [&](auto start,
-                                                              auto length,
-                                                              auto chr) {
-                if (chr == U'\t') {
-                    this->cache.push(TaggedTextFragment<int>(
-                        this->current,
-                        TextPosition{0, static_cast<TextPosition::Column>(1)},
-                        1));
-                }
-                this->current.column++;
-                return true;
-            });
+            this->encoding.IterateCodepoints(
+                currentLine, [&](auto start, auto length, auto chr) {
+                    if (chr == U'\t') {
+                        this->cache.push(
+                            TaggedTextFragment<SlokedEditorDocument::TagType>(
+                                this->current,
+                                TextPosition{
+                                    0, static_cast<TextPosition::Column>(1)},
+                                1));
+                    }
+                    this->current.column++;
+                    return true;
+                });
 
             this->current.line++;
             this->current.column = 0;
@@ -143,18 +146,20 @@ namespace sloked {
         const TextBlockView &text;
         const Encoding &encoding;
         TextPosition current;
-        std::queue<TaggedTextFragment<int>> cache;
+        std::queue<TaggedTextFragment<SlokedEditorDocument::TagType>> cache;
         SlokedEventEmitter<const TextPositionRange &> emitter;
         SlokedTransactionListenerManager &listeners;
         std::shared_ptr<DocumentListener> listener;
     };
 
-    class SlokedTestTagger : public SlokedTextTagger<int> {
+    class SlokedTestTagger
+        : public SlokedTextTagger<SlokedEditorDocument::TagType> {
      public:
         SlokedTestTagger(SlokedTaggableDocument &doc)
             : doc(doc), iter(doc.GetText(), doc.GetEncoding(),
                              doc.GetTransactionListeners()),
-              updater(std::make_shared<SlokedFragmentUpdater<int>>(
+              updater(std::make_shared<
+                      SlokedFragmentUpdater<SlokedEditorDocument::TagType>>(
                   doc.GetText(), iter, doc.GetEncoding())),
               lazy(iter), cached(lazy) {
             doc.GetTransactionListeners().AddListener(this->updater);
@@ -164,32 +169,35 @@ namespace sloked {
             doc.GetTransactionListeners().RemoveListener(*this->updater);
         }
 
-        std::optional<TaggedTextFragment<int>> Get(
+        std::optional<TaggedTextFragment<SlokedEditorDocument::TagType>> Get(
             const TextPosition &pos) final {
             return this->cached.Get(pos);
         }
 
-        std::vector<TaggedTextFragment<int>> Get(
+        std::vector<TaggedTextFragment<SlokedEditorDocument::TagType>> Get(
             TextPosition::Line line) final {
             return this->cached.Get(line);
         }
 
-        typename SlokedTextTagger<int>::Unbind OnChange(
-            std::function<void(const TextPositionRange &)> callback) final {
+        typename SlokedTextTagger<SlokedEditorDocument::TagType>::Unbind
+            OnChange(
+                std::function<void(const TextPositionRange &)> callback) final {
             return this->cached.OnChange(std::move(callback));
         }
 
      private:
         SlokedTaggableDocument &doc;
         TestFragment iter;
-        std::shared_ptr<SlokedFragmentUpdater<int>> updater;
-        SlokedLazyTaggedText<int> lazy;
-        SlokedCacheTaggedText<int> cached;
+        std::shared_ptr<SlokedFragmentUpdater<SlokedEditorDocument::TagType>>
+            updater;
+        SlokedLazyTaggedText<SlokedEditorDocument::TagType> lazy;
+        SlokedCacheTaggedText<SlokedEditorDocument::TagType> cached;
     };
 
-    class TestFragmentFactory : public SlokedTextTaggerFactory<int> {
+    class TestFragmentFactory
+        : public SlokedTextTaggerFactory<SlokedEditorDocument::TagType> {
      public:
-        std::unique_ptr<SlokedTextTagger<int>> Create(
+        std::unique_ptr<SlokedTextTagger<SlokedEditorDocument::TagType>> Create(
             SlokedTaggableDocument &doc) const final {
             return std::make_unique<SlokedTestTagger>(doc);
         }
@@ -213,7 +221,6 @@ namespace sloked {
         SlokedLogger logger(SlokedLoggerTag);
         manager.GetBaseTaggers().Bind("default",
                                       std::make_unique<TestFragmentFactory>());
-        const Encoding &terminalEncoding = Encoding::Get("system");  // TODO
 
         // Configuration
         SlokedCLI cli;
@@ -424,7 +431,7 @@ namespace sloked {
         SlokedScreenInputNotificationClient screenInput(
             secondaryServer.GetServer().Connect(
                 {"/screen/component/input/notify"}),
-            terminalEncoding, isScreenLocked);
+            Encoding::Get("system"), isScreenLocked);
         screenInput.Listen(
             "/",
             [&](auto &evt) {
