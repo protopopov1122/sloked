@@ -22,7 +22,6 @@
 #ifndef SLOKED_CORE_COUNTER_H_
 #define SLOKED_CORE_COUNTER_H_
 
-#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -40,24 +39,27 @@ namespace sloked {
         SlokedCounter(T value) : counter(value) {}
 
         void Increment() {
+            std::unique_lock<std::mutex> lock(mutex);
             this->counter++;
             this->cv.notify_all();
         }
 
         void Decrement() {
+            std::unique_lock<std::mutex> lock(mutex);
             this->counter--;
             this->cv.notify_all();
         }
 
         void Wait(std::function<bool(T)> cond) {
             std::unique_lock<std::mutex> lock(mutex);
-            if (!cond(this->counter.load())) {
-                this->cv.wait(lock, [&] { return cond(this->counter.load()); });
+            if (!cond(this->counter)) {
+                this->cv.wait(lock, [&] { return cond(this->counter); });
             }
         }
 
         T Load() {
-            return this->counter.load();
+            std::unique_lock<std::mutex> lock(mutex);
+            return this->counter;
         }
 
         class Handle {
@@ -114,7 +116,7 @@ namespace sloked {
         };
 
      private:
-        std::atomic<T> counter;
+        T counter;
         std::mutex mutex;
         std::condition_variable cv;
     };

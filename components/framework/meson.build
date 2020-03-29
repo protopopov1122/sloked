@@ -118,7 +118,7 @@ cpp = meson.get_compiler('cpp')
 atomic = cpp.find_library('atomic', required : false)
 execinfo = cpp.find_library('execinfo', required : false)
 threads = dependency('threads')
-sloked_framework_lib = static_library('sloked', sloked_src,
+sloked_framework_lib = shared_library('sloked', sloked_src,
   include_directories : include_directories('headers'),
   dependencies : [threads, atomic, execinfo])
 sloked_framework = declare_dependency(link_with : sloked_framework_lib,

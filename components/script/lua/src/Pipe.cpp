@@ -38,6 +38,7 @@ namespace sloked {
         SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(
             luaL_checkudata(state, 1, "sloked.pipe"));
         if (pipe != nullptr && pipe->pipe != nullptr) {
+            pipe->pipe->SetMessageListener(nullptr);
             pipe->pipe->Close();
             pipe->~SlokedPipeHandle();
         }
@@ -114,6 +115,7 @@ namespace sloked {
             SlokedPipeHandle *pipe = reinterpret_cast<SlokedPipeHandle *>(
                 luaL_checkudata(state, 1, "sloked.pipe"));
             if (pipe != nullptr && pipe->pipe != nullptr) {
+                pipe->pipe->SetMessageListener(nullptr);
                 pipe->pipe->Close();
                 return 0;
             } else {
