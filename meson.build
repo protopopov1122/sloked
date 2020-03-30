@@ -15,6 +15,8 @@ sloked_disable_scripting = true
 sloked_disable_graphics = true
 
 subdir('components/framework')
+subdir('components/frontend')
+
 if get_option('crypto') == 'botan'
   subdir('components/crypto/botan')
   sloked_crypto = sloked_botan_crypto
@@ -50,4 +52,4 @@ sloked_platform = sloked_posix_platform
 sloked_platform_flags = sloked_posix_platform_flags
 subdir('components/compat')
 
-subdir('components/frontend')
+subdir('components/bootstrap')

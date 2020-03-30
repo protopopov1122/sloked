@@ -23,6 +23,8 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "sloked/bootstrap/Graphics.h"
+#include "sloked/bootstrap/Namespace.h"
 #include "sloked/compat/Interface.h"
 #include "sloked/compat/compression/Compat.h"
 #include "sloked/compat/core/awaitable/Compat.h"
@@ -43,14 +45,12 @@
 #include "sloked/core/Semaphore.h"
 #include "sloked/core/awaitable/Poll.h"
 #include "sloked/editor/Configuration.h"
+#include "sloked/editor/CorePlugin.h"
 #include "sloked/editor/EditorInstance.h"
 #include "sloked/editor/Manager.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/editor/terminal/ScreenProvider.h"
 #include "sloked/facade/Services.h"
-#include "sloked/frontend/CorePlugin.h"
-#include "sloked/frontend/Graphics.h"
-#include "sloked/frontend/Namespace.h"
 #include "sloked/kgr/Path.h"
 #include "sloked/kgr/ctx-manager/RunnableContextManager.h"
 #include "sloked/kgr/local/NamedServer.h"
@@ -91,7 +91,7 @@ int main(int argc, const char **argv) {
     SlokedLocale::Setup();
     SlokedLogger logger(SlokedLoggerTag);
     SlokedCloseablePool closeables;
-    SlokedFrontendRootNamespaceFactory nsFactory;
+    SlokedBootstrapRootNamespaceFactory nsFactory;
     const SlokedBaseInterface &BaseInterface =
         SlokedEditorCompat::GetBaseInterface();
     SlokedEditorManager::Parameters startupPrms(logger, nsFactory);
@@ -105,13 +105,13 @@ int main(int argc, const char **argv) {
     if constexpr (SlokedCompressionCompat::IsSupported()) {
         startupPrms.SetComresssion(SlokedCompressionCompat::GetCompression());
     }
-    SlokedFrontendScreenFactory screenFactory;
+    SlokedBootstrapScreenFactory screenFactory;
     startupPrms.SetScreenProviders(screenFactory);
     SlokedEditorManager startup(std::move(startupPrms));
     closeables.Attach(startup);
 
-    SlokedFrontendDefaultCorePlugin corePlugin;
-    auto rc = corePlugin.Start(argc, argv, BaseInterface, startup);
+    auto corePlugin = SlokedGetCorePlugin();
+    auto rc = corePlugin->Start(argc, argv, BaseInterface, startup);
 
     closeables.Close();
     return rc;

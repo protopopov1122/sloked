@@ -19,33 +19,33 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/frontend/Namespace.h"
+#include "sloked/bootstrap/Namespace.h"
 
 #include "sloked/compat/namespace/Compat.h"
 #include "sloked/namespace/Empty.h"
 
 namespace sloked {
 
-    SlokedFrontendRootNamespace::SlokedFrontendRootNamespace()
+    SlokedBootstrapRootNamespace::SlokedBootstrapRootNamespace()
         : root(std::make_unique<SlokedEmptyNamespace>()),
           mounter(SlokedNamespaceCompat::NewRootFilesystem(), root),
           resolver(SlokedNamespaceCompat::GetWorkDir(),
                    SlokedNamespaceCompat::GetHomeDir()) {}
 
-    SlokedPathResolver &SlokedFrontendRootNamespace::GetResolver() {
+    SlokedPathResolver &SlokedBootstrapRootNamespace::GetResolver() {
         return this->resolver;
     }
 
-    SlokedMountableNamespace &SlokedFrontendRootNamespace::GetRoot() {
+    SlokedMountableNamespace &SlokedBootstrapRootNamespace::GetRoot() {
         return this->root;
     }
 
-    SlokedNamespaceMounter &SlokedFrontendRootNamespace::GetMounter() {
+    SlokedNamespaceMounter &SlokedBootstrapRootNamespace::GetMounter() {
         return this->mounter;
     }
 
     std::unique_ptr<SlokedRootNamespace>
-        SlokedFrontendRootNamespaceFactory::Build() const {
-        return std::make_unique<SlokedFrontendRootNamespace>();
+        SlokedBootstrapRootNamespaceFactory::Build() const {
+        return std::make_unique<SlokedBootstrapRootNamespace>();
     }
 }  // namespace sloked

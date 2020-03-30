@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/frontend/CorePlugin.h"
+#include "sloked/editor/CorePlugin.h"
 
 #include <iostream>
 
@@ -34,6 +34,12 @@
 #include "sloked/text/fragment/Updater.h"
 
 namespace sloked {
+
+    class SlokedFrontendDefaultCorePlugin : public SlokedCorePlugin {
+     public:
+        int Start(int, const char **, const SlokedBaseInterface &,
+                  SlokedEditorManager &) final;
+    };
 
     class TestFragment
         : public SlokedTextTagIterator<SlokedEditorDocument::TagType> {
@@ -462,5 +468,9 @@ namespace sloked {
         terminate.WaitAll();
         closeables.Close();
         return EXIT_SUCCESS;
+    }
+
+    extern "C" std::unique_ptr<SlokedCorePlugin> SlokedGetCorePlugin() {
+        return std::make_unique<SlokedFrontendDefaultCorePlugin>();
     }
 }  // namespace sloked

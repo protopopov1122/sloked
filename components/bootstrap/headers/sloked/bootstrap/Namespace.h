@@ -19,17 +19,31 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_FRONTEND_CORE_PLUGIN_H_
-#define SLOKED_FRONTEND_CORE_PLUGIN_H_
+#ifndef SLOKED_BOOTSTRAP_NAMESPACE_H_
+#define SLOKED_BOOTSTRAP_NAMESPACE_H_
 
-#include "sloked/editor/CorePlugin.h"
+#include "sloked/namespace/Root.h"
+#include "sloked/namespace/Virtual.h"
 
 namespace sloked {
 
-    class SlokedFrontendDefaultCorePlugin : public SlokedCorePlugin {
+    class SlokedBootstrapRootNamespace : public SlokedRootNamespace {
      public:
-        int Start(int, const char **, const SlokedBaseInterface &,
-                  SlokedEditorManager &) final;
+        SlokedBootstrapRootNamespace();
+        SlokedPathResolver &GetResolver() final;
+        SlokedMountableNamespace &GetRoot() final;
+        SlokedNamespaceMounter &GetMounter() final;
+
+     private:
+        SlokedDefaultVirtualNamespace root;
+        SlokedDefaultNamespaceMounter mounter;
+        SlokedPathResolver resolver;
+    };
+
+    class SlokedBootstrapRootNamespaceFactory
+        : public SlokedRootNamespaceFactory {
+     public:
+        std::unique_ptr<SlokedRootNamespace> Build() const final;
     };
 }  // namespace sloked
 

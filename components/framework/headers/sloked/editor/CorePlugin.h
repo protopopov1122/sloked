@@ -39,6 +39,8 @@ namespace sloked {
         virtual int Start(int, const char **, const SlokedBaseInterface &,
                           SlokedEditorManager &) = 0;
     };
+
+    extern "C" std::unique_ptr<SlokedCorePlugin> SlokedGetCorePlugin();
 }  // namespace sloked
 
 #endif

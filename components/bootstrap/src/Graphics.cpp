@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/frontend/Graphics.h"
+#include "sloked/bootstrap/Graphics.h"
 
 #include "sloked/compat/screen/graphics/Compat.h"
 #include "sloked/compat/screen/terminal/Compat.h"
@@ -31,7 +31,7 @@
 
 namespace sloked {
 
-    class SlokedGraphicalFrontendScreen : public SlokedScreenProvider {
+    class SlokedGraphicalBootstrapScreen : public SlokedScreenProvider {
      public:
         struct GUI {
             GUI(int width, int height)
@@ -55,7 +55,7 @@ namespace sloked {
             std::unique_ptr<SlokedGraphicalTerminalWindow> terminal;
         };
 
-        SlokedGraphicalFrontendScreen(const SlokedCharPreset &charPreset)
+        SlokedGraphicalBootstrapScreen(const SlokedCharPreset &charPreset)
             : gui(1024, 960),
               console(gui.GetTerminal(), gui.GetTerminal().GetEncoding(),
                       charPreset),
@@ -90,9 +90,9 @@ namespace sloked {
         SlokedTerminalScreenProvider provider;
     };
 
-    class SlokedTerminalFrontendScreen : public SlokedScreenProvider {
+    class SlokedTerminalBootstrapScreen : public SlokedScreenProvider {
      public:
-        SlokedTerminalFrontendScreen(const SlokedCharPreset &charPreset)
+        SlokedTerminalBootstrapScreen(const SlokedCharPreset &charPreset)
             : terminal(SlokedTerminalCompat::GetSystemTerminal()),
               size(terminal,
                    [](auto callback) {
@@ -132,18 +132,18 @@ namespace sloked {
         SlokedTerminalScreenProvider provider;
     };
 
-    std::unique_ptr<SlokedScreenProvider> SlokedFrontendScreenFactory::Make(
+    std::unique_ptr<SlokedScreenProvider> SlokedBootstrapScreenFactory::Make(
         const SlokedUri &uri, const SlokedCharPreset &charPreset) {
         if (uri.GetScheme() == "terminal") {
-            return std::make_unique<SlokedTerminalFrontendScreen>(charPreset);
+            return std::make_unique<SlokedTerminalBootstrapScreen>(charPreset);
         } else if (uri.GetScheme() == "graphics") {
             const auto &query = uri.GetQuery();
             if constexpr (SlokedGraphicsCompat::HasGraphics()) {
-                return std::make_unique<SlokedGraphicalFrontendScreen>(
+                return std::make_unique<SlokedGraphicalBootstrapScreen>(
                     charPreset);
             } else if (query.has_value() && query.value().Has("fallback") &&
                        query.value().Get("fallback") == "terminal") {
-                return std::make_unique<SlokedTerminalFrontendScreen>(
+                return std::make_unique<SlokedTerminalBootstrapScreen>(
                     charPreset);
             } else {
                 throw SlokedError(
