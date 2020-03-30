@@ -1,9 +1,9 @@
 
 frontend_src = [
-  'main.cpp',
   'src/CorePlugin.cpp',
-  'src/Graphics.cpp',
-  'src/Namespace.cpp'
+  'src/main.cpp',
+  'src/Namespace.cpp',
+  'src/Graphics.cpp'
 ]
 
 frontend_flags = []

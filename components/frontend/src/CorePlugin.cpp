@@ -210,8 +210,9 @@ namespace sloked {
                                       {"port", 1234},
                                   }}};
 
-    int SlokedFrontendDefaultCorePlugin::Start(int argc, const char **argv,
-                                               SlokedEditorManager &manager) {
+    int SlokedFrontendDefaultCorePlugin::Start(
+        int argc, const char **argv, const SlokedBaseInterface &baseInterface,
+        SlokedEditorManager &manager) {
         SlokedCloseablePool closeables;
         SlokedLoggingManager::Global.SetSink(
             SlokedLogLevel::Debug,
@@ -245,7 +246,7 @@ namespace sloked {
                                               {"map", "/script{}/path"}}});
         cli.Parse(argc, argv);
         SlokedConfiguration mainConfig{
-            cli.Export(), manager.GetConfigurationLoader().Load("main"),
+            cli.Export(), baseInterface.GetConfigurationLoader().Load("main"),
             DefaultConfiguration};
         if (cli.ArgCount() == 0) {
             std::cout << "Format: " << argv[0]
@@ -449,9 +450,9 @@ namespace sloked {
 
         // Scripting engine startup
         std::unique_ptr<SlokedScriptEngine> scriptEngine;
-        if (mainConfig.Has("/script/init")) {
-            scriptEngine = manager.NewScriptEngine(
-                mainEditor.GetScheduler(),
+        if (baseInterface.HasScripting() && mainConfig.Has("/script/init")) {
+            scriptEngine = baseInterface.NewScriptEngine(
+                manager, mainEditor.GetScheduler(),
                 mainConfig.Find("/script/path").AsString());
             if (scriptEngine) {
                 closeables.Attach(*scriptEngine);

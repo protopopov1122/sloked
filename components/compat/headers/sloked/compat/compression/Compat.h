@@ -19,20 +19,24 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_NAMESPACE_COMPAT_H_
-#define SLOKED_NAMESPACE_COMPAT_H_
+#ifndef SLOKED_COMPAT_COMPRESSION_COMPAT_H_
+#define SLOKED_COMPAT_COMPRESSION_COMPAT_H_
 
-#include "sloked/namespace/Filesystem.h"
+#include "sloked/core/Compression.h"
 
 namespace sloked {
 
-    class SlokedNamespaceCompat {
+    class SlokedCompressionCompat {
      public:
-        static std::unique_ptr<SlokedFilesystemAdapter> NewFilesystem(
-            const std::string &);
-        static std::unique_ptr<SlokedFilesystemAdapter> NewRootFilesystem();
-        static SlokedPath GetWorkDir();
-        static SlokedPath GetHomeDir();
+        static constexpr bool IsSupported() {
+#ifdef SLOKED_FEATURE_COMPRESSION
+            return true;
+#else
+            return false;
+#endif
+        }
+
+        static SlokedCompression &GetCompression();
     };
 }  // namespace sloked
 

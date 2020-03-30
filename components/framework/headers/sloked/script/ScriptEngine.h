@@ -34,14 +34,6 @@ namespace sloked {
         virtual ~SlokedScriptEngine() = default;
         virtual void Start(const std::string &) = 0;
     };
-
-    class SlokedScriptEngineFactory {
-     public:
-        virtual ~SlokedScriptEngineFactory() = default;
-        virtual std::unique_ptr<SlokedScriptEngine> Make(
-            SlokedEditorInstanceContainer &, SlokedSchedulerThread &,
-            const std::string &) = 0;
-    };
 }  // namespace sloked
 
 #endif

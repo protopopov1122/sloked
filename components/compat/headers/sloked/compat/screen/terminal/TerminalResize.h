@@ -19,26 +19,27 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_GRAPHICS_COMPAT_H_
-#define SLOKED_SCREEN_GRAPHICS_COMPAT_H_
+#ifndef SLOKED_COMPAT_SCREEN_TERMINAL_TERMINALRESIZE_H_
+#define SLOKED_COMPAT_SCREEN_TERMINAL_TERMINALRESIZE_H_
 
-#include "sloked/screen/Manager.h"
-#include "sloked/screen/graphics/GUI.h"
+#include <functional>
+#include <map>
+#include <mutex>
+
+#include "sloked/Base.h"
 
 namespace sloked {
 
-    class SlokedGraphicsCompat {
+    class SlokedTerminalResizeListener {
      public:
-        static constexpr bool HasGraphics() {
-#if defined(SLOKED_GFX_CAIRO_SDL)
-            return true;
-#else
-            return false;
-#endif
-        }
+        static std::function<void()> Bind(std::function<void()>);
 
-        static std::unique_ptr<SlokedGraphicalComponents> GetGraphics(
-            SlokedScreenManager &);
+     private:
+        static void Trigger(int);
+
+        static std::mutex mtx;
+        static int64_t nextId;
+        static std::map<int64_t, std::function<void()>> listeners;
     };
 }  // namespace sloked
 

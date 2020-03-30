@@ -19,16 +19,20 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CORE_AWAITABLE_COMPAT_H_
-#define SLOKED_CORE_AWAITABLE_COMPAT_H_
+#ifndef SLOKED_COMPAT_NAMESPACE_COMPAT_H_
+#define SLOKED_COMPAT_NAMESPACE_COMPAT_H_
 
-#include "sloked/core/awaitable/Awaitable.h"
+#include "sloked/namespace/Filesystem.h"
 
 namespace sloked {
 
-    class SlokedIOPollCompat {
+    class SlokedNamespaceCompat {
      public:
-        static std::unique_ptr<SlokedIOPoll> NewPoll();
+        static std::unique_ptr<SlokedFilesystemAdapter> NewFilesystem(
+            const std::string &);
+        static std::unique_ptr<SlokedFilesystemAdapter> NewRootFilesystem();
+        static SlokedPath GetWorkDir();
+        static SlokedPath GetHomeDir();
     };
 }  // namespace sloked
 

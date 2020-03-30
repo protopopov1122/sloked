@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/core/awaitable/Compat.h"
+#include "sloked/compat/core/awaitable/Compat.h"
 
 #ifdef SLOKED_PLATFORM_POSIX
 #include "sloked/core/awaitable/Posix.h"

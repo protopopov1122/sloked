@@ -24,10 +24,8 @@
 namespace sloked {
 
     SlokedEditorManager::Parameters::Parameters(
-        SlokedLogger &logger, SlokedRootNamespaceFactory &root,
-        SlokedConfigurationLoader &configLoader)
-        : logger(logger), root(root),
-          configurationLoader(configLoader), editors{nullptr}, crypto{nullptr},
+        SlokedLogger &logger, SlokedRootNamespaceFactory &root)
+        : logger(logger), root(root), editors{nullptr}, crypto{nullptr},
           compression{nullptr}, screenProviders{nullptr} {}
 
     SlokedEditorManager::Parameters &
@@ -57,19 +55,11 @@ namespace sloked {
         return *this;
     }
 
-    SlokedEditorManager::Parameters &
-        SlokedEditorManager::Parameters::SetScriptEngineFactory(
-            SlokedScriptEngineFactory &factory) {
-        this->scriptEngines = std::addressof(factory);
-        return *this;
-    }
-
     SlokedEditorManager::SlokedEditorManager(Parameters prms)
         : logger(prms.logger), namespaceFactory(prms.root),
-          configurationLoader(prms.configurationLoader),
           editorFactory(std::move(prms.editors)), cryptoEngine(prms.crypto),
-          compression(prms.compression), screenProviders(prms.screenProviders),
-          scriptEngines(prms.scriptEngines) {}
+          compression(prms.compression), screenProviders(prms.screenProviders) {
+    }
 
     void SlokedEditorManager::Spawn(const KgrValue &config) {
         const auto &editors = config.AsDictionary();
@@ -126,10 +116,6 @@ namespace sloked {
         return this->baseTaggers;
     }
 
-    SlokedConfigurationLoader &SlokedEditorManager::GetConfigurationLoader() {
-        return this->configurationLoader;
-    }
-
     bool SlokedEditorManager::HasEditorFactory() const {
         return this->editorFactory != nullptr;
     }
@@ -144,15 +130,6 @@ namespace sloked {
 
     bool SlokedEditorManager::HasScreen() const {
         return this->screenProviders != nullptr;
-    }
-
-    std::unique_ptr<SlokedScriptEngine> SlokedEditorManager::NewScriptEngine(
-        SlokedSchedulerThread &sched, const std::string &path) {
-        if (this->scriptEngines) {
-            return this->scriptEngines->Make(*this, sched, path);
-        } else {
-            return nullptr;
-        }
     }
 
     bool SlokedEditorManager::Has(const std::string &key) const {

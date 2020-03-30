@@ -19,28 +19,24 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCRIPT_COMPAT_H_
-#define SLOKED_SCRIPT_COMPAT_H_
+#ifndef SLOKED_COMPAT_SCREEN_TERMINAL_COMPAT_H_
+#define SLOKED_COMPAT_SCREEN_TERMINAL_COMPAT_H_
 
-#include "sloked/editor/EditorInstance.h"
-#include "sloked/sched/Scheduler.h"
-#include "sloked/script/ScriptEngine.h"
+#include "sloked/screen/terminal/Terminal.h"
 
 namespace sloked {
 
-    class SlokedScriptCompat {
+    class SlokedTerminalCompat {
      public:
-        static constexpr bool IsSupported() {
-#ifdef SLOKED_FEATURE_SCRIPTING
+        static constexpr bool HasSystemTerminal() {
+#if defined(SLOKED_PLATFORM_POSIX)
             return true;
 #else
             return false;
 #endif
         }
 
-        static std::unique_ptr<SlokedScriptEngine> GetEngine(
-            SlokedEditorInstanceContainer &, SlokedSchedulerThread &,
-            const std::string &);
+        static SlokedDuplexTerminal &GetSystemTerminal();
     };
 }  // namespace sloked
 

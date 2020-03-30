@@ -19,16 +19,16 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_NET_COMPAT_H_
-#define SLOKED_NET_COMPAT_H_
+#ifndef SLOKED_COMPAT_EDITOR_CONFIGURATION_COMPAT_H_
+#define SLOKED_COMPAT_EDITOR_CONFIGURATION_COMPAT_H_
 
-#include "sloked/net/Socket.h"
+#include "sloked/editor/Configuration.h"
 
 namespace sloked {
 
-    class SlokedNetCompat {
+    class SlokedConfigurationLoaderCompat {
      public:
-        static SlokedSocketFactory &GetNetwork();
+        static SlokedConfigurationLoader &GetLoader();
     };
 }  // namespace sloked
 

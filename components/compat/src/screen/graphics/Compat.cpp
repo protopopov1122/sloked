@@ -1,4 +1,4 @@
-#include "sloked/screen/graphics/Compat.h"
+#include "sloked/compat/screen/graphics/Compat.h"
 
 #ifdef SLOKED_GFX_CAIRO_SDL
 #include "sloked/screen/cairo/GUI.h"

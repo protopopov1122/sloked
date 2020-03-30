@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/namespace/Compat.h"
+#include "sloked/compat/namespace/Compat.h"
 
 #ifdef SLOKED_PLATFORM_POSIX
 #include "sloked/namespace/posix/Environment.h"

@@ -23,7 +23,17 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "sloked/compression/Compat.h"
+#include "sloked/compat/Interface.h"
+#include "sloked/compat/compression/Compat.h"
+#include "sloked/compat/core/awaitable/Compat.h"
+#include "sloked/compat/crypto/Compat.h"
+#include "sloked/compat/editor/configuration/Compat.h"
+#include "sloked/compat/namespace/Compat.h"
+#include "sloked/compat/net/Compat.h"
+#include "sloked/compat/screen/graphics/Compat.h"
+#include "sloked/compat/screen/terminal/Compat.h"
+#include "sloked/compat/screen/terminal/TerminalResize.h"
+#include "sloked/compat/script/Compat.h"
 #include "sloked/core/CLI.h"
 #include "sloked/core/Closeable.h"
 #include "sloked/core/Failure.h"
@@ -31,13 +41,10 @@
 #include "sloked/core/Logger.h"
 #include "sloked/core/Monitor.h"
 #include "sloked/core/Semaphore.h"
-#include "sloked/core/awaitable/Compat.h"
 #include "sloked/core/awaitable/Poll.h"
-#include "sloked/crypto/Compat.h"
 #include "sloked/editor/Configuration.h"
 #include "sloked/editor/EditorInstance.h"
 #include "sloked/editor/Manager.h"
-#include "sloked/editor/configuration/Compat.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/editor/terminal/ScreenProvider.h"
 #include "sloked/facade/Services.h"
@@ -52,21 +59,15 @@
 #include "sloked/kgr/net/Config.h"
 #include "sloked/kgr/net/MasterServer.h"
 #include "sloked/kgr/net/SlaveServer.h"
-#include "sloked/namespace/Compat.h"
 #include "sloked/namespace/Empty.h"
 #include "sloked/namespace/Mount.h"
 #include "sloked/namespace/Resolve.h"
 #include "sloked/namespace/Root.h"
 #include "sloked/namespace/Virtual.h"
-#include "sloked/net/Compat.h"
 #include "sloked/net/CryptoSocket.h"
 #include "sloked/sched/Scheduler.h"
-#include "sloked/screen/graphics/Compat.h"
-#include "sloked/screen/terminal/Compat.h"
-#include "sloked/screen/terminal/TerminalResize.h"
 #include "sloked/screen/terminal/TerminalSize.h"
 #include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
-#include "sloked/script/Compat.h"
 #include "sloked/security/Master.h"
 #include "sloked/security/Slave.h"
 #include "sloked/services/Cursor.h"
@@ -84,14 +85,6 @@
 
 using namespace sloked;
 
-class SlokedFrontendScriptEngineFactory : public SlokedScriptEngineFactory {
-    std::unique_ptr<SlokedScriptEngine> Make(
-        SlokedEditorInstanceContainer &container,
-        SlokedSchedulerThread &scheduler, const std::string &path) final {
-        return SlokedScriptCompat::GetEngine(container, scheduler, path);
-    }
-};
-
 int main(int argc, const char **argv) {
     // Initialize globals
     SlokedFailure::SetupHandler();
@@ -99,8 +92,9 @@ int main(int argc, const char **argv) {
     SlokedLogger logger(SlokedLoggerTag);
     SlokedCloseablePool closeables;
     SlokedFrontendRootNamespaceFactory nsFactory;
-    SlokedEditorManager::Parameters startupPrms(
-        logger, nsFactory, SlokedConfigurationLoaderCompat::GetLoader());
+    const SlokedBaseInterface &BaseInterface =
+        SlokedEditorCompat::GetBaseInterface();
+    SlokedEditorManager::Parameters startupPrms(logger, nsFactory);
     if constexpr (SlokedCryptoCompat::IsSupported()) {
         startupPrms.SetCrypto(SlokedCryptoCompat::GetCrypto());
     }
@@ -111,17 +105,13 @@ int main(int argc, const char **argv) {
     if constexpr (SlokedCompressionCompat::IsSupported()) {
         startupPrms.SetComresssion(SlokedCompressionCompat::GetCompression());
     }
-    SlokedFrontendScriptEngineFactory scripting;
-    if constexpr (SlokedScriptCompat::IsSupported()) {
-        startupPrms.SetScriptEngineFactory(scripting);
-    }
     SlokedFrontendScreenFactory screenFactory;
     startupPrms.SetScreenProviders(screenFactory);
     SlokedEditorManager startup(std::move(startupPrms));
     closeables.Attach(startup);
 
     SlokedFrontendDefaultCorePlugin corePlugin;
-    auto rc = corePlugin.Start(argc, argv, startup);
+    auto rc = corePlugin.Start(argc, argv, BaseInterface, startup);
 
     closeables.Close();
     return rc;

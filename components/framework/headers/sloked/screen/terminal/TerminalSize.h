@@ -33,9 +33,9 @@ namespace sloked {
     template <typename T>
     class SlokedTerminalSize : public SlokedScreenSize {
      public:
-        SlokedTerminalSize(SlokedTerminal &terminal)
+        SlokedTerminalSize(SlokedTerminal &terminal, const T &binder)
             : terminal(terminal), nextId{0} {
-            this->unsubscribe = T::Bind([this] { this->Trigger(); });
+            this->unsubscribe = binder([this] { this->Trigger(); });
         }
 
         ~SlokedTerminalSize() {

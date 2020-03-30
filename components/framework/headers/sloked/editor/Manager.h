@@ -37,25 +37,21 @@ namespace sloked {
             std::function<std::unique_ptr<SlokedEditorInstance>()>;
         class Parameters {
          public:
-            Parameters(SlokedLogger &, SlokedRootNamespaceFactory &,
-                       SlokedConfigurationLoader &);
+            Parameters(SlokedLogger &, SlokedRootNamespaceFactory &);
             Parameters &SetEditors(SlokedEditorManager::EditorFactory);
             Parameters &SetCrypto(SlokedCrypto &);
             Parameters &SetComresssion(SlokedCompression &);
             Parameters &SetScreenProviders(SlokedScreenProviderFactory &);
-            Parameters &SetScriptEngineFactory(SlokedScriptEngineFactory &);
 
             friend class SlokedEditorManager;
 
          private:
             SlokedLogger &logger;
             SlokedRootNamespaceFactory &root;
-            SlokedConfigurationLoader &configurationLoader;
             SlokedEditorManager::EditorFactory editors;
             SlokedCrypto *crypto;
             SlokedCompression *compression;
             SlokedScreenProviderFactory *screenProviders;
-            SlokedScriptEngineFactory *scriptEngines;
         };
         SlokedEditorManager(Parameters);
         void Spawn(const KgrValue &);
@@ -66,13 +62,10 @@ namespace sloked {
             &GetBaseTaggers();
         const SlokedTextTaggerRegistry<SlokedEditorDocument::TagType>
             &GetBaseTaggers() const;
-        SlokedConfigurationLoader &GetConfigurationLoader();
         bool HasEditorFactory() const;
         bool HasCrypto() const;
         bool HasCompression() const;
         bool HasScreen() const;
-        std::unique_ptr<SlokedScriptEngine> NewScriptEngine(
-            SlokedSchedulerThread &, const std::string &);
 
         bool Has(const std::string &) const final;
         SlokedEditorInstance &Get(const std::string &) const final;
@@ -93,14 +86,12 @@ namespace sloked {
         std::map<std::string, std::unique_ptr<SlokedEditorInstance>> editors;
         SlokedLogger &logger;
         SlokedRootNamespaceFactory &namespaceFactory;
-        SlokedConfigurationLoader &configurationLoader;
         SlokedDefaultTextTaggerRegistry<SlokedEditorDocument::TagType>
             baseTaggers;
         EditorFactory editorFactory;
         SlokedCrypto *cryptoEngine;
         SlokedCompression *compression;
         SlokedScreenProviderFactory *screenProviders;
-        SlokedScriptEngineFactory *scriptEngines;
     };
 }  // namespace sloked
 

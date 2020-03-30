@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/screen/terminal/TerminalResize.h"
+#include "sloked/compat/screen/terminal/TerminalResize.h"
 
 #include <csignal>
 

@@ -19,24 +19,24 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_COMPRESSION_COMPAT_H_
-#define SLOKED_COMPRESSION_COMPAT_H_
+#ifndef SLOKED_COMPAT_CRYPTO_COMPAT_H_
+#define SLOKED_COMPAT_CRYPTO_COMPAT_H_
 
-#include "sloked/core/Compression.h"
+#include "sloked/core/Crypto.h"
 
 namespace sloked {
 
-    class SlokedCompressionCompat {
+    class SlokedCryptoCompat {
      public:
         static constexpr bool IsSupported() {
-#ifdef SLOKED_FEATURE_COMPRESSION
+#ifdef SLOKED_FEATURE_CRYPTO
             return true;
 #else
             return false;
 #endif
         }
 
-        static SlokedCompression &GetCompression();
+        static SlokedCrypto &GetCrypto();
     };
 }  // namespace sloked
 

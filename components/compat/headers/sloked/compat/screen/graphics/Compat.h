@@ -19,16 +19,26 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_EDITOR_CONFIGURATION_COMPAT_H_
-#define SLOKED_EDITOR_CONFIGURATION_COMPAT_H_
+#ifndef SLOKED_COMPAT_SCREEN_GRAPHICS_COMPAT_H_
+#define SLOKED_COMPAT_SCREEN_GRAPHICS_COMPAT_H_
 
-#include "sloked/editor/Configuration.h"
+#include "sloked/screen/Manager.h"
+#include "sloked/screen/graphics/GUI.h"
 
 namespace sloked {
 
-    class SlokedConfigurationLoaderCompat {
+    class SlokedGraphicsCompat {
      public:
-        static SlokedConfigurationLoader &GetLoader();
+        static constexpr bool HasGraphics() {
+#if defined(SLOKED_GFX_CAIRO_SDL)
+            return true;
+#else
+            return false;
+#endif
+        }
+
+        static std::unique_ptr<SlokedGraphicalComponents> GetGraphics(
+            SlokedScreenManager &);
     };
 }  // namespace sloked
 

@@ -19,24 +19,16 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_TERMINAL_COMPAT_H_
-#define SLOKED_SCREEN_TERMINAL_COMPAT_H_
+#ifndef SLOKED_COMPAT_CORE_AWAITABLE_COMPAT_H_
+#define SLOKED_COMPAT_CORE_AWAITABLE_COMPAT_H_
 
-#include "sloked/screen/terminal/Terminal.h"
+#include "sloked/core/awaitable/Awaitable.h"
 
 namespace sloked {
 
-    class SlokedTerminalCompat {
+    class SlokedIOPollCompat {
      public:
-        static constexpr bool HasSystemTerminal() {
-#if defined(SLOKED_PLATFORM_POSIX)
-            return true;
-#else
-            return false;
-#endif
-        }
-
-        static SlokedDuplexTerminal *GetSystemTerminal();
+        static std::unique_ptr<SlokedIOPoll> NewPoll();
     };
 }  // namespace sloked
 

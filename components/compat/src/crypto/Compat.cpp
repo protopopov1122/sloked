@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/crypto/Compat.h"
+#include "sloked/compat/crypto/Compat.h"
 
 #if defined(SLOKED_FEATURE_CRYPTO) &&         \
     !(defined(SLOKED_FEATURE_CRYPTO_BOTAN) || \

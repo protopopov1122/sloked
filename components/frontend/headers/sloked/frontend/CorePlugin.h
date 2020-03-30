@@ -28,7 +28,8 @@ namespace sloked {
 
     class SlokedFrontendDefaultCorePlugin : public SlokedCorePlugin {
      public:
-        int Start(int, const char **, SlokedEditorManager &) final;
+        int Start(int, const char **, const SlokedBaseInterface &,
+                  SlokedEditorManager &) final;
     };
 }  // namespace sloked
 

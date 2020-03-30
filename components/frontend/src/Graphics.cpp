@@ -21,11 +21,11 @@
 
 #include "sloked/frontend/Graphics.h"
 
+#include "sloked/compat/screen/graphics/Compat.h"
+#include "sloked/compat/screen/terminal/Compat.h"
+#include "sloked/compat/screen/terminal/TerminalResize.h"
 #include "sloked/core/Error.h"
 #include "sloked/editor/terminal/ScreenProvider.h"
-#include "sloked/screen/graphics/Compat.h"
-#include "sloked/screen/terminal/Compat.h"
-#include "sloked/screen/terminal/TerminalResize.h"
 #include "sloked/screen/terminal/TerminalSize.h"
 #include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
 
@@ -93,8 +93,11 @@ namespace sloked {
     class SlokedTerminalFrontendScreen : public SlokedScreenProvider {
      public:
         SlokedTerminalFrontendScreen(const SlokedCharPreset &charPreset)
-            : terminal(*SlokedTerminalCompat::GetSystemTerminal()),
-              size(terminal),
+            : terminal(SlokedTerminalCompat::GetSystemTerminal()),
+              size(terminal,
+                   [](auto callback) {
+                       return SlokedTerminalResizeListener::Bind(callback);
+                   }),
               console(terminal, Encoding::Get("system"), charPreset),
               provider(console, Encoding::Get("system"), charPreset, terminal,
                        size) {}
@@ -122,7 +125,9 @@ namespace sloked {
 
      private:
         SlokedDuplexTerminal &terminal;
-        SlokedTerminalSize<SlokedTerminalResizeListener> size;
+        SlokedTerminalSize<
+            std::function<std::function<void()>(std::function<void()>)>>
+            size;
         BufferedTerminal console;
         SlokedTerminalScreenProvider provider;
     };

@@ -25,6 +25,7 @@
 #include "sloked/core/CLI.h"
 #include "sloked/core/Closeable.h"
 #include "sloked/core/Logger.h"
+#include "sloked/editor/BaseInterface.h"
 #include "sloked/editor/Configuration.h"
 #include "sloked/editor/Manager.h"
 #include "sloked/editor/doc-mgr/Document.h"
@@ -35,7 +36,8 @@ namespace sloked {
     class SlokedCorePlugin {
      public:
         virtual ~SlokedCorePlugin() = default;
-        virtual int Start(int, const char **, SlokedEditorManager &) = 0;
+        virtual int Start(int, const char **, const SlokedBaseInterface &,
+                          SlokedEditorManager &) = 0;
     };
 }  // namespace sloked
 

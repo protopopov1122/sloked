@@ -19,16 +19,16 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/screen/terminal/Compat.h"
+#include "sloked/compat/screen/terminal/Compat.h"
 
 #ifdef SLOKED_PLATFORM_POSIX
 #include "sloked/screen/terminal/posix/PosixTerminal.h"
 
 namespace sloked {
 
-    SlokedDuplexTerminal *SlokedTerminalCompat::GetSystemTerminal() {
+    SlokedDuplexTerminal &SlokedTerminalCompat::GetSystemTerminal() {
         static PosixTerminal terminal;
-        return &terminal;
+        return terminal;
     }
 }  // namespace sloked
 #else

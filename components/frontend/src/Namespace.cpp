@@ -21,7 +21,7 @@
 
 #include "sloked/frontend/Namespace.h"
 
-#include "sloked/namespace/Compat.h"
+#include "sloked/compat/namespace/Compat.h"
 #include "sloked/namespace/Empty.h"
 
 namespace sloked {

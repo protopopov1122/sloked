@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/compression/Compat.h"
+#include "sloked/compat/compression/Compat.h"
 
 #if defined(SLOKED_FEATURE_COMPRESSION) && \
     !defined(SLOKED_FEATURE_COMPRESSION_ZLIB)

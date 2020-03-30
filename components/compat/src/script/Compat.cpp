@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/script/Compat.h"
+#include "sloked/compat/script/Compat.h"
 
 #if defined(SLOKED_FEATURE_SCRIPTING) && !defined(SLOKED_FEATURE_SCRIPTING_LUA)
 #error "Build system error: scripting language bindings are not defined"

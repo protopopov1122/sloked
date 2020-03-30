@@ -19,24 +19,28 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CRYPTO_COMPAT_H_
-#define SLOKED_CRYPTO_COMPAT_H_
+#ifndef SLOKED_COMPAT_SCRIPT_COMPAT_H_
+#define SLOKED_COMPAT_SCRIPT_COMPAT_H_
 
-#include "sloked/core/Crypto.h"
+#include "sloked/editor/EditorInstance.h"
+#include "sloked/sched/Scheduler.h"
+#include "sloked/script/ScriptEngine.h"
 
 namespace sloked {
 
-    class SlokedCryptoCompat {
+    class SlokedScriptCompat {
      public:
         static constexpr bool IsSupported() {
-#ifdef SLOKED_FEATURE_CRYPTO
+#ifdef SLOKED_FEATURE_SCRIPTING
             return true;
 #else
             return false;
 #endif
         }
 
-        static SlokedCrypto &GetCrypto();
+        static std::unique_ptr<SlokedScriptEngine> GetEngine(
+            SlokedEditorInstanceContainer &, SlokedSchedulerThread &,
+            const std::string &);
     };
 }  // namespace sloked
 

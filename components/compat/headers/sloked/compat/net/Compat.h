@@ -19,27 +19,16 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_TERMINAL_TERMINALRESIZE_H_
-#define SLOKED_SCREEN_TERMINAL_TERMINALRESIZE_H_
+#ifndef SLOKED_COMPAT_NET_COMPAT_H_
+#define SLOKED_COMPAT_NET_COMPAT_H_
 
-#include <functional>
-#include <map>
-#include <mutex>
-
-#include "sloked/Base.h"
+#include "sloked/net/Socket.h"
 
 namespace sloked {
 
-    class SlokedTerminalResizeListener {
+    class SlokedNetCompat {
      public:
-        static std::function<void()> Bind(std::function<void()>);
-
-     private:
-        static void Trigger(int);
-
-        static std::mutex mtx;
-        static int64_t nextId;
-        static std::map<int64_t, std::function<void()>> listeners;
+        static SlokedSocketFactory &GetNetwork();
     };
 }  // namespace sloked
 
