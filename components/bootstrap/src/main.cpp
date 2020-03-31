@@ -85,6 +85,31 @@
 
 using namespace sloked;
 
+std::pair<std::unique_ptr<SlokedCorePlugin>,
+          std::unique_ptr<SlokedDynamicLibrary>>
+    LoadCorePlugin(int argc, const char **argv,
+                   const SlokedBaseInterface &baseInterface) {
+    SlokedCLI cli;
+    cli.Define("--core-plugin", cli.Option<std::string>());
+    cli.Parse(argc, argv, true);
+    if (cli.Has("core-plugin")) {
+        auto libraryPath = cli["core-plugin"].As<std::string>();
+        auto library = baseInterface.GetDynamicLibraryLoader().Load(
+            libraryPath, SlokedDynamicLibrary::Binding::Lazy,
+            SlokedDynamicLibrary::Scope::Local);
+        void *pluginGetterRaw = library->Resolve("SlokedGetCorePlugin");
+        SlokedCorePluginFactory pluginGetter =
+            reinterpret_cast<SlokedCorePluginFactory>(pluginGetterRaw);
+        return std::make_pair(pluginGetter(), std::move(library));
+    } else {
+#ifdef SLOKED_BOOTSTRAP_HAS_DEFAULT_CORE_PLUGIN
+        return std::make_pair(SlokedGetCorePlugin(), nullptr);
+#else
+        throw SlokedError("Bootstrap: No default core plugin defined");
+#endif
+    }
+}
+
 int main(int argc, const char **argv) {
     // Initialize globals
     SlokedFailure::SetupHandler();
@@ -107,12 +132,16 @@ int main(int argc, const char **argv) {
     }
     SlokedBootstrapScreenFactory screenFactory;
     startupPrms.SetScreenProviders(screenFactory);
-    SlokedEditorManager startup(std::move(startupPrms));
-    closeables.Attach(startup);
+    auto startup =
+        std::make_unique<SlokedEditorManager>(std::move(startupPrms));
+    closeables.Attach(*startup);
 
-    auto corePlugin = SlokedGetCorePlugin();
-    auto rc = corePlugin->Start(argc, argv, BaseInterface, startup);
+    auto [corePlugin, corePluginLibrary] =
+        LoadCorePlugin(argc, argv, BaseInterface);
+    auto rc = corePlugin->Start(argc, argv, BaseInterface, *startup);
 
     closeables.Close();
+    corePlugin.reset();
+    startup.reset();
     return rc;
 }

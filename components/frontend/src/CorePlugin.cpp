@@ -249,7 +249,10 @@ namespace sloked {
                                               {"map", "/script{}/init"}},
                                 KgrDictionary{{"options", "--script-path"},
                                               {"type", "string"},
-                                              {"map", "/script{}/path"}}});
+                                              {"map", "/script{}/path"}},
+                                KgrDictionary{{"options", "--core-plugin"},
+                                              {"type", "string"},
+                                              {"map", "/corePlugin"}}});
         cli.Parse(argc, argv);
         SlokedConfiguration mainConfig{
             cli.Export(), baseInterface.GetConfigurationLoader().Load("main"),

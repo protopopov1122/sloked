@@ -7,8 +7,14 @@ bootstrap_src = [
 
 bootstrap_flags = []
 bootstrap_flags += sloked_compat_flags
+bootstrap_dependencies = [sloked_framework, sloked_compat]
+
+if get_option('default_core_plugin')
+  bootstrap_flags += '-DSLOKED_BOOTSTRAP_HAS_DEFAULT_CORE_PLUGIN'
+  bootstrap_dependencies += sloked_frontend
+endif
 
 bootstrap = executable('sloked', bootstrap_src,
   cpp_args : bootstrap_flags,
   include_directories : include_directories('headers'),
-  dependencies : [sloked_framework, sloked_compat, sloked_frontend])
+  dependencies : bootstrap_dependencies)

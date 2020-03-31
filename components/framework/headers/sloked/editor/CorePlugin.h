@@ -40,6 +40,8 @@ namespace sloked {
                           SlokedEditorManager &) = 0;
     };
 
+    using SlokedCorePluginFactory = std::unique_ptr<SlokedCorePlugin> (*)();
+
     extern "C" std::unique_ptr<SlokedCorePlugin> SlokedGetCorePlugin();
 }  // namespace sloked
 

@@ -249,7 +249,7 @@ namespace sloked {
         std::string_view Argument(std::size_t) const;
         Iterator begin() const;
         Iterator end() const;
-        void Parse(int, const char **);
+        void Parse(int, const char **, bool = false);
         KgrValue Export() const;
         void Initialize(const KgrValue &);
 
@@ -300,8 +300,9 @@ namespace sloked {
         }
 
      private:
-        void ParseOption(std::string_view, SlokedCLIArgumentIterator &);
-        void ParseShortOption(std::string_view, SlokedCLIArgumentIterator &);
+        void ParseOption(std::string_view, SlokedCLIArgumentIterator &, bool);
+        void ParseShortOption(std::string_view, SlokedCLIArgumentIterator &,
+                              bool);
         void DefineImpl(std::string_view, std::shared_ptr<SlokedCLIOption>);
         std::vector<std::shared_ptr<SlokedCLIOption>> FindKeys(
             std::string_view);

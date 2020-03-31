@@ -172,7 +172,7 @@ namespace sloked {
         return this->arguments.end();
     }
 
-    void SlokedCLI::Parse(int argc, const char **argv) {
+    void SlokedCLI::Parse(int argc, const char **argv, bool ignoreUnknowns) {
         SlokedCLIArgumentIterator args(argc - 1, argv + 1);
         bool rawMode = false;
         while (args.HasNext()) {
@@ -181,10 +181,10 @@ namespace sloked {
                 rawMode = true;
             } else if (starts_with(arg, "--") && !rawMode) {
                 arg.remove_prefix(2);
-                this->ParseOption(arg, args);
+                this->ParseOption(arg, args, ignoreUnknowns);
             } else if (starts_with(arg, "-") && !rawMode) {
                 arg.remove_prefix(1);
-                this->ParseShortOption(arg, args);
+                this->ParseShortOption(arg, args, ignoreUnknowns);
             } else {
                 this->arguments.push_back(arg);
             }
@@ -324,7 +324,8 @@ namespace sloked {
     }
 
     void SlokedCLI::ParseOption(std::string_view arg,
-                                SlokedCLIArgumentIterator &args) {
+                                SlokedCLIArgumentIterator &args,
+                                bool ignoreUnknowns) {
         auto pos = arg.find('=');
         std::string key{pos != arg.npos ? arg.substr(0, pos) : arg};
         arg.remove_prefix(key.size());
@@ -333,20 +334,29 @@ namespace sloked {
         }
 
         if (this->options.count(key) == 0) {
-            throw SlokedError("CLI: Unknown option '--" + key + "'");
+            if (ignoreUnknowns) {
+                return;
+            } else {
+                throw SlokedError("CLI: Unknown option '--" + key + "'");
+            }
         }
         auto &option = *this->options.at(key);
         ParseOptionValue(option, arg, args);
     }
 
     void SlokedCLI::ParseShortOption(std::string_view arg,
-                                     SlokedCLIArgumentIterator &args) {
+                                     SlokedCLIArgumentIterator &args,
+                                     bool ignoreUnknowns) {
         while (!arg.empty()) {
             char key = arg[0];
             arg.remove_prefix(1);
             if (this->shortOptions.count(key) == 0) {
-                throw SlokedError("CLI: Unknown option '-" +
-                                  std::string(1, key) + "'");
+                if (ignoreUnknowns) {
+                    break;
+                } else {
+                    throw SlokedError("CLI: Unknown option '-" +
+                                      std::string(1, key) + "'");
+                }
             }
             auto &option = *this->shortOptions.at(key);
             if (!ParseOptionValue(option, arg, args)) {
