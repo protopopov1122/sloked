@@ -24,6 +24,7 @@
 
 #include "sloked/core/Compression.h"
 #include "sloked/core/Crypto.h"
+#include "sloked/core/Library.h"
 #include "sloked/core/awaitable/Awaitable.h"
 #include "sloked/editor/Configuration.h"
 #include "sloked/editor/EditorInstance.h"
@@ -51,6 +52,8 @@ namespace sloked {
         virtual SlokedCrypto &GetCryptography() const = 0;
         virtual SlokedConfigurationLoader &GetConfigurationLoader() const = 0;
         virtual SlokedSocketFactory &GetNetwork() const = 0;
+        virtual const SlokedDynamicLibraryLoader &GetDynamicLibraryLoader()
+            const = 0;
         virtual bool HasGraphics() const = 0;
         virtual std::unique_ptr<SlokedGraphicalComponents> GetGraphics(
             SlokedScreenManager &) const = 0;

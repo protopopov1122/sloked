@@ -22,6 +22,7 @@
 #include "sloked/compat/compression/Compat.h"
 
 #include "sloked/compat/Interface.h"
+#include "sloked/compat/core/Compat.h"
 #include "sloked/compat/core/awaitable/Compat.h"
 #include "sloked/compat/crypto/Compat.h"
 #include "sloked/compat/editor/configuration/Compat.h"
@@ -60,6 +61,11 @@ namespace sloked {
 
         SlokedSocketFactory &GetNetwork() const final {
             return SlokedNetCompat::GetNetwork();
+        }
+
+        const SlokedDynamicLibraryLoader &GetDynamicLibraryLoader()
+            const final {
+            return SlokedDynamicLibraryCompat::GetLoader();
         }
 
         bool HasGraphics() const final {

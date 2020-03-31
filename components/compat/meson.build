@@ -1,6 +1,7 @@
 compat_src = [
   'src/Compat.cpp',
   'src/compression/Compat.cpp',
+  'src/core/Compat.cpp',
   'src/core/awaitable/Compat.cpp',
   'src/crypto/Compat.cpp',
   'src/editor/configuration/Compat.cpp',

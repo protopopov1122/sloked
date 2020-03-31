@@ -7,6 +7,7 @@ sloked_src = [
   'src/core/Encoding.cpp',
   'src/core/Error.cpp',
   'src/core/Failure.cpp',
+  'src/core/Library.cpp',
   'src/core/Locale.cpp',
   'src/core/Logger.cpp',
   'src/core/NewLine.cpp',
