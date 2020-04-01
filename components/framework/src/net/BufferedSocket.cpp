@@ -35,6 +35,11 @@ namespace sloked {
     }
 
     void SlokedBufferedSocket::Close() {
+        std::unique_lock lock(this->mtx);
+        if (this->task && this->task->Pending()) {
+            this->task->Cancel();
+            this->task = nullptr;
+        }
         this->socket->Close();
     }
 

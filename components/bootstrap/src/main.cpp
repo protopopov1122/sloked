@@ -123,9 +123,13 @@ int main(int argc, const char **argv) {
     if constexpr (SlokedCryptoCompat::IsSupported()) {
         startupPrms.SetCrypto(SlokedCryptoCompat::GetCrypto());
     }
-    startupPrms.SetEditors([] {
+    SlokedSharedEditorState sharedEditorState(SlokedIOPollCompat::NewPoll());
+    closeables.Attach(sharedEditorState);
+    sharedEditorState.Start();
+
+    startupPrms.SetEditors([&sharedEditorState] {
         return std::make_unique<SlokedEditorInstance>(
-            SlokedIOPollCompat::NewPoll(), SlokedNetCompat::GetNetwork());
+            sharedEditorState, SlokedNetCompat::GetNetwork());
     });
     if constexpr (SlokedCompressionCompat::IsSupported()) {
         startupPrms.SetComresssion(SlokedCompressionCompat::GetCompression());

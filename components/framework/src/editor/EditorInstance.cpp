@@ -27,12 +27,36 @@
 
 namespace sloked {
 
+    SlokedSharedEditorState::SlokedSharedEditorState(
+        std::unique_ptr<SlokedIOPoll> ioPoll)
+        : ioPoll(std::move(ioPoll)), ioPoller(*this->ioPoll) {}
+
+    void SlokedSharedEditorState::Start() {
+        this->scheduler.Start();
+        this->ioPoller.Start(KgrNetConfig::RequestTimeout);
+    }
+
+    void SlokedSharedEditorState::Close() {
+        this->ioPoller.Close();
+        this->threadManager.Shutdown();
+        this->scheduler.Close();
+    }
+
+    SlokedIOPoller &SlokedSharedEditorState::GetIO() {
+        return this->ioPoller;
+    }
+
+    SlokedSchedulerThread &SlokedSharedEditorState::GetScheduler() {
+        return this->scheduler;
+    }
+
+    SlokedThreadManager &SlokedSharedEditorState::GetThreadManager() {
+        return this->threadManager;
+    }
+
     SlokedEditorInstance::SlokedEditorInstance(
-        std::unique_ptr<SlokedIOPoll> ioPoll, SlokedSocketFactory &network)
-        : running{false}, ioPoll(std::move(ioPoll)), network(network) {
-        this->ioPoller =
-            std::make_unique<SlokedDefaultIOPollThread>(*this->ioPoll);
-        this->closeables.Attach(*this->ioPoller);
+        SlokedSharedEditorState &sharedState, SlokedSocketFactory &network)
+        : sharedState(sharedState), running{false}, network(network) {
         this->closeables.Attach(this->contextManager);
     }
 
@@ -74,7 +98,7 @@ namespace sloked {
             }
             this->server = std::make_unique<SlokedServerFacade>(
                 std::make_unique<SlokedRemoteEditorServer>(
-                    std::move(socket), *this->ioPoller, auth));
+                    std::move(socket), this->sharedState.GetIO(), auth));
             this->closeables.Attach(*this->server);
             return *this->server;
         }
@@ -126,9 +150,6 @@ namespace sloked {
 
     void SlokedEditorInstance::Start() {
         if (!this->running.exchange(true)) {
-            this->ioPoller->Start(KgrNetConfig::RequestTimeout);
-            this->sched.Start();
-            this->closeables.Attach(this->sched);
             this->contextManager.Start();
             if (this->server) {
                 this->server->Start();
@@ -185,15 +206,15 @@ namespace sloked {
     }
 
     SlokedSchedulerThread &SlokedEditorInstance::GetScheduler() {
-        return this->sched;
+        return this->sharedState.GetScheduler();
     }
 
     SlokedThreadManager &SlokedEditorInstance::GetThreadManager() {
-        return this->threadManager;
+        return this->sharedState.GetThreadManager();
     }
 
     SlokedIOPoller &SlokedEditorInstance::GetIO() {
-        return *this->ioPoller;
+        return this->sharedState.GetIO();
     }
 
     SlokedNetworkFacade &SlokedEditorInstance::GetNetwork() {

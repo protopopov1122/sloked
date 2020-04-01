@@ -42,10 +42,27 @@
 
 namespace sloked {
 
+    class SlokedSharedEditorState : public SlokedCloseable {
+     public:
+        SlokedSharedEditorState(std::unique_ptr<SlokedIOPoll>);
+
+        void Start();
+        void Close() final;
+
+        SlokedIOPoller &GetIO();
+        SlokedSchedulerThread &GetScheduler();
+        SlokedThreadManager &GetThreadManager();
+
+     private:
+        std::unique_ptr<SlokedIOPoll> ioPoll;
+        SlokedDefaultIOPollThread ioPoller;
+        SlokedDefaultSchedulerThread scheduler;
+        SlokedDefaultThreadManager threadManager;
+    };
+
     class SlokedEditorInstance : public SlokedCloseable {
      public:
-        SlokedEditorInstance(std::unique_ptr<SlokedIOPoll>,
-                             SlokedSocketFactory &);
+        SlokedEditorInstance(SlokedSharedEditorState &, SlokedSocketFactory &);
         SlokedCryptoFacade &InitializeCrypto(SlokedCrypto &);
         SlokedServerFacade &InitializeServer();
         SlokedServerFacade &InitializeServer(std::unique_ptr<SlokedSocket>);
@@ -76,14 +93,11 @@ namespace sloked {
         KgrContextManager<KgrLocalContext> &GetContextManager();
 
      private:
+        SlokedSharedEditorState &sharedState;
         std::atomic<bool> running;
         std::mutex termination_mtx;
         std::condition_variable termination_cv;
         SlokedCloseablePool closeables;
-        SlokedDefaultSchedulerThread sched;
-        SlokedDefaultThreadManager threadManager;
-        std::unique_ptr<SlokedIOPoll> ioPoll;
-        std::unique_ptr<SlokedDefaultIOPollThread> ioPoller;
         SlokedNetworkFacade network;
         std::unique_ptr<SlokedCryptoFacade> crypto;
         std::unique_ptr<SlokedServerFacade> server;

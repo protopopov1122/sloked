@@ -449,9 +449,11 @@ namespace sloked {
                     renderStatus();
                     if (evt.value.index() != 0 &&
                         std::get<1>(evt.value) == SlokedControlKey::Escape) {
-                        logger.Debug() << "Saving document";
-                        documentClient.Save(outputPath.ToString());
-                        terminate.Notify();
+                        mainEditor.GetThreadManager().Spawn([&] {
+                            logger.Debug() << "Saving document";
+                            documentClient.Save(outputPath.ToString());
+                            terminate.Notify();
+                        });
                     }
                 });
             },
