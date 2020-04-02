@@ -38,10 +38,6 @@ namespace sloked {
         this->work = true;
         this->worker = std::thread([this, timeout] {
             while (this->work.load()) {
-                for (const auto &kv : this->awaitables) {
-                    kv.second->Process(false);
-                }
-                this->poll.Await(timeout);
                 std::unique_lock queueLock(this->queueMtx);
                 if (!this->awaitableQueue.empty()) {
                     for (auto &kv : this->awaitableQueue) {
@@ -59,6 +55,11 @@ namespace sloked {
                     }
                 }
                 this->removalQueue.clear();
+                for (const auto &kv : this->awaitables) {
+                    kv.second->Process(false);
+                }
+                queueLock.unlock();
+                this->poll.Await(timeout);
             }
         });
     }

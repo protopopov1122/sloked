@@ -64,7 +64,7 @@ namespace sloked {
         std::atomic<bool> work;
         std::map<std::size_t, std::unique_ptr<Awaitable>> awaitables;
         std::size_t nextId;
-        std::mutex queueMtx;
+        std::recursive_mutex queueMtx;
         std::map<std::size_t, std::unique_ptr<Awaitable>> awaitableQueue;
         std::vector<std::size_t> removalQueue;
     };
