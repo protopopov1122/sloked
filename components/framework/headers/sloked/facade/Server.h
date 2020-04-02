@@ -26,6 +26,7 @@
 
 #include "sloked/editor/EditorServer.h"
 #include "sloked/kgr/net/MasterServer.h"
+#include "sloked/sched/ThreadManager.h"
 
 namespace sloked {
 
@@ -42,8 +43,8 @@ namespace sloked {
         SlokedRemoteEditorServer &AsRemoteServer() const;
         KgrMasterNetServer &GetNetworkServer() const;
 
-        void SpawnNetServer(SlokedSocketFactory &, const SlokedSocketAddress &,
-                            SlokedIOPoller &,
+        void SpawnNetServer(SlokedSocketFactory &, SlokedThreadManager &,
+                            const SlokedSocketAddress &, SlokedIOPoller &,
                             SlokedNamedRestrictionAuthority * = nullptr,
                             SlokedAuthenticatorFactory * = nullptr);
 

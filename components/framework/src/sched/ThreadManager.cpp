@@ -90,7 +90,8 @@ namespace sloked {
                 lock.lock();
                 this->available_workers++;
             }
-            if (!this->active) {
+            if (!this->active ||
+                this->available_workers >= this->total_workers.Load()) {
                 break;
             }
             this->task_cv.wait_for(lock, PollTimeout);
