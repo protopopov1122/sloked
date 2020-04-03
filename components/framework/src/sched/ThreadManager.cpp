@@ -37,10 +37,10 @@ namespace sloked {
           available_workers{0} {}
 
     SlokedDefaultThreadManager::~SlokedDefaultThreadManager() {
-        this->Shutdown();
+        this->Close();
     }
 
-    void SlokedDefaultThreadManager::Spawn(Task task) {
+    void SlokedDefaultThreadManager::EnqueueCallback(Task task) {
         std::unique_lock lock(this->task_mtx);
         if (!this->active.load()) {
             throw SlokedError("ThreadManager: Shutting down");
@@ -54,7 +54,7 @@ namespace sloked {
         this->task_cv.notify_all();
     }
 
-    void SlokedDefaultThreadManager::Shutdown() {
+    void SlokedDefaultThreadManager::Close() {
         this->active = false;
         this->task_cv.notify_all();
         this->total_workers.Wait([](auto count) { return count == 0; });

@@ -51,12 +51,13 @@ namespace sloked {
 
         SlokedIOPoller &GetIO();
         SlokedSchedulerThread &GetScheduler();
-        SlokedThreadManager &GetThreadManager();
+        SlokedActionQueue &GetThreadManager();
 
      private:
         std::unique_ptr<SlokedIOPoll> ioPoll;
+        SlokedSingleThreadActionQueue executor;
         SlokedDefaultIOPollThread ioPoller;
-        SlokedDefaultSchedulerThread scheduler;
+        SlokedDefaultScheduler scheduler;
         SlokedDefaultThreadManager threadManager;
     };
 
@@ -81,7 +82,7 @@ namespace sloked {
 
         SlokedCharPreset &GetCharPreset();
         SlokedSchedulerThread &GetScheduler();
-        SlokedThreadManager &GetThreadManager();
+        SlokedActionQueue &GetThreadManager();
         SlokedIOPoller &GetIO();
         SlokedNetworkFacade &GetNetwork();
         bool HasCrypto() const;

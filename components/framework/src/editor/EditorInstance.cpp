@@ -29,16 +29,19 @@ namespace sloked {
 
     SlokedSharedEditorState::SlokedSharedEditorState(
         std::unique_ptr<SlokedIOPoll> ioPoll)
-        : ioPoll(std::move(ioPoll)), ioPoller(*this->ioPoll) {}
+        : ioPoll(std::move(ioPoll)), ioPoller(*this->ioPoll, executor),
+          scheduler(executor) {}
 
     void SlokedSharedEditorState::Start() {
         this->scheduler.Start();
         this->ioPoller.Start(KgrNetConfig::RequestTimeout);
+        this->executor.Start();
     }
 
     void SlokedSharedEditorState::Close() {
+        this->executor.Close();
         this->ioPoller.Close();
-        this->threadManager.Shutdown();
+        this->threadManager.Close();
         this->scheduler.Close();
     }
 
@@ -50,7 +53,7 @@ namespace sloked {
         return this->scheduler;
     }
 
-    SlokedThreadManager &SlokedSharedEditorState::GetThreadManager() {
+    SlokedActionQueue &SlokedSharedEditorState::GetThreadManager() {
         return this->threadManager;
     }
 
@@ -209,7 +212,7 @@ namespace sloked {
         return this->sharedState.GetScheduler();
     }
 
-    SlokedThreadManager &SlokedEditorInstance::GetThreadManager() {
+    SlokedActionQueue &SlokedEditorInstance::GetThreadManager() {
         return this->sharedState.GetThreadManager();
     }
 

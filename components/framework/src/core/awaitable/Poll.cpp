@@ -23,8 +23,10 @@
 
 namespace sloked {
 
-    SlokedDefaultIOPollThread::SlokedDefaultIOPollThread(SlokedIOPoll &poll)
-        : poll(poll), work(false), nextId{0} {}
+    SlokedDefaultIOPollThread::SlokedDefaultIOPollThread(
+        SlokedIOPoll &poll, SlokedActionQueue &executor)
+        : poll(poll), executor(executor),
+          work(false), nextId{0}, asyncTasks{0} {}
 
     SlokedDefaultIOPollThread::~SlokedDefaultIOPollThread() {
         this->Close();
@@ -38,28 +40,21 @@ namespace sloked {
         this->work = true;
         this->worker = std::thread([this, timeout] {
             while (this->work.load()) {
-                std::unique_lock queueLock(this->queueMtx);
-                if (!this->awaitableQueue.empty()) {
-                    for (auto &kv : this->awaitableQueue) {
-                        this->awaitables.emplace(kv.first,
-                                                 std::move(kv.second));
-                    }
-                    this->awaitableQueue.clear();
-                }
-                for (auto removalId : this->removalQueue) {
-                    if (this->awaitables.count(removalId) != 0) {
-                        this->awaitables.erase(removalId);
-                    }
-                    if (this->awaitableQueue.count(removalId) != 0) {
-                        this->awaitableQueue.erase(removalId);
-                    }
-                }
-                this->removalQueue.clear();
+                std::unique_lock lock(this->mtx);
                 for (const auto &kv : this->awaitables) {
-                    kv.second->Process(false);
+                    this->executor.Enqueue([this, id = kv.first] {
+                        std::unique_lock lock(this->mtx);
+                        if (this->awaitables.count(id)) {
+                            auto awaitable = this->awaitables.at(id);
+                            lock.unlock();
+                            awaitable->Process(false);
+                        }
+                    });
                 }
-                queueLock.unlock();
+                lock.unlock();
                 this->poll.Await(timeout);
+                lock.lock();
+                this->cv.wait(lock, [this] { return this->asyncTasks == 0; });
             }
         });
     }
@@ -72,19 +67,31 @@ namespace sloked {
 
     SlokedDefaultIOPollThread::Handle SlokedDefaultIOPollThread::Attach(
         std::unique_ptr<Awaitable> awaitable) {
-        std::unique_lock lock(this->queueMtx);
+        std::unique_lock lock(this->mtx);
         auto id = this->nextId++;
-        this->awaitableQueue.emplace(id, std::move(awaitable));
+        this->awaitables.insert_or_assign(id, std::move(awaitable));
         auto detacher = this->poll.Attach(
-            this->awaitableQueue.at(id)->GetAwaitable(), [this, id] {
-                if (this->awaitables.count(id) != 0) {
-                    this->awaitables.at(id)->Process(true);
+            this->awaitables.at(id)->GetAwaitable(), [this, id] {
+                std::unique_lock lock(this->mtx);
+                if (this->awaitables.count(id)) {
+                    auto awaitable = this->awaitables.at(id);
+                    this->asyncTasks++;
+                    lock.unlock();
+                    this->executor.Enqueue(
+                        [this, awaitable = std::move(awaitable)] {
+                            awaitable->Process(true);
+                            std::unique_lock lock(this->mtx);
+                            this->asyncTasks--;
+                            this->cv.notify_all();
+                        });
                 }
             });
         return Handle([this, id, detacher = std::move(detacher)] {
             detacher();
-            std::unique_lock lock(this->queueMtx);
-            this->removalQueue.push_back(id);
+            std::unique_lock lock(this->mtx);
+            if (this->awaitables.count(id)) {
+                this->awaitables.erase(id);
+            }
         });
     }
 }  // namespace sloked

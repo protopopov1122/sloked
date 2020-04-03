@@ -401,7 +401,7 @@ namespace sloked {
                 screenServer.GetScreen().GetSize().GetScreenSize().line,
                 screenServer.GetScreen().GetSize().GetScreenSize().column});
         screenSizeClient.Listen([&](const auto &size) {
-            mainEditor.GetThreadManager().Spawn([&, size] {
+            mainEditor.GetThreadManager().Enqueue([&, size] {
                 if (screenServer.IsRunning() && mainWindow.has_value()) {
                     screenClient.Multiplexer.ResizeWindow(mainWindow.value(),
                                                           size);
@@ -449,7 +449,7 @@ namespace sloked {
                     renderStatus();
                     if (evt.value.index() != 0 &&
                         std::get<1>(evt.value) == SlokedControlKey::Escape) {
-                        mainEditor.GetThreadManager().Spawn([&] {
+                        mainEditor.GetThreadManager().Enqueue([&] {
                             logger.Debug() << "Saving document";
                             documentClient.Save(outputPath.ToString());
                             terminate.Notify();

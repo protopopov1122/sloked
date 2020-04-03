@@ -35,6 +35,7 @@
 
 #include "sloked/core/Closeable.h"
 #include "sloked/core/Counter.h"
+#include "sloked/sched/ActionQueue.h"
 
 namespace sloked {
 
@@ -61,12 +62,12 @@ namespace sloked {
         virtual void Defer(std::function<void()>) = 0;
     };
 
-    class SlokedDefaultSchedulerThread : public SlokedSchedulerThread,
-                                         public SlokedCloseable {
+    class SlokedDefaultScheduler : public SlokedSchedulerThread,
+                                   public SlokedCloseable {
      public:
         class TimerTask : public SlokedSchedulerThread::TimerTask {
          public:
-            friend class SlokedDefaultSchedulerThread;
+            friend class SlokedDefaultScheduler;
 
             void Run();
 
@@ -75,11 +76,11 @@ namespace sloked {
             void Cancel() final;
 
          private:
-            TimerTask(SlokedDefaultSchedulerThread &, TimePoint, Callback,
+            TimerTask(SlokedDefaultScheduler &, TimePoint, Callback,
                       std::optional<TimeDiff> = {});
             void NextInterval();
 
-            SlokedDefaultSchedulerThread &sched;
+            SlokedDefaultScheduler &sched;
             std::atomic<bool> pending;
             TimePoint at;
             Callback callback;
@@ -87,8 +88,8 @@ namespace sloked {
         };
         friend class TimerTask;
 
-        SlokedDefaultSchedulerThread();
-        ~SlokedDefaultSchedulerThread();
+        SlokedDefaultScheduler(SlokedActionQueue &);
+        ~SlokedDefaultScheduler();
         void Start();
         void Close() final;
 
@@ -107,9 +108,9 @@ namespace sloked {
 
         void Run();
 
+        SlokedActionQueue &executor;
         std::map<TimerTask *, std::shared_ptr<TimerTask>, TimerTaskCompare>
             tasks;
-        std::queue<std::function<void()>> deferred;
         std::atomic<bool> work;
         SlokedCounter<std::size_t> timer_thread;
         std::mutex mtx;

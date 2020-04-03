@@ -31,6 +31,7 @@
 #include "sloked/core/Counter.h"
 #include "sloked/core/Scope.h"
 #include "sloked/core/awaitable/Awaitable.h"
+#include "sloked/sched/ActionQueue.h"
 
 namespace sloked {
 
@@ -52,7 +53,7 @@ namespace sloked {
     class SlokedDefaultIOPollThread : public SlokedIOPoller,
                                       public SlokedCloseable {
      public:
-        SlokedDefaultIOPollThread(SlokedIOPoll &);
+        SlokedDefaultIOPollThread(SlokedIOPoll &, SlokedActionQueue &);
         ~SlokedDefaultIOPollThread();
         void Start(std::chrono::system_clock::duration);
         void Close() final;
@@ -60,13 +61,14 @@ namespace sloked {
 
      private:
         SlokedIOPoll &poll;
+        SlokedActionQueue &executor;
         std::thread worker;
         std::atomic<bool> work;
-        std::map<std::size_t, std::unique_ptr<Awaitable>> awaitables;
+        std::map<std::size_t, std::shared_ptr<Awaitable>> awaitables;
         std::size_t nextId;
-        std::recursive_mutex queueMtx;
-        std::map<std::size_t, std::unique_ptr<Awaitable>> awaitableQueue;
-        std::vector<std::size_t> removalQueue;
+        std::mutex mtx;
+        std::condition_variable cv;
+        std::size_t asyncTasks;
     };
 }  // namespace sloked
 

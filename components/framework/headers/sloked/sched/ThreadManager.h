@@ -31,46 +31,23 @@
 #include <queue>
 
 #include "sloked/core/Counter.h"
+#include "sloked/sched/ActionQueue.h"
 
 namespace sloked {
 
-    class SlokedThreadManager {
-     public:
-        using Task = std::function<void()>;
-
-        template <typename T>
-        using Producer = std::function<T()>;
-
-        virtual ~SlokedThreadManager() = default;
-        virtual void Spawn(Task) = 0;
-        virtual void Shutdown() = 0;
-
-        template <typename T, typename E = std::enable_if_t<!std::is_void_v<T>>>
-        std::future<T> Spawn(Producer<T> producer) {
-            std::shared_ptr<std::promise<T>> promise =
-                std::make_shared<std::promise<T>>();
-            this->Spawn([producer = std::move(producer), promise] {
-                try {
-                    promise->set_value(producer());
-                } catch (...) {
-                    promise->set_exception(std::current_exception());
-                }
-            });
-            return promise->get_future();
-        }
-    };
-
-    class SlokedDefaultThreadManager : public SlokedThreadManager {
+    class SlokedDefaultThreadManager : public SlokedActionQueue,
+                                       public SlokedCloseable {
      public:
         static constexpr std::size_t UnlimitedWorkers = 0;
+        using Task = std::function<void()>;
 
         SlokedDefaultThreadManager(std::size_t = UnlimitedWorkers);
         ~SlokedDefaultThreadManager();
 
-        void Spawn(Task) final;
-        void Shutdown() final;
+        void Close() final;
 
      private:
+        void EnqueueCallback(Task) final;
         void SpawnWorker();
         void ProcessWorker();
 

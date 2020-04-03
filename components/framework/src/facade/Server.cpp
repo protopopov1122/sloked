@@ -68,7 +68,7 @@ namespace sloked {
     }
 
     void SlokedServerFacade::SpawnNetServer(
-        SlokedSocketFactory &socketFactory, SlokedThreadManager &threadManager,
+        SlokedSocketFactory &socketFactory, SlokedActionQueue &threadManager,
         const SlokedSocketAddress &addr, SlokedIOPoller &io,
         SlokedNamedRestrictionAuthority *restrictions,
         SlokedAuthenticatorFactory *authFactory) {

@@ -25,48 +25,48 @@
 
 namespace sloked {
 
-    bool SlokedDefaultSchedulerThread::TimerTask::Pending() const {
+    bool SlokedDefaultScheduler::TimerTask::Pending() const {
         return this->pending.load();
     }
 
-    const SlokedDefaultSchedulerThread::TimePoint &
-        SlokedDefaultSchedulerThread::TimerTask::GetTime() const {
+    const SlokedDefaultScheduler::TimePoint &
+        SlokedDefaultScheduler::TimerTask::GetTime() const {
         return this->at;
     }
 
-    void SlokedDefaultSchedulerThread::TimerTask::Run() {
+    void SlokedDefaultScheduler::TimerTask::Run() {
         this->pending = this->interval.has_value();
         this->callback();
     }
 
-    void SlokedDefaultSchedulerThread::TimerTask::Cancel() {
+    void SlokedDefaultScheduler::TimerTask::Cancel() {
         this->pending = false;
         std::unique_lock lock(this->sched.mtx);
         this->sched.tasks.erase(this);
         this->sched.cv.notify_all();
     }
 
-    SlokedDefaultSchedulerThread::TimerTask::TimerTask(
-        SlokedDefaultSchedulerThread &sched, TimePoint at, Callback callback,
+    SlokedDefaultScheduler::TimerTask::TimerTask(
+        SlokedDefaultScheduler &sched, TimePoint at, Callback callback,
         std::optional<TimeDiff> interval)
         : sched(sched), pending(true), at(std::move(at)),
           callback(std::move(callback)), interval(std::move(interval)) {}
 
-    void SlokedDefaultSchedulerThread::TimerTask::NextInterval() {
+    void SlokedDefaultScheduler::TimerTask::NextInterval() {
         if (this->pending.load()) {
             this->at = std::chrono::system_clock::now();
             this->at += this->interval.value();
         }
     }
 
-    SlokedDefaultSchedulerThread::SlokedDefaultSchedulerThread()
-        : work(false) {}
+    SlokedDefaultScheduler::SlokedDefaultScheduler(SlokedActionQueue &executor)
+        : executor(executor), work(false) {}
 
-    SlokedDefaultSchedulerThread::~SlokedDefaultSchedulerThread() {
+    SlokedDefaultScheduler::~SlokedDefaultScheduler() {
         this->Close();
     }
 
-    void SlokedDefaultSchedulerThread::Start() {
+    void SlokedDefaultScheduler::Start() {
         if (!this->work.exchange(true)) {
             std::thread([this] {
                 SlokedCounter<std::size_t>::Handle counter(this->timer_thread);
@@ -78,7 +78,7 @@ namespace sloked {
         }
     }
 
-    void SlokedDefaultSchedulerThread::Close() {
+    void SlokedDefaultScheduler::Close() {
         if (this->work.exchange(false)) {
             this->cv.notify_all();
             this->timer_thread.Wait([](auto count) { return count == 0; });
@@ -86,7 +86,7 @@ namespace sloked {
     }
 
     std::shared_ptr<SlokedSchedulerThread::TimerTask>
-        SlokedDefaultSchedulerThread::At(TimePoint time, Callback callback) {
+        SlokedDefaultScheduler::At(TimePoint time, Callback callback) {
         std::unique_lock lock(this->mtx);
         std::shared_ptr<TimerTask> task(
             new TimerTask(*this, std::move(time), std::move(callback)));
@@ -96,15 +96,14 @@ namespace sloked {
     }
 
     std::shared_ptr<SlokedSchedulerThread::TimerTask>
-        SlokedDefaultSchedulerThread::Sleep(TimeDiff diff, Callback callback) {
+        SlokedDefaultScheduler::Sleep(TimeDiff diff, Callback callback) {
         auto now = std::chrono::system_clock::now();
         now += diff;
         return this->At(now, std::move(callback));
     }
 
     std::shared_ptr<SlokedSchedulerThread::TimerTask>
-        SlokedDefaultSchedulerThread::Interval(TimeDiff diff,
-                                               Callback callback) {
+        SlokedDefaultScheduler::Interval(TimeDiff diff, Callback callback) {
         auto now = std::chrono::system_clock::now();
         now += diff;
         std::unique_lock lock(this->mtx);
@@ -115,18 +114,16 @@ namespace sloked {
         return task;
     }
 
-    void SlokedDefaultSchedulerThread::Defer(std::function<void()> callback) {
-        std::unique_lock lock(this->mtx);
-        this->deferred.push(std::move(callback));
-        this->cv.notify_all();
+    void SlokedDefaultScheduler::Defer(std::function<void()> callback) {
+        this->executor.Enqueue(std::move(callback));
     }
 
-    bool SlokedDefaultSchedulerThread::TimerTaskCompare::operator()(
+    bool SlokedDefaultScheduler::TimerTaskCompare::operator()(
         TimerTask *t1, TimerTask *t2) const {
         return t1 != t2 && t1->GetTime() < t2->GetTime();
     }
 
-    void SlokedDefaultSchedulerThread::Run() {
+    void SlokedDefaultScheduler::Run() {
         std::unique_lock lock(this->mtx);
         auto now = std::chrono::system_clock::now();
         while (this->work.load() && !this->tasks.empty() &&
@@ -134,27 +131,18 @@ namespace sloked {
             auto taskIt = this->tasks.begin();
             auto taskId = taskIt->first;
             auto task = taskIt->second;
-            bool erase = true;
+            this->tasks.erase(taskId);
             if (task->Pending()) {
-                lock.unlock();
-                task->Run();
-                erase = !task->Pending();
-                lock.lock();
+                this->executor.Enqueue([this, taskId, task = std::move(task)] {
+                    task->Run();
+                    if (task->Pending()) {
+                        std::unique_lock lock(this->mtx);
+                        this->tasks.erase(taskId);
+                        task->NextInterval();
+                        this->tasks[task.get()] = task;
+                    }
+                });
             }
-            if (erase) {
-                this->tasks.erase(taskId);
-            } else {
-                this->tasks.erase(taskId);
-                task->NextInterval();
-                this->tasks[task.get()] = task;
-            }
-        }
-        while (this->work.load() && !this->deferred.empty()) {
-            auto task = std::move(this->deferred.front());
-            this->deferred.pop();
-            lock.unlock();
-            task();
-            lock.lock();
         }
         if (this->work.load()) {
             if (this->tasks.empty()) {

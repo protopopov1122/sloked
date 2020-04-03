@@ -43,7 +43,7 @@ namespace sloked {
         SlokedRemoteEditorServer &AsRemoteServer() const;
         KgrMasterNetServer &GetNetworkServer() const;
 
-        void SpawnNetServer(SlokedSocketFactory &, SlokedThreadManager &,
+        void SpawnNetServer(SlokedSocketFactory &, SlokedActionQueue &,
                             const SlokedSocketAddress &, SlokedIOPoller &,
                             SlokedNamedRestrictionAuthority * = nullptr,
                             SlokedAuthenticatorFactory * = nullptr);

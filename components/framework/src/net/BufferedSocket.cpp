@@ -28,7 +28,11 @@ namespace sloked {
         std::chrono::system_clock::duration timeout,
         SlokedSchedulerThread &sched)
         : socket(std::move(socket)), timeout(std::move(timeout)),
-          sched(sched), task{nullptr} {}
+          sched(sched), task{nullptr} {
+        if (this->socket == nullptr) {
+            throw SlokedError("ERROR");
+        }
+    }
 
     bool SlokedBufferedSocket::Valid() {
         return this->socket->Valid();
@@ -116,9 +120,17 @@ namespace sloked {
 
     std::unique_ptr<SlokedSocket> SlokedBufferedServerSocket::Accept(
         std::chrono::system_clock::duration timeout) {
-        return std::make_unique<SlokedBufferedSocket>(
-            this->serverSocket->Accept(std::move(timeout)), this->timeout,
-            this->sched);
+        if (this->Valid()) {
+            auto rawSocket = this->serverSocket->Accept(timeout);
+            if (rawSocket) {
+                return std::make_unique<SlokedBufferedSocket>(
+                    std::move(rawSocket), this->timeout, this->sched);
+            } else {
+                return nullptr;
+            }
+        } else {
+            throw SlokedError("CompressedServerSocket: Invalid socket");
+        }
     }
 
     std::unique_ptr<SlokedIOAwaitable> SlokedBufferedServerSocket::Awaitable()

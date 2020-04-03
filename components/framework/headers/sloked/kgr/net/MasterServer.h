@@ -42,7 +42,7 @@ namespace sloked {
      public:
         KgrMasterNetServer(KgrNamedServer &,
                            std::unique_ptr<SlokedServerSocket>,
-                           SlokedIOPoller &, SlokedThreadManager &,
+                           SlokedIOPoller &, SlokedActionQueue &,
                            SlokedNamedRestrictionAuthority * = nullptr,
                            SlokedAuthenticatorFactory * = nullptr);
         ~KgrMasterNetServer();
@@ -67,7 +67,7 @@ namespace sloked {
         KgrNamedServer &server;
         std::unique_ptr<SlokedServerSocket> srvSocket;
         SlokedIOPoller &poll;
-        SlokedThreadManager &threadManager;
+        SlokedActionQueue &threadManager;
         SlokedNamedRestrictionAuthority *restrictions;
         SlokedAuthenticatorFactory *authFactory;
         SlokedIOPoller::Handle awaiterHandle;
