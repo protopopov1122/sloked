@@ -35,7 +35,7 @@
 
 #include "sloked/core/Closeable.h"
 #include "sloked/core/Counter.h"
-#include "sloked/sched/ActionQueue.h"
+#include "sloked/sched/Executor.h"
 
 namespace sloked {
 
@@ -88,7 +88,7 @@ namespace sloked {
         };
         friend class TimerTask;
 
-        SlokedDefaultScheduler(SlokedActionQueue &);
+        SlokedDefaultScheduler(SlokedExecutor &);
         ~SlokedDefaultScheduler();
         void Start();
         void Close() final;
@@ -108,7 +108,7 @@ namespace sloked {
 
         void Run();
 
-        SlokedActionQueue &executor;
+        SlokedExecutor &executor;
         std::map<TimerTask *, std::shared_ptr<TimerTask>, TimerTaskCompare>
             tasks;
         std::atomic<bool> work;

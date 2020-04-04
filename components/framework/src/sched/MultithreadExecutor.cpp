@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/sched/ThreadManager.h"
+#include "sloked/sched/MultithreadExecutor.h"
 
 #include <chrono>
 #include <thread>
@@ -31,36 +31,54 @@ namespace sloked {
     static constexpr std::chrono::seconds PollTimeout{5};
     static constexpr unsigned int MaxInactivity = 12;
 
-    SlokedDefaultThreadManager::SlokedDefaultThreadManager(
-        std::size_t max_workers)
+    SlokedMultitheadExecutor::SlokedMultitheadExecutor(std::size_t max_workers)
         : active{true}, max_workers{max_workers}, total_workers{0},
           available_workers{0} {}
 
-    SlokedDefaultThreadManager::~SlokedDefaultThreadManager() {
+    SlokedMultitheadExecutor::~SlokedMultitheadExecutor() {
         this->Close();
     }
 
-    void SlokedDefaultThreadManager::EnqueueCallback(Task task) {
+    std::shared_ptr<SlokedExecutor::Task>
+        SlokedMultitheadExecutor::EnqueueCallback(
+            std::function<void()> callback) {
         std::unique_lock lock(this->task_mtx);
         if (!this->active.load()) {
             throw SlokedError("ThreadManager: Shutting down");
         }
-        this->pending.push(std::move(task));
+        auto task = std::make_shared<SlokedRunnableTask>(
+            [this](auto &task) {
+                std::unique_lock lock(this->task_mtx);
+                this->pending.erase(
+                    std::remove_if(this->pending.begin(), this->pending.end(),
+                                   [&task](auto &other) {
+                                       return std::addressof(task) ==
+                                              other.get();
+                                   }),
+                    this->pending.end());
+            },
+            std::move(callback));
+        this->pending.emplace_back(task);
         if ((this->total_workers.Load() < this->max_workers ||
              this->max_workers == 0) &&
             this->available_workers == 0) {
             this->SpawnWorker();
         }
         this->task_cv.notify_all();
+        return task;
     }
 
-    void SlokedDefaultThreadManager::Close() {
+    void SlokedMultitheadExecutor::Close() {
         this->active = false;
         this->task_cv.notify_all();
         this->total_workers.Wait([](auto count) { return count == 0; });
+        std::unique_lock lock(this->task_mtx);
+        for (auto task : this->pending) {
+            task->Cancel();
+        }
     }
 
-    void SlokedDefaultThreadManager::SpawnWorker() {
+    void SlokedMultitheadExecutor::SpawnWorker() {
         std::thread([this] {
             this->available_workers++;
             try {
@@ -76,7 +94,7 @@ namespace sloked {
         this->total_workers.Increment();
     }
 
-    void SlokedDefaultThreadManager::ProcessWorker() {
+    void SlokedMultitheadExecutor::ProcessWorker() {
         for (unsigned int counter = 0;
              this->active.load() && counter < MaxInactivity; counter++) {
             std::unique_lock lock(this->task_mtx);
@@ -84,9 +102,9 @@ namespace sloked {
                 this->available_workers--;
                 counter = 0;
                 auto task = std::move(this->pending.front());
-                this->pending.pop();
+                this->pending.pop_front();
                 lock.unlock();
-                task();
+                task->Start();
                 lock.lock();
                 this->available_workers++;
             }

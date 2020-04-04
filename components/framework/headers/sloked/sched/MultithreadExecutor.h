@@ -19,35 +19,34 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCHED_THREADMANAGER_H_
-#define SLOKED_SCHED_THREADMANAGER_H_
+#ifndef SLOKED_SCHED_MULTITHREADEXECUTOR_H_
+#define SLOKED_SCHED_MULTITHREADEXECUTOR_H_
 
 #include <atomic>
 #include <condition_variable>
 #include <exception>
 #include <functional>
 #include <future>
+#include <list>
 #include <mutex>
-#include <queue>
 
 #include "sloked/core/Counter.h"
-#include "sloked/sched/ActionQueue.h"
+#include "sloked/sched/Executor.h"
 
 namespace sloked {
 
-    class SlokedDefaultThreadManager : public SlokedActionQueue,
-                                       public SlokedCloseable {
+    class SlokedMultitheadExecutor : public SlokedExecutor,
+                                     public SlokedCloseable {
      public:
         static constexpr std::size_t UnlimitedWorkers = 0;
-        using Task = std::function<void()>;
 
-        SlokedDefaultThreadManager(std::size_t = UnlimitedWorkers);
-        ~SlokedDefaultThreadManager();
+        SlokedMultitheadExecutor(std::size_t = UnlimitedWorkers);
+        ~SlokedMultitheadExecutor();
 
         void Close() final;
 
      private:
-        void EnqueueCallback(Task) final;
+        std::shared_ptr<Task> EnqueueCallback(std::function<void()>) final;
         void SpawnWorker();
         void ProcessWorker();
 
@@ -55,7 +54,7 @@ namespace sloked {
         const std::size_t max_workers;
         std::mutex task_mtx;
         std::condition_variable task_cv;
-        std::queue<Task> pending;
+        std::list<std::shared_ptr<SlokedRunnableTask>> pending;
         SlokedCounter<std::size_t> total_workers;
         std::size_t available_workers;
     };

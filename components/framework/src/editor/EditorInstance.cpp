@@ -53,7 +53,7 @@ namespace sloked {
         return this->scheduler;
     }
 
-    SlokedActionQueue &SlokedSharedEditorState::GetThreadManager() {
+    SlokedExecutor &SlokedSharedEditorState::GetThreadManager() {
         return this->threadManager;
     }
 
@@ -212,7 +212,7 @@ namespace sloked {
         return this->sharedState.GetScheduler();
     }
 
-    SlokedActionQueue &SlokedEditorInstance::GetThreadManager() {
+    SlokedExecutor &SlokedEditorInstance::GetThreadManager() {
         return this->sharedState.GetThreadManager();
     }
 

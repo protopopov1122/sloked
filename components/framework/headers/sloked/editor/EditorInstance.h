@@ -36,8 +36,9 @@
 #include "sloked/facade/Network.h"
 #include "sloked/facade/Server.h"
 #include "sloked/facade/Services.h"
+#include "sloked/sched/MultithreadExecutor.h"
 #include "sloked/sched/Scheduler.h"
-#include "sloked/sched/ThreadManager.h"
+#include "sloked/sched/SequentialExecutor.h"
 #include "sloked/services/CharPreset.h"
 
 namespace sloked {
@@ -51,14 +52,14 @@ namespace sloked {
 
         SlokedIOPoller &GetIO();
         SlokedSchedulerThread &GetScheduler();
-        SlokedActionQueue &GetThreadManager();
+        SlokedExecutor &GetThreadManager();
 
      private:
         std::unique_ptr<SlokedIOPoll> ioPoll;
-        SlokedSingleThreadActionQueue executor;
+        SlokedSequentialExecutor executor;
         SlokedDefaultIOPollThread ioPoller;
         SlokedDefaultScheduler scheduler;
-        SlokedDefaultThreadManager threadManager;
+        SlokedMultitheadExecutor threadManager;
     };
 
     class SlokedEditorInstance : public SlokedCloseable {
@@ -82,7 +83,7 @@ namespace sloked {
 
         SlokedCharPreset &GetCharPreset();
         SlokedSchedulerThread &GetScheduler();
-        SlokedActionQueue &GetThreadManager();
+        SlokedExecutor &GetThreadManager();
         SlokedIOPoller &GetIO();
         SlokedNetworkFacade &GetNetwork();
         bool HasCrypto() const;

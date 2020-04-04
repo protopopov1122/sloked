@@ -31,7 +31,7 @@
 #include "sloked/kgr/local/Pipe.h"
 #include "sloked/kgr/net/Config.h"
 #include "sloked/kgr/net/Interface.h"
-#include "sloked/sched/ThreadManager.h"
+#include "sloked/sched/ScopedExecutor.h"
 
 using namespace std::chrono_literals;
 
@@ -42,7 +42,7 @@ namespace sloked {
         KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket,
                                   const std::atomic<bool> &work,
                                   SlokedCounter<std::size_t>::Handle counter,
-                                  SlokedActionQueue &threadManager,
+                                  SlokedExecutor &threadManager,
                                   KgrNamedServer &server,
                                   SlokedNamedRestrictionAuthority *restrictions,
                                   SlokedAuthenticatorFactory *authFactory)
@@ -220,7 +220,7 @@ namespace sloked {
         }
 
         virtual ~KgrMasterNetServerContext() {
-            // this->workers.Shutdown();
+            this->workers.Close();
             std::unique_lock lock(this->mtx);
             for (const auto &pipe : this->pipes) {
                 pipe.second->Close();
@@ -418,7 +418,7 @@ namespace sloked {
         SlokedCounter<std::size_t>::Handle counterHandle;
         SlokedIOPoller::Handle awaitableHandle;
         std::chrono::system_clock::time_point lastActivity;
-        SlokedActionQueue &workers;
+        SlokedScopedExecutor workers;
         bool pinged;
         SlokedNamedRestrictionAuthority *restrictions;
         std::unique_ptr<SlokedMasterAuthenticator> auth;
@@ -426,7 +426,7 @@ namespace sloked {
 
     KgrMasterNetServer::KgrMasterNetServer(
         KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket,
-        SlokedIOPoller &poll, SlokedActionQueue &threadManager,
+        SlokedIOPoller &poll, SlokedExecutor &threadManager,
         SlokedNamedRestrictionAuthority *restrictions,
         SlokedAuthenticatorFactory *authFactory)
         : server(server), srvSocket(std::move(socket)), poll(poll),

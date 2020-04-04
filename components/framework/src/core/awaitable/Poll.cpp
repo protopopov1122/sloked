@@ -24,7 +24,7 @@
 namespace sloked {
 
     SlokedDefaultIOPollThread::SlokedDefaultIOPollThread(
-        SlokedIOPoll &poll, SlokedActionQueue &executor)
+        SlokedIOPoll &poll, SlokedExecutor &executor)
         : poll(poll), executor(executor),
           work(false), nextId{0}, asyncTasks{0} {}
 
@@ -40,21 +40,19 @@ namespace sloked {
         this->work = true;
         this->worker = std::thread([this, timeout] {
             while (this->work.load()) {
+                this->poll.Await(timeout);
                 std::unique_lock lock(this->mtx);
+                std::vector<std::shared_ptr<SlokedExecutor::Task>> tasks;
                 for (const auto &kv : this->awaitables) {
-                    this->executor.Enqueue([this, id = kv.first] {
-                        std::unique_lock lock(this->mtx);
-                        if (this->awaitables.count(id)) {
-                            auto awaitable = this->awaitables.at(id);
-                            lock.unlock();
+                    tasks.emplace_back(
+                        this->executor.Enqueue([awaitable = kv.second] {
                             awaitable->Process(false);
-                        }
-                    });
+                        }));
                 }
                 lock.unlock();
-                this->poll.Await(timeout);
-                lock.lock();
-                this->cv.wait(lock, [this] { return this->asyncTasks == 0; });
+                for (auto task : tasks) {
+                    task->Wait();
+                }
             }
         });
     }
@@ -75,15 +73,12 @@ namespace sloked {
                 std::unique_lock lock(this->mtx);
                 if (this->awaitables.count(id)) {
                     auto awaitable = this->awaitables.at(id);
-                    this->asyncTasks++;
                     lock.unlock();
-                    this->executor.Enqueue(
-                        [this, awaitable = std::move(awaitable)] {
+                    this->executor
+                        .Enqueue([this, awaitable = std::move(awaitable)] {
                             awaitable->Process(true);
-                            std::unique_lock lock(this->mtx);
-                            this->asyncTasks--;
-                            this->cv.notify_all();
-                        });
+                        })
+                        ->Wait();
                 }
             });
         return Handle([this, id, detacher = std::move(detacher)] {

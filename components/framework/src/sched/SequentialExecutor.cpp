@@ -18,45 +18,62 @@
   You should have received a copy of the GNU Lesser General Public License
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "sloked/sched/ActionQueue.h"
+
+#include "sloked/sched/SequentialExecutor.h"
 
 namespace sloked {
 
-    SlokedSingleThreadActionQueue::SlokedSingleThreadActionQueue()
-        : active{false} {}
+    SlokedSequentialExecutor::SlokedSequentialExecutor() : active{false} {}
 
-    SlokedSingleThreadActionQueue::~SlokedSingleThreadActionQueue() {
+    SlokedSequentialExecutor::~SlokedSequentialExecutor() {
         this->Close();
     }
 
-    void SlokedSingleThreadActionQueue::Start() {
+    void SlokedSequentialExecutor::Start() {
         if (!this->active.exchange(true)) {
             this->worker = std::thread([this] { this->Run(); });
         }
     }
-    void SlokedSingleThreadActionQueue::Close() {
+    void SlokedSequentialExecutor::Close() {
         if (this->active.exchange(false) && this->worker.joinable()) {
             this->cv.notify_all();
             this->worker.join();
+            std::unique_lock lock(this->mtx);
+            for (auto task : this->queue) {
+                task->Cancel();
+            }
         }
     }
 
-    void SlokedSingleThreadActionQueue::EnqueueCallback(
-        std::function<void()> task) {
+    std::shared_ptr<SlokedExecutor::Task>
+        SlokedSequentialExecutor::EnqueueCallback(std::function<void()> exec) {
         std::unique_lock lock(this->mtx);
-        this->queue.emplace(std::move(task));
+        auto task = std::make_shared<SlokedRunnableTask>(
+            [this](auto &task) {
+                std::unique_lock lock(this->mtx);
+                this->queue.erase(
+                    std::remove_if(this->queue.begin(), this->queue.end(),
+                                   [&task](auto &other) {
+                                       return std::addressof(task) ==
+                                              other.get();
+                                   }),
+                    this->queue.end());
+            },
+            std::move(exec));
+        this->queue.emplace_back(task);
         this->cv.notify_all();
+        return task;
     }
 
-    void SlokedSingleThreadActionQueue::Run() {
-        constexpr std::chrono::milliseconds Timeout{100};
+    void SlokedSequentialExecutor::Run() {
+        constexpr std::chrono::milliseconds Timeout{10};
         std::unique_lock lock(this->mtx);
         while (this->active.load()) {
             while (this->active.load() && !this->queue.empty()) {
                 auto task = std::move(this->queue.front());
-                this->queue.pop();
+                this->queue.pop_front();
                 lock.unlock();
-                task();
+                task->Start();
                 lock.lock();
             }
             while (this->active.load() && this->queue.empty()) {

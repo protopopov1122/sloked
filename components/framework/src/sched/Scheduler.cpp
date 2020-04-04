@@ -59,7 +59,7 @@ namespace sloked {
         }
     }
 
-    SlokedDefaultScheduler::SlokedDefaultScheduler(SlokedActionQueue &executor)
+    SlokedDefaultScheduler::SlokedDefaultScheduler(SlokedExecutor &executor)
         : executor(executor), work(false) {}
 
     SlokedDefaultScheduler::~SlokedDefaultScheduler() {
