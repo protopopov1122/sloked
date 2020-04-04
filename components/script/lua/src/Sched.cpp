@@ -26,10 +26,10 @@
 namespace sloked {
 
     struct SchedTaskHandle {
-        SchedTaskHandle(std::shared_ptr<SlokedSchedulerThread::TimerTask> task)
+        SchedTaskHandle(std::shared_ptr<SlokedScheduler::TimerTask> task)
             : task(std::move(task)) {}
 
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> task;
+        std::shared_ptr<SlokedScheduler::TimerTask> task;
     };
 
     static int SlokedSchedTask_GC(lua_State *state) {
@@ -67,8 +67,7 @@ namespace sloked {
     }
 
     static int SlokedSchedTaskToLua(
-        lua_State *state,
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> task) {
+        lua_State *state, std::shared_ptr<SlokedScheduler::TimerTask> task) {
         SchedTaskHandle *taskHandle = reinterpret_cast<SchedTaskHandle *>(
             lua_newuserdata(state, sizeof(SchedTaskHandle)));
         new (taskHandle) SchedTaskHandle(task);
@@ -83,11 +82,13 @@ namespace sloked {
     }
 
     struct SchedHandle {
-        SchedHandle(SlokedSchedulerThread &sched, SlokedEventLoop &eventLoop)
-            : sched(sched), eventLoop(eventLoop) {}
+        SchedHandle(SlokedScheduler &sched, SlokedEventLoop &eventLoop,
+                    SlokedExecutor &executor)
+            : sched(sched), eventLoop(eventLoop), executor(executor) {}
 
-        SlokedSchedulerThread &sched;
+        SlokedScheduler &sched;
         SlokedEventLoop &eventLoop;
+        SlokedExecutor &executor;
     };
 
     static int SlokedSched_GC(lua_State *state) {
@@ -116,7 +117,7 @@ namespace sloked {
                 SlokedEventLoop &eventLoop = sched->eventLoop;
                 lua_pushvalue(state, 2);
                 auto callback = LuaCallback(state, eventLoop);
-                sched->sched.Defer(
+                sched->executor.Enqueue(
                     [&eventLoop, callback = std::move(callback)] {
                         eventLoop.Attach(callback);
                     });
@@ -201,11 +202,11 @@ namespace sloked {
         }
     }
 
-    int SlokedSchedToLua(SlokedSchedulerThread &sched,
-                         SlokedEventLoop &eventLoop, lua_State *state) {
+    int SlokedSchedToLua(SlokedScheduler &sched, SlokedEventLoop &eventLoop,
+                         SlokedExecutor &executor, lua_State *state) {
         SchedHandle *schedHandle = reinterpret_cast<SchedHandle *>(
             lua_newuserdata(state, sizeof(SchedHandle)));
-        new (schedHandle) SchedHandle(sched, eventLoop);
+        new (schedHandle) SchedHandle(sched, eventLoop, executor);
         if (luaL_newmetatable(state, "sloked.sched")) {
             lua_pushcfunction(state, SlokedSched_GC);
             lua_setfield(state, -2, "__gc");

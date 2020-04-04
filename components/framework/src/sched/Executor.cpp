@@ -55,10 +55,6 @@ namespace sloked {
             this->state = SlokedExecutor::State::Canceled;
             this->cancel(*this);
             this->cv.notify_all();
-        } else if (this->state == SlokedExecutor::State::Running) {
-            this->cv.wait(lock, [this] {
-                return this->state == SlokedExecutor::State::Finished;
-            });
         }
     }
 

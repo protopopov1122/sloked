@@ -31,6 +31,7 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <type_traits>
 #include <utility>
 
 #include "sloked/core/Closeable.h"
@@ -39,102 +40,165 @@
 
 namespace sloked {
 
-    class SlokedSchedulerThread {
+    class SlokedScheduler {
      public:
-        using TimePoint =
-            std::chrono::time_point<std::chrono::system_clock,
-                                    std::chrono::system_clock::duration>;
-        using TimeDiff = std::chrono::system_clock::duration;
+        using Clock = std::chrono::system_clock;
+        using TimePoint = std::chrono::time_point<Clock, Clock::duration>;
+        using TimeDiff = Clock::duration;
         using Callback = std::function<void()>;
 
-        class TimerTask {
+        class TimerTask : public SlokedExecutor::Task {
          public:
             virtual ~TimerTask() = default;
-            virtual bool Pending() const = 0;
-            virtual const TimePoint &GetTime() const = 0;
-            virtual void Cancel() = 0;
+            virtual bool Pending() const;
+            virtual TimePoint GetTime() const = 0;
+            virtual bool IsRecurring() const = 0;
+            virtual std::optional<TimeDiff> GetInterval() const = 0;
         };
 
-        virtual ~SlokedSchedulerThread() = default;
-        virtual std::shared_ptr<TimerTask> At(TimePoint, Callback) = 0;
-        virtual std::shared_ptr<TimerTask> Sleep(TimeDiff, Callback) = 0;
-        virtual std::shared_ptr<TimerTask> Interval(TimeDiff, Callback) = 0;
-        virtual void Defer(std::function<void()>) = 0;
-    };
-
-    class SlokedDefaultScheduler : public SlokedSchedulerThread,
-                                   public SlokedCloseable {
-     public:
-        class TimerTask : public SlokedSchedulerThread::TimerTask {
+        template <typename T>
+        class FutureTimerTask : public TimerTask {
          public:
-            friend class SlokedDefaultScheduler;
+            FutureTimerTask(std::shared_ptr<TimerTask> task,
+                            std::future<T> future)
+                : task(std::move(task)), future(std::move(future)) {}
 
-            void Run();
+            SlokedExecutor::State Status() const final {
+                return this->task->Status();
+            }
 
-            bool Pending() const final;
-            const TimePoint &GetTime() const final;
-            void Cancel() final;
+            void Wait() final {
+                this->task->Wait();
+            }
+
+            void Cancel() final {
+                this->task->Cancel();
+            }
+
+            TimePoint GetTime() const final {
+                return this->task->GetTime();
+            }
+
+            bool IsRecurring() const final {
+                return this->task->IsRecurring();
+            }
+
+            std::optional<TimeDiff> GetInterval() const final {
+                return this->task->GetInterval();
+            }
+
+            std::future<T> &GetFuture() const {
+                return this->future;
+            }
 
          private:
-            TimerTask(SlokedDefaultScheduler &, TimePoint, Callback,
-                      std::optional<TimeDiff> = {});
-            void NextInterval();
-
-            SlokedDefaultScheduler &sched;
-            std::atomic<bool> pending;
-            TimePoint at;
-            Callback callback;
-            std::optional<TimeDiff> interval;
-        };
-        friend class TimerTask;
-
-        SlokedDefaultScheduler(SlokedExecutor &);
-        ~SlokedDefaultScheduler();
-        void Start();
-        void Close() final;
-
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> At(TimePoint,
-                                                             Callback) final;
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> Sleep(TimeDiff,
-                                                                Callback) final;
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> Interval(
-            TimeDiff, Callback) final;
-        void Defer(std::function<void()>) final;
-
-     private:
-        struct TimerTaskCompare {
-            bool operator()(TimerTask *, TimerTask *) const;
+            std::shared_ptr<TimerTask> task;
+            std::future<T> future;
         };
 
-        void Run();
+        virtual ~SlokedScheduler() = default;
 
-        SlokedExecutor &executor;
-        std::map<TimerTask *, std::shared_ptr<TimerTask>, TimerTaskCompare>
-            tasks;
-        std::atomic<bool> work;
-        SlokedCounter<std::size_t> timer_thread;
-        std::mutex mtx;
-        std::condition_variable cv;
-    };
+        template <typename T>
+        auto At(TimePoint tp, T callable)
+            -> std::shared_ptr<FutureTimerTask<decltype(std::declval<T>()())>> {
+            using R = decltype(callable());
+            if constexpr (std::is_void_v<R>) {
+                auto promise = std::make_shared<std::promise<void>>();
+                auto task = this->EnqueueAt(
+                    tp, [promise, callable = std::move(callable)]() mutable {
+                        try {
+                            callable();
+                            promise->set_value();
+                        } catch (...) {
+                            promise->set_exception(std::current_exception());
+                        }
+                    });
+                return std::make_shared<FutureTimerTask<R>>(
+                    std::move(task), promise->get_future());
+            } else {
+                auto promise = std::make_shared<std::promise<R>>();
+                auto task = this->EnqueueAt(
+                    tp, [promise, callable = std::move(callable)]() mutable {
+                        try {
+                            promise->set_value(callable());
+                        } catch (...) {
+                            promise->set_exception(std::current_exception());
+                        }
+                    });
+                return std::make_shared<FutureTimerTask<R>>(
+                    std::move(task), promise->get_future());
+            }
+        }
 
-    class SlokedScheduledTaskPool : public SlokedSchedulerThread {
-     public:
-        SlokedScheduledTaskPool(SlokedSchedulerThread &);
-        ~SlokedScheduledTaskPool();
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> At(TimePoint,
-                                                             Callback) final;
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> Sleep(TimeDiff,
-                                                                Callback) final;
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> Interval(
-            TimeDiff, Callback) final;
-        void Defer(std::function<void()>) final;
-        void CollectGarbage();
-        void DropAll();
+        template <typename T>
+        auto Sleep(TimeDiff td, T callable)
+            -> std::shared_ptr<FutureTimerTask<decltype(std::declval<T>()())>> {
+            using R = decltype(callable());
+            if constexpr (std::is_void_v<R>) {
+                auto promise = std::make_shared<std::promise<void>>();
+                auto task = this->EnqueueSleep(
+                    td, [promise, callable = std::move(callable)]() mutable {
+                        try {
+                            callable();
+                            promise->set_value();
+                        } catch (...) {
+                            promise->set_exception(std::current_exception());
+                        }
+                    });
+                return std::make_shared<FutureTimerTask<R>>(
+                    std::move(task), promise->get_future());
+            } else {
+                auto promise = std::make_shared<std::promise<R>>();
+                auto task = this->EnqueueSleep(
+                    td, [promise, callable = std::move(callable)]() mutable {
+                        try {
+                            promise->set_value(callable());
+                        } catch (...) {
+                            promise->set_exception(std::current_exception());
+                        }
+                    });
+                return std::make_shared<FutureTimerTask<R>>(
+                    std::move(task), promise->get_future());
+            }
+        }
 
-     private:
-        SlokedSchedulerThread &sched;
-        std::mutex mtx;
-        std::list<std::shared_ptr<SlokedSchedulerThread::TimerTask>> tasks;
+        template <typename T>
+        auto Interval(TimeDiff td, T callable)
+            -> std::shared_ptr<FutureTimerTask<decltype(std::declval<T>()())>> {
+            using R = decltype(callable());
+            if constexpr (std::is_void_v<R>) {
+                auto promise = std::make_shared<std::promise<void>>();
+                auto task = this->EnqueueInterval(
+                    td, [promise, callable = std::move(callable)]() mutable {
+                        try {
+                            callable();
+                            promise->set_value();
+                        } catch (...) {
+                            promise->set_exception(std::current_exception());
+                        }
+                    });
+                return std::make_shared<FutureTimerTask<R>>(
+                    std::move(task), promise->get_future());
+            } else {
+                auto promise = std::make_shared<std::promise<R>>();
+                auto task = this->EnqueueInterval(
+                    td, [promise, callable = std::move(callable)]() mutable {
+                        try {
+                            promise->set_value(callable());
+                        } catch (...) {
+                            promise->set_exception(std::current_exception());
+                        }
+                    });
+                return std::make_shared<FutureTimerTask<R>>(
+                    std::move(task), promise->get_future());
+            }
+        }
+
+     protected:
+        virtual std::shared_ptr<TimerTask> EnqueueAt(TimePoint, Callback) = 0;
+        virtual std::shared_ptr<TimerTask> EnqueueSleep(TimeDiff, Callback) = 0;
+        virtual std::shared_ptr<TimerTask> EnqueueInterval(TimeDiff,
+                                                           Callback) = 0;
     };
 }  // namespace sloked
 

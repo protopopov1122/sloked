@@ -31,7 +31,7 @@ namespace sloked {
      public:
         SlokedBufferedSocket(std::unique_ptr<SlokedSocket>,
                              std::chrono::system_clock::duration,
-                             SlokedSchedulerThread &);
+                             SlokedScheduler &);
         bool Valid() final;
         void Close() final;
         std::size_t Available() final;
@@ -49,8 +49,8 @@ namespace sloked {
 
         std::unique_ptr<SlokedSocket> socket;
         std::chrono::system_clock::duration timeout;
-        SlokedSchedulerThread &sched;
-        std::shared_ptr<SlokedSchedulerThread::TimerTask> task;
+        SlokedScheduler &sched;
+        std::shared_ptr<SlokedScheduler::TimerTask> task;
         std::mutex mtx;
         std::vector<uint8_t> buffer;
     };
@@ -59,7 +59,7 @@ namespace sloked {
      public:
         SlokedBufferedServerSocket(std::unique_ptr<SlokedServerSocket>,
                                    std::chrono::system_clock::duration,
-                                   SlokedSchedulerThread &);
+                                   SlokedScheduler &);
 
         bool Valid() final;
         void Start() final;
@@ -72,14 +72,14 @@ namespace sloked {
      private:
         std::unique_ptr<SlokedServerSocket> serverSocket;
         std::chrono::system_clock::duration timeout;
-        SlokedSchedulerThread &sched;
+        SlokedScheduler &sched;
     };
 
     class SlokedBufferedSocketFactory : public SlokedSocketFactory {
      public:
         SlokedBufferedSocketFactory(SlokedSocketFactory &,
                                     std::chrono::system_clock::duration,
-                                    SlokedSchedulerThread &);
+                                    SlokedScheduler &);
 
         std::unique_ptr<SlokedSocket> Connect(
             const SlokedSocketAddress &) final;
@@ -89,7 +89,7 @@ namespace sloked {
      private:
         SlokedSocketFactory &socketFactory;
         std::chrono::system_clock::duration timeout;
-        SlokedSchedulerThread &sched;
+        SlokedScheduler &sched;
     };
 }  // namespace sloked
 

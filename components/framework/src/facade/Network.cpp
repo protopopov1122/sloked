@@ -55,8 +55,7 @@ namespace sloked {
     }
 
     void SlokedNetworkFacade::BufferingLayer(
-        std::chrono::system_clock::duration timeout,
-        SlokedSchedulerThread &sched) {
+        std::chrono::system_clock::duration timeout, SlokedScheduler &sched) {
         this->layers.push(std::make_unique<SlokedBufferedSocketFactory>(
             this->GetEngine(), std::move(timeout), sched));
     }

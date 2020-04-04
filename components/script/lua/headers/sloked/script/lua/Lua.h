@@ -32,7 +32,8 @@
 #include "sloked/core/Semaphore.h"
 #include "sloked/editor/EditorInstance.h"
 #include "sloked/sched/EventLoop.h"
-#include "sloked/sched/Scheduler.h"
+#include "sloked/sched/ScopedExecutor.h"
+#include "sloked/sched/ScopedScheduler.h"
 #include "sloked/script/ScriptEngine.h"
 #include "sloked/script/lua/Base.h"
 
@@ -40,8 +41,8 @@ namespace sloked {
 
     class SlokedLuaEngine : public SlokedScriptEngine {
      public:
-        SlokedLuaEngine(SlokedEditorInstanceContainer &,
-                        SlokedSchedulerThread &, const std::string & = "");
+        SlokedLuaEngine(SlokedEditorInstanceContainer &, SlokedScheduler &,
+                        SlokedExecutor &, const std::string & = "");
         ~SlokedLuaEngine();
         void Start(const std::string &) final;
         void Close() final;
@@ -58,7 +59,8 @@ namespace sloked {
         SlokedEditorInstanceContainer &apps;
         SlokedSemaphore activity;
         SlokedDefaultEventLoop eventLoop;
-        SlokedScheduledTaskPool sched;
+        SlokedScopedScheduler sched;
+        SlokedScopedExecutor executor;
         std::string path;
         SlokedLogger logger;
     };

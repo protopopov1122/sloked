@@ -33,10 +33,11 @@
 namespace sloked {
 
     SlokedLuaEngine::SlokedLuaEngine(SlokedEditorInstanceContainer &apps,
-                                     SlokedSchedulerThread &sched,
+                                     SlokedScheduler &sched,
+                                     SlokedExecutor &executor,
                                      const std::string &path)
-        : state{nullptr}, work{false}, apps(apps), sched(sched), path{path},
-          logger(SlokedLoggerTag) {
+        : state{nullptr}, work{false}, apps(apps), sched(sched),
+          executor(executor), path{path}, logger(SlokedLoggerTag) {
         this->eventLoop.Notify([this] { this->activity.Notify(); });
     }
 
@@ -72,13 +73,13 @@ namespace sloked {
                     if (this->work.load() && this->eventLoop.HasPending()) {
                         this->eventLoop.Run();
                     }
-                    this->sched.CollectGarbage();
                 }
             } catch (const SlokedError &err) {
                 logger.To(SlokedLogLevel::Error) << err.what();
             }
         }
-        this->sched.DropAll();
+        this->executor.Close();
+        this->sched.Close();
         lua_close(this->state);
         this->state = nullptr;
     }
@@ -135,7 +136,8 @@ namespace sloked {
         lua_newtable(this->state);
         this->InitializeApps();
         lua_setfield(this->state, -2, "editors");
-        SlokedSchedToLua(this->sched, this->eventLoop, this->state);
+        SlokedSchedToLua(this->sched, this->eventLoop, this->executor,
+                         this->state);
         lua_setfield(this->state, -2, "sched");
         SlokedLoggerToLua(this->logger, this->state);
         lua_setfield(this->state, -2, "logger");

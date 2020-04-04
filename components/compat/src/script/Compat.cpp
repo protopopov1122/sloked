@@ -31,9 +31,9 @@
 namespace sloked {
 
     std::unique_ptr<SlokedScriptEngine> SlokedScriptCompat::GetEngine(
-        SlokedEditorInstanceContainer &apps, SlokedSchedulerThread &sched,
-        const std::string &path) {
-        return std::make_unique<SlokedLuaEngine>(apps, sched, path);
+        SlokedEditorInstanceContainer &apps, SlokedScheduler &sched,
+        SlokedExecutor &executor, const std::string &path) {
+        return std::make_unique<SlokedLuaEngine>(apps, sched, executor, path);
     }
 }  // namespace sloked
 #endif

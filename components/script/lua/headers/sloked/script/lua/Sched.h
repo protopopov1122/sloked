@@ -29,7 +29,7 @@
 
 namespace sloked {
 
-    int SlokedSchedToLua(SlokedSchedulerThread &, SlokedEventLoop &,
+    int SlokedSchedToLua(SlokedScheduler &, SlokedEventLoop &, SlokedExecutor &,
                          lua_State *);
 }
 

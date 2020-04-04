@@ -25,8 +25,7 @@ namespace sloked {
 
     SlokedBufferedSocket::SlokedBufferedSocket(
         std::unique_ptr<SlokedSocket> socket,
-        std::chrono::system_clock::duration timeout,
-        SlokedSchedulerThread &sched)
+        std::chrono::system_clock::duration timeout, SlokedScheduler &sched)
         : socket(std::move(socket)), timeout(std::move(timeout)),
           sched(sched), task{nullptr} {
         if (this->socket == nullptr) {
@@ -101,8 +100,7 @@ namespace sloked {
 
     SlokedBufferedServerSocket::SlokedBufferedServerSocket(
         std::unique_ptr<SlokedServerSocket> serverSocket,
-        std::chrono::system_clock::duration timeout,
-        SlokedSchedulerThread &sched)
+        std::chrono::system_clock::duration timeout, SlokedScheduler &sched)
         : serverSocket(std::move(serverSocket)), timeout(std::move(timeout)),
           sched(sched) {}
 
@@ -140,8 +138,7 @@ namespace sloked {
 
     SlokedBufferedSocketFactory::SlokedBufferedSocketFactory(
         SlokedSocketFactory &socketFactory,
-        std::chrono::system_clock::duration timeout,
-        SlokedSchedulerThread &sched)
+        std::chrono::system_clock::duration timeout, SlokedScheduler &sched)
         : socketFactory(socketFactory), timeout(std::move(timeout)),
           sched(sched) {}
 

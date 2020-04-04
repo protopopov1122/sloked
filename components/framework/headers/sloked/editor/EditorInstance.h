@@ -36,8 +36,8 @@
 #include "sloked/facade/Network.h"
 #include "sloked/facade/Server.h"
 #include "sloked/facade/Services.h"
+#include "sloked/sched/DefaultScheduler.h"
 #include "sloked/sched/MultithreadExecutor.h"
-#include "sloked/sched/Scheduler.h"
 #include "sloked/sched/SequentialExecutor.h"
 #include "sloked/services/CharPreset.h"
 
@@ -51,8 +51,9 @@ namespace sloked {
         void Close() final;
 
         SlokedIOPoller &GetIO();
-        SlokedSchedulerThread &GetScheduler();
-        SlokedExecutor &GetThreadManager();
+        SlokedScheduler &GetScheduler();
+        SlokedExecutor &GetExecutor();
+        SlokedExecutor &GetThreadedExecutor();
 
      private:
         std::unique_ptr<SlokedIOPoll> ioPoll;
@@ -82,8 +83,9 @@ namespace sloked {
         void Close() final;
 
         SlokedCharPreset &GetCharPreset();
-        SlokedSchedulerThread &GetScheduler();
-        SlokedExecutor &GetThreadManager();
+        SlokedScheduler &GetScheduler();
+        SlokedExecutor &GetExecutor();
+        SlokedExecutor &GetThreadedExecutor();
         SlokedIOPoller &GetIO();
         SlokedNetworkFacade &GetNetwork();
         bool HasCrypto() const;

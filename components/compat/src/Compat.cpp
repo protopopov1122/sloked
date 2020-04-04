@@ -95,9 +95,10 @@ namespace sloked {
         }
 
         std::unique_ptr<SlokedScriptEngine> NewScriptEngine(
-            SlokedEditorInstanceContainer &container,
-            SlokedSchedulerThread &sched, const std::string &path) const final {
-            return SlokedScriptCompat::GetEngine(container, sched, path);
+            SlokedEditorInstanceContainer &container, SlokedScheduler &sched,
+            SlokedExecutor &executor, const std::string &path) const final {
+            return SlokedScriptCompat::GetEngine(container, sched, executor,
+                                                 path);
         }
     };
 

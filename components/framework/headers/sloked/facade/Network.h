@@ -39,7 +39,7 @@ namespace sloked {
         bool HasLayers() const;
         void PopLayer();
         void BufferingLayer(std::chrono::system_clock::duration,
-                            SlokedSchedulerThread &);
+                            SlokedScheduler &);
         void CompressionLayer(SlokedCompression &);
         void EncryptionLayer(SlokedCrypto &, SlokedCrypto::Key &);
 

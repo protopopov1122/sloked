@@ -401,7 +401,7 @@ namespace sloked {
                 screenServer.GetScreen().GetSize().GetScreenSize().line,
                 screenServer.GetScreen().GetSize().GetScreenSize().column});
         screenSizeClient.Listen([&](const auto &size) {
-            mainEditor.GetThreadManager().Enqueue([&, size] {
+            mainEditor.GetThreadedExecutor().Enqueue([&, size] {
                 if (screenServer.IsRunning() && mainWindow.has_value()) {
                     screenClient.Multiplexer.ResizeWindow(mainWindow.value(),
                                                           size);
@@ -445,11 +445,11 @@ namespace sloked {
         screenInput.Listen(
             "/",
             [&](auto &evt) {
-                mainEditor.GetScheduler().Defer([&, evt] {
+                mainEditor.GetExecutor().Enqueue([&, evt] {
                     renderStatus();
                     if (evt.value.index() != 0 &&
                         std::get<1>(evt.value) == SlokedControlKey::Escape) {
-                        mainEditor.GetThreadManager().Enqueue([&] {
+                        mainEditor.GetThreadedExecutor().Enqueue([&] {
                             logger.Debug() << "Saving document";
                             documentClient.Save(outputPath.ToString());
                             terminate.Notify();
@@ -463,7 +463,7 @@ namespace sloked {
         std::unique_ptr<SlokedScriptEngine> scriptEngine;
         if (baseInterface.HasScripting() && mainConfig.Has("/script/init")) {
             scriptEngine = baseInterface.NewScriptEngine(
-                manager, mainEditor.GetScheduler(),
+                manager, mainEditor.GetScheduler(), mainEditor.GetExecutor(),
                 mainConfig.Find("/script/path").AsString());
             if (scriptEngine) {
                 closeables.Attach(*scriptEngine);

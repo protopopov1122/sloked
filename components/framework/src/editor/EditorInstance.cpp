@@ -49,11 +49,15 @@ namespace sloked {
         return this->ioPoller;
     }
 
-    SlokedSchedulerThread &SlokedSharedEditorState::GetScheduler() {
+    SlokedScheduler &SlokedSharedEditorState::GetScheduler() {
         return this->scheduler;
     }
 
-    SlokedExecutor &SlokedSharedEditorState::GetThreadManager() {
+    SlokedExecutor &SlokedSharedEditorState::GetExecutor() {
+        return this->executor;
+    }
+
+    SlokedExecutor &SlokedSharedEditorState::GetThreadedExecutor() {
         return this->threadManager;
     }
 
@@ -208,12 +212,16 @@ namespace sloked {
         return this->charPreset;
     }
 
-    SlokedSchedulerThread &SlokedEditorInstance::GetScheduler() {
+    SlokedScheduler &SlokedEditorInstance::GetScheduler() {
         return this->sharedState.GetScheduler();
     }
 
-    SlokedExecutor &SlokedEditorInstance::GetThreadManager() {
-        return this->sharedState.GetThreadManager();
+    SlokedExecutor &SlokedEditorInstance::GetExecutor() {
+        return this->sharedState.GetExecutor();
+    }
+
+    SlokedExecutor &SlokedEditorInstance::GetThreadedExecutor() {
+        return this->sharedState.GetThreadedExecutor();
     }
 
     SlokedIOPoller &SlokedEditorInstance::GetIO() {
