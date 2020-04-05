@@ -194,11 +194,16 @@ namespace sloked {
         KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), contextManager(contextManager) {}
 
-    void SlokedScreenInputNotificationService::Attach(
+    TaskResult<void> SlokedScreenInputNotificationService::Attach(
         std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedScreenInputNotifierContext>(
-            std::move(pipe), this->root, this->encoding);
-        this->contextManager.Attach(std::move(ctx));
+        TaskResultSupplier<void> supplier;
+        try {
+            auto ctx = std::make_unique<SlokedScreenInputNotifierContext>(
+                std::move(pipe), this->root, this->encoding);
+            this->contextManager.Attach(std::move(ctx));
+            supplier.SetResult();
+        } catch (...) { supplier.SetError(std::current_exception()); }
+        return supplier.Result();
     }
 
     SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(
@@ -303,11 +308,16 @@ namespace sloked {
         KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), contextManager(contextManager) {}
 
-    void SlokedScreenInputForwardingService::Attach(
+    TaskResult<void> SlokedScreenInputForwardingService::Attach(
         std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedScreenInputForwardingContext>(
-            std::move(pipe), this->root, this->encoding);
-        this->contextManager.Attach(std::move(ctx));
+        TaskResultSupplier<void> supplier;
+        try {
+            auto ctx = std::make_unique<SlokedScreenInputForwardingContext>(
+                std::move(pipe), this->root, this->encoding);
+            this->contextManager.Attach(std::move(ctx));
+            supplier.SetResult();
+        } catch (...) { supplier.SetError(std::current_exception()); }
+        return supplier.Result();
     }
 
     SlokedScreenInputForwardingClient::SlokedScreenInputForwardingClient(

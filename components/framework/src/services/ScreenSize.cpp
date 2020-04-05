@@ -64,11 +64,16 @@ namespace sloked {
         KgrContextManager<KgrLocalContext> &contextManager)
         : size(size), contextManager(contextManager) {}
 
-    void SlokedScreenSizeNotificationService::Attach(
+    TaskResult<void> SlokedScreenSizeNotificationService::Attach(
         std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedScreenSizeNotificationContext>(
-            std::move(pipe), this->size);
-        this->contextManager.Attach(std::move(ctx));
+        TaskResultSupplier<void> supplier;
+        try {
+            auto ctx = std::make_unique<SlokedScreenSizeNotificationContext>(
+                std::move(pipe), this->size);
+            this->contextManager.Attach(std::move(ctx));
+            supplier.SetResult();
+        } catch (...) { supplier.SetError(std::current_exception()); }
+        return supplier.Result();
     }
 
     SlokedScreenSizeNotificationClient::SlokedScreenSizeNotificationClient(

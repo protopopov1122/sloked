@@ -35,7 +35,7 @@ namespace sloked {
      public:
         SlokedScreenSizeNotificationService(
             SlokedScreenSize &, KgrContextManager<KgrLocalContext> &);
-        void Attach(std::unique_ptr<KgrPipe>) override;
+        TaskResult<void> Attach(std::unique_ptr<KgrPipe>) override;
 
      private:
         SlokedScreenSize &size;

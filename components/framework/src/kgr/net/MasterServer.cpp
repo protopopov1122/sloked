@@ -135,10 +135,15 @@ namespace sloked {
                 } else {
                     this->workers.Enqueue([this, service,
                                            rsp = std::move(rsp)]() mutable {
-                        if (!this->server.Registered({service})) {
-                            this->server.Register(
-                                {service},
-                                std::make_unique<SlaveService>(*this, service));
+                        auto res = this->server.Registered({service});
+                        res.Wait();
+                        if (res.State() == TaskResult<bool>::Status::Ready &&
+                            !res.Get()) {
+                            this->server
+                                .Register({service},
+                                          std::make_unique<SlaveService>(
+                                              *this, service))
+                                .Wait();
                             std::unique_lock lock(this->mtx);
                             this->remoteServiceList.insert(service);
                             rsp.Result(true);
@@ -155,7 +160,9 @@ namespace sloked {
                     this->workers.Enqueue([this, params,
                                            rsp = std::move(rsp)]() mutable {
                         const auto &service = params.AsString();
-                        rsp.Result(this->server.Registered({service}) &&
+                        auto res = this->server.Registered({service});
+                        res.Wait();
+                        rsp.Result(res.Get() &&
                                    (this->IsAccessPermitted(service) ||
                                     this->IsModificationPermitted(service)));
                     });
@@ -279,49 +286,62 @@ namespace sloked {
                          const std::string &service)
                 : srv(srv), service(service) {}
 
-            void Attach(std::unique_ptr<KgrPipe> pipe) final {
+            TaskResult<void> Attach(std::unique_ptr<KgrPipe> pipe) final {
+                TaskResultSupplier<void> supplier;
                 std::unique_lock lock(this->srv.mtx);
                 auto pipeId = this->srv.nextPipeId++;
                 lock.unlock();
-                this->srv.workers.Enqueue([this, pipeId,
+                this->srv.workers.Enqueue([this, pipeId, supplier,
                                            pipePtr = pipe.release()] {
-                    auto rsp = this->srv.net.Invoke(
-                        "connect", KgrDictionary{{"pipe", pipeId},
-                                                 {"service", this->service}});
-                    if (rsp.WaitResponse(KgrNetConfig::ResponseTimeout) &&
-                        rsp.HasResponse()) {
-                        auto remotePipe = rsp.GetResponse().GetResult().AsInt();
-                        std::unique_ptr<KgrPipe> pipe{pipePtr};
-                        pipe->SetMessageListener([this, pipeId, remotePipe] {
+                    try {
+                        auto rsp = this->srv.net.Invoke(
+                            "connect",
+                            KgrDictionary{{"pipe", pipeId},
+                                          {"service", this->service}});
+                        if (rsp.WaitResponse(KgrNetConfig::ResponseTimeout) &&
+                            rsp.HasResponse()) {
+                            auto remotePipe =
+                                rsp.GetResponse().GetResult().AsInt();
+                            std::unique_ptr<KgrPipe> pipe{pipePtr};
+                            pipe->SetMessageListener([this, pipeId,
+                                                      remotePipe] {
+                                std::unique_lock lock(this->srv.mtx);
+                                if (this->srv.pipes.count(pipeId) != 0) {
+                                    auto &pipe = *this->srv.pipes.at(pipeId);
+                                    while (!pipe.Empty()) {
+                                        this->srv.net.Invoke(
+                                            "send", KgrDictionary{
+                                                        {"pipe", remotePipe},
+                                                        {"data", pipe.Read()}});
+                                    }
+                                    if (pipe.GetStatus() ==
+                                        KgrPipe::Status::Closed) {
+                                        this->srv.net.Invoke("close",
+                                                             remotePipe);
+                                        this->srv.pipes.erase(pipeId);
+                                    }
+                                }
+                            });
                             std::unique_lock lock(this->srv.mtx);
-                            if (this->srv.pipes.count(pipeId) != 0) {
-                                auto &pipe = *this->srv.pipes.at(pipeId);
-                                while (!pipe.Empty()) {
-                                    this->srv.net.Invoke(
-                                        "send",
-                                        KgrDictionary{{"pipe", remotePipe},
-                                                      {"data", pipe.Read()}});
-                                }
-                                if (pipe.GetStatus() ==
-                                    KgrPipe::Status::Closed) {
-                                    this->srv.net.Invoke("close", remotePipe);
-                                    this->srv.pipes.erase(pipeId);
-                                }
+                            while (!pipe->Empty()) {
+                                this->srv.net.Invoke(
+                                    "send",
+                                    KgrDictionary{{"pipe", remotePipe},
+                                                  {"data", pipe->Read()}});
                             }
-                        });
-                        std::unique_lock lock(this->srv.mtx);
-                        while (!pipe->Empty()) {
-                            this->srv.net.Invoke(
-                                "send", KgrDictionary{{"pipe", remotePipe},
-                                                      {"data", pipe->Read()}});
+                            if (pipe->GetStatus() == KgrPipe::Status::Closed) {
+                                this->srv.net.Invoke("close", remotePipe);
+                            } else {
+                                this->srv.pipes.emplace(pipeId,
+                                                        std::move(pipe));
+                            }
                         }
-                        if (pipe->GetStatus() == KgrPipe::Status::Closed) {
-                            this->srv.net.Invoke("close", remotePipe);
-                        } else {
-                            this->srv.pipes.emplace(pipeId, std::move(pipe));
-                        }
+                        supplier.SetResult();
+                    } catch (...) {
+                        supplier.SetError(std::current_exception());
                     }
                 });
+                return supplier.Result();
             }
 
          private:

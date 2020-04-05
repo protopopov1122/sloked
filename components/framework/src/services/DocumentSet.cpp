@@ -147,10 +147,16 @@ namespace sloked {
         : documents(documents), taggers(taggers),
           contextManager(contextManager) {}
 
-    void SlokedDocumentSetService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedDocumentSetContext>(
-            std::move(pipe), this->documents, this->taggers);
-        this->contextManager.Attach(std::move(ctx));
+    TaskResult<void> SlokedDocumentSetService::Attach(
+        std::unique_ptr<KgrPipe> pipe) {
+        TaskResultSupplier<void> supplier;
+        try {
+            auto ctx = std::make_unique<SlokedDocumentSetContext>(
+                std::move(pipe), this->documents, this->taggers);
+            this->contextManager.Attach(std::move(ctx));
+            supplier.SetResult();
+        } catch (...) { supplier.SetError(std::current_exception()); }
+        return supplier.Result();
     }
 
     SlokedDocumentSetClient::SlokedDocumentSetClient(

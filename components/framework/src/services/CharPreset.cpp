@@ -41,10 +41,16 @@ namespace sloked {
         KgrContextManager<KgrLocalContext> &contextManager)
         : charPreset(charPreset), contextManager(contextManager) {}
 
-    void SlokedCharPresetService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedCharPresetNotifyContext>(
-            std::move(pipe), this->charPreset);
-        this->contextManager.Attach(std::move(ctx));
+    TaskResult<void> SlokedCharPresetService::Attach(
+        std::unique_ptr<KgrPipe> pipe) {
+        TaskResultSupplier<void> supplier;
+        try {
+            auto ctx = std::make_unique<SlokedCharPresetNotifyContext>(
+                std::move(pipe), this->charPreset);
+            this->contextManager.Attach(std::move(ctx));
+            supplier.SetResult();
+        } catch (...) { supplier.SetError(std::current_exception()); }
+        return supplier.Result();
     }
 
     SlokedCharPresetClient::SlokedCharPresetClient(

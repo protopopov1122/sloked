@@ -39,16 +39,16 @@ namespace sloked {
         virtual std::unique_ptr<KgrPipe> Connect(T) = 0;
         virtual Connector GetConnector(T) = 0;
 
-        virtual void Register(T, std::unique_ptr<KgrService>) = 0;
-        virtual bool Registered(T) = 0;
-        virtual void Deregister(T) = 0;
+        virtual TaskResult<void> Register(T, std::unique_ptr<KgrService>) = 0;
+        virtual TaskResult<bool> Registered(T) = 0;
+        virtual TaskResult<void> Deregister(T) = 0;
     };
 
     class KgrServer : public KgrAbstractServer<KgrServerServiceId> {
      public:
         using ServiceId = KgrServerServiceId;
         using KgrAbstractServer<KgrServerServiceId>::Register;
-        virtual ServiceId Register(std::unique_ptr<KgrService>) = 0;
+        virtual TaskResult<ServiceId> Register(std::unique_ptr<KgrService>) = 0;
     };
 }  // namespace sloked
 

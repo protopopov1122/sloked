@@ -286,9 +286,15 @@ namespace sloked {
         KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), contextManager(contextManager) {}
 
-    void SlokedNamespaceService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedNamespaceServiceContext>(
-            std::move(pipe), this->root);
-        this->contextManager.Attach(std::move(ctx));
+    TaskResult<void> SlokedNamespaceService::Attach(
+        std::unique_ptr<KgrPipe> pipe) {
+        TaskResultSupplier<void> supplier;
+        try {
+            auto ctx = std::make_unique<SlokedNamespaceServiceContext>(
+                std::move(pipe), this->root);
+            this->contextManager.Attach(std::move(ctx));
+            supplier.SetResult();
+        } catch (...) { supplier.SetError(std::current_exception()); }
+        return supplier.Result();
     }
 }  // namespace sloked

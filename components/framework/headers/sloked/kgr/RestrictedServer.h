@@ -41,9 +41,10 @@ namespace sloked {
         std::unique_ptr<KgrPipe> Connect(const SlokedPath &) final;
         Connector GetConnector(const SlokedPath &) final;
 
-        void Register(const SlokedPath &, std::unique_ptr<KgrService>) final;
-        bool Registered(const SlokedPath &) final;
-        void Deregister(const SlokedPath &) final;
+        TaskResult<void> Register(const SlokedPath &,
+                                  std::unique_ptr<KgrService>) final;
+        TaskResult<bool> Registered(const SlokedPath &) final;
+        TaskResult<void> Deregister(const SlokedPath &) final;
 
      private:
         KgrNamedServer &server;

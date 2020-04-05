@@ -339,8 +339,11 @@ namespace sloked {
             }
             SlokedDefaultServicesFacade services(serviceProvider);
             for (const auto &service : serviceConfig["endpoints"].AsArray()) {
-                editor.GetServer().GetServer().Register(
-                    {service.AsString()}, services.Build(service.AsString()));
+                editor.GetServer()
+                    .GetServer()
+                    .Register({service.AsString()},
+                              services.Build(service.AsString()))
+                    .Wait();
             }
         }
         if (serverConfig.Has("screen")) {

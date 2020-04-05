@@ -37,7 +37,7 @@ namespace sloked {
         SlokedTextPaneService(SlokedMonitor<SlokedScreenComponent &> &,
                               const Encoding &,
                               KgrContextManager<KgrLocalContext> &);
-        void Attach(std::unique_ptr<KgrPipe>) override;
+        TaskResult<void> Attach(std::unique_ptr<KgrPipe>) override;
 
      private:
         SlokedMonitor<SlokedScreenComponent &> &root;

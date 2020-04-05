@@ -26,13 +26,14 @@
 
 #include "sloked/kgr/Context.h"
 #include "sloked/kgr/Pipe.h"
+#include "sloked/sched/Task.h"
 
 namespace sloked {
 
     class KgrService {
      public:
         virtual ~KgrService() = default;
-        virtual void Attach(std::unique_ptr<KgrPipe>) = 0;
+        virtual TaskResult<void> Attach(std::unique_ptr<KgrPipe>) = 0;
     };
 }  // namespace sloked
 

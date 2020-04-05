@@ -32,7 +32,7 @@ namespace sloked {
      public:
         SlokedNamespaceService(SlokedRootNamespace &,
                                KgrContextManager<KgrLocalContext> &);
-        void Attach(std::unique_ptr<KgrPipe>) final;
+        TaskResult<void> Attach(std::unique_ptr<KgrPipe>) final;
 
      private:
         SlokedRootNamespace &root;

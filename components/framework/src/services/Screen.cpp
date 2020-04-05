@@ -774,11 +774,17 @@ namespace sloked {
           notifyService(std::move(notifyService)),
           contextManager(contextManager) {}
 
-    void SlokedScreenService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedScreenContext>(
-            std::move(pipe), this->root, this->encoding, this->cursorService,
-            this->renderService, this->notifyService);
-        this->contextManager.Attach(std::move(ctx));
+    TaskResult<void> SlokedScreenService::Attach(
+        std::unique_ptr<KgrPipe> pipe) {
+        TaskResultSupplier<void> supplier;
+        try {
+            auto ctx = std::make_unique<SlokedScreenContext>(
+                std::move(pipe), this->root, this->encoding,
+                this->cursorService, this->renderService, this->notifyService);
+            this->contextManager.Attach(std::move(ctx));
+            supplier.SetResult();
+        } catch (...) { supplier.SetError(std::current_exception()); }
+        return supplier.Result();
     }
 
     SlokedScreenClient::SlokedScreenClient(std::unique_ptr<KgrPipe> pipe,

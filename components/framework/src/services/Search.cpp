@@ -170,9 +170,15 @@ namespace sloked {
         KgrContextManager<KgrLocalContext> &contextManager)
         : documents(documents), contextManager(contextManager) {}
 
-    void SlokedSearchService::Attach(std::unique_ptr<KgrPipe> pipe) {
-        auto ctx = std::make_unique<SlokedSearchContext>(std::move(pipe),
-                                                         this->documents);
-        this->contextManager.Attach(std::move(ctx));
+    TaskResult<void> SlokedSearchService::Attach(
+        std::unique_ptr<KgrPipe> pipe) {
+        TaskResultSupplier<void> supplier;
+        try {
+            auto ctx = std::make_unique<SlokedSearchContext>(std::move(pipe),
+                                                             this->documents);
+            this->contextManager.Attach(std::move(ctx));
+            supplier.SetResult();
+        } catch (...) { supplier.SetError(std::current_exception()); }
+        return supplier.Result();
     }
 }  // namespace sloked

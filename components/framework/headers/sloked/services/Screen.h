@@ -40,7 +40,7 @@ namespace sloked {
                             const Encoding &, KgrServer::Connector,
                             KgrServer::Connector, KgrServer::Connector,
                             KgrContextManager<KgrLocalContext> &);
-        void Attach(std::unique_ptr<KgrPipe>) override;
+        TaskResult<void> Attach(std::unique_ptr<KgrPipe>) override;
 
      private:
         SlokedMonitor<SlokedScreenComponent &> &root;

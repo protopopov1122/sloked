@@ -34,7 +34,7 @@ namespace sloked {
      public:
         SlokedCharPresetService(const SlokedCharPreset &,
                                 KgrContextManager<KgrLocalContext> &);
-        void Attach(std::unique_ptr<KgrPipe>) final;
+        TaskResult<void> Attach(std::unique_ptr<KgrPipe>) final;
 
      private:
         const SlokedCharPreset &charPreset;
