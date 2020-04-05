@@ -33,6 +33,7 @@
 #include "sloked/kgr/local/NamedServer.h"
 #include "sloked/kgr/local/Server.h"
 #include "sloked/kgr/net/Interface.h"
+#include "sloked/sched/TaskNotifications.h"
 #include "sloked/security/Authenticator.h"
 
 namespace sloked {
@@ -71,6 +72,7 @@ namespace sloked {
         };
         friend class Awaitable;
 
+        SlokedTaskNotifications notifications;
         KgrNetInterface net;
         std::atomic<bool> work;
         SlokedIOPoller::Handle awaitableHandle;

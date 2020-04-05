@@ -125,6 +125,7 @@ namespace sloked {
 
     void KgrSlaveNetServer::Close() {
         if (this->work.exchange(false)) {
+            this->notifications.Close();
             this->awaitableHandle.Detach();
             for (const auto &pipe : this->pipes) {
                 pipe.second->Close();
@@ -185,18 +186,18 @@ namespace sloked {
         supplier.Catch([&] {
             auto id = serviceName.ToString();
             auto rsp = this->localServer.Registered(serviceName);
-            rsp.Notify([this, supplier, id, serviceName,
-                        servicePtr =
-                            service.release()](const auto &result) mutable {
+            this->notifications.Notify(rsp, [this, supplier, id, serviceName,
+                                             servicePtr = service.release()](
+                                                const auto &result) mutable {
                 std::unique_ptr<KgrService> service{servicePtr};
                 servicePtr = nullptr;
                 supplier.Catch([&] {
                     if (result.State() == TaskResultStatus::Ready &&
                         !result.Unwrap()) {
-                        this->localServer
-                            .Register(serviceName, std::move(service))
-                            .Notify([this, supplier, id,
-                                     serviceName](const auto &) {
+                        this->notifications.Notify(
+                            this->localServer.Register(serviceName,
+                                                       std::move(service)),
+                            [this, supplier, id, serviceName](const auto &) {
                                 supplier.Wrap([&] {
                                     auto rsp = this->net.Invoke("bind", id);
                                     if (!(rsp.WaitResponse(
@@ -227,7 +228,8 @@ namespace sloked {
     TaskResult<bool> KgrSlaveNetServer::Registered(const SlokedPath &service) {
         TaskResultSupplier<bool> supplier;
         supplier.Catch([&] {
-            this->localServer.Registered(service).Notify(
+            this->notifications.Notify(
+                this->localServer.Registered(service),
                 [this, supplier, service](const auto &result) {
                     supplier.Wrap([&] {
                         if (result.Unwrap()) {
@@ -249,7 +251,8 @@ namespace sloked {
     TaskResult<void> KgrSlaveNetServer::Deregister(const SlokedPath &service) {
         TaskResultSupplier<void> supplier;
         auto id = service.ToString();
-        this->localServer.Registered(service).Notify(
+        this->notifications.Notify(
+            this->localServer.Registered(service),
             [this, service, supplier, id](const auto &result) {
                 supplier.Wrap([&] {
                     if (result.State() == TaskResultStatus::Ready &&

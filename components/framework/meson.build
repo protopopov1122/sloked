@@ -69,6 +69,7 @@ sloked_src = [
   'src/sched/ScopedExecutor.cpp',
   'src/sched/ScopedScheduler.cpp',
   'src/sched/SequentialExecutor.cpp',
+  'src/sched/TaskNotifications.cpp',
   'src/screen/Component.cpp',
   'src/screen/ComponentTree.cpp',
   'src/screen/Manager.cpp',

@@ -25,12 +25,14 @@
 #include <mutex>
 
 #include "sloked/kgr/NamedServer.h"
+#include "sloked/sched/TaskNotifications.h"
 
 namespace sloked {
 
     class KgrLocalNamedServer : public KgrNamedServer {
      public:
         KgrLocalNamedServer(KgrServer &);
+        ~KgrLocalNamedServer();
         std::unique_ptr<KgrPipe> Connect(const SlokedPath &) override;
         Connector GetConnector(const SlokedPath &) override;
 
@@ -41,6 +43,7 @@ namespace sloked {
 
      private:
         KgrServer &server;
+        SlokedTaskNotifications notifications;
         std::map<SlokedPath, KgrServer::ServiceId> names;
         std::mutex mtx;
     };

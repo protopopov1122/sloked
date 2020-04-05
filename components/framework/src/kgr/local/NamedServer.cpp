@@ -28,6 +28,10 @@ namespace sloked {
     KgrLocalNamedServer::KgrLocalNamedServer(KgrServer &server)
         : server(server) {}
 
+    KgrLocalNamedServer::~KgrLocalNamedServer() {
+        this->notifications.Close();
+    }
+
     std::unique_ptr<KgrPipe> KgrLocalNamedServer::Connect(
         const SlokedPath &name) {
         auto absPath = name.IsAbsolute() ? name : name.RelativeTo(name.Root());
@@ -54,8 +58,9 @@ namespace sloked {
                 name.IsAbsolute() ? name : name.RelativeTo(name.Root());
             std::unique_lock<std::mutex> lock(this->mtx);
             if (this->names.count(absPath) == 0) {
-                this->server.Register(std::move(service))
-                    .Notify([supplier, this, absPath](const auto &result) {
+                this->notifications.Notify(
+                    this->server.Register(std::move(service)),
+                    [supplier, this, absPath](const auto &result) {
                         supplier.Wrap([&] {
                             this->names.emplace(absPath, result.Unwrap());
                         });

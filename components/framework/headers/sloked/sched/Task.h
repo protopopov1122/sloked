@@ -30,6 +30,7 @@
 #include <mutex>
 #include <type_traits>
 #include <variant>
+#include <vector>
 
 #include "sloked/core/Error.h"
 
@@ -92,7 +93,7 @@ namespace sloked {
             return this->impl->state;
         }
 
-        DetachListener Notify(Listener listener) {
+        DetachListener Notify(Listener listener) const {
             std::unique_lock lock(this->impl->mtx);
             if (this->impl->state == Status::Pending) {
                 auto id = this->impl->nextListenerId++;
@@ -105,7 +106,7 @@ namespace sloked {
                 };
             } else {
                 lock.unlock();
-                listener(*static_cast<C<R, E> *>(this));
+                listener(*static_cast<const C<R, E> *>(this));
                 return [] {};
             }
         }

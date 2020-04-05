@@ -32,6 +32,10 @@ namespace sloked {
         : server(server), accessRestrictions(std::move(access)),
           modificationRestrictions(std::move(modification)) {}
 
+    KgrRestrictedNamedServer::~KgrRestrictedNamedServer() {
+        this->notifications.Close();
+    }
+
     void KgrRestrictedNamedServer::SetAccessRestrictions(
         std::shared_ptr<SlokedNamedRestrictions> restrictions) {
         this->accessRestrictions = std::move(restrictions);
@@ -65,7 +69,7 @@ namespace sloked {
             if (this->modificationRestrictions != nullptr &&
                 this->modificationRestrictions->IsAllowed(name)) {
                 auto res = this->server.Register(name, std::move(service));
-                res.Notify([supplier](const auto &result) {
+                this->notifications.Notify(res, [supplier](const auto &result) {
                     switch (result.State()) {
                         case TaskResultStatus::Ready:
                             supplier.SetResult();
@@ -99,7 +103,8 @@ namespace sloked {
                  this->accessRestrictions->IsAllowed(name)) ||
                 (this->modificationRestrictions != nullptr &&
                  this->modificationRestrictions->IsAllowed(name))) {
-                this->server.Registered(name).Notify(
+                this->notifications.Notify(
+                    this->server.Registered(name),
                     [supplier](const auto &result) {
                         switch (result.State()) {
                             case TaskResultStatus::Ready:
@@ -131,7 +136,8 @@ namespace sloked {
         supplier.Catch([&] {
             if (this->modificationRestrictions != nullptr &&
                 this->modificationRestrictions->IsAllowed(name)) {
-                this->server.Deregister(name).Notify(
+                this->notifications.Notify(
+                    this->server.Deregister(name),
                     [supplier](const auto &result) {
                         switch (result.State()) {
                             case TaskResultStatus::Ready:
