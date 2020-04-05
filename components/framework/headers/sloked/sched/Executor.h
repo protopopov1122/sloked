@@ -85,12 +85,10 @@ namespace sloked {
                 TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueCallback(
                     [supplier, callable = std::move(callable)]() mutable {
-                        try {
+                        supplier.Wrap([supplier, callable = std::move(
+                                                     callable)]() mutable {
                             callable();
-                            supplier.SetResult();
-                        } catch (...) {
-                            supplier.SetError(std::current_exception());
-                        }
+                        });
                     });
                 return std::make_shared<FutureTask<R>>(std::move(task),
                                                        supplier.Result());
@@ -98,11 +96,10 @@ namespace sloked {
                 TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueCallback(
                     [supplier, callable = std::move(callable)]() mutable {
-                        try {
-                            supplier.SetResult(callable());
-                        } catch (...) {
-                            supplier.SetError(std::current_exception());
-                        }
+                        supplier.Wrap([supplier, callable = std::move(
+                                                     callable)]() mutable {
+                            return callable();
+                        });
                     });
                 return std::make_shared<FutureTask<R>>(std::move(task),
                                                        supplier.Result());

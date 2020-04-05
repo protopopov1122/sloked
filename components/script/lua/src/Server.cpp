@@ -45,8 +45,7 @@ namespace sloked {
             KgrNamedServer &srv = **srvPtr;
             std::string serviceName{lua_tostring(state, 2)};
             auto res = srv.Registered({serviceName});
-            res.Wait();
-            if (res.Get()) {
+            if (res.UnwrapWait()) {
                 return KgrPipeToLua(eventLoop, state,
                                     srv.Connect({serviceName}));
             } else {

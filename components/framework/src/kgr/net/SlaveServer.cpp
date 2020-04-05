@@ -182,7 +182,7 @@ namespace sloked {
     TaskResult<void> KgrSlaveNetServer::Register(
         const SlokedPath &serviceName, std::unique_ptr<KgrService> service) {
         TaskResultSupplier<void> supplier;
-        try {
+        supplier.Catch([&] {
             auto id = serviceName.ToString();
             auto rsp = this->localServer.Registered(serviceName);
             rsp.Notify([this, supplier, id, serviceName,
@@ -190,14 +190,14 @@ namespace sloked {
                             service.release()](const auto &result) mutable {
                 std::unique_ptr<KgrService> service{servicePtr};
                 servicePtr = nullptr;
-                try {
-                    if (result.State() == TaskResult<bool>::Status::Ready &&
-                        !result.Get()) {
+                supplier.Catch([&] {
+                    if (result.State() == TaskResultStatus::Ready &&
+                        !result.Unwrap()) {
                         this->localServer
                             .Register(serviceName, std::move(service))
                             .Notify([this, supplier, id,
                                      serviceName](const auto &) {
-                                try {
+                                supplier.Wrap([&] {
                                     auto rsp = this->net.Invoke("bind", id);
                                     if (!(rsp.WaitResponse(
                                               KgrNetConfig::ResponseTimeout) &&
@@ -212,43 +212,37 @@ namespace sloked {
                                             "service " +
                                             id);
                                     }
-                                    supplier.SetResult();
-                                } catch (...) {
-                                    supplier.SetError(std::current_exception());
-                                }
+                                });
                             });
                     } else {
                         throw SlokedError("KgrSlaveServer: Service " + id +
                                           " already registered");
                     }
-                } catch (...) { supplier.SetError(std::current_exception()); }
+                });
             });
-        } catch (...) { supplier.SetError(std::current_exception()); }
+        });
         return supplier.Result();
     }
 
     TaskResult<bool> KgrSlaveNetServer::Registered(const SlokedPath &service) {
         TaskResultSupplier<bool> supplier;
-        try {
+        supplier.Catch([&] {
             this->localServer.Registered(service).Notify(
                 [this, supplier, service](const auto &result) {
-                    try {
-                        if (result.Get()) {
-                            supplier.SetResult(true);
+                    supplier.Wrap([&] {
+                        if (result.Unwrap()) {
+                            return true;
                         } else {
                             auto rsp =
                                 this->net.Invoke("bound", service.ToString());
-                            supplier.SetResult(
-                                rsp.WaitResponse(
-                                    KgrNetConfig::ResponseTimeout) &&
-                                this->work.load() && rsp.HasResponse() &&
-                                rsp.GetResponse().GetResult().AsBoolean());
+                            return rsp.WaitResponse(
+                                       KgrNetConfig::ResponseTimeout) &&
+                                   this->work.load() && rsp.HasResponse() &&
+                                   rsp.GetResponse().GetResult().AsBoolean();
                         }
-                    } catch (...) {
-                        supplier.SetError(std::current_exception());
-                    }
+                    });
                 });
-        } catch (...) { supplier.SetError(std::current_exception()); }
+        });
         return supplier.Result();
     }
 
@@ -257,9 +251,9 @@ namespace sloked {
         auto id = service.ToString();
         this->localServer.Registered(service).Notify(
             [this, service, supplier, id](const auto &result) {
-                try {
-                    if (result.State() == TaskResult<bool>::Status::Ready &&
-                        result.Get()) {
+                supplier.Wrap([&] {
+                    if (result.State() == TaskResultStatus::Ready &&
+                        result.Unwrap()) {
                         this->localServer.Deregister(service);
                         auto rsp = this->net.Invoke("unbind", id);
                         if (!(rsp.WaitResponse(KgrNetConfig::ResponseTimeout) &&
@@ -272,7 +266,7 @@ namespace sloked {
                         throw SlokedError("KgrSlaveServer: Service " + id +
                                           " not registered");
                     }
-                } catch (...) { supplier.SetError(std::current_exception()); }
+                });
             });
         return supplier.Result();
     }

@@ -106,12 +106,10 @@ namespace sloked {
                 TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueAt(
                     tp, [supplier, callable = std::move(callable)]() mutable {
-                        try {
+                        supplier.Wrap([supplier, callable = std::move(
+                                                     callable)]() mutable {
                             callable();
-                            supplier.SetResult();
-                        } catch (...) {
-                            supplier.SetError(std::current_exception());
-                        }
+                        });
                     });
                 return std::make_shared<FutureTimerTask<R>>(std::move(task),
                                                             supplier.Result());
@@ -119,11 +117,10 @@ namespace sloked {
                 TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueAt(
                     tp, [supplier, callable = std::move(callable)]() mutable {
-                        try {
-                            supplier.SetResult(callable());
-                        } catch (...) {
-                            supplier.SetError(std::current_exception());
-                        }
+                        supplier.Wrap([supplier, callable = std::move(
+                                                     callable)]() mutable {
+                            return callable();
+                        });
                     });
                 return std::make_shared<FutureTimerTask<R>>(std::move(task),
                                                             supplier.Result());
@@ -138,12 +135,10 @@ namespace sloked {
                 TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueSleep(
                     td, [supplier, callable = std::move(callable)]() mutable {
-                        try {
+                        supplier.Wrap([supplier, callable = std::move(
+                                                     callable)]() mutable {
                             callable();
-                            supplier.SetResult();
-                        } catch (...) {
-                            supplier.SetError(std::current_exception());
-                        }
+                        });
                     });
                 return std::make_shared<FutureTimerTask<R>>(std::move(task),
                                                             supplier.Result());
@@ -151,11 +146,10 @@ namespace sloked {
                 TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueSleep(
                     td, [supplier, callable = std::move(callable)]() mutable {
-                        try {
-                            supplier.SetResult(callable());
-                        } catch (...) {
-                            supplier.SetError(std::current_exception());
-                        }
+                        supplier.Wrap([supplier, callable = std::move(
+                                                     callable)]() mutable {
+                            return callable();
+                        });
                     });
                 return std::make_shared<FutureTimerTask<R>>(std::move(task),
                                                             supplier.Result());
@@ -170,12 +164,10 @@ namespace sloked {
                 TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueInterval(
                     td, [supplier, callable = std::move(callable)]() mutable {
-                        try {
+                        supplier.Wrap([supplier, callable = std::move(
+                                                     callable)]() mutable {
                             callable();
-                            supplier.SetResult();
-                        } catch (...) {
-                            supplier.SetError(std::current_exception());
-                        }
+                        });
                     });
                 return std::make_shared<FutureTimerTask<R>>(std::move(task),
                                                             supplier.Result());
@@ -183,11 +175,10 @@ namespace sloked {
                 TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueInterval(
                     td, [supplier, callable = std::move(callable)]() mutable {
-                        try {
-                            supplier.SetResult(callable());
-                        } catch (...) {
-                            supplier.SetError(std::current_exception());
-                        }
+                        supplier.Wrap([supplier, callable = std::move(
+                                                     callable)]() mutable {
+                            return callable();
+                        });
                     });
                 return std::make_shared<FutureTimerTask<R>>(std::move(task),
                                                             supplier.Result());

@@ -777,13 +777,12 @@ namespace sloked {
     TaskResult<void> SlokedScreenService::Attach(
         std::unique_ptr<KgrPipe> pipe) {
         TaskResultSupplier<void> supplier;
-        try {
+        supplier.Wrap([&] {
             auto ctx = std::make_unique<SlokedScreenContext>(
                 std::move(pipe), this->root, this->encoding,
                 this->cursorService, this->renderService, this->notifyService);
             this->contextManager.Attach(std::move(ctx));
-            supplier.SetResult();
-        } catch (...) { supplier.SetError(std::current_exception()); }
+        });
         return supplier.Result();
     }
 

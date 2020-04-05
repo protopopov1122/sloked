@@ -125,34 +125,34 @@ namespace sloked {
                                      }
                                  });
 
-            this->net.BindMethod("bind", [this](const std::string &method,
-                                                const KgrValue &params,
-                                                auto &rsp) {
-                const auto &service = params.AsString();
-                if (!this->IsModificationPermitted(service)) {
-                    rsp.Error("KgrMasterServer: Modification of \'" + service +
-                              "\' restricted");
-                } else {
-                    this->workers.Enqueue([this, service,
-                                           rsp = std::move(rsp)]() mutable {
-                        auto res = this->server.Registered({service});
-                        res.Wait();
-                        if (res.State() == TaskResult<bool>::Status::Ready &&
-                            !res.Get()) {
-                            this->server
-                                .Register({service},
-                                          std::make_unique<SlaveService>(
-                                              *this, service))
-                                .Wait();
-                            std::unique_lock lock(this->mtx);
-                            this->remoteServiceList.insert(service);
-                            rsp.Result(true);
-                        } else {
-                            rsp.Result(false);
-                        }
-                    });
-                }
-            });
+            this->net.BindMethod(
+                "bind", [this](const std::string &method,
+                               const KgrValue &params, auto &rsp) {
+                    const auto &service = params.AsString();
+                    if (!this->IsModificationPermitted(service)) {
+                        rsp.Error("KgrMasterServer: Modification of \'" +
+                                  service + "\' restricted");
+                    } else {
+                        this->workers.Enqueue([this, service,
+                                               rsp = std::move(rsp)]() mutable {
+                            auto res = this->server.Registered({service});
+                            res.Wait();
+                            if (res.State() == TaskResultStatus::Ready &&
+                                !res.Unwrap()) {
+                                this->server
+                                    .Register({service},
+                                              std::make_unique<SlaveService>(
+                                                  *this, service))
+                                    .Wait();
+                                std::unique_lock lock(this->mtx);
+                                this->remoteServiceList.insert(service);
+                                rsp.Result(true);
+                            } else {
+                                rsp.Result(false);
+                            }
+                        });
+                    }
+                });
 
             this->net.BindMethod(
                 "bound", [this](const std::string &method,
@@ -162,7 +162,7 @@ namespace sloked {
                         const auto &service = params.AsString();
                         auto res = this->server.Registered({service});
                         res.Wait();
-                        rsp.Result(res.Get() &&
+                        rsp.Result(res.Unwrap() &&
                                    (this->IsAccessPermitted(service) ||
                                     this->IsModificationPermitted(service)));
                     });
@@ -293,7 +293,7 @@ namespace sloked {
                 lock.unlock();
                 this->srv.workers.Enqueue([this, pipeId, supplier,
                                            pipePtr = pipe.release()] {
-                    try {
+                    supplier.Wrap([&] {
                         auto rsp = this->srv.net.Invoke(
                             "connect",
                             KgrDictionary{{"pipe", pipeId},
@@ -336,10 +336,7 @@ namespace sloked {
                                                         std::move(pipe));
                             }
                         }
-                        supplier.SetResult();
-                    } catch (...) {
-                        supplier.SetError(std::current_exception());
-                    }
+                    });
                 });
                 return supplier.Result();
             }

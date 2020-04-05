@@ -186,12 +186,11 @@ namespace sloked {
     TaskResult<void> SlokedCursorService::Attach(
         std::unique_ptr<KgrPipe> pipe) {
         TaskResultSupplier<void> supplier;
-        try {
+        supplier.Wrap([&] {
             auto ctx = std::make_unique<SlokedCursorContext>(
                 std::move(pipe), this->renderConnector, this->documents);
             this->contextManager.Attach(std::move(ctx));
-            supplier.SetResult();
-        } catch (...) { supplier.SetError(std::current_exception()); }
+        });
         return supplier.Result();
     }
 

@@ -61,22 +61,25 @@ namespace sloked {
     TaskResult<void> KgrRestrictedNamedServer::Register(
         const SlokedPath &name, std::unique_ptr<KgrService> service) {
         TaskResultSupplier<void> supplier;
-        try {
+        supplier.Catch([&] {
             if (this->modificationRestrictions != nullptr &&
                 this->modificationRestrictions->IsAllowed(name)) {
                 auto res = this->server.Register(name, std::move(service));
                 res.Notify([supplier](const auto &result) {
                     switch (result.State()) {
-                        case TaskResult<void>::Status::Ready:
+                        case TaskResultStatus::Ready:
                             supplier.SetResult();
                             break;
 
-                        case TaskResult<void>::Status::Error:
+                        case TaskResultStatus::Error:
                             supplier.SetError(result.GetError());
                             break;
 
-                        case TaskResult<void>::Status::Cancelled:
+                        case TaskResultStatus::Cancelled:
                             supplier.Cancel();
+                            break;
+
+                        default:
                             break;
                     }
                 });
@@ -84,14 +87,14 @@ namespace sloked {
                 throw SlokedError("KgrNamedServer: Modification restricted \'" +
                                   name.ToString() + "\'");
             }
-        } catch (...) { supplier.SetError(std::current_exception()); }
+        });
         return supplier.Result();
     }
 
     TaskResult<bool> KgrRestrictedNamedServer::Registered(
         const SlokedPath &name) {
         TaskResultSupplier<bool> supplier;
-        try {
+        supplier.Catch([&] {
             if ((this->accessRestrictions != nullptr &&
                  this->accessRestrictions->IsAllowed(name)) ||
                 (this->modificationRestrictions != nullptr &&
@@ -99,45 +102,51 @@ namespace sloked {
                 this->server.Registered(name).Notify(
                     [supplier](const auto &result) {
                         switch (result.State()) {
-                            case TaskResult<bool>::Status::Ready:
+                            case TaskResultStatus::Ready:
                                 supplier.SetResult(result.GetResult());
                                 break;
 
-                            case TaskResult<bool>::Status::Error:
+                            case TaskResultStatus::Error:
                                 supplier.SetError(result.GetError());
                                 break;
 
-                            case TaskResult<bool>::Status::Cancelled:
+                            case TaskResultStatus::Cancelled:
                                 supplier.Cancel();
+                                break;
+
+                            default:
                                 break;
                         }
                     });
             } else {
                 supplier.SetResult(false);
             }
-        } catch (...) { supplier.SetError(std::current_exception()); }
+        });
         return supplier.Result();
     }
 
     TaskResult<void> KgrRestrictedNamedServer::Deregister(
         const SlokedPath &name) {
         TaskResultSupplier<void> supplier;
-        try {
+        supplier.Catch([&] {
             if (this->modificationRestrictions != nullptr &&
                 this->modificationRestrictions->IsAllowed(name)) {
                 this->server.Deregister(name).Notify(
                     [supplier](const auto &result) {
                         switch (result.State()) {
-                            case TaskResult<void>::Status::Ready:
+                            case TaskResultStatus::Ready:
                                 supplier.SetResult();
                                 break;
 
-                            case TaskResult<void>::Status::Error:
+                            case TaskResultStatus::Error:
                                 supplier.SetError(result.GetError());
                                 break;
 
-                            case TaskResult<void>::Status::Cancelled:
+                            case TaskResultStatus::Cancelled:
                                 supplier.Cancel();
+                                break;
+
+                            default:
                                 break;
                         }
                     });
@@ -145,7 +154,7 @@ namespace sloked {
                 throw SlokedError("KgrNamedServer: Modification restricted \'" +
                                   name.ToString() + "\'");
             }
-        } catch (...) { supplier.SetError(std::current_exception()); }
+        });
         return supplier.Result();
     }
 }  // namespace sloked

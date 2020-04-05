@@ -49,42 +49,39 @@ namespace sloked {
     TaskResult<void> KgrLocalNamedServer::Register(
         const SlokedPath &name, std::unique_ptr<KgrService> service) {
         TaskResultSupplier<void> supplier;
-        try {
+        supplier.Catch([&] {
             auto absPath =
                 name.IsAbsolute() ? name : name.RelativeTo(name.Root());
             std::unique_lock<std::mutex> lock(this->mtx);
             if (this->names.count(absPath) == 0) {
                 this->server.Register(std::move(service))
                     .Notify([supplier, this, absPath](const auto &result) {
-                        try {
-                            this->names.emplace(absPath, result.Get());
-                            supplier.SetResult();
-                        } catch (...) {
-                            supplier.SetError(std::current_exception());
-                        }
+                        supplier.Wrap([&] {
+                            this->names.emplace(absPath, result.Unwrap());
+                        });
                     });
             } else {
                 throw SlokedError("KgrNamedServer: Name \'" + name.ToString() +
                                   "\' already exists");
             }
-        } catch (...) { supplier.SetError(std::current_exception()); }
+        });
         return supplier.Result();
     }
 
     TaskResult<bool> KgrLocalNamedServer::Registered(const SlokedPath &name) {
         TaskResultSupplier<bool> supplier;
-        try {
+        supplier.Wrap([&] {
             auto absPath =
                 name.IsAbsolute() ? name : name.RelativeTo(name.Root());
             std::unique_lock<std::mutex> lock(this->mtx);
-            supplier.SetResult(this->names.count(absPath) != 0);
-        } catch (...) { supplier.SetError(std::current_exception()); }
+            return this->names.count(absPath) != 0;
+        });
         return supplier.Result();
     }
 
     TaskResult<void> KgrLocalNamedServer::Deregister(const SlokedPath &name) {
         TaskResultSupplier<void> supplier;
-        try {
+        supplier.Wrap([&] {
             auto absPath =
                 name.IsAbsolute() ? name : name.RelativeTo(name.Root());
             std::unique_lock<std::mutex> lock(this->mtx);
@@ -92,12 +89,11 @@ namespace sloked {
                 auto srvId = this->names.at(absPath);
                 this->server.Deregister(srvId);
                 this->names.erase(absPath);
-                supplier.SetResult();
             } else {
                 throw SlokedError("KgrNamedServer: Unknown name \'" +
                                   name.ToString() + "\'");
             }
-        } catch (...) { supplier.SetError(std::current_exception()); }
+        });
         return supplier.Result();
     }
 }  // namespace sloked
