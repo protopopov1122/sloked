@@ -118,10 +118,9 @@ namespace sloked {
         }
 
         void Start() {
-            if (this->work.load()) {
+            if (this->work.exchange(true)) {
                 return;
             }
-            this->work = true;
             this->managerThread = std::thread([&]() {
                 while (this->work.load()) {
                     std::unique_lock<std::mutex> notificationLock(
@@ -139,8 +138,7 @@ namespace sloked {
         }
 
         void Close() final {
-            if (this->work.load()) {
-                this->work = false;
+            if (this->work.exchange(false) && this->managerThread.joinable()) {
                 this->notificationCV.notify_all();
                 this->managerThread.join();
                 this->manager.Clear();

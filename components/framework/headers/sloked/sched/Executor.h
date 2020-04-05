@@ -30,6 +30,7 @@
 #include <type_traits>
 
 #include "sloked/core/Closeable.h"
+#include "sloked/sched/Task.h"
 
 namespace sloked {
 
@@ -50,8 +51,8 @@ namespace sloked {
         template <typename T>
         class FutureTask : public Task {
          public:
-            FutureTask(std::shared_ptr<Task> task, std::future<T> future)
-                : task(std::move(task)), future(std::move(future)) {}
+            FutureTask(std::shared_ptr<Task> task, TaskResult<T> result)
+                : task(std::move(task)), result(std::move(result)) {}
 
             State Status() const final {
                 return this->task->Status();
@@ -65,13 +66,13 @@ namespace sloked {
                 this->task->Cancel();
             }
 
-            std::future<T> &Result() {
-                return this->future;
+            TaskResult<T> Result() {
+                return this->result;
             }
 
          private:
             std::shared_ptr<Task> task;
-            std::future<T> future;
+            TaskResult<T> result;
         };
 
         virtual ~SlokedExecutor() = default;
@@ -81,30 +82,30 @@ namespace sloked {
             -> std::shared_ptr<FutureTask<decltype(std::declval<T>()())>> {
             using R = decltype(callable());
             if constexpr (std::is_void_v<R>) {
-                auto promise = std::make_shared<std::promise<void>>();
+                TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueCallback(
-                    [promise, callable = std::move(callable)]() mutable {
+                    [supplier, callable = std::move(callable)]() mutable {
                         try {
                             callable();
-                            promise->set_value();
+                            supplier.SetResult();
                         } catch (...) {
-                            promise->set_exception(std::current_exception());
+                            supplier.SetError(std::current_exception());
                         }
                     });
                 return std::make_shared<FutureTask<R>>(std::move(task),
-                                                       promise->get_future());
+                                                       supplier.Result());
             } else {
-                auto promise = std::make_shared<std::promise<R>>();
+                TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueCallback(
-                    [promise, callable = std::move(callable)]() mutable {
+                    [supplier, callable = std::move(callable)]() mutable {
                         try {
-                            promise->set_value(callable());
+                            supplier.SetResult(callable());
                         } catch (...) {
-                            promise->set_exception(std::current_exception());
+                            supplier.SetError(std::current_exception());
                         }
                     });
                 return std::make_shared<FutureTask<R>>(std::move(task),
-                                                       promise->get_future());
+                                                       supplier.Result());
             }
         }
 

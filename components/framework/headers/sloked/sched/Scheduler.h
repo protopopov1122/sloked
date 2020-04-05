@@ -60,8 +60,8 @@ namespace sloked {
         class FutureTimerTask : public TimerTask {
          public:
             FutureTimerTask(std::shared_ptr<TimerTask> task,
-                            std::future<T> future)
-                : task(std::move(task)), future(std::move(future)) {}
+                            TaskResult<T> result)
+                : task(std::move(task)), result(std::move(result)) {}
 
             SlokedExecutor::State Status() const final {
                 return this->task->Status();
@@ -87,13 +87,13 @@ namespace sloked {
                 return this->task->GetInterval();
             }
 
-            std::future<T> &GetFuture() const {
-                return this->future;
+            TaskResult<T> Result() const {
+                return this->result;
             }
 
          private:
             std::shared_ptr<TimerTask> task;
-            std::future<T> future;
+            TaskResult<T> result;
         };
 
         virtual ~SlokedScheduler() = default;
@@ -103,30 +103,30 @@ namespace sloked {
             -> std::shared_ptr<FutureTimerTask<decltype(std::declval<T>()())>> {
             using R = decltype(callable());
             if constexpr (std::is_void_v<R>) {
-                auto promise = std::make_shared<std::promise<void>>();
+                TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueAt(
-                    tp, [promise, callable = std::move(callable)]() mutable {
+                    tp, [supplier, callable = std::move(callable)]() mutable {
                         try {
                             callable();
-                            promise->set_value();
+                            supplier.SetResult();
                         } catch (...) {
-                            promise->set_exception(std::current_exception());
+                            supplier.SetError(std::current_exception());
                         }
                     });
-                return std::make_shared<FutureTimerTask<R>>(
-                    std::move(task), promise->get_future());
+                return std::make_shared<FutureTimerTask<R>>(std::move(task),
+                                                            supplier.Result());
             } else {
-                auto promise = std::make_shared<std::promise<R>>();
+                TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueAt(
-                    tp, [promise, callable = std::move(callable)]() mutable {
+                    tp, [supplier, callable = std::move(callable)]() mutable {
                         try {
-                            promise->set_value(callable());
+                            supplier.SetResult(callable());
                         } catch (...) {
-                            promise->set_exception(std::current_exception());
+                            supplier.SetError(std::current_exception());
                         }
                     });
-                return std::make_shared<FutureTimerTask<R>>(
-                    std::move(task), promise->get_future());
+                return std::make_shared<FutureTimerTask<R>>(std::move(task),
+                                                            supplier.Result());
             }
         }
 
@@ -135,30 +135,30 @@ namespace sloked {
             -> std::shared_ptr<FutureTimerTask<decltype(std::declval<T>()())>> {
             using R = decltype(callable());
             if constexpr (std::is_void_v<R>) {
-                auto promise = std::make_shared<std::promise<void>>();
+                TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueSleep(
-                    td, [promise, callable = std::move(callable)]() mutable {
+                    td, [supplier, callable = std::move(callable)]() mutable {
                         try {
                             callable();
-                            promise->set_value();
+                            supplier.SetResult();
                         } catch (...) {
-                            promise->set_exception(std::current_exception());
+                            supplier.SetError(std::current_exception());
                         }
                     });
-                return std::make_shared<FutureTimerTask<R>>(
-                    std::move(task), promise->get_future());
+                return std::make_shared<FutureTimerTask<R>>(std::move(task),
+                                                            supplier.Result());
             } else {
-                auto promise = std::make_shared<std::promise<R>>();
+                TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueSleep(
-                    td, [promise, callable = std::move(callable)]() mutable {
+                    td, [supplier, callable = std::move(callable)]() mutable {
                         try {
-                            promise->set_value(callable());
+                            supplier.SetResult(callable());
                         } catch (...) {
-                            promise->set_exception(std::current_exception());
+                            supplier.SetError(std::current_exception());
                         }
                     });
-                return std::make_shared<FutureTimerTask<R>>(
-                    std::move(task), promise->get_future());
+                return std::make_shared<FutureTimerTask<R>>(std::move(task),
+                                                            supplier.Result());
             }
         }
 
@@ -167,30 +167,30 @@ namespace sloked {
             -> std::shared_ptr<FutureTimerTask<decltype(std::declval<T>()())>> {
             using R = decltype(callable());
             if constexpr (std::is_void_v<R>) {
-                auto promise = std::make_shared<std::promise<void>>();
+                TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueInterval(
-                    td, [promise, callable = std::move(callable)]() mutable {
+                    td, [supplier, callable = std::move(callable)]() mutable {
                         try {
                             callable();
-                            promise->set_value();
+                            supplier.SetResult();
                         } catch (...) {
-                            promise->set_exception(std::current_exception());
+                            supplier.SetError(std::current_exception());
                         }
                     });
-                return std::make_shared<FutureTimerTask<R>>(
-                    std::move(task), promise->get_future());
+                return std::make_shared<FutureTimerTask<R>>(std::move(task),
+                                                            supplier.Result());
             } else {
-                auto promise = std::make_shared<std::promise<R>>();
+                TaskResultSupplier<R> supplier;
                 auto task = this->EnqueueInterval(
-                    td, [promise, callable = std::move(callable)]() mutable {
+                    td, [supplier, callable = std::move(callable)]() mutable {
                         try {
-                            promise->set_value(callable());
+                            supplier.SetResult(callable());
                         } catch (...) {
-                            promise->set_exception(std::current_exception());
+                            supplier.SetError(std::current_exception());
                         }
                     });
-                return std::make_shared<FutureTimerTask<R>>(
-                    std::move(task), promise->get_future());
+                return std::make_shared<FutureTimerTask<R>>(std::move(task),
+                                                            supplier.Result());
             }
         }
 
