@@ -42,12 +42,12 @@ namespace sloked {
             bool Start();
             void Finish();
             void Cancel();
-            void Erase();
 
             friend class SlokedTaskNotifications;
 
          private:
             NotificationHandle(SlokedTaskNotifications &, std::size_t);
+            void Erase();
 
             SlokedTaskNotifications &notifications;
             std::size_t id;
@@ -86,7 +86,9 @@ namespace sloked {
                     }
                 });
             return [detach = std::move(detach), handle = std::move(handle)] {
-                detach();
+                if (detach) {
+                    detach();
+                }
                 handle->Cancel();
             };
         }

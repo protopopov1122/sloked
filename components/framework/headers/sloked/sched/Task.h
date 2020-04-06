@@ -111,32 +111,32 @@ namespace sloked {
             }
         }
 
-        auto UnwrapWait() {
+        auto UnwrapWait() const {
             this->Wait();
             if constexpr (std::is_void_v<R>) {
-                static_cast<C<R, E> *>(this)->Unwrap();
+                static_cast<const C<R, E> *>(this)->Unwrap();
             } else {
-                return static_cast<C<R, E> *>(this)->Unwrap();
+                return static_cast<const C<R, E> *>(this)->Unwrap();
             }
         }
 
         template <typename D>
-        auto UnwrapWaitFor(D duration) {
+        auto UnwrapWaitFor(D duration) const {
             this->WaitFor<D>(duration);
             if constexpr (std::is_void_v<R>) {
-                static_cast<C<R, E> *>(this)->Unwrap();
+                static_cast<const C<R, E> *>(this)->Unwrap();
             } else {
-                return static_cast<C<R, E> *>(this)->Unwrap();
+                return static_cast<const C<R, E> *>(this)->Unwrap();
             }
         }
 
         template <typename Tp>
-        auto UnwrapWaitUntil(Tp tpoint) {
+        auto UnwrapWaitUntil(Tp tpoint) const {
             this->WaitUntil<Tp>(tpoint);
             if constexpr (std::is_void_v<R>) {
-                static_cast<C<R, E> *>(this)->Unwrap();
+                static_cast<const C<R, E> *>(this)->Unwrap();
             } else {
-                return static_cast<C<R, E> *>(this)->Unwrap();
+                return static_cast<const C<R, E> *>(this)->Unwrap();
             }
         }
 
@@ -165,14 +165,12 @@ namespace sloked {
     class TaskResult<R, E, std::enable_if_t<!std::is_void_v<R>>>
         : public TaskResultBase<TaskResult, R, E> {
         using Parent = TaskResultBase<TaskResult, R, E>;
-        using Impl = typename Parent::Impl;
 
      public:
         using Listener = typename Parent::Listener;
         using DetachListener = typename Parent::DetachListener;
         using Status = typename Parent::Status;
         friend class TaskResultSupplierBase<TaskResultSupplier, R, E>;
-        friend class TaskResultSupplier<R, E>;
 
         const R &GetResult() const {
             std::unique_lock lock(this->impl->mtx);
@@ -208,14 +206,12 @@ namespace sloked {
     class TaskResult<void, E, void>
         : public TaskResultBase<TaskResult, void, E> {
         using Parent = TaskResultBase<TaskResult, void, E>;
-        using Impl = typename Parent::Impl;
 
      public:
         using Listener = typename Parent::Listener;
         using DetachListener = typename Parent::DetachListener;
         using Status = typename Parent::Status;
         friend class TaskResultSupplierBase<TaskResultSupplier, void, E>;
-        friend class TaskResultSupplier<void, E>;
 
         void Unwrap() const {
             std::unique_lock lock(this->impl->mtx);

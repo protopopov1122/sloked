@@ -23,10 +23,6 @@
 
 namespace sloked {
 
-    SlokedTaskNotifications::NotificationHandle::NotificationHandle(
-        SlokedTaskNotifications &notifications, std::size_t id)
-        : notifications(notifications), id(id), state{State::Pending} {}
-
     bool SlokedTaskNotifications::NotificationHandle::Start() {
         std::unique_lock lock(this->mtx);
         if (this->state == State::Pending) {
@@ -49,6 +45,7 @@ namespace sloked {
             case State::Pending:
                 this->state = State::Complete;
                 this->Erase();
+                lock.unlock();
                 break;
 
             case State::Running:
@@ -60,6 +57,10 @@ namespace sloked {
                 break;
         }
     }
+
+    SlokedTaskNotifications::NotificationHandle::NotificationHandle(
+        SlokedTaskNotifications &notifications, std::size_t id)
+        : notifications(notifications), id(id), state{State::Pending} {}
 
     void SlokedTaskNotifications::NotificationHandle::Erase() {
         std::unique_lock lock(this->notifications.mtx);
