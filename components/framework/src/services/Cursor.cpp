@@ -196,13 +196,14 @@ namespace sloked {
 
     class SlokedCursorConnectionTask : public SlokedDeferredTask {
      public:
-        SlokedCursorConnectionTask(SlokedServiceClient::ResponseHandle rsp,
-                                   std::function<void(bool)> callback)
-            : waiter(std::move(rsp)), callback(std::move(callback)) {
-            this->waiter.Wait([this](auto &res) {
+        SlokedCursorConnectionTask(
+            std::shared_ptr<SlokedServiceClient::InvokeResult> rsp,
+            std::function<void(bool)> callback)
+            : callback(std::move(callback)) {
+            rsp->Next().Notify([this](const auto &res) {
                 std::unique_lock lock(this->mtx);
-                this->result = res.HasResult() && res.GetResult().AsBoolean();
-                ;
+                this->result = res.Unwrap().HasResult() &&
+                               res.Unwrap().GetResult().AsBoolean();
                 if (this->ready) {
                     this->ready();
                 }
@@ -226,7 +227,6 @@ namespace sloked {
 
      private:
         std::mutex mtx;
-        SlokedServiceClient::ResponseWaiter waiter;
         std::function<void()> ready;
         std::function<void(bool)> callback;
         std::optional<bool> result;
@@ -285,7 +285,8 @@ namespace sloked {
 
     std::optional<TextPosition> SlokedCursorClient::GetPosition() {
         auto rsp = this->client.Invoke("getPosition", {});
-        auto clientRes = rsp.Get();
+        auto result = rsp->Next();
+        auto clientRes = result.UnwrapWait();
         if (!clientRes.HasResult()) {
             return {};
         } else {

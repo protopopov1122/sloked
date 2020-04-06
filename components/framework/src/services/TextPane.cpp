@@ -418,7 +418,8 @@ namespace sloked {
                 char32_t value) const final {
                 auto rsp = this->client.Invoke("getCharWidth",
                                                static_cast<int64_t>(value));
-                auto res = rsp.Get();
+                auto result = rsp->Next();
+                auto res = result.UnwrapWait();
                 if (res.HasResult() &&
                     res.GetResult().Is(KgrValueType::Integer)) {
                     return static_cast<SlokedGraphicsPoint::Coordinate>(
@@ -430,7 +431,8 @@ namespace sloked {
 
             SlokedGraphicsPoint::Coordinate GetHeight() const final {
                 auto rsp = this->client.Invoke("getCharHeight", {});
-                auto res = rsp.Get();
+                auto result = rsp->Next();
+                auto res = result.UnwrapWait();
                 if (res.HasResult() &&
                     res.GetResult().Is(KgrValueType::Integer)) {
                     return static_cast<SlokedGraphicsPoint::Coordinate>(
@@ -499,7 +501,8 @@ namespace sloked {
 
         SlokedGraphicsPoint::Coordinate GetMaxWidth() override {
             auto rsp = this->client.Invoke("getMaxWidth", {});
-            auto res = rsp.Get();
+            auto result = rsp->Next();
+            auto res = result.UnwrapWait();
             if (res.HasResult() && res.GetResult().Is(KgrValueType::Integer)) {
                 return static_cast<SlokedGraphicsPoint::Coordinate>(
                     res.GetResult().AsInt());
@@ -510,7 +513,8 @@ namespace sloked {
 
         TextPosition::Line GetHeight() override {
             auto rsp = this->client.Invoke("getHeight", {});
-            auto res = rsp.Get();
+            auto result = rsp->Next();
+            auto res = result.UnwrapWait();
             if (res.HasResult() && res.GetResult().Is(KgrValueType::Integer)) {
                 return static_cast<SlokedGraphicsPoint::Coordinate>(
                     res.GetResult().AsInt());
@@ -585,7 +589,8 @@ namespace sloked {
         }
         params.Put("keys", std::move(array));
         auto rsp = this->client.Invoke("connect", std::move(params));
-        auto res = rsp.Get();
+        auto result = rsp->Next();
+        auto res = result.UnwrapWait();
         return res.HasResult() && res.GetResult().AsBoolean();
     }
 
@@ -600,7 +605,8 @@ namespace sloked {
     std::vector<SlokedKeyboardInput> SlokedTextPaneClient::GetInput() {
         this->PreventDeadlock();
         auto rsp = this->client.Invoke("getInput", {});
-        auto res = rsp.Get();
+        auto result = rsp->Next();
+        auto res = result.UnwrapWait();
         if (res.HasResult() && res.GetResult().Is(KgrValueType::Array)) {
             const auto &array = res.GetResult().AsArray();
             std::vector<SlokedKeyboardInput> input;

@@ -272,7 +272,8 @@ namespace sloked {
             "realPosition",
             KgrDictionary{{"line", static_cast<int64_t>(src.line)},
                           {"column", static_cast<int64_t>(src.column)}});
-        auto renderRes = rsp.Get();
+        auto renderResult = rsp->Next();
+        auto renderRes = renderResult.UnwrapWait();
         if (!renderRes.HasResult()) {
             return {};
         }
@@ -289,7 +290,8 @@ namespace sloked {
         auto rsp = this->client.Invoke(
             "render", KgrDictionary{{"height", static_cast<int64_t>(height)},
                                     {"line", static_cast<int64_t>(line)}});
-        auto renderRes = rsp.Get();
+        auto renderResult = rsp->Next();
+        auto renderRes = renderResult.UnwrapWait();
         const auto &result = renderRes.GetResult().AsDictionary();
         return {result["start"].AsInt(), result["end"].AsInt(),
                 result["content"]};
@@ -303,7 +305,8 @@ namespace sloked {
             "render", KgrDictionary{{"height", static_cast<int64_t>(height)},
                                     {"line", static_cast<int64_t>(line)},
                                     {"partial", true}});
-        auto renderRes = rsp.Get();
+        auto renderResult = rsp->Next();
+        auto renderRes = renderResult.UnwrapWait();
         if (!renderRes.HasResult()) {
             return {};
         }

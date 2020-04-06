@@ -167,7 +167,7 @@ namespace sloked {
                                      const std::string &newline) {
         auto rsp = this->client.Invoke(
             "new", KgrDictionary{{"encoding", encoding}, {"newline", newline}});
-        auto res = rsp.Get();
+        auto res = rsp->Next().UnwrapWait();
         if (res.HasResult()) {
             return res.GetResult().AsInt();
         } else {
@@ -185,7 +185,8 @@ namespace sloked {
                                                       {"encoding", encoding},
                                                       {"newline", newline},
                                                       {"tagger", tagger}});
-        auto res = rsp.Get();
+        auto result = rsp->Next();
+        auto res = result.UnwrapWait();
         if (res.HasResult()) {
             return res.GetResult().AsInt();
         } else {
@@ -197,7 +198,8 @@ namespace sloked {
         SlokedEditorDocumentSet::DocumentId docId) {
         auto rsp = this->client.Invoke(
             "openById", KgrDictionary{{"id", static_cast<int64_t>(docId)}});
-        auto res = rsp.Get();
+        auto result = rsp->Next();
+        auto res = result.UnwrapWait();
         if (res.HasResult()) {
             return res.GetResult().AsBoolean();
         } else {
@@ -207,7 +209,8 @@ namespace sloked {
 
     bool SlokedDocumentSetClient::Save() {
         auto rsp = this->client.Invoke("save", {});
-        auto res = rsp.Get();
+        auto result = rsp->Next();
+        auto res = result.UnwrapWait();
         if (res.HasResult()) {
             return res.GetResult().AsBoolean();
         } else {
@@ -217,7 +220,8 @@ namespace sloked {
 
     bool SlokedDocumentSetClient::Save(const std::string &path) {
         auto rsp = this->client.Invoke("saveAs", path);
-        auto res = rsp.Get();
+        auto result = rsp->Next();
+        auto res = result.UnwrapWait();
         if (res.HasResult()) {
             return res.GetResult().AsBoolean();
         } else {
@@ -232,7 +236,8 @@ namespace sloked {
     std::optional<SlokedEditorDocumentSet::DocumentId>
         SlokedDocumentSetClient::GetId() {
         auto rsp = this->client.Invoke("getId", {});
-        auto res = rsp.Get();
+        auto result = rsp->Next();
+        auto res = result.UnwrapWait();
         if (res.HasResult() && res.GetResult().Is(KgrValueType::Integer)) {
             return res.GetResult().AsInt();
         } else {
@@ -242,7 +247,8 @@ namespace sloked {
 
     std::optional<std::string> SlokedDocumentSetClient::GetUpstream() {
         auto rsp = this->client.Invoke("getUpstream", {});
-        auto res = rsp.Get();
+        auto result = rsp->Next();
+        auto res = result.UnwrapWait();
         if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
             return res.GetResult().AsString();
         } else {

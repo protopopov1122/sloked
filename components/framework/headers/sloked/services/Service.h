@@ -36,6 +36,7 @@
 #include "sloked/kgr/local/Context.h"
 #include "sloked/sched/EventLoop.h"
 #include "sloked/sched/Scheduler.h"
+#include "sloked/sched/Task.h"
 
 namespace sloked {
 
@@ -112,58 +113,40 @@ namespace sloked {
             KgrValue content;
         };
 
-        class ResponseHandle {
+        class InvokeResult {
          public:
-            ResponseHandle(int64_t, SlokedServiceClient &);
-            ResponseHandle(const ResponseHandle &) = delete;
-            ResponseHandle(ResponseHandle &&);
-            ~ResponseHandle();
+            ~InvokeResult();
 
-            ResponseHandle &operator=(const ResponseHandle &) = delete;
-            ResponseHandle &operator=(ResponseHandle &&);
+            TaskResult<Response> Next();
 
-            void Drop();
-            Response Get();
-            std::optional<Response> GetOptional();
-            bool Has();
-            void Notify(std::function<void()>);
+            friend class SlokedServiceClient;
 
          private:
-            int64_t id;
+            InvokeResult(SlokedServiceClient &, int64_t);
+            void Push(Response);
+
             std::reference_wrapper<SlokedServiceClient> client;
-        };
-
-        class ResponseWaiter {
-         public:
-            ResponseWaiter(ResponseHandle);
-            void Wait(std::function<void(Response &)>);
-
-         private:
+            int64_t id;
             std::mutex mtx;
-            std::queue<std::function<void(Response &)>> callbacks;
-            ResponseHandle handle;
+            std::queue<Response> pending;
+            std::queue<TaskResultSupplier<Response>> awaiting;
         };
 
-        friend class ResponseHandle;
+        friend class InvokeResult;
 
         SlokedServiceClient(std::unique_ptr<KgrPipe>);
         KgrPipe::Status GetStatus() const;
-        ResponseHandle Invoke(const std::string &, KgrValue &&);
+        std::shared_ptr<InvokeResult> Invoke(const std::string &, KgrValue &&);
         void Close();
 
      private:
-        void SetCallback(int64_t, std::function<void()>);
-        void ClearHandle(int64_t);
-        bool Has(int64_t);
-        Response Get(int64_t);
-        void Drop(int64_t);
+        std::shared_ptr<InvokeResult> NewResult();
+        void DropResult(InvokeResult &);
 
         std::unique_ptr<std::mutex> mtx;
-        std::unique_ptr<std::condition_variable> cv;
         std::unique_ptr<KgrPipe> pipe;
         int64_t nextId;
-        std::map<int64_t, std::queue<Response>> pending;
-        std::map<int64_t, std::function<void()>> callbacks;
+        std::map<int64_t, std::weak_ptr<InvokeResult>> active;
     };
 }  // namespace sloked
 

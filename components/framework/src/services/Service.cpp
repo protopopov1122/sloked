@@ -203,84 +203,45 @@ namespace sloked {
         }
     }
 
-    SlokedServiceClient::ResponseHandle::ResponseHandle(
-        int64_t id, SlokedServiceClient &client)
-        : id(id), client(client) {}
-
-    SlokedServiceClient::ResponseHandle::ResponseHandle(ResponseHandle &&rsp)
-        : id(rsp.id), client(rsp.client) {
-        rsp.id = -1;
+    SlokedServiceClient::InvokeResult::~InvokeResult() {
+        this->client.get().DropResult(*this);
     }
 
-    SlokedServiceClient::ResponseHandle::~ResponseHandle() {
-        this->client.get().ClearHandle(this->id);
-    }
-
-    SlokedServiceClient::ResponseHandle &
-        SlokedServiceClient::ResponseHandle::operator=(ResponseHandle &&rsp) {
-        this->client.get().ClearHandle(this->id);
-        this->id = rsp.id;
-        this->client = rsp.client;
-        rsp.id = -1;
-        return *this;
-    }
-
-    void SlokedServiceClient::ResponseHandle::Drop() {
-        this->client.get().Drop(this->id);
-    }
-
-    SlokedServiceClient::Response SlokedServiceClient::ResponseHandle::Get() {
-        return this->client.get().Get(this->id);
-    }
-
-    std::optional<SlokedServiceClient::Response>
-        SlokedServiceClient::ResponseHandle::GetOptional() {
-        if (this->client.get().Has(this->id)) {
-            return this->client.get().Get(this->id);
-        } else {
-            return {};
-        }
-    }
-
-    bool SlokedServiceClient::ResponseHandle::Has() {
-        return this->client.get().Has(this->id);
-    }
-
-    void SlokedServiceClient::ResponseHandle::Notify(
-        std::function<void()> callback) {
-        this->client.get().SetCallback(this->id, std::move(callback));
-    }
-
-    SlokedServiceClient::ResponseWaiter::ResponseWaiter(ResponseHandle handle)
-        : handle(std::move(handle)) {
-        this->handle.Notify([this] {
-            std::unique_lock lock(this->mtx);
-            if (!this->callbacks.empty()) {
-                auto callback = std::move(this->callbacks.front());
-                this->callbacks.pop();
-                auto res = this->handle.Get();
-                lock.unlock();
-                callback(res);
-            }
-        });
-    }
-
-    void SlokedServiceClient::ResponseWaiter::Wait(
-        std::function<void(Response &)> callback) {
+    TaskResult<SlokedServiceClient::Response>
+        SlokedServiceClient::InvokeResult::Next() {
         std::unique_lock lock(this->mtx);
-        if (this->handle.Has()) {
-            auto res = this->handle.Get();
-            lock.unlock();
-            callback(res);
+        TaskResultSupplier<Response> supplier;
+        auto result = supplier.Result();
+        if (this->pending.empty()) {
+            this->awaiting.push(std::move(supplier));
         } else {
-            this->callbacks.push(std::move(callback));
+            auto res = std::move(this->pending.front());
+            this->pending.pop();
+            lock.unlock();
+            supplier.SetResult(std::move(res));
+        }
+        return result;
+    }
+
+    SlokedServiceClient::InvokeResult::InvokeResult(SlokedServiceClient &client,
+                                                    int64_t id)
+        : client(client), id(id) {}
+
+    void SlokedServiceClient::InvokeResult::Push(Response rsp) {
+        std::unique_lock lock(this->mtx);
+        if (this->awaiting.empty()) {
+            this->pending.push(std::move(rsp));
+        } else {
+            auto supplier = std::move(this->awaiting.front());
+            this->awaiting.pop();
+            lock.unlock();
+            supplier.SetResult(std::move(rsp));
         }
     }
 
     SlokedServiceClient::SlokedServiceClient(std::unique_ptr<KgrPipe> pipe)
-        : mtx(std::make_unique<std::mutex>()),
-          cv(std::make_unique<std::condition_variable>()),
-          pipe(std::move(pipe)), nextId(0) {
+        : mtx(std::make_unique<std::mutex>()), pipe(std::move(pipe)),
+          nextId(0) {
         if (this->pipe == nullptr) {
             throw SlokedError("SlokedServiceClient: Pipe can't be null");
         } else {
@@ -289,23 +250,20 @@ namespace sloked {
                     auto rsp = this->pipe->Read();
                     int64_t rspId = rsp.AsDictionary()["id"].AsInt();
                     std::unique_lock lock(*this->mtx);
-                    if (this->pending.count(rspId) == 0) {
+                    if (this->active.count(rspId) == 0) {
+                        continue;
+                    }
+                    auto result = this->active.at(rspId).lock();
+                    if (result == nullptr) {
+                        this->active.erase(rspId);
                         continue;
                     }
                     if (rsp.AsDictionary().Has("result")) {
-                        this->pending[rspId].push(Response(
+                        result->Push(Response(
                             true, std::move(rsp.AsDictionary()["result"])));
                     } else {
-                        this->pending[rspId].push(Response(
+                        result->Push(Response(
                             false, std::move(rsp.AsDictionary()["error"])));
-                    }
-                    this->cv->notify_all();
-                    if (this->callbacks.count(rspId) != 0 &&
-                        this->callbacks.at(rspId)) {
-                        auto callback = this->callbacks.at(rspId);
-                        lock.unlock();
-                        callback();
-                        lock.lock();
                     }
                 }
             });
@@ -320,64 +278,30 @@ namespace sloked {
         }
     }
 
-    SlokedServiceClient::ResponseHandle SlokedServiceClient::Invoke(
-        const std::string &method, KgrValue &&params) {
-        std::unique_lock lock(*this->mtx);
-        int64_t id = this->nextId++;
-        this->pending.emplace(id, std::queue<Response>{});
-        ResponseHandle rspHandle(id, *this);
-        lock.unlock();
-        this->pipe->Write(
-            KgrDictionary{{"id", id}, {"method", method}, {"params", params}});
-        return rspHandle;
+    std::shared_ptr<SlokedServiceClient::InvokeResult>
+        SlokedServiceClient::Invoke(const std::string &method,
+                                    KgrValue &&params) {
+        auto result = this->NewResult();
+        this->pipe->Write(KgrDictionary{
+            {"id", result->id}, {"method", method}, {"params", params}});
+        return result;
     }
 
     void SlokedServiceClient::Close() {
         this->pipe->Close();
     }
 
-    void SlokedServiceClient::SetCallback(int64_t id,
-                                          std::function<void()> callback) {
+    std::shared_ptr<SlokedServiceClient::InvokeResult>
+        SlokedServiceClient::NewResult() {
         std::unique_lock lock(*this->mtx);
-        this->callbacks.emplace(id, std::move(callback));
+        std::shared_ptr<InvokeResult> result(
+            new InvokeResult(*this, this->nextId++));
+        this->active.insert_or_assign(result->id, result);
+        return result;
     }
 
-    void SlokedServiceClient::ClearHandle(int64_t id) {
+    void SlokedServiceClient::DropResult(InvokeResult &result) {
         std::unique_lock lock(*this->mtx);
-        if (this->pending.count(id)) {
-            this->pending.erase(id);
-        }
-        if (this->callbacks.count(id)) {
-            this->callbacks.erase(id);
-        }
-    }
-
-    bool SlokedServiceClient::Has(int64_t id) {
-        std::unique_lock lock(*this->mtx);
-        return this->pending.count(id) != 0 && !this->pending.at(id).empty();
-    }
-
-    SlokedServiceClient::Response SlokedServiceClient::Get(int64_t id) {
-        if (!this->Has(id)) {
-            std::unique_lock lock(*this->mtx);
-            this->cv->wait_for(lock, KgrNetConfig::ResponseTimeout);
-        }
-        std::unique_lock lock(*this->mtx);
-        if (this->pending.count(id) != 0 && !this->pending.at(id).empty()) {
-            auto rsp = std::move(this->pending.at(id).front());
-            this->pending.at(id).pop();
-            return rsp;
-        } else {
-            return Response(false, {});
-        }
-    }
-
-    void SlokedServiceClient::Drop(int64_t id) {
-        while (!this->Has(id)) {
-            std::unique_lock lock(*this->mtx);
-            this->cv->wait(lock);
-        }
-        std::unique_lock lock(*this->mtx);
-        this->pending.at(id).pop();
+        this->active.erase(result.id);
     }
 }  // namespace sloked
