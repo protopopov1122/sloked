@@ -165,9 +165,11 @@ namespace sloked {
     std::optional<SlokedEditorDocumentSet::DocumentId>
         SlokedDocumentSetClient::New(const std::string &encoding,
                                      const std::string &newline) {
-        auto rsp = this->client.Invoke(
-            "new", KgrDictionary{{"encoding", encoding}, {"newline", newline}});
-        auto res = rsp->Next().UnwrapWait();
+        auto res = this->client
+                       .Invoke("new", KgrDictionary{{"encoding", encoding},
+                                                    {"newline", newline}})
+                       ->Next()
+                       .UnwrapWait();
         if (res.HasResult()) {
             return res.GetResult().AsInt();
         } else {
@@ -180,13 +182,13 @@ namespace sloked {
                                       const std::string &encoding,
                                       const std::string &newline,
                                       const std::string &tagger) {
-        auto rsp =
-            this->client.Invoke("open", KgrDictionary{{"path", path},
-                                                      {"encoding", encoding},
-                                                      {"newline", newline},
-                                                      {"tagger", tagger}});
-        auto result = rsp->Next();
-        auto res = result.UnwrapWait();
+        auto res = this->client
+                       .Invoke("open", KgrDictionary{{"path", path},
+                                                     {"encoding", encoding},
+                                                     {"newline", newline},
+                                                     {"tagger", tagger}})
+                       ->Next()
+                       .UnwrapWait();
         if (res.HasResult()) {
             return res.GetResult().AsInt();
         } else {
@@ -196,10 +198,12 @@ namespace sloked {
 
     bool SlokedDocumentSetClient::Open(
         SlokedEditorDocumentSet::DocumentId docId) {
-        auto rsp = this->client.Invoke(
-            "openById", KgrDictionary{{"id", static_cast<int64_t>(docId)}});
-        auto result = rsp->Next();
-        auto res = result.UnwrapWait();
+        auto res =
+            this->client
+                .Invoke("openById",
+                        KgrDictionary{{"id", static_cast<int64_t>(docId)}})
+                ->Next()
+                .UnwrapWait();
         if (res.HasResult()) {
             return res.GetResult().AsBoolean();
         } else {
@@ -208,9 +212,7 @@ namespace sloked {
     }
 
     bool SlokedDocumentSetClient::Save() {
-        auto rsp = this->client.Invoke("save", {});
-        auto result = rsp->Next();
-        auto res = result.UnwrapWait();
+        auto res = this->client.Invoke("save", {})->Next().UnwrapWait();
         if (res.HasResult()) {
             return res.GetResult().AsBoolean();
         } else {
@@ -219,9 +221,7 @@ namespace sloked {
     }
 
     bool SlokedDocumentSetClient::Save(const std::string &path) {
-        auto rsp = this->client.Invoke("saveAs", path);
-        auto result = rsp->Next();
-        auto res = result.UnwrapWait();
+        auto res = this->client.Invoke("saveAs", path)->Next().UnwrapWait();
         if (res.HasResult()) {
             return res.GetResult().AsBoolean();
         } else {
@@ -235,9 +235,7 @@ namespace sloked {
 
     std::optional<SlokedEditorDocumentSet::DocumentId>
         SlokedDocumentSetClient::GetId() {
-        auto rsp = this->client.Invoke("getId", {});
-        auto result = rsp->Next();
-        auto res = result.UnwrapWait();
+        auto res = this->client.Invoke("getId", {})->Next().UnwrapWait();
         if (res.HasResult() && res.GetResult().Is(KgrValueType::Integer)) {
             return res.GetResult().AsInt();
         } else {
@@ -246,9 +244,7 @@ namespace sloked {
     }
 
     std::optional<std::string> SlokedDocumentSetClient::GetUpstream() {
-        auto rsp = this->client.Invoke("getUpstream", {});
-        auto result = rsp->Next();
-        auto res = result.UnwrapWait();
+        auto res = this->client.Invoke("getUpstream", {})->Next().UnwrapWait();
         if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
             return res.GetResult().AsString();
         } else {

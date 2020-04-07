@@ -213,7 +213,13 @@ namespace sloked {
         TaskResultSupplier<Response> supplier;
         auto result = supplier.Result();
         if (this->pending.empty()) {
-            this->awaiting.push(std::move(supplier));
+            std::unique_lock clientLock(*this->client.get().mtx);
+            std::shared_ptr<InvokeResult> self;
+            if (this->client.get().active.count(this->id)) {
+                self = this->client.get().active.at(this->id).lock();
+            }
+            this->awaiting.push(
+                std::make_pair(std::move(supplier), std::move(self)));
         } else {
             auto res = std::move(this->pending.front());
             this->pending.pop();
@@ -235,7 +241,7 @@ namespace sloked {
             auto supplier = std::move(this->awaiting.front());
             this->awaiting.pop();
             lock.unlock();
-            supplier.SetResult(std::move(rsp));
+            supplier.first.SetResult(std::move(rsp));
         }
     }
 

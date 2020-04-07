@@ -129,7 +129,9 @@ namespace sloked {
             int64_t id;
             std::mutex mtx;
             std::queue<Response> pending;
-            std::queue<TaskResultSupplier<Response>> awaiting;
+            std::queue<std::pair<TaskResultSupplier<Response>,
+                                 std::shared_ptr<InvokeResult>>>
+                awaiting;
         };
 
         friend class InvokeResult;

@@ -284,9 +284,8 @@ namespace sloked {
     }
 
     std::optional<TextPosition> SlokedCursorClient::GetPosition() {
-        auto rsp = this->client.Invoke("getPosition", {});
-        auto result = rsp->Next();
-        auto clientRes = result.UnwrapWait();
+        auto clientRes =
+            this->client.Invoke("getPosition", {})->Next().UnwrapWait();
         if (!clientRes.HasResult()) {
             return {};
         } else {

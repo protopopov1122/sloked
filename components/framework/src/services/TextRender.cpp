@@ -262,18 +262,20 @@ namespace sloked {
         std::unique_ptr<KgrPipe> pipe,
         SlokedEditorDocumentSet::DocumentId docId)
         : client(std::move(pipe)) {
-        auto rsp = this->client.Invoke(
+        this->client.Invoke(
             "attach", KgrDictionary{{"document", static_cast<int64_t>(docId)}});
     }
 
     std::optional<TextPosition> SlokedTextRenderClient::RealPosition(
         TextPosition src) {
-        auto rsp = this->client.Invoke(
-            "realPosition",
-            KgrDictionary{{"line", static_cast<int64_t>(src.line)},
-                          {"column", static_cast<int64_t>(src.column)}});
-        auto renderResult = rsp->Next();
-        auto renderRes = renderResult.UnwrapWait();
+        auto renderRes =
+            this->client
+                .Invoke(
+                    "realPosition",
+                    KgrDictionary{{"line", static_cast<int64_t>(src.line)},
+                                  {"column", static_cast<int64_t>(src.column)}})
+                ->Next()
+                .UnwrapWait();
         if (!renderRes.HasResult()) {
             return {};
         }
@@ -287,11 +289,13 @@ namespace sloked {
     std::tuple<TextPosition::Line, TextPosition::Line, KgrValue>
         SlokedTextRenderClient::Render(TextPosition::Line line,
                                        TextPosition::Line height) {
-        auto rsp = this->client.Invoke(
-            "render", KgrDictionary{{"height", static_cast<int64_t>(height)},
-                                    {"line", static_cast<int64_t>(line)}});
-        auto renderResult = rsp->Next();
-        auto renderRes = renderResult.UnwrapWait();
+        auto renderRes =
+            this->client
+                .Invoke("render",
+                        KgrDictionary{{"height", static_cast<int64_t>(height)},
+                                      {"line", static_cast<int64_t>(line)}})
+                ->Next()
+                .UnwrapWait();
         const auto &result = renderRes.GetResult().AsDictionary();
         return {result["start"].AsInt(), result["end"].AsInt(),
                 result["content"]};
@@ -301,12 +305,14 @@ namespace sloked {
                std::vector<std::pair<TextPosition::Line, KgrValue>>>
         SlokedTextRenderClient::PartialRender(TextPosition::Line line,
                                               TextPosition::Line height) {
-        auto rsp = this->client.Invoke(
-            "render", KgrDictionary{{"height", static_cast<int64_t>(height)},
-                                    {"line", static_cast<int64_t>(line)},
-                                    {"partial", true}});
-        auto renderResult = rsp->Next();
-        auto renderRes = renderResult.UnwrapWait();
+        auto renderRes =
+            this->client
+                .Invoke("render",
+                        KgrDictionary{{"height", static_cast<int64_t>(height)},
+                                      {"line", static_cast<int64_t>(line)},
+                                      {"partial", true}})
+                ->Next()
+                .UnwrapWait();
         if (!renderRes.HasResult()) {
             return {};
         }
