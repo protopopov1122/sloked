@@ -294,14 +294,15 @@ namespace sloked {
                 this->srv.workers.Enqueue([this, pipeId, supplier,
                                            pipePtr = pipe.release()] {
                     supplier.Wrap([&] {
-                        auto rsp = this->srv.net.Invoke(
-                            "connect",
-                            KgrDictionary{{"pipe", pipeId},
-                                          {"service", this->service}});
-                        if (rsp.WaitResponse(KgrNetConfig::ResponseTimeout) &&
-                            rsp.HasResponse()) {
-                            auto remotePipe =
-                                rsp.GetResponse().GetResult().AsInt();
+                        auto rsp = this->srv.net
+                                       .Invoke("connect",
+                                               KgrDictionary{
+                                                   {"pipe", pipeId},
+                                                   {"service", this->service}})
+                                       ->Next();
+                        if (rsp.WaitFor(KgrNetConfig::ResponseTimeout) ==
+                            TaskResultStatus::Ready) {
+                            auto remotePipe = rsp.Unwrap().GetResult().AsInt();
                             std::unique_ptr<KgrPipe> pipe{pipePtr};
                             pipe->SetMessageListener([this, pipeId,
                                                       remotePipe] {
@@ -366,7 +367,7 @@ namespace sloked {
                         try {
                             this->net.Invoke("close", pipeId);
                         } catch (const SlokedError &err) {
-                            // Ignoring errors in case when socket already
+                            // Ignoring errors in case when socket is already
                             // closed
                         }
                         this->frozenPipes.erase(pipeId);

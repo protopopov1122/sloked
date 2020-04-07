@@ -32,6 +32,7 @@
 #include "sloked/core/RingBuffer.h"
 #include "sloked/kgr/Value.h"
 #include "sloked/net/Socket.h"
+#include "sloked/sched/Task.h"
 
 namespace sloked {
 
@@ -49,23 +50,27 @@ namespace sloked {
             bool result;
         };
 
-        class ResponseHandle {
+        class InvokeResult {
          public:
-            ResponseHandle(KgrNetInterface &, int64_t);
-            ResponseHandle(const ResponseHandle &) = delete;
-            ResponseHandle(ResponseHandle &&) = default;
-            ~ResponseHandle();
-            ResponseHandle &operator=(const ResponseHandle &) = delete;
-            ResponseHandle &operator=(ResponseHandle &&) = default;
-            bool HasResponse() const;
-            bool WaitResponse(std::chrono::system_clock::duration) const;
-            Response GetResponse() const;
+            ~InvokeResult();
+            TaskResult<Response> Next();
+
+            friend class KgrNetInterface;
 
          private:
-            KgrNetInterface *net;
+            InvokeResult(KgrNetInterface &, int64_t);
+            void Push(Response);
+
+            KgrNetInterface &net;
             int64_t id;
+            std::mutex mtx;
+            std::queue<Response> pending;
+            std::queue<std::pair<TaskResultSupplier<Response>,
+                                 std::shared_ptr<InvokeResult>>>
+                awaiting;
         };
-        friend class ResponseHandle;
+
+        friend class InvokeResult;
 
         class Responder {
          public:
@@ -87,7 +92,8 @@ namespace sloked {
         bool Valid() const;
         void Receive();
         void Process(std::size_t = 0);
-        ResponseHandle Invoke(const std::string &, const KgrValue &);
+        std::shared_ptr<InvokeResult> Invoke(const std::string &,
+                                             const KgrValue &);
         void Close();
         void BindMethod(const std::string &,
                         std::function<void(const std::string &,
@@ -105,13 +111,15 @@ namespace sloked {
         void ActionResponse(const KgrValue &);
         void ActionClose(const KgrValue &);
 
+        std::shared_ptr<InvokeResult> NewResult();
+        void DropResult(int64_t);
+
         std::unique_ptr<SlokedSocket> socket;
         SlokedRingBuffer<uint8_t, SlokedRingBufferType::Dynamic> buffer;
+        std::mutex mtx;
         int64_t nextId;
         std::queue<KgrValue> incoming;
-        std::map<int64_t, std::queue<Response>> responses;
-        std::mutex response_mtx;
-        std::condition_variable response_cv;
+        std::map<int64_t, std::weak_ptr<InvokeResult>> responses;
         std::map<std::string,
                  std::function<void(const std::string &, const KgrValue &,
                                     Responder &)>>

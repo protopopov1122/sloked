@@ -141,10 +141,11 @@ namespace sloked {
         if (!this->work.load()) {
             return nullptr;
         }
-        auto rsp = this->net.Invoke("connect", service.ToString());
-        if (rsp.WaitResponse(KgrNetConfig::ResponseTimeout) &&
+        auto rsp = this->net.Invoke("connect", service.ToString())->Next();
+        if (rsp.WaitFor(KgrNetConfig::ResponseTimeout) ==
+                TaskResultStatus::Ready &&
             this->work.load()) {
-            const auto &res = rsp.GetResponse();
+            const auto &res = rsp.Unwrap();
             if (res.HasResult()) {
                 std::unique_lock lock(this->mtx);
                 int64_t pipeId = res.GetResult().AsInt();
@@ -199,13 +200,13 @@ namespace sloked {
                                                        std::move(service)),
                             [this, supplier, id, serviceName](const auto &) {
                                 supplier.Wrap([&] {
-                                    auto rsp = this->net.Invoke("bind", id);
-                                    if (!(rsp.WaitResponse(
-                                              KgrNetConfig::ResponseTimeout) &&
+                                    auto rsp =
+                                        this->net.Invoke("bind", id)->Next();
+                                    if (!(rsp.WaitFor(
+                                              KgrNetConfig::ResponseTimeout) ==
+                                              TaskResultStatus::Ready &&
                                           this->work.load()) ||
-                                        !rsp.GetResponse()
-                                             .GetResult()
-                                             .AsBoolean()) {
+                                        !rsp.Unwrap().GetResult().AsBoolean()) {
                                         this->localServer.Deregister(
                                             serviceName);
                                         throw SlokedError(
@@ -236,11 +237,13 @@ namespace sloked {
                             return true;
                         } else {
                             auto rsp =
-                                this->net.Invoke("bound", service.ToString());
-                            return rsp.WaitResponse(
-                                       KgrNetConfig::ResponseTimeout) &&
-                                   this->work.load() && rsp.HasResponse() &&
-                                   rsp.GetResponse().GetResult().AsBoolean();
+                                this->net.Invoke("bound", service.ToString())
+                                    ->Next();
+                            return rsp.WaitFor(KgrNetConfig::ResponseTimeout) ==
+                                       TaskResultStatus::Ready &&
+                                   this->work.load() &&
+                                   rsp.Unwrap().HasResult() &&
+                                   rsp.Unwrap().GetResult().AsBoolean();
                         }
                     });
                 });
@@ -258,10 +261,11 @@ namespace sloked {
                     if (result.State() == TaskResultStatus::Ready &&
                         result.Unwrap()) {
                         this->localServer.Deregister(service);
-                        auto rsp = this->net.Invoke("unbind", id);
-                        if (!(rsp.WaitResponse(KgrNetConfig::ResponseTimeout) &&
+                        auto rsp = this->net.Invoke("unbind", id)->Next();
+                        if (!(rsp.WaitFor(KgrNetConfig::ResponseTimeout) ==
+                                  TaskResultStatus::Ready &&
                               this->work.load()) ||
-                            !rsp.GetResponse().GetResult().AsBoolean()) {
+                            !rsp.Unwrap().GetResult().AsBoolean()) {
                             throw SlokedError(
                                 "KgrSlaveServer: Error deregistering " + id);
                         }
@@ -279,26 +283,27 @@ namespace sloked {
             throw SlokedError("KgrSlaveServer: Authenticator not defined");
         }
         // Sending login request
-        auto loginRequest = this->net.Invoke("auth-request", {});
-        if (!(loginRequest.WaitResponse(KgrNetConfig::ResponseTimeout) &&
+        auto loginRequest = this->net.Invoke("auth-request", {})->Next();
+        if (!(loginRequest.WaitFor(KgrNetConfig::ResponseTimeout) ==
+                  TaskResultStatus::Ready &&
               this->work.load())) {
             throw SlokedError("KgrSlaveServer: Error requesting login for \'" +
                               account + "\'");
         }
         auto nonce = static_cast<SlokedSlaveAuthenticator::Challenge>(
-            loginRequest.GetResponse()
-                .GetResult()
-                .AsDictionary()["nonce"]
-                .AsInt());
+            loginRequest.Unwrap().GetResult().AsDictionary()["nonce"].AsInt());
         auto result = this->auth->InitiateLogin(account, nonce);
 
         // Sending result
-        auto loginResponse = this->net.Invoke(
-            "auth-response",
-            KgrDictionary{{"id", account}, {"result", result}});
-        if (!(loginResponse.WaitResponse(KgrNetConfig::ResponseTimeout) &&
+        auto loginResponse =
+            this->net
+                .Invoke("auth-response",
+                        KgrDictionary{{"id", account}, {"result", result}})
+                ->Next();
+        if (!(loginResponse.WaitFor(KgrNetConfig::ResponseTimeout) ==
+                  TaskResultStatus::Ready &&
               this->work.load() &&
-              loginResponse.GetResponse().GetResult().AsBoolean())) {
+              loginResponse.Unwrap().GetResult().AsBoolean())) {
             throw SlokedError("KgrSlaveServer: Error requesting login for \'" +
                               account + "\'");
         }

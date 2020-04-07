@@ -56,40 +56,45 @@ namespace sloked {
         }
     }
 
-    KgrNetInterface::ResponseHandle::ResponseHandle(KgrNetInterface &net,
-                                                    int64_t id)
-        : net(&net), id(id) {
-        std::unique_lock<std::mutex> lock(this->net->response_mtx);
-        this->net->responses[this->id] = {};
+    KgrNetInterface::InvokeResult::~InvokeResult() {
+        this->net.DropResult(this->id);
     }
 
-    KgrNetInterface::ResponseHandle::~ResponseHandle() {
-        std::unique_lock<std::mutex> lock(this->net->response_mtx);
-        this->net->responses.erase(this->id);
-    }
-
-    bool KgrNetInterface::ResponseHandle::HasResponse() const {
-        std::unique_lock<std::mutex> lock(this->net->response_mtx);
-        return !this->net->responses.at(this->id).empty();
-    }
-
-    bool KgrNetInterface::ResponseHandle::WaitResponse(
-        std::chrono::system_clock::duration timeout) const {
-        std::unique_lock<std::mutex> lock(this->net->response_mtx);
-        this->net->response_cv.wait_for(lock, timeout);
-        return !this->net->responses.at(this->id).empty();
-    }
-
-    KgrNetInterface::Response KgrNetInterface::ResponseHandle::GetResponse()
-        const {
-        std::unique_lock<std::mutex> lock(this->net->response_mtx);
-        auto &queue = this->net->responses.at(this->id);
-        if (!queue.empty()) {
-            auto res = std::move(queue.front());
-            queue.pop();
-            return res;
+    TaskResult<KgrNetInterface::Response>
+        KgrNetInterface::InvokeResult::Next() {
+        std::unique_lock lock(this->mtx);
+        TaskResultSupplier<Response> supplier;
+        auto result = supplier.Result();
+        if (this->pending.empty()) {
+            std::unique_lock netLock(this->net.mtx);
+            std::shared_ptr<InvokeResult> self;
+            if (this->net.responses.count(this->id)) {
+                self = this->net.responses.at(this->id).lock();
+            }
+            this->awaiting.push(
+                std::make_pair(std::move(supplier), std::move(self)));
         } else {
-            throw SlokedError("KgrNetResponse: No response");
+            auto res = std::move(this->pending.front());
+            this->pending.pop();
+            lock.unlock();
+            supplier.SetResult(std::move(res));
+        }
+        return result;
+    }
+
+    KgrNetInterface::InvokeResult::InvokeResult(KgrNetInterface &net,
+                                                int64_t id)
+        : net(net), id(id) {}
+
+    void KgrNetInterface::InvokeResult::Push(Response rsp) {
+        std::unique_lock lock(this->mtx);
+        if (this->awaiting.empty()) {
+            this->pending.push(std::move(rsp));
+        } else {
+            auto supplier = std::move(this->awaiting.front());
+            this->awaiting.pop();
+            lock.unlock();
+            supplier.first.SetResult(std::move(rsp));
         }
     }
 
@@ -170,14 +175,14 @@ namespace sloked {
         }
     }
 
-    KgrNetInterface::ResponseHandle KgrNetInterface::Invoke(
+    std::shared_ptr<KgrNetInterface::InvokeResult> KgrNetInterface::Invoke(
         const std::string &method, const KgrValue &params) {
-        int64_t id = this->nextId++;
+        auto res = this->NewResult();
         this->Write(KgrDictionary{{"action", "invoke"},
-                                  {"id", id},
+                                  {"id", res->id},
                                   {"method", method},
                                   {"params", params}});
-        return KgrNetInterface::ResponseHandle(*this, id);
+        return res;
     }
 
     void KgrNetInterface::Close() {
@@ -185,9 +190,14 @@ namespace sloked {
         this->socket->Close();
         this->buffer.clear();
         this->incoming = {};
-        std::unique_lock<std::mutex> lock(this->response_mtx);
+        std::unique_lock<std::mutex> lock(this->mtx);
+        for (auto rsp : this->responses) {
+            auto resp = rsp.second.lock();
+            if (resp) {
+                resp->awaiting = {};
+            }
+        }
         this->responses.clear();
-        this->response_cv.notify_all();
     }
 
     void KgrNetInterface::BindMethod(
@@ -252,16 +262,18 @@ namespace sloked {
 
     void KgrNetInterface::ActionResponse(const KgrValue &msg) {
         int64_t id = msg.AsDictionary()["id"].AsInt();
-        std::unique_lock<std::mutex> lock(this->response_mtx);
+        std::unique_lock<std::mutex> lock(this->mtx);
         if (this->responses.count(id) != 0) {
+            auto resp = this->responses.at(id).lock();
+            if (resp == nullptr) {
+                this->responses.erase(id);
+                return;
+            }
+            lock.unlock();
             if (msg.AsDictionary().Has("result")) {
-                this->responses.at(id).push(
-                    Response(msg.AsDictionary()["result"], true));
-                this->response_cv.notify_all();
+                resp->Push(Response(msg.AsDictionary()["result"], true));
             } else if (msg.AsDictionary().Has("error")) {
-                this->responses.at(id).push(
-                    Response(msg.AsDictionary()["error"], false));
-                this->response_cv.notify_all();
+                resp->Push(Response(msg.AsDictionary()["error"], false));
             }
         }
     }
@@ -270,8 +282,26 @@ namespace sloked {
         this->socket->Close();
         this->buffer.clear();
         this->incoming = {};
-        std::unique_lock<std::mutex> lock(this->response_mtx);
+        std::unique_lock<std::mutex> lock(this->mtx);
+        for (auto rsp : this->responses) {
+            auto resp = rsp.second.lock();
+            if (resp) {
+                resp->awaiting = {};
+            }
+        }
         this->responses.clear();
-        this->response_cv.notify_all();
+    }
+    std::shared_ptr<KgrNetInterface::InvokeResult>
+        KgrNetInterface::NewResult() {
+        std::unique_lock lock(this->mtx);
+        std::shared_ptr<InvokeResult> res(
+            new InvokeResult(*this, this->nextId++));
+        this->responses.insert_or_assign(res->id, res);
+        return res;
+    }
+
+    void KgrNetInterface::DropResult(int64_t id) {
+        std::unique_lock lock(this->mtx);
+        this->responses.erase(id);
     }
 }  // namespace sloked
