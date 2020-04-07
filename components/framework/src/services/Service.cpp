@@ -258,6 +258,7 @@ namespace sloked {
                         this->active.erase(rspId);
                         continue;
                     }
+                    lock.unlock();
                     if (rsp.AsDictionary().Has("result")) {
                         result->Push(Response(
                             true, std::move(rsp.AsDictionary()["result"])));
