@@ -23,7 +23,6 @@
 #define SLOKED_SECURITY_RESTRICTEDSERVER_H_
 
 #include "sloked/kgr/NamedServer.h"
-#include "sloked/sched/TaskNotifications.h"
 #include "sloked/security/Restriction.h"
 
 namespace sloked {
@@ -50,7 +49,7 @@ namespace sloked {
 
      private:
         KgrNamedServer &server;
-        SlokedTaskNotifications notifications;
+        std::shared_ptr<SlokedStandardLifetime> lifetime;
         std::shared_ptr<SlokedNamedRestrictions> accessRestrictions;
         std::shared_ptr<SlokedNamedRestrictions> modificationRestrictions;
     };

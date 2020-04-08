@@ -25,7 +25,6 @@
 #include <mutex>
 
 #include "sloked/kgr/NamedServer.h"
-#include "sloked/sched/TaskNotifications.h"
 
 namespace sloked {
 
@@ -43,7 +42,7 @@ namespace sloked {
 
      private:
         KgrServer &server;
-        SlokedTaskNotifications notifications;
+        std::shared_ptr<SlokedStandardLifetime> lifetime;
         std::map<SlokedPath, KgrServer::ServiceId> names;
         std::mutex mtx;
     };

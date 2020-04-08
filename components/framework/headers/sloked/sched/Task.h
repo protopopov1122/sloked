@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "sloked/core/Error.h"
+#include "sloked/sched/Lifetime.h"
 
 namespace sloked {
 
@@ -93,11 +94,22 @@ namespace sloked {
             return this->impl->state;
         }
 
-        DetachListener Notify(Listener listener) const {
+        DetachListener Notify(Listener listener,
+                              std::weak_ptr<SlokedLifetime> lifetime =
+                                  SlokedLifetime::Global) const {
             std::unique_lock lock(this->impl->mtx);
             if (this->impl->state == Status::Pending) {
                 auto id = this->impl->nextListenerId++;
-                this->impl->listeners.insert_or_assign(id, std::move(listener));
+                this->impl->listeners.insert_or_assign(
+                    id,
+                    [lifetime_weak = lifetime, listener = std::move(listener)](
+                        const auto &result) mutable {
+                        if (auto lifetime = lifetime_weak.lock()) {
+                            if (auto token = lifetime->Acquire()) {
+                                listener(result);
+                            }
+                        }
+                    });
                 return [id, impl_weak = std::weak_ptr(this->impl)] {
                     if (auto impl = impl_weak.lock()) {
                         std::unique_lock lock(impl->mtx);
@@ -106,7 +118,11 @@ namespace sloked {
                 };
             } else {
                 lock.unlock();
-                listener(*static_cast<const C<R, E> *>(this));
+                if (auto ltime = lifetime.lock()) {
+                    if (auto token = ltime->Acquire()) {
+                        listener(*static_cast<const C<R, E> *>(this));
+                    }
+                }
                 return [] {};
             }
         }

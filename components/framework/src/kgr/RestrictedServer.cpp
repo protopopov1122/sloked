@@ -29,11 +29,12 @@ namespace sloked {
     KgrRestrictedNamedServer::KgrRestrictedNamedServer(
         KgrNamedServer &server, std::shared_ptr<SlokedNamedRestrictions> access,
         std::shared_ptr<SlokedNamedRestrictions> modification)
-        : server(server), accessRestrictions(std::move(access)),
+        : server(server), lifetime(std::make_shared<SlokedStandardLifetime>()),
+          accessRestrictions(std::move(access)),
           modificationRestrictions(std::move(modification)) {}
 
     KgrRestrictedNamedServer::~KgrRestrictedNamedServer() {
-        this->notifications.Close();
+        this->lifetime->Close();
     }
 
     void KgrRestrictedNamedServer::SetAccessRestrictions(
@@ -69,75 +70,7 @@ namespace sloked {
             if (this->modificationRestrictions != nullptr &&
                 this->modificationRestrictions->IsAllowed(name)) {
                 auto res = this->server.Register(name, std::move(service));
-                this->notifications.Notify(res, [supplier](const auto &result) {
-                    switch (result.State()) {
-                        case TaskResultStatus::Ready:
-                            supplier.SetResult();
-                            break;
-
-                        case TaskResultStatus::Error:
-                            supplier.SetError(result.GetError());
-                            break;
-
-                        case TaskResultStatus::Cancelled:
-                            supplier.Cancel();
-                            break;
-
-                        default:
-                            break;
-                    }
-                });
-            } else {
-                throw SlokedError("KgrNamedServer: Modification restricted \'" +
-                                  name.ToString() + "\'");
-            }
-        });
-        return supplier.Result();
-    }
-
-    TaskResult<bool> KgrRestrictedNamedServer::Registered(
-        const SlokedPath &name) {
-        TaskResultSupplier<bool> supplier;
-        supplier.Catch([&] {
-            if ((this->accessRestrictions != nullptr &&
-                 this->accessRestrictions->IsAllowed(name)) ||
-                (this->modificationRestrictions != nullptr &&
-                 this->modificationRestrictions->IsAllowed(name))) {
-                this->notifications.Notify(
-                    this->server.Registered(name),
-                    [supplier](const auto &result) {
-                        switch (result.State()) {
-                            case TaskResultStatus::Ready:
-                                supplier.SetResult(result.GetResult());
-                                break;
-
-                            case TaskResultStatus::Error:
-                                supplier.SetError(result.GetError());
-                                break;
-
-                            case TaskResultStatus::Cancelled:
-                                supplier.Cancel();
-                                break;
-
-                            default:
-                                break;
-                        }
-                    });
-            } else {
-                supplier.SetResult(false);
-            }
-        });
-        return supplier.Result();
-    }
-
-    TaskResult<void> KgrRestrictedNamedServer::Deregister(
-        const SlokedPath &name) {
-        TaskResultSupplier<void> supplier;
-        supplier.Catch([&] {
-            if (this->modificationRestrictions != nullptr &&
-                this->modificationRestrictions->IsAllowed(name)) {
-                this->notifications.Notify(
-                    this->server.Deregister(name),
+                res.Notify(
                     [supplier](const auto &result) {
                         switch (result.State()) {
                             case TaskResultStatus::Ready:
@@ -155,7 +88,77 @@ namespace sloked {
                             default:
                                 break;
                         }
-                    });
+                    },
+                    this->lifetime);
+            } else {
+                throw SlokedError("KgrNamedServer: Modification restricted \'" +
+                                  name.ToString() + "\'");
+            }
+        });
+        return supplier.Result();
+    }
+
+    TaskResult<bool> KgrRestrictedNamedServer::Registered(
+        const SlokedPath &name) {
+        TaskResultSupplier<bool> supplier;
+        supplier.Catch([&] {
+            if ((this->accessRestrictions != nullptr &&
+                 this->accessRestrictions->IsAllowed(name)) ||
+                (this->modificationRestrictions != nullptr &&
+                 this->modificationRestrictions->IsAllowed(name))) {
+                this->server.Registered(name).Notify(
+                    [supplier](const auto &result) {
+                        switch (result.State()) {
+                            case TaskResultStatus::Ready:
+                                supplier.SetResult(result.GetResult());
+                                break;
+
+                            case TaskResultStatus::Error:
+                                supplier.SetError(result.GetError());
+                                break;
+
+                            case TaskResultStatus::Cancelled:
+                                supplier.Cancel();
+                                break;
+
+                            default:
+                                break;
+                        }
+                    },
+                    this->lifetime);
+            } else {
+                supplier.SetResult(false);
+            }
+        });
+        return supplier.Result();
+    }
+
+    TaskResult<void> KgrRestrictedNamedServer::Deregister(
+        const SlokedPath &name) {
+        TaskResultSupplier<void> supplier;
+        supplier.Catch([&] {
+            if (this->modificationRestrictions != nullptr &&
+                this->modificationRestrictions->IsAllowed(name)) {
+                this->server.Deregister(name).Notify(
+                    [supplier](const auto &result) {
+                        switch (result.State()) {
+                            case TaskResultStatus::Ready:
+                                supplier.SetResult();
+                                break;
+
+                            case TaskResultStatus::Error:
+                                supplier.SetError(result.GetError());
+                                break;
+
+                            case TaskResultStatus::Cancelled:
+                                supplier.Cancel();
+                                break;
+
+                            default:
+                                break;
+                        }
+                    },
+                    this->lifetime);
             } else {
                 throw SlokedError("KgrNamedServer: Modification restricted \'" +
                                   name.ToString() + "\'");
