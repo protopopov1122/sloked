@@ -46,6 +46,7 @@ sloked_src = [
   'src/kgr/local/Server.cpp',
   'src/kgr/net/Interface.cpp',
   'src/kgr/net/MasterServer.cpp',
+  'src/kgr/net/Response.cpp',
   'src/kgr/net/SlaveServer.cpp',
   'src/namespace/Directory.cpp',
   'src/namespace/Empty.cpp',

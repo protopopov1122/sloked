@@ -197,7 +197,7 @@ namespace sloked {
     class SlokedCursorConnectionTask : public SlokedDeferredTask {
      public:
         SlokedCursorConnectionTask(
-            std::shared_ptr<SlokedServiceClient::InvokeResult> rsp,
+            std::shared_ptr<SlokedNetResponseBroker::Channel> rsp,
             std::function<void(bool)> callback)
             : callback(std::move(callback)) {
             rsp->Next().Notify([this](const auto &res) {

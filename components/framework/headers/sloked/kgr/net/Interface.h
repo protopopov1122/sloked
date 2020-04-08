@@ -31,6 +31,7 @@
 
 #include "sloked/core/RingBuffer.h"
 #include "sloked/kgr/Value.h"
+#include "sloked/kgr/net/Response.h"
 #include "sloked/net/Socket.h"
 #include "sloked/sched/Task.h"
 
@@ -38,40 +39,6 @@ namespace sloked {
 
     class KgrNetInterface {
      public:
-        class Response {
-         public:
-            Response(const KgrValue &, bool);
-            bool HasResult() const;
-            const KgrValue &GetResult() const;
-            const KgrValue &GetError() const;
-
-         private:
-            KgrValue content;
-            bool result;
-        };
-
-        class InvokeResult {
-         public:
-            ~InvokeResult();
-            TaskResult<Response> Next();
-
-            friend class KgrNetInterface;
-
-         private:
-            InvokeResult(KgrNetInterface &, int64_t);
-            void Push(Response);
-
-            KgrNetInterface &net;
-            int64_t id;
-            std::mutex mtx;
-            std::queue<Response> pending;
-            std::queue<std::pair<TaskResultSupplier<Response>,
-                                 std::shared_ptr<InvokeResult>>>
-                awaiting;
-        };
-
-        friend class InvokeResult;
-
         class Responder {
          public:
             Responder(KgrNetInterface &, int64_t);
@@ -92,8 +59,8 @@ namespace sloked {
         bool Valid() const;
         void Receive();
         void Process(std::size_t = 0);
-        std::shared_ptr<InvokeResult> Invoke(const std::string &,
-                                             const KgrValue &);
+        std::shared_ptr<SlokedNetResponseBroker::Channel> Invoke(
+            const std::string &, const KgrValue &);
         void Close();
         void BindMethod(const std::string &,
                         std::function<void(const std::string &,
@@ -111,15 +78,10 @@ namespace sloked {
         void ActionResponse(const KgrValue &);
         void ActionClose(const KgrValue &);
 
-        std::shared_ptr<InvokeResult> NewResult();
-        void DropResult(int64_t);
-
         std::unique_ptr<SlokedSocket> socket;
         SlokedRingBuffer<uint8_t, SlokedRingBufferType::Dynamic> buffer;
-        std::mutex mtx;
-        int64_t nextId;
+        SlokedNetResponseBroker responseBroker;
         std::queue<KgrValue> incoming;
-        std::map<int64_t, std::weak_ptr<InvokeResult>> responses;
         std::map<std::string,
                  std::function<void(const std::string &, const KgrValue &,
                                     Responder &)>>

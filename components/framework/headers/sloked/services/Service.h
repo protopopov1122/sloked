@@ -34,6 +34,7 @@
 #include "sloked/core/Error.h"
 #include "sloked/kgr/Value.h"
 #include "sloked/kgr/local/Context.h"
+#include "sloked/kgr/net/Response.h"
 #include "sloked/sched/EventLoop.h"
 #include "sloked/sched/Scheduler.h"
 #include "sloked/sched/Task.h"
@@ -101,54 +102,15 @@ namespace sloked {
 
     class SlokedServiceClient {
      public:
-        class Response {
-         public:
-            Response(bool, KgrValue &&);
-            bool HasResult() const;
-            const KgrValue &GetResult() const;
-            const KgrValue &GetError() const;
-
-         private:
-            bool has_result;
-            KgrValue content;
-        };
-
-        class InvokeResult {
-         public:
-            ~InvokeResult();
-
-            TaskResult<Response> Next();
-
-            friend class SlokedServiceClient;
-
-         private:
-            InvokeResult(SlokedServiceClient &, int64_t);
-            void Push(Response);
-
-            std::reference_wrapper<SlokedServiceClient> client;
-            int64_t id;
-            std::mutex mtx;
-            std::queue<Response> pending;
-            std::queue<std::pair<TaskResultSupplier<Response>,
-                                 std::shared_ptr<InvokeResult>>>
-                awaiting;
-        };
-
-        friend class InvokeResult;
-
         SlokedServiceClient(std::unique_ptr<KgrPipe>);
         KgrPipe::Status GetStatus() const;
-        std::shared_ptr<InvokeResult> Invoke(const std::string &, KgrValue &&);
+        std::shared_ptr<SlokedNetResponseBroker::Channel> Invoke(
+            const std::string &, KgrValue &&);
         void Close();
 
      private:
-        std::shared_ptr<InvokeResult> NewResult();
-        void DropResult(InvokeResult &);
-
-        std::unique_ptr<std::mutex> mtx;
+        SlokedNetResponseBroker responseBroker;
         std::unique_ptr<KgrPipe> pipe;
-        int64_t nextId;
-        std::map<int64_t, std::weak_ptr<InvokeResult>> active;
     };
 }  // namespace sloked
 

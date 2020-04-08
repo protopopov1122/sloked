@@ -180,74 +180,8 @@ namespace sloked {
             KgrDictionary{{"id", id}, {"error", std::forward<KgrValue>(msg)}});
     }
 
-    SlokedServiceClient::Response::Response(bool has_result, KgrValue &&content)
-        : has_result(has_result), content(std::forward<KgrValue>(content)) {}
-
-    bool SlokedServiceClient::Response::HasResult() const {
-        return this->has_result;
-    }
-
-    const KgrValue &SlokedServiceClient::Response::GetResult() const {
-        if (this->has_result) {
-            return this->content;
-        } else {
-            throw SlokedError("KgrServiceClient: Response contains error");
-        }
-    }
-
-    const KgrValue &SlokedServiceClient::Response::GetError() const {
-        if (!this->has_result) {
-            return this->content;
-        } else {
-            throw SlokedError("KgrServiceClient: Response contains result");
-        }
-    }
-
-    SlokedServiceClient::InvokeResult::~InvokeResult() {
-        this->client.get().DropResult(*this);
-    }
-
-    TaskResult<SlokedServiceClient::Response>
-        SlokedServiceClient::InvokeResult::Next() {
-        std::unique_lock lock(this->mtx);
-        TaskResultSupplier<Response> supplier;
-        auto result = supplier.Result();
-        if (this->pending.empty()) {
-            std::unique_lock clientLock(*this->client.get().mtx);
-            std::shared_ptr<InvokeResult> self;
-            if (this->client.get().active.count(this->id)) {
-                self = this->client.get().active.at(this->id).lock();
-            }
-            this->awaiting.push(
-                std::make_pair(std::move(supplier), std::move(self)));
-        } else {
-            auto res = std::move(this->pending.front());
-            this->pending.pop();
-            lock.unlock();
-            supplier.SetResult(std::move(res));
-        }
-        return result;
-    }
-
-    SlokedServiceClient::InvokeResult::InvokeResult(SlokedServiceClient &client,
-                                                    int64_t id)
-        : client(client), id(id) {}
-
-    void SlokedServiceClient::InvokeResult::Push(Response rsp) {
-        std::unique_lock lock(this->mtx);
-        if (this->awaiting.empty()) {
-            this->pending.push(std::move(rsp));
-        } else {
-            auto supplier = std::move(this->awaiting.front());
-            this->awaiting.pop();
-            lock.unlock();
-            supplier.first.SetResult(std::move(rsp));
-        }
-    }
-
     SlokedServiceClient::SlokedServiceClient(std::unique_ptr<KgrPipe> pipe)
-        : mtx(std::make_unique<std::mutex>()), pipe(std::move(pipe)),
-          nextId(0) {
+        : pipe(std::move(pipe)) {
         if (this->pipe == nullptr) {
             throw SlokedError("SlokedServiceClient: Pipe can't be null");
         } else {
@@ -255,22 +189,16 @@ namespace sloked {
                 while (this->pipe->Count() > 0) {
                     auto rsp = this->pipe->Read();
                     int64_t rspId = rsp.AsDictionary()["id"].AsInt();
-                    std::unique_lock lock(*this->mtx);
-                    if (this->active.count(rspId) == 0) {
-                        continue;
-                    }
-                    auto result = this->active.at(rspId).lock();
-                    if (result == nullptr) {
-                        this->active.erase(rspId);
-                        continue;
-                    }
-                    lock.unlock();
                     if (rsp.AsDictionary().Has("result")) {
-                        result->Push(Response(
-                            true, std::move(rsp.AsDictionary()["result"])));
+                        this->responseBroker.Feed(
+                            rspId,
+                            SlokedNetResponseBroker::Response(
+                                std::move(rsp.AsDictionary()["result"]), true));
                     } else {
-                        result->Push(Response(
-                            false, std::move(rsp.AsDictionary()["error"])));
+                        this->responseBroker.Feed(
+                            rspId,
+                            SlokedNetResponseBroker::Response(
+                                std::move(rsp.AsDictionary()["error"]), false));
                     }
                 }
             });
@@ -285,30 +213,17 @@ namespace sloked {
         }
     }
 
-    std::shared_ptr<SlokedServiceClient::InvokeResult>
+    std::shared_ptr<SlokedNetResponseBroker::Channel>
         SlokedServiceClient::Invoke(const std::string &method,
                                     KgrValue &&params) {
-        auto result = this->NewResult();
+        auto result = this->responseBroker.OpenChannel();
         this->pipe->Write(KgrDictionary{
-            {"id", result->id}, {"method", method}, {"params", params}});
+            {"id", result->GetID()}, {"method", method}, {"params", params}});
         return result;
     }
 
     void SlokedServiceClient::Close() {
+        this->responseBroker.Close();
         this->pipe->Close();
-    }
-
-    std::shared_ptr<SlokedServiceClient::InvokeResult>
-        SlokedServiceClient::NewResult() {
-        std::unique_lock lock(*this->mtx);
-        std::shared_ptr<InvokeResult> result(
-            new InvokeResult(*this, this->nextId++));
-        this->active.insert_or_assign(result->id, result);
-        return result;
-    }
-
-    void SlokedServiceClient::DropResult(InvokeResult &result) {
-        std::unique_lock lock(*this->mtx);
-        this->active.erase(result.id);
     }
 }  // namespace sloked
