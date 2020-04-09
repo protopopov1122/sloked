@@ -29,10 +29,10 @@
 #include <map>
 #include <mutex>
 #include <type_traits>
-#include <variant>
 #include <vector>
 
 #include "sloked/core/Error.h"
+#include "sloked/core/Meta.h"
 #include "sloked/sched/Lifetime.h"
 
 namespace sloked {
@@ -54,6 +54,9 @@ namespace sloked {
         using Listener = std::function<void(const TaskResult<R, E> &)>;
         using DetachListener = std::function<void()>;
         using Status = TaskResultStatus;
+        using Supplier = TaskResultSupplier<R, E>;
+        using Result = R;
+        using Error = E;
 
         Status State() const {
             std::unique_lock lock(this->impl->mtx);
@@ -162,7 +165,7 @@ namespace sloked {
         template <typename... T>
         struct ImplBase {
             Status state{Status::Pending};
-            std::variant<NoValue, T...> result{NoValue{}};
+            UniqueVariant_t<NoValue, T...> result{NoValue{}};
             std::size_t nextListenerId{0};
             std::map<std::size_t, Listener> listeners;
             std::mutex mtx;
