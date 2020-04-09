@@ -26,22 +26,28 @@
 
 namespace sloked {
 
-    std::unique_ptr<KgrPipe> KgrLocalServer::Connect(ServiceId srvId) {
-        if (this->services.count(srvId) == 0) {
-            throw SlokedError("KgrServer: Unknown service #" +
-                              std::to_string(srvId));
-        }
-        auto [clientPipe, servicePipe] = KgrLocalPipe::Make();
-        auto result = this->services.at(srvId)->Attach(std::move(servicePipe));
-        auto status = result.Wait();
-        if (status == TaskResultStatus::Ready) {
-            return std::move(clientPipe);
-        } else if (status == TaskResultStatus::Cancelled) {
-            throw SlokedError(
-                "LocalServer: Service cancelled attach operation");
-        } else {
-            std::rethrow_exception(result.GetError());
-        }
+    TaskResult<std::unique_ptr<KgrPipe>> KgrLocalServer::Connect(
+        ServiceId srvId) {
+        TaskResultSupplier<std::unique_ptr<KgrPipe>> supplier;
+        supplier.Wrap([&] {
+            if (this->services.count(srvId) == 0) {
+                throw SlokedError("KgrServer: Unknown service #" +
+                                  std::to_string(srvId));
+            }
+            auto [clientPipe, servicePipe] = KgrLocalPipe::Make();
+            auto result =
+                this->services.at(srvId)->Attach(std::move(servicePipe));
+            auto status = result.Wait();
+            if (status == TaskResultStatus::Ready) {
+                return std::move(clientPipe);
+            } else if (status == TaskResultStatus::Cancelled) {
+                throw SlokedError(
+                    "LocalServer: Service cancelled attach operation");
+            } else {
+                std::rethrow_exception(result.GetError());
+            }
+        });
+        return supplier.Result();
     }
 
     KgrLocalServer::Connector KgrLocalServer::GetConnector(ServiceId srvId) {

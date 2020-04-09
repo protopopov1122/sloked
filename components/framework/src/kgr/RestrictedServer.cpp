@@ -47,14 +47,18 @@ namespace sloked {
         this->modificationRestrictions = std::move(restrictions);
     }
 
-    std::unique_ptr<KgrPipe> KgrRestrictedNamedServer::Connect(
+    TaskResult<std::unique_ptr<KgrPipe>> KgrRestrictedNamedServer::Connect(
         const SlokedPath &name) {
         if (this->accessRestrictions != nullptr &&
             this->accessRestrictions->IsAllowed(name)) {
             return this->server.Connect(name);
         } else {
-            throw SlokedError("KgrNamedServer: Connection to \'" +
-                              name.ToString() + "\' restricted");
+            TaskResultSupplier<std::unique_ptr<KgrPipe>> supplier;
+            supplier.Wrap([&]() -> std::unique_ptr<KgrPipe> {
+                throw SlokedError("KgrNamedServer: Connection to \'" +
+                                  name.ToString() + "\' restricted");
+            });
+            return supplier.Result();
         }
     }
 

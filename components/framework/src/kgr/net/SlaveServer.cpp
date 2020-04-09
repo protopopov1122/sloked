@@ -73,7 +73,8 @@ namespace sloked {
             std::unique_lock lock(this->mtx);
             const auto &service = params.AsDictionary()["service"].AsString();
             auto remotePipe = params.AsDictionary()["pipe"].AsInt();
-            auto pipe = this->localServer.Connect({service});
+            auto pipe =
+                std::move(this->localServer.Connect({service}).UnwrapWait());
             if (pipe == nullptr) {
                 throw SlokedError("KgrSlaveServer: Pipe can't be null");
             }
@@ -137,44 +138,48 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<KgrPipe> KgrSlaveNetServer::Connect(
+    TaskResult<std::unique_ptr<KgrPipe>> KgrSlaveNetServer::Connect(
         const SlokedPath &service) {
-        if (!this->work.load()) {
-            return nullptr;
-        }
-        auto rsp = this->net.Invoke("connect", service.ToString())->Next();
-        if (rsp.WaitFor(KgrNetConfig::ResponseTimeout) ==
-                TaskResultStatus::Ready &&
-            this->work.load()) {
-            const auto &res = rsp.Unwrap();
-            if (res.HasResult()) {
-                std::unique_lock lock(this->mtx);
-                int64_t pipeId = res.GetResult().AsInt();
-                auto [pipe1, pipe2] = KgrLocalPipe::Make();
-                pipe1->SetMessageListener([this, pipeId] {
-                    std::unique_lock lock(this->mtx);
-                    if (this->pipes.count(pipeId) == 0) {
-                        return;
-                    }
-                    auto &pipe = *this->pipes.at(pipeId);
-                    while (!pipe.Empty()) {
-                        this->net.Invoke("send",
-                                         KgrDictionary{{"pipe", pipeId},
-                                                       {"data", pipe.Read()}});
-                    }
-                    if (pipe.GetStatus() == KgrPipe::Status::Closed) {
-                        this->net.Invoke("close", pipeId);
-                        this->pipes.erase(pipeId);
-                    }
-                });
-                this->pipes.emplace(pipeId, std::move(pipe1));
-                this->net.Invoke("activate", pipeId);
-                return std::move(pipe2);
-            } else {
-                throw SlokedError(res.GetError().AsString());
+        TaskResultSupplier<std::unique_ptr<KgrPipe>> supplier;
+        supplier.Wrap([&]() -> std::unique_ptr<KgrPipe> {
+            if (!this->work.load()) {
+                return nullptr;
             }
-        }
-        return nullptr;
+            auto rsp = this->net.Invoke("connect", service.ToString())->Next();
+            if (rsp.WaitFor(KgrNetConfig::ResponseTimeout) ==
+                    TaskResultStatus::Ready &&
+                this->work.load()) {
+                const auto &res = rsp.Unwrap();
+                if (res.HasResult()) {
+                    std::unique_lock lock(this->mtx);
+                    int64_t pipeId = res.GetResult().AsInt();
+                    auto [pipe1, pipe2] = KgrLocalPipe::Make();
+                    pipe1->SetMessageListener([this, pipeId] {
+                        std::unique_lock lock(this->mtx);
+                        if (this->pipes.count(pipeId) == 0) {
+                            return;
+                        }
+                        auto &pipe = *this->pipes.at(pipeId);
+                        while (!pipe.Empty()) {
+                            this->net.Invoke(
+                                "send", KgrDictionary{{"pipe", pipeId},
+                                                      {"data", pipe.Read()}});
+                        }
+                        if (pipe.GetStatus() == KgrPipe::Status::Closed) {
+                            this->net.Invoke("close", pipeId);
+                            this->pipes.erase(pipeId);
+                        }
+                    });
+                    this->pipes.emplace(pipeId, std::move(pipe1));
+                    this->net.Invoke("activate", pipeId);
+                    return std::move(pipe2);
+                } else {
+                    throw SlokedError(res.GetError().AsString());
+                }
+            }
+            return nullptr;
+        });
+        return supplier.Result();
     }
 
     KgrSlaveNetServer::Connector KgrSlaveNetServer::GetConnector(

@@ -39,7 +39,7 @@ namespace sloked {
             std::shared_ptr<SlokedNamedRestrictions>) final;
         void SetModificationRestrictions(
             std::shared_ptr<SlokedNamedRestrictions>) final;
-        std::unique_ptr<KgrPipe> Connect(const SlokedPath &) final;
+        TaskResult<std::unique_ptr<KgrPipe>> Connect(const SlokedPath &) final;
         Connector GetConnector(const SlokedPath &) final;
 
         TaskResult<void> Register(const SlokedPath &,

@@ -65,16 +65,17 @@ namespace sloked {
                         rsp.Error("KgrMasterServer: Access to \'" + service +
                                   "\' restricted");
                     } else {
-                        this->workers.Enqueue(
-                            [this, service, rsp = std::move(rsp)]() mutable {
-                                auto pipe = this->server.Connect({service});
-                                if (pipe == nullptr) {
-                                    throw SlokedError(
-                                        "KgrMasterServer: Pipe can't be null");
-                                } else {
-                                    this->Connect(std::move(pipe), rsp);
-                                }
-                            });
+                        this->workers.Enqueue([this, service,
+                                               rsp = std::move(rsp)]() mutable {
+                            auto pipe = std::move(
+                                this->server.Connect({service}).UnwrapWait());
+                            if (pipe == nullptr) {
+                                throw SlokedError(
+                                    "KgrMasterServer: Pipe can't be null");
+                            } else {
+                                this->Connect(std::move(pipe), rsp);
+                            }
+                        });
                     }
                 });
 

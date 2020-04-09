@@ -163,8 +163,9 @@ namespace sloked {
                 if (this->server->IsRemote()) {
                     this->charPresetUpdater =
                         std::make_unique<SlokedCharPresetClient>(
-                            this->server->GetServer().Connect(
-                                {"/editor/parameters"}),
+                            std::move(this->server->GetServer()
+                                          .Connect({"/editor/parameters"})
+                                          .UnwrapWait()),
                             this->charPreset);
                 }
             }

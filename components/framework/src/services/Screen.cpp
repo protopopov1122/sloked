@@ -171,9 +171,12 @@ namespace sloked {
                             }));
                     };
                     handle.NewTextPane(std::make_unique<SlokedTextEditor>(
-                        this->encoding, this->cursorService(),
-                        std::move(initCursor), this->renderService(),
-                        this->notifyService(), documentId, tagger));
+                        this->encoding,
+                        std::move(this->cursorService().UnwrapWait()),
+                        std::move(initCursor),
+                        std::move(this->renderService().UnwrapWait()),
+                        std::move(this->notifyService().UnwrapWait()),
+                        documentId, tagger));
                     rsp.Result(true);
                 } catch (const SlokedError &err) { rsp.Result(false); }
             });

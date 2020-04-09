@@ -60,7 +60,7 @@ namespace sloked {
             return this->impl->state;
         }
 
-        const E &GetError() const {
+        E &GetError() const {
             std::unique_lock lock(this->impl->mtx);
             if (this->impl->state == Status::Error) {
                 return std::get<E>(this->impl->result);
@@ -127,7 +127,7 @@ namespace sloked {
             }
         }
 
-        auto UnwrapWait() const {
+        auto &UnwrapWait() const {
             this->Wait();
             if constexpr (std::is_void_v<R>) {
                 static_cast<const C<R, E> *>(this)->Unwrap();
@@ -137,7 +137,7 @@ namespace sloked {
         }
 
         template <typename D>
-        auto UnwrapWaitFor(D duration) const {
+        auto &UnwrapWaitFor(D duration) const {
             this->WaitFor<D>(duration);
             if constexpr (std::is_void_v<R>) {
                 static_cast<const C<R, E> *>(this)->Unwrap();
@@ -147,7 +147,7 @@ namespace sloked {
         }
 
         template <typename Tp>
-        auto UnwrapWaitUntil(Tp tpoint) const {
+        auto &UnwrapWaitUntil(Tp tpoint) const {
             this->WaitUntil<Tp>(tpoint);
             if constexpr (std::is_void_v<R>) {
                 static_cast<const C<R, E> *>(this)->Unwrap();
@@ -188,7 +188,7 @@ namespace sloked {
         using Status = typename Parent::Status;
         friend class TaskResultSupplierBase<TaskResultSupplier, R, E>;
 
-        const R &GetResult() const {
+        R &GetResult() const {
             std::unique_lock lock(this->impl->mtx);
             if (this->impl->state == Status::Ready) {
                 return std::get<R>(this->impl->result);
@@ -197,7 +197,7 @@ namespace sloked {
             }
         }
 
-        const R &Unwrap() const {
+        R &Unwrap() const {
             std::unique_lock lock(this->impl->mtx);
             if (this->impl->state == Status::Ready) {
                 return std::get<R>(this->impl->result);

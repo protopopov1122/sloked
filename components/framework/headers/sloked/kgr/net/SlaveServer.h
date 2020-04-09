@@ -46,7 +46,8 @@ namespace sloked {
         void Start();
         void Close() final;
 
-        std::unique_ptr<KgrPipe> Connect(const SlokedPath &) override;
+        TaskResult<std::unique_ptr<KgrPipe>> Connect(
+            const SlokedPath &) override;
         Connector GetConnector(const SlokedPath &) override;
 
         TaskResult<void> Register(const SlokedPath &,

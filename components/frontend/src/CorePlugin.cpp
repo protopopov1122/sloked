@@ -383,12 +383,18 @@ namespace sloked {
             return screenServer.GetScreen().GetScreen().IsHolder();
         };
         SlokedScreenClient screenClient(
-            secondaryServer.GetServer().Connect({"/screen/manager"}),
+            std::move(secondaryServer.GetServer()
+                          .Connect({"/screen/manager"})
+                          .UnwrapWait()),
             isScreenLocked);
         SlokedScreenSizeNotificationClient screenSizeClient(
-            secondaryServer.GetServer().Connect({"/screen/size/notify"}));
+            std::move(secondaryServer.GetServer()
+                          .Connect({"/screen/size/notify"})
+                          .UnwrapWait()));
         SlokedDocumentSetClient documentClient(
-            secondaryServer.GetServer().Connect({"/document/manager"}));
+            std::move(secondaryServer.GetServer()
+                          .Connect({"/document/manager"})
+                          .UnwrapWait()));
         documentClient.Open(inputPath.ToString(),
                             mainConfig.Find("/encoding").AsString(),
                             mainConfig.Find("/newline").AsString(), "default");
@@ -419,9 +425,11 @@ namespace sloked {
         screenClient.Handle.NewTextEditor(
             tab1.value(), documentClient.GetId().value(), "default");
 
-        SlokedTextPaneClient paneClient(secondaryServer.GetServer().Connect(
-                                            {"/screen/component/text/pane"}),
-                                        isScreenLocked);
+        SlokedTextPaneClient paneClient(
+            std::move(secondaryServer.GetServer()
+                          .Connect({"/screen/component/text/pane"})
+                          .UnwrapWait()),
+            isScreenLocked);
         paneClient.Connect("/0/1", false, {});
         auto &render = paneClient.GetRender();
 
@@ -439,8 +447,9 @@ namespace sloked {
         };
         renderStatus();
         SlokedScreenInputNotificationClient screenInput(
-            secondaryServer.GetServer().Connect(
-                {"/screen/component/input/notify"}),
+            std::move(secondaryServer.GetServer()
+                          .Connect({"/screen/component/input/notify"})
+                          .UnwrapWait()),
             Encoding::Get("system"), isScreenLocked);
         screenInput.Listen(
             "/",

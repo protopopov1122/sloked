@@ -33,7 +33,7 @@ namespace sloked {
 
     class KgrLocalServer : public KgrServer {
      public:
-        std::unique_ptr<KgrPipe> Connect(ServiceId) override;
+        TaskResult<std::unique_ptr<KgrPipe>> Connect(ServiceId) override;
         Connector GetConnector(ServiceId) override;
 
         TaskResult<ServiceId> Register(std::unique_ptr<KgrService>) override;

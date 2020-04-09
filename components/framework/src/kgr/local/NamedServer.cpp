@@ -33,15 +33,19 @@ namespace sloked {
         this->lifetime->Close();
     }
 
-    std::unique_ptr<KgrPipe> KgrLocalNamedServer::Connect(
+    TaskResult<std::unique_ptr<KgrPipe>> KgrLocalNamedServer::Connect(
         const SlokedPath &name) {
         auto absPath = name.IsAbsolute() ? name : name.RelativeTo(name.Root());
         std::unique_lock<std::mutex> lock(this->mtx);
         if (this->names.count(absPath) != 0) {
             return this->server.Connect(this->names.at(absPath));
         } else {
-            throw SlokedError("KgrNamedServer: Unknown name \'" +
-                              name.ToString() + "\'");
+            TaskResultSupplier<std::unique_ptr<KgrPipe>> supplier;
+            supplier.Wrap([&]() -> std::unique_ptr<KgrPipe> {
+                throw SlokedError("KgrNamedServer: Unknown name \'" +
+                                  name.ToString() + "\'");
+            });
+            return supplier.Result();
         }
     }
 

@@ -34,9 +34,9 @@ namespace sloked {
     template <typename T>
     class KgrAbstractServer {
      public:
-        using Connector = std::function<std::unique_ptr<KgrPipe>()>;
+        using Connector = std::function<TaskResult<std::unique_ptr<KgrPipe>>()>;
         virtual ~KgrAbstractServer() = default;
-        virtual std::unique_ptr<KgrPipe> Connect(T) = 0;
+        virtual TaskResult<std::unique_ptr<KgrPipe>> Connect(T) = 0;
         virtual Connector GetConnector(T) = 0;
 
         virtual TaskResult<void> Register(T, std::unique_ptr<KgrService>) = 0;
