@@ -34,6 +34,7 @@
 #include "sloked/kgr/local/Server.h"
 #include "sloked/net/Socket.h"
 #include "sloked/sched/MultithreadExecutor.h"
+#include "sloked/sched/Scheduler.h"
 #include "sloked/security/Authenticator.h"
 
 namespace sloked {
@@ -42,7 +43,8 @@ namespace sloked {
      public:
         KgrMasterNetServer(KgrNamedServer &,
                            std::unique_ptr<SlokedServerSocket>,
-                           SlokedIOPoller &, SlokedExecutor &,
+                           SlokedIOPoller &, SlokedScheduler &,
+                           SlokedExecutor &,
                            SlokedNamedRestrictionAuthority * = nullptr,
                            SlokedAuthenticatorFactory * = nullptr);
         ~KgrMasterNetServer();
@@ -67,6 +69,7 @@ namespace sloked {
         KgrNamedServer &server;
         std::unique_ptr<SlokedServerSocket> srvSocket;
         SlokedIOPoller &poll;
+        SlokedScheduler &sched;
         SlokedExecutor &threadManager;
         SlokedNamedRestrictionAuthority *restrictions;
         SlokedAuthenticatorFactory *authFactory;

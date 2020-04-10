@@ -42,13 +42,15 @@ namespace sloked {
         KgrMasterNetServerContext(std::unique_ptr<SlokedSocket> socket,
                                   const std::atomic<bool> &work,
                                   SlokedCounter<std::size_t>::Handle counter,
+                                  SlokedScheduler &sched,
                                   SlokedExecutor &threadManager,
                                   KgrNamedServer &server,
                                   SlokedNamedRestrictionAuthority *restrictions,
                                   SlokedAuthenticatorFactory *authFactory)
-            : net(std::move(socket)), work(work), server(server), nextPipeId(0),
-              counterHandle(std::move(counter)), workers{threadManager},
-              pinged{false}, restrictions(restrictions) {
+            : net(std::move(socket), sched), work(work), server(server),
+              nextPipeId(0), counterHandle(std::move(counter)),
+              workers{threadManager}, pinged{false},
+              restrictions(restrictions) {
 
             if (authFactory) {
                 this->auth = authFactory->NewMaster(this->net.GetEncryption());
@@ -445,12 +447,13 @@ namespace sloked {
 
     KgrMasterNetServer::KgrMasterNetServer(
         KgrNamedServer &server, std::unique_ptr<SlokedServerSocket> socket,
-        SlokedIOPoller &poll, SlokedExecutor &threadManager,
+        SlokedIOPoller &poll, SlokedScheduler &sched,
+        SlokedExecutor &threadManager,
         SlokedNamedRestrictionAuthority *restrictions,
         SlokedAuthenticatorFactory *authFactory)
         : server(server), srvSocket(std::move(socket)), poll(poll),
-          threadManager(threadManager), restrictions(restrictions),
-          authFactory(authFactory), work(false) {}
+          sched(sched), threadManager(threadManager),
+          restrictions(restrictions), authFactory(authFactory), work(false) {}
 
     KgrMasterNetServer::~KgrMasterNetServer() {
         this->Close();
@@ -507,9 +510,9 @@ namespace sloked {
                     this->self.workers);
                 auto ctx = std::make_unique<KgrMasterNetServerContext>(
                     std::move(client), this->self.work,
-                    std::move(counterHandle), this->self.threadManager,
-                    this->self.server, this->self.restrictions,
-                    this->self.authFactory);
+                    std::move(counterHandle), this->self.sched,
+                    this->self.threadManager, this->self.server,
+                    this->self.restrictions, this->self.authFactory);
                 auto &ctx_ref = *ctx;
                 auto handle = this->self.poll.Attach(std::move(ctx));
                 ctx_ref.SetHandle(std::move(handle));

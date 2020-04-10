@@ -26,6 +26,7 @@
 #include "sloked/core/Error.h"
 #include "sloked/core/Locale.h"
 #include "sloked/kgr/Serialize.h"
+#include "sloked/kgr/net/Config.h"
 
 using namespace std::chrono_literals;
 
@@ -46,8 +47,9 @@ namespace sloked {
             {"action", "response"}, {"id", this->id}, {"error", value}});
     }
 
-    KgrNetInterface::KgrNetInterface(std::unique_ptr<SlokedSocket> socket)
-        : socket(std::move(socket)), buffer{0} {}
+    KgrNetInterface::KgrNetInterface(std::unique_ptr<SlokedSocket> socket,
+                                     SlokedScheduler &sched)
+        : socket(std::move(socket)), buffer{0}, inactivityTimeouts(sched) {}
 
     bool KgrNetInterface::Wait(
         std::chrono::system_clock::duration timeout) const {
@@ -117,11 +119,17 @@ namespace sloked {
                                   {"id", res->GetID()},
                                   {"method", method},
                                   {"params", params}});
+        this->inactivityTimeouts.Schedule(
+            res->GetID(), KgrNetConfig::ResponseTimeout,
+            [this, id = res->GetID()] {
+                this->responseBroker.DropChannel(id);
+            });
         return res;
     }
 
     void KgrNetInterface::Close() {
         this->Write(KgrDictionary{{"action", "close"}});
+        this->inactivityTimeouts.Clear();
         this->socket->Close();
         this->buffer.clear();
         this->incoming = {};
@@ -190,6 +198,9 @@ namespace sloked {
 
     void KgrNetInterface::ActionResponse(const KgrValue &msg) {
         int64_t id = msg.AsDictionary()["id"].AsInt();
+        this->inactivityTimeouts.Schedule(
+            id, KgrNetConfig::ResponseTimeout,
+            [this, id] { this->responseBroker.DropChannel(id); });
         if (msg.AsDictionary().Has("result")) {
             responseBroker.Feed(id, SlokedNetResponseBroker::Response(
                                         msg.AsDictionary()["result"], true));
@@ -200,6 +211,7 @@ namespace sloked {
     }
 
     void KgrNetInterface::ActionClose(const KgrValue &msg) {
+        this->inactivityTimeouts.Clear();
         this->socket->Close();
         this->buffer.clear();
         this->incoming = {};

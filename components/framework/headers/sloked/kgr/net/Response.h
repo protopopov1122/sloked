@@ -22,6 +22,7 @@
 #ifndef SLOKED_KGR_NET_RESPONSE_H_
 #define SLOKED_KGR_NET_RESPONSE_H_
 
+#include <list>
 #include <mutex>
 #include <queue>
 
@@ -74,14 +75,14 @@ namespace sloked {
             SlokedNetResponseBroker &broker;
             int64_t id;
             std::mutex mtx;
-            std::queue<Response> pending;
-            std::queue<std::pair<TaskResultSupplier<Response>,
-                                 std::shared_ptr<Channel>>>
+            std::list<Response> pending;
+            std::list<std::pair<TaskResultSupplier<Response>,
+                                std::shared_ptr<Channel>>>
                 awaiting;
         };
 
         mutable std::mutex mtx;
-        int64_t nextId;
+        int64_t nextId{0};
         std::queue<KgrValue> incoming;
         std::map<int64_t, std::weak_ptr<SimplexChannel>> active;
     };

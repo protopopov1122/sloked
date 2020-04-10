@@ -304,14 +304,15 @@ namespace sloked {
             if (editor.HasCrypto()) {
                 editor.GetServer().SpawnNetServer(
                     editor.GetNetwork().GetEngine(),
-                    editor.GetThreadedExecutor(), address, editor.GetIO(),
+                    editor.GetThreadedExecutor(), editor.GetScheduler(),
+                    address, editor.GetIO(),
                     &editor.GetCrypto().GetCredentialMaster(),
                     &editor.GetCrypto().GetAuthenticator());
             } else {
                 editor.GetServer().SpawnNetServer(
                     editor.GetNetwork().GetEngine(),
-                    editor.GetThreadedExecutor(), address, editor.GetIO(),
-                    nullptr, nullptr);
+                    editor.GetThreadedExecutor(), editor.GetScheduler(),
+                    address, editor.GetIO(), nullptr, nullptr);
             }
         }
         if (serverConfig.Has("restrictAccess")) {

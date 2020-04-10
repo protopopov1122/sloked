@@ -105,7 +105,8 @@ namespace sloked {
             }
             this->server = std::make_unique<SlokedServerFacade>(
                 std::make_unique<SlokedRemoteEditorServer>(
-                    std::move(socket), this->sharedState.GetIO(), auth));
+                    std::move(socket), this->sharedState.GetIO(),
+                    this->sharedState.GetScheduler(), auth));
             this->closeables.Attach(*this->server);
             return *this->server;
         }

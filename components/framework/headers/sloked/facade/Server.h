@@ -44,7 +44,8 @@ namespace sloked {
         KgrMasterNetServer &GetNetworkServer() const;
 
         void SpawnNetServer(SlokedSocketFactory &, SlokedExecutor &,
-                            const SlokedSocketAddress &, SlokedIOPoller &,
+                            SlokedScheduler &, const SlokedSocketAddress &,
+                            SlokedIOPoller &,
                             SlokedNamedRestrictionAuthority * = nullptr,
                             SlokedAuthenticatorFactory * = nullptr);
 

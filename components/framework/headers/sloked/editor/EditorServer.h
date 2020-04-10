@@ -56,7 +56,7 @@ namespace sloked {
     class SlokedRemoteEditorServer : public SlokedEditorServer {
      public:
         SlokedRemoteEditorServer(std::unique_ptr<SlokedSocket>,
-                                 SlokedIOPoller &,
+                                 SlokedIOPoller &, SlokedScheduler &,
                                  SlokedAuthenticatorFactory *);
         ~SlokedRemoteEditorServer();
         KgrNamedServer &GetServer() final;

@@ -69,13 +69,13 @@ namespace sloked {
 
     void SlokedServerFacade::SpawnNetServer(
         SlokedSocketFactory &socketFactory, SlokedExecutor &threadManager,
-        const SlokedSocketAddress &addr, SlokedIOPoller &io,
-        SlokedNamedRestrictionAuthority *restrictions,
+        SlokedScheduler &sched, const SlokedSocketAddress &addr,
+        SlokedIOPoller &io, SlokedNamedRestrictionAuthority *restrictions,
         SlokedAuthenticatorFactory *authFactory) {
         if (this->netServer == nullptr) {
             this->netServer = std::make_unique<KgrMasterNetServer>(
-                this->GetServer(), socketFactory.Bind(addr), io, threadManager,
-                restrictions, authFactory);
+                this->GetServer(), socketFactory.Bind(addr), io, sched,
+                threadManager, restrictions, authFactory);
         } else {
             throw SlokedError("Editor: network server already spawned");
         }

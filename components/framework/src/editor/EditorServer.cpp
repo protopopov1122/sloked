@@ -42,8 +42,8 @@ namespace sloked {
 
     SlokedRemoteEditorServer::SlokedRemoteEditorServer(
         std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &io,
-        SlokedAuthenticatorFactory *authFactory)
-        : unrestrictedServer(std::move(socket), io, authFactory),
+        SlokedScheduler &sched, SlokedAuthenticatorFactory *authFactory)
+        : unrestrictedServer(std::move(socket), io, sched, authFactory),
           server(unrestrictedServer, std::make_unique<SlokedNamedBlacklist>(),
                  std::make_unique<SlokedNamedBlacklist>()),
           deferredAuth{} {}

@@ -67,11 +67,11 @@ namespace sloked {
         auto result = supplier.Result();
         if (this->pending.empty()) {
             auto self = this->broker.GetChannel(this->id);
-            this->awaiting.push(
+            this->awaiting.emplace_back(
                 std::make_pair(std::move(supplier), std::move(self)));
         } else {
             auto res = std::move(this->pending.front());
-            this->pending.pop();
+            this->pending.pop_front();
             lock.unlock();
             supplier.SetResult(std::move(res));
         }
@@ -81,10 +81,10 @@ namespace sloked {
     void SlokedNetResponseBroker::SimplexChannel::Push(Response rsp) {
         std::unique_lock lock(this->mtx);
         if (this->awaiting.empty()) {
-            this->pending.push(std::move(rsp));
+            this->pending.emplace_back(std::move(rsp));
         } else {
             auto supplier = std::move(this->awaiting.front());
-            this->awaiting.pop();
+            this->awaiting.pop_front();
             lock.unlock();
             supplier.first.SetResult(std::move(rsp));
         }
@@ -92,7 +92,11 @@ namespace sloked {
 
     void SlokedNetResponseBroker::SimplexChannel::Close() {
         std::unique_lock lock(this->mtx);
-        this->awaiting = {};
+        this->pending.clear();
+        for (auto &supplier : this->awaiting) {
+            supplier.first.Cancel();
+        }
+        this->awaiting.clear();
     }
 
     std::shared_ptr<SlokedNetResponseBroker::Channel>
@@ -115,6 +119,11 @@ namespace sloked {
 
     void SlokedNetResponseBroker::DropChannel(Channel::Id id) {
         std::unique_lock lock(this->mtx);
+        if (this->active.count(id)) {
+            if (auto channel = this->active.at(id).lock()) {
+                channel->Close();
+            }
+        }
         this->active.erase(id);
     }
 

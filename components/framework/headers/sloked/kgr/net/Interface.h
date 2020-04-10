@@ -33,6 +33,8 @@
 #include "sloked/kgr/Value.h"
 #include "sloked/kgr/net/Response.h"
 #include "sloked/net/Socket.h"
+#include "sloked/sched/DelayManager.h"
+#include "sloked/sched/Scheduler.h"
 #include "sloked/sched/Task.h"
 
 namespace sloked {
@@ -51,7 +53,7 @@ namespace sloked {
         };
         friend class Responder;
 
-        KgrNetInterface(std::unique_ptr<SlokedSocket>);
+        KgrNetInterface(std::unique_ptr<SlokedSocket>, SlokedScheduler &);
         virtual ~KgrNetInterface() = default;
         bool Wait(std::chrono::system_clock::duration =
                       std::chrono::system_clock::duration::zero()) const;
@@ -87,6 +89,8 @@ namespace sloked {
                                     Responder &)>>
             methods;
         std::mutex write_mtx;
+        SlokedDelayManager<SlokedNetResponseBroker::Channel::Id>
+            inactivityTimeouts;
     };
 }  // namespace sloked
 

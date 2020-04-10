@@ -33,10 +33,10 @@ namespace sloked {
 
     KgrSlaveNetServer::KgrSlaveNetServer(
         std::unique_ptr<SlokedSocket> socket, SlokedIOPoller &poll,
-        SlokedAuthenticatorFactory *authFactory)
+        SlokedScheduler &sched, SlokedAuthenticatorFactory *authFactory)
         : lifetime(std::make_shared<SlokedStandardLifetime>()),
-          net(std::move(socket)), work(false), localServer(rawLocalServer),
-          poll(poll), pinged{false} {
+          net(std::move(socket), sched), work(false),
+          localServer(rawLocalServer), poll(poll), pinged{false} {
 
         if (authFactory) {
             this->auth = authFactory->NewSlave(this->net.GetEncryption());
