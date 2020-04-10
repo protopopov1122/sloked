@@ -219,6 +219,26 @@ namespace sloked {
             }
         }
 
+        static TaskResult<R, E> Resolve(R &&result) {
+            auto impl = std::make_shared<typename Parent::Impl>();
+            impl->state = Status::Ready;
+            impl->result = std::forward<R>(result);
+            return TaskResult<R, E>(std::move(impl));
+        }
+
+        static TaskResult<R, E> Reject(E &&error) {
+            auto impl = std::make_shared<typename Parent::Impl>();
+            impl->state = Status::Error;
+            impl->result = std::forward<E>(error);
+            return TaskResult<R, E>(std::move(impl));
+        }
+
+        static TaskResult<R, E> Cancel() {
+            auto impl = std::make_shared<typename Parent::Impl>();
+            impl->state = Status::Cancelled;
+            return TaskResult<R, E>(std::move(impl));
+        }
+
      private:
         using Parent::Parent;
     };
@@ -247,6 +267,25 @@ namespace sloked {
             } else if (this->impl->state == Status::Pending) {
                 throw SlokedError("TaskResult: Result is not available");
             }
+        }
+
+        static TaskResult<void, E> Resolve() {
+            auto impl = std::make_shared<typename Parent::Impl>();
+            impl->state = Status::Ready;
+            return TaskResult<void, E>(std::move(impl));
+        }
+
+        static TaskResult<void, E> Reject(E &&error) {
+            auto impl = std::make_shared<typename Parent::Impl>();
+            impl->state = Status::Error;
+            impl->result = std::forward<E>(error);
+            return TaskResult<void, E>(std::move(impl));
+        }
+
+        static TaskResult<void, E> Cancel() {
+            auto impl = std::make_shared<typename Parent::Impl>();
+            impl->state = Status::Cancelled;
+            return TaskResult<void, E>(std::move(impl));
         }
 
      private:

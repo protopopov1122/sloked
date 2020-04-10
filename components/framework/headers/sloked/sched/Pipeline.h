@@ -42,6 +42,17 @@ namespace sloked {
                 stage(std::forward<Source>(task), lifetime), lifetime,
                 std::forward<OtherStages>(otherStages)...);
         }
+
+        template <typename State, typename Source>
+        static auto Apply(State &&state, Source &&task,
+                          std::weak_ptr<SlokedLifetime> lifetime,
+                          CurrentStage &&stage, OtherStages &&... otherStages) {
+            return SlokedTaskPipelineApplier<OtherStages...>::Apply(
+                std::forward<State>(state),
+                stage(std::forward<State>(state), std::forward<Source>(task),
+                      lifetime),
+                lifetime, std::forward<OtherStages>(otherStages)...);
+        }
     };
 
     template <typename CurrentStage>
@@ -50,6 +61,14 @@ namespace sloked {
         static auto Apply(Source &&task, std::weak_ptr<SlokedLifetime> lifetime,
                           CurrentStage &&stage) {
             return stage(std::forward<Source>(task), lifetime);
+        }
+
+        template <typename State, typename Source>
+        static auto Apply(State &&state, Source &&task,
+                          std::weak_ptr<SlokedLifetime> lifetime,
+                          CurrentStage &&stage) {
+            return stage(std::forward<State>(state), std::forward<Source>(task),
+                         lifetime);
         }
     };
 
@@ -62,13 +81,25 @@ namespace sloked {
             : stages{std::make_tuple(std::move(stages)...)} {}
 
         template <typename Source>
-        auto operator()(Source &&task, std::weak_ptr<SlokedLifetime> lifetime =
-                                           SlokedLifetime::Global) const {
+        auto operator()(Source &&task,
+                        std::weak_ptr<SlokedLifetime> lifetime) const {
             auto applier = &Applier::template Apply<Source>;
             return std::apply(
                 applier,
                 std::tuple_cat(
                     std::make_tuple(std::forward<Source>(task), lifetime),
+                    this->stages));
+        }
+
+        template <typename State, typename Source>
+        auto operator()(State &&state, Source &&task,
+                        std::weak_ptr<SlokedLifetime> lifetime) const {
+            auto applier = &Applier::template Apply<State, Source>;
+            return std::apply(
+                applier,
+                std::tuple_cat(
+                    std::make_tuple(std::forward<State>(state),
+                                    std::forward<Source>(task), lifetime),
                     this->stages));
         }
 
@@ -89,28 +120,39 @@ namespace sloked {
                     decltype(this->stage(std::forward<Source>(src), lifetime));
                 typename Target::Supplier supplier;
                 src.Notify(
-                    [this, supplier, lifetime](const auto &result) {
-                        auto stageResult = this->stage(result, lifetime);
+                    [stage = this->stage, supplier,
+                     lifetime](const auto &result) {
+                        auto stageResult = stage(result, lifetime);
                         stageResult.Notify(
                             [supplier](const auto &stageResult) {
-                                switch (stageResult.State()) {
-                                    case TaskResultStatus::Ready:
-                                        supplier.SetResult(
-                                            std::move(stageResult.GetResult()));
-                                        break;
+                                Async<Stage>::Notify<decltype(stageResult),
+                                                     decltype(supplier),
+                                                     Target>(stageResult,
+                                                             supplier);
+                            },
+                            lifetime);
+                    },
+                    lifetime);
+                return supplier.Result();
+            }
 
-                                    case TaskResultStatus::Error:
-                                        supplier.SetError(
-                                            std::move(stageResult.GetError()));
-                                        break;
-
-                                    case TaskResultStatus::Cancelled:
-                                        supplier.Cancel();
-                                        break;
-
-                                    default:
-                                        break;
-                                }
+            template <typename State, typename Source>
+            auto operator()(State &&state, Source &&src,
+                            std::weak_ptr<SlokedLifetime> lifetime) const {
+                using Target =
+                    decltype(this->stage(std::forward<State>(state),
+                                         std::forward<Source>(src), lifetime));
+                typename Target::Supplier supplier;
+                src.Notify(
+                    [stage = this->stage, supplier, state,
+                     lifetime](const auto &result) {
+                        auto stageResult = stage(state, result, lifetime);
+                        stageResult.Notify(
+                            [supplier](const auto &stageResult) {
+                                Async<Stage>::Notify<decltype(stageResult),
+                                                     decltype(supplier),
+                                                     Target>(stageResult,
+                                                             supplier);
                             },
                             lifetime);
                     },
@@ -119,28 +161,139 @@ namespace sloked {
             }
 
          private:
+            template <typename Result, typename Supplier, typename Target>
+            static void Notify(const Result &stageResult,
+                               const Supplier &supplier) {
+                switch (stageResult.State()) {
+                    case TaskResultStatus::Ready:
+                        if constexpr (std::is_void_v<typename Target::Result>) {
+                            supplier.SetResult();
+                        } else {
+                            supplier.SetResult(
+                                std::move(stageResult.GetResult()));
+                        }
+                        break;
+
+                    case TaskResultStatus::Error:
+                        supplier.SetError(std::move(stageResult.GetError()));
+                        break;
+
+                    case TaskResultStatus::Cancelled:
+                        supplier.Cancel();
+                        break;
+
+                    default:
+                        break;
+                }
+            }
             Stage stage;
         };
 
         template <typename F>
         class Map {
+            template <typename Arg, typename Fn, typename E = void>
+            struct InvokeResult;
+
+            template <typename Arg, typename Fn>
+            struct InvokeResult<Arg, Fn,
+                                std::enable_if_t<!std::is_void_v<Arg>>> {
+                using Type = std::invoke_result_t<Fn, Arg>;
+            };
+
+            template <typename Fn>
+            struct InvokeResult<void, Fn, void> {
+                using Type = std::invoke_result_t<Fn>;
+            };
+
+            template <typename TransformFn, typename Arg, typename E = void>
+            struct Transform;
+
+            template <typename TransformFn, typename Arg>
+            struct Transform<
+                TransformFn, Arg,
+                std::enable_if_t<!std::is_void_v<typename Arg::Result>>> {
+                static auto Make(const TransformFn &transform, const Arg &src) {
+                    using Result = typename InvokeResult<typename Arg::Result,
+                                                         TransformFn>::Type;
+                    if constexpr (std::is_void_v<Result>) {
+                        transform(src.GetResult());
+                    } else {
+                        return transform(src.GetResult());
+                    }
+                }
+            };
+
+            template <typename TransformFn, typename Arg>
+            struct Transform<
+                TransformFn, Arg,
+                std::enable_if_t<std::is_void_v<typename Arg::Result>>> {
+                static auto Make(const TransformFn &transform, const Arg &src) {
+                    using Result = typename InvokeResult<typename Arg::Result,
+                                                         TransformFn>::Type;
+                    if constexpr (std::is_void_v<Result>) {
+                        transform();
+                    } else {
+                        return transform();
+                    }
+                }
+            };
+
          public:
             Map(F transform) : transform(std::move(transform)) {}
 
             template <typename Source>
             auto operator()(const Source &src,
                             std::weak_ptr<SlokedLifetime> lifetime) const {
+                return this->Invoke(this->transform, src, std::move(lifetime));
+            }
+
+            template <typename State, typename Source>
+            auto operator()(State &&state, Source &&src,
+                            std::weak_ptr<SlokedLifetime> lifetime) const {
+                if constexpr (SlokedFunctionTraits<decltype(
+                                  this->transform)>::ArgumentCount > 1) {
+                    return this->Invoke(
+                        [transform = this->transform,
+                         state](const auto &param) {
+                            return transform(state, param);
+                        },
+                        src, std::move(lifetime));
+                } else {
+                    return this->Invoke([transform = this->transform,
+                                         state]() { return transform(state); },
+                                        src, std::move(lifetime));
+                }
+            }
+
+         private:
+            template <typename TransformFn, typename Source>
+            static auto Invoke(const TransformFn &transform, const Source &src,
+                               std::weak_ptr<SlokedLifetime> lifetime) {
                 using SrcResult = typename Source::Result;
-                using TargetResult = std::invoke_result_t<F, SrcResult>;
+                using TargetResult =
+                    typename InvokeResult<SrcResult, TransformFn>::Type;
                 using Error = typename Source::Error;
                 TaskResultSupplier<TargetResult, Error> supplier;
                 src.Notify(
-                    [this, supplier](const auto &result) {
+                    [transform, supplier](const auto &result) {
                         switch (result.State()) {
                             case TaskResultStatus::Ready:
                                 try {
-                                    supplier.SetResult(
-                                        this->transform(result.GetResult()));
+                                    if constexpr (std::is_void_v<
+                                                      TargetResult>) {
+                                        Transform<
+                                            TransformFn,
+                                            std::remove_reference_t<decltype(
+                                                result)>>::Make(transform,
+                                                                result);
+                                        supplier.SetResult();
+                                    } else {
+                                        supplier.SetResult(
+                                            Transform<TransformFn,
+                                                      std::remove_reference_t<
+                                                          decltype(result)>>::
+                                                Make(transform, result));
+                                    }
                                 } catch (const Error &err) {
                                     supplier.SetError(err);
                                 }
@@ -161,8 +314,6 @@ namespace sloked {
                     lifetime);
                 return supplier.Result();
             }
-
-         private:
             F transform;
         };
 
@@ -174,21 +325,49 @@ namespace sloked {
             template <typename Source>
             auto operator()(const Source &src,
                             std::weak_ptr<SlokedLifetime> lifetime) const {
+                return this->Invoke(this->transform, src, std::move(lifetime));
+            }
+
+            template <typename State, typename Source>
+            auto operator()(const State &state, const Source &src,
+                            std::weak_ptr<SlokedLifetime> lifetime) const {
+                if constexpr (SlokedFunctionTraits<decltype(
+                                  this->transform)>::ArgumentCount > 1) {
+                    return this->Invoke(
+                        [transform = this->transform,
+                         state](const auto &param) {
+                            return transform(state, param);
+                        },
+                        src, std::move(lifetime));
+                } else {
+                    return this->Invoke([transform = this->transform,
+                                         state]() { return transform(state); },
+                                        src, std::move(lifetime));
+                }
+            }
+
+         private:
+            template <typename TransformFn, typename Source>
+            static auto Invoke(const TransformFn &transform, const Source &src,
+                               std::weak_ptr<SlokedLifetime> lifetime) {
                 using Result = typename Source::Result;
                 using SrcError = typename Source::Error;
                 using TargetError = std::invoke_result_t<F, SrcError>;
                 TaskResultSupplier<Result, TargetError> supplier;
                 src.Notify(
-                    [this, supplier](const auto &result) {
+                    [transform, supplier](const auto &result) {
                         switch (result.State()) {
                             case TaskResultStatus::Ready:
-                                supplier.SetResult(
-                                    std::move(result.GetResult()));
+                                if constexpr (std::is_void_v<Result>) {
+                                    supplier.SetResult();
+                                } else {
+                                    supplier.SetResult(
+                                        std::move(result.GetResult()));
+                                }
                                 break;
 
                             case TaskResultStatus::Error:
-                                supplier.SetError(
-                                    this->transform(result.GetError()));
+                                supplier.SetError(transform(result.GetError()));
                                 break;
 
                             case TaskResultStatus::Cancelled:
@@ -202,8 +381,6 @@ namespace sloked {
                     lifetime);
                 return supplier.Result();
             }
-
-         private:
             F transform;
         };
         template <typename F>
@@ -214,15 +391,43 @@ namespace sloked {
             template <typename Source>
             auto operator()(const Source &src,
                             std::weak_ptr<SlokedLifetime> lifetime) const {
+                return Invoke(this->generate, src, std::move(lifetime));
+            }
+
+            template <typename State, typename Source>
+            auto operator()(const State &state, const Source &src,
+                            std::weak_ptr<SlokedLifetime> lifetime) const {
+                if constexpr (SlokedFunctionTraits<decltype(
+                                  this->generate)>::ArgumentCount > 1) {
+                    return Invoke(
+                        [generate = this->generate, state](const auto &param) {
+                            return generate(state, param);
+                        },
+                        src, std::move(lifetime));
+                } else {
+                    return Invoke([generate = this->generate,
+                                   state]() { return generate(state); },
+                                  src, std::move(lifetime));
+                }
+            }
+
+         private:
+            template <typename TransformFn, typename Source>
+            static auto Invoke(const TransformFn &generate, const Source &src,
+                               std::weak_ptr<SlokedLifetime> lifetime) {
                 using Result = typename Source::Result;
                 using Error = typename Source::Error;
                 TaskResultSupplier<Result, Error> supplier;
                 src.Notify(
-                    [this, supplier](const auto &result) {
+                    [generate, supplier](const auto &result) {
                         switch (result.State()) {
                             case TaskResultStatus::Ready:
-                                supplier.SetResult(
-                                    std::move(result.GetResult()));
+                                if constexpr (std::is_void_v<Result>) {
+                                    supplier.SetResult();
+                                } else {
+                                    supplier.SetResult(
+                                        std::move(result.GetResult()));
+                                }
                                 break;
 
                             case TaskResultStatus::Error:
@@ -231,7 +436,7 @@ namespace sloked {
 
                             case TaskResultStatus::Cancelled:
                                 try {
-                                    supplier.SetResult(this->generate());
+                                    supplier.SetResult(generate());
                                 } catch (const Error &err) {
                                     supplier.SetError(err);
                                 }
@@ -244,8 +449,6 @@ namespace sloked {
                     lifetime);
                 return supplier.Result();
             }
-
-         private:
             F generate;
         };
 
@@ -257,17 +460,44 @@ namespace sloked {
             template <typename T>
             T operator()(const T &src,
                          std::weak_ptr<SlokedLifetime> lifetime) const {
+                return Invoke(this->scanner, src, std::move(lifetime));
+            }
+
+            template <typename State, typename T>
+            T operator()(const State &state, const T &src,
+                         std::weak_ptr<SlokedLifetime> lifetime) const {
+                if constexpr (SlokedFunctionTraits<decltype(
+                                  this->scanner)>::ArgumentCount > 1) {
+                    return Invoke(
+                        [scanner = this->scanner, state](const auto &param) {
+                            return scanner(state, param);
+                        },
+                        src, std::move(lifetime));
+                } else {
+                    return Invoke([scanner = this->scanner,
+                                   state]() { return scanner(state); },
+                                  src, std::move(lifetime));
+                }
+            }
+
+         private:
+            template <typename ScannerFn, typename Source>
+            static auto Invoke(const ScannerFn &scanner, const Source &src,
+                               std::weak_ptr<SlokedLifetime> lifetime) {
                 src.Notify(
-                    [this](const auto &value) {
+                    [scanner](const auto &value) {
                         if (value.State() == TaskResultStatus::Ready) {
-                            this->scanner(value.GetResult());
+                            if constexpr (std::is_void_v<decltype(
+                                              value.GetResult())>) {
+                                scanner();
+                            } else {
+                                scanner(value.GetResult());
+                            }
                         }
                     },
                     lifetime);
                 return src;
             }
-
-         private:
             F scanner;
         };
 
@@ -279,17 +509,39 @@ namespace sloked {
             template <typename T>
             T operator()(const T &src,
                          std::weak_ptr<SlokedLifetime> lifetime) const {
+                return Invoke(this->scanner, src, std::move(lifetime));
+            }
+
+            template <typename State, typename T>
+            T operator()(const State &state, const T &src,
+                         std::weak_ptr<SlokedLifetime> lifetime) const {
+                if constexpr (SlokedFunctionTraits<decltype(
+                                  this->scanner)>::ArgumentCount > 1) {
+                    return Invoke(
+                        [scanner = this->scanner, state](const auto &param) {
+                            return scanner(state, param);
+                        },
+                        src, std::move(lifetime));
+                } else {
+                    return Invoke([scanner = this->scanner,
+                                   state]() { return scanner(state); },
+                                  src, std::move(lifetime));
+                }
+            }
+
+         private:
+            template <typename ScannerFn, typename Source>
+            static auto Invoke(const ScannerFn &scanner, const Source &src,
+                               std::weak_ptr<SlokedLifetime> lifetime) {
                 src.Notify(
-                    [this](const auto &value) {
+                    [scanner](const auto &value) {
                         if (value.State() == TaskResultStatus::Error) {
-                            this->scanner(value.GetError());
+                            scanner(value.GetError());
                         }
                     },
                     lifetime);
                 return src;
             }
-
-         private:
             F scanner;
         };
 
@@ -301,17 +553,39 @@ namespace sloked {
             template <typename T>
             T operator()(const T &src,
                          std::weak_ptr<SlokedLifetime> lifetime) const {
+                return Invoke(this->scanner, src, std::move(lifetime));
+            }
+
+            template <typename State, typename T>
+            T operator()(const State &state, const T &src,
+                         std::weak_ptr<SlokedLifetime> lifetime) const {
+                if constexpr (SlokedFunctionTraits<decltype(
+                                  this->scanner)>::ArgumentCount > 1) {
+                    return Invoke(
+                        [scanner = this->scanner, state](const auto &param) {
+                            return scanner(state, param);
+                        },
+                        src, std::move(lifetime));
+                } else {
+                    return Invoke([scanner = this->scanner,
+                                   state]() { return scanner(state); },
+                                  src, std::move(lifetime));
+                }
+            }
+
+         private:
+            template <typename ScannerFn, typename Source>
+            static auto Invoke(const ScannerFn &scanner, const Source &src,
+                               std::weak_ptr<SlokedLifetime> lifetime) {
                 src.Notify(
-                    [this](const auto &value) {
+                    [scanner](const auto &value) {
                         if (value.State() == TaskResultStatus::Cancelled) {
-                            this->scanner(value);
+                            scanner(value);
                         }
                     },
                     lifetime);
                 return src;
             }
-
-         private:
             F scanner;
         };
 
@@ -323,21 +597,49 @@ namespace sloked {
             template <typename Source>
             auto operator()(const Source &src,
                             std::weak_ptr<SlokedLifetime> lifetime) const {
+                return Invoke(this->catcher, src, std::move(lifetime));
+            }
+
+            template <typename State, typename Source>
+            auto operator()(const State &state, const Source &src,
+                            std::weak_ptr<SlokedLifetime> lifetime) const {
+                if constexpr (SlokedFunctionTraits<decltype(
+                                  this->catcher)>::ArgumentCount > 1) {
+                    return Invoke(
+                        [catcher = this->catcher, state](const auto &param) {
+                            return catcher(state, param);
+                        },
+                        src, std::move(lifetime));
+                } else {
+                    return Invoke([catcher = this->catcher,
+                                   state]() { return catcher(state); },
+                                  src, std::move(lifetime));
+                }
+            }
+
+         private:
+            template <typename CatcherFn, typename Source>
+            static auto Invoke(const CatcherFn &catcher, const Source &src,
+                               std::weak_ptr<SlokedLifetime> lifetime) {
                 using Result = typename Source::Result;
                 using Error = typename Source::Error;
                 TaskResultSupplier<Result, Error> supplier;
                 src.Notify(
-                    [this, supplier](const auto &result) {
+                    [catcher, supplier](const auto &result) {
                         switch (result.State()) {
                             case TaskResultStatus::Ready:
-                                supplier.SetResult(
-                                    std::move(result.GetResult()));
+                                if constexpr (std::is_void_v<Result>) {
+                                    supplier.SetResult();
+                                } else {
+                                    supplier.SetResult(
+                                        std::move(result.GetResult()));
+                                }
                                 break;
 
                             case TaskResultStatus::Error:
                                 try {
                                     supplier.SetResult(
-                                        this->catcher(result.GetError()));
+                                        catcher(result.GetError()));
                                 } catch (const Error &err) {
                                     supplier.SetError(err);
                                 }
@@ -354,8 +656,6 @@ namespace sloked {
                     lifetime);
                 return supplier.Result();
             }
-
-         private:
             F catcher;
         };
 
@@ -369,6 +669,25 @@ namespace sloked {
                          std::weak_ptr<SlokedLifetime> lifetime) const {
                 src.Notify(this->scanner, lifetime);
                 return src;
+            }
+
+            template <typename State, typename T>
+            T operator()(const State &state, const T &src,
+                         std::weak_ptr<SlokedLifetime> lifetime) const {
+                if constexpr (SlokedFunctionTraits<decltype(
+                                  this->scanner)>::ArgumentCount > 1) {
+                    src.Notify(
+                        [scanner = this->scanner, state](const auto &param) {
+                            return scanner(state, param);
+                        },
+                        lifetime);
+                    return src;
+                } else {
+                    src.Notify([scanner = this->scanner,
+                                state]() { return scanner(state); },
+                               lifetime);
+                    return src;
+                }
             }
 
          private:
@@ -396,9 +715,16 @@ namespace sloked {
                   std::move(stages)}...} {}
 
         template <typename Source>
-        auto operator()(Source &&src, std::weak_ptr<SlokedLifetime> lifetime =
-                                          SlokedLifetime::Global) const {
+        auto operator()(Source &&src,
+                        std::weak_ptr<SlokedLifetime> lifetime) const {
             return this->base(std::forward<Source>(src), std::move(lifetime));
+        }
+
+        template <typename State, typename Source>
+        auto operator()(State &&state, Source &&src,
+                        std::weak_ptr<SlokedLifetime> lifetime) const {
+            return this->base(std::forward<State>(state),
+                              std::forward<Source>(src), std::move(lifetime));
         }
 
      private:

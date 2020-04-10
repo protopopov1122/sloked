@@ -23,31 +23,46 @@
 
 #include "sloked/core/Error.h"
 #include "sloked/kgr/local/Pipe.h"
+#include "sloked/sched/Pipeline.h"
 
 namespace sloked {
 
+    KgrLocalServer::KgrLocalServer()
+        : lifetime(std::make_shared<SlokedStandardLifetime>()) {}
+
+    KgrLocalServer::~KgrLocalServer() {
+        this->lifetime->Close();
+    }
+
     TaskResult<std::unique_ptr<KgrPipe>> KgrLocalServer::Connect(
         ServiceId srvId) {
-        TaskResultSupplier<std::unique_ptr<KgrPipe>> supplier;
-        supplier.Wrap([&] {
-            if (this->services.count(srvId) == 0) {
-                throw SlokedError("KgrServer: Unknown service #" +
-                                  std::to_string(srvId));
-            }
-            auto [clientPipe, servicePipe] = KgrLocalPipe::Make();
-            auto result =
-                this->services.at(srvId)->Attach(std::move(servicePipe));
-            auto status = result.Wait();
-            if (status == TaskResultStatus::Ready) {
-                return std::move(clientPipe);
-            } else if (status == TaskResultStatus::Cancelled) {
-                throw SlokedError(
-                    "LocalServer: Service cancelled attach operation");
-            } else {
-                std::rethrow_exception(result.GetError());
-            }
-        });
-        return supplier.Result();
+        using Result = TaskResult<std::unique_ptr<KgrPipe>>;
+        struct State {
+            State(std::unique_ptr<KgrPipe> pipe) : pipe(std::move(pipe)) {}
+            std::unique_ptr<KgrPipe> pipe;
+        };
+
+        if (this->services.count(srvId) == 0) {
+            return Result::Reject(std::make_exception_ptr(SlokedError(
+                "KgrServer: Unknown service #" + std::to_string(srvId))));
+        }
+        auto [clientPipe, servicePipe] = KgrLocalPipe::Make();
+        static const SlokedAsyncTaskPipeline Pipeline(
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state)
+                    -> std::unique_ptr<KgrPipe> {
+                    return std::move(state->pipe);
+                }),
+            SlokedTaskPipelineStages::MapCancelled(
+                [](const std::shared_ptr<State> &state)
+                    -> std::unique_ptr<KgrPipe> {
+                    throw SlokedError(
+                        "LocalServer: Service cancelled attach operation");
+                }));
+        return Pipeline(
+            std::make_shared<State>(std::move(clientPipe)),
+            this->services.at(srvId)->Attach(std::move(servicePipe)),
+            this->lifetime);
     }
 
     KgrLocalServer::Connector KgrLocalServer::GetConnector(ServiceId srvId) {

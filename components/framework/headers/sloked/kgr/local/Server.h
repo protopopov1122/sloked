@@ -33,6 +33,8 @@ namespace sloked {
 
     class KgrLocalServer : public KgrServer {
      public:
+        KgrLocalServer();
+        ~KgrLocalServer();
         TaskResult<std::unique_ptr<KgrPipe>> Connect(ServiceId) override;
         Connector GetConnector(ServiceId) override;
 
@@ -45,6 +47,7 @@ namespace sloked {
      private:
         std::map<ServiceId, std::unique_ptr<KgrService>> services;
         SlokedDynamicBitset serviceAllocator;
+        std::shared_ptr<SlokedStandardLifetime> lifetime;
     };
 }  // namespace sloked
 
