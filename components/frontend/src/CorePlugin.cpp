@@ -484,7 +484,7 @@ namespace sloked {
         return EXIT_SUCCESS;
     }
 
-    extern "C" std::unique_ptr<SlokedCorePlugin> SlokedGetCorePlugin() {
-        return std::make_unique<SlokedFrontendDefaultCorePlugin>();
+    extern "C" SlokedCorePlugin *SlokedGetCorePlugin() {
+        return new SlokedFrontendDefaultCorePlugin();
     }
 }  // namespace sloked

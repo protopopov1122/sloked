@@ -164,7 +164,7 @@ namespace sloked {
             auto task = taskIt->second;
             this->tasks.erase(taskId);
             if (task->Pending()) {
-                this->executor.Enqueue([this, taskId, task = std::move(task)] {
+                this->executor.Enqueue([this, task = std::move(task)] {
                     task->Start();
                     if (task->Pending()) {
                         std::unique_lock lock(this->mtx);

@@ -61,6 +61,7 @@ namespace sloked {
         bool Valid() const;
         void Receive();
         void Process(std::size_t = 0);
+        void Flush();
         std::shared_ptr<SlokedNetResponseBroker::Channel> Invoke(
             const std::string &, const KgrValue &);
         void Close();

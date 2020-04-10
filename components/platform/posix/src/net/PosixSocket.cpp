@@ -160,6 +160,14 @@ namespace sloked {
         this->Write(SlokedSpan<const uint8_t>(&byte, 1));
     }
 
+    void SlokedPosixSocket::Flush() {
+        if (IsSocketValid(this->socket)) {
+            fsync(this->socket);
+        } else {
+            throw SlokedError("PosixSocket: Invalid socket");
+        }
+    }
+
     std::unique_ptr<SlokedIOAwaitable> SlokedPosixSocket::Awaitable() const {
         return std::make_unique<SlokedPosixAwaitable>(this->socket);
     }

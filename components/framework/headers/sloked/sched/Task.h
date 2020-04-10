@@ -37,24 +37,26 @@
 
 namespace sloked {
 
-    template <template <typename, typename> typename, typename, typename>
+    template <template <typename, typename, typename = void> typename, typename,
+              typename>
     class TaskResultSupplierBase;
 
-    template <typename R, typename E = std::exception_ptr, typename = void>
+    template <typename, typename = std::exception_ptr, typename = void>
     class TaskResultSupplier;
 
-    template <typename R, typename E = std::exception_ptr, typename = void>
+    template <typename, typename = std::exception_ptr, typename = void>
     class TaskResult;
 
     enum class TaskResultStatus { Pending, Ready, Error, Cancelled };
 
-    template <template <typename, typename> class C, typename R, typename E>
+    template <template <typename, typename, typename = void> class C,
+              typename R, typename E>
     class TaskResultBase {
      public:
-        using Listener = std::function<void(const TaskResult<R, E> &)>;
+        using Listener = std::function<void(const TaskResult<R, E, void> &)>;
         using DetachListener = std::function<void()>;
         using Status = TaskResultStatus;
-        using Supplier = TaskResultSupplier<R, E>;
+        using Supplier = TaskResultSupplier<R, E, void>;
         using Result = R;
         using Error = E;
 
@@ -251,7 +253,8 @@ namespace sloked {
         using Parent::Parent;
     };
 
-    template <template <typename, typename> class C, typename R, typename E>
+    template <template <typename, typename, typename = void> class C,
+              typename R, typename E>
     class TaskResultSupplierBase {
         using Status = TaskResultStatus;
         using Impl = typename TaskResult<R, E>::Impl;

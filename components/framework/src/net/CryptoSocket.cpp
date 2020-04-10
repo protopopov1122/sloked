@@ -129,6 +129,14 @@ namespace sloked {
         }
     }
 
+    void SlokedCryptoSocket::Flush() {
+        if (this->Valid()) {
+            this->socket->Flush();
+        } else {
+            throw SlokedError("CryptoSocket: Invalid socket");
+        }
+    }
+
     std::unique_ptr<SlokedIOAwaitable> SlokedCryptoSocket::Awaitable() const {
         return this->socket->Awaitable();
     }

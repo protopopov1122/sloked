@@ -68,7 +68,6 @@ namespace sloked {
         std::size_t nextId;
         std::mutex mtx;
         std::condition_variable cv;
-        std::size_t asyncTasks;
     };
 }  // namespace sloked
 

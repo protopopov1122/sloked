@@ -112,6 +112,10 @@ namespace sloked {
         }
     }
 
+    void KgrNetInterface::Flush() {
+        this->socket->Flush();
+    }
+
     std::shared_ptr<SlokedNetResponseBroker::Channel> KgrNetInterface::Invoke(
         const std::string &method, const KgrValue &params) {
         auto res = this->responseBroker.OpenChannel();

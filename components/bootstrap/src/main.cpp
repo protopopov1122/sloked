@@ -100,10 +100,12 @@ std::pair<std::unique_ptr<SlokedCorePlugin>,
         void *pluginGetterRaw = library->Resolve("SlokedGetCorePlugin");
         SlokedCorePluginFactory pluginGetter =
             reinterpret_cast<SlokedCorePluginFactory>(pluginGetterRaw);
-        return std::make_pair(pluginGetter(), std::move(library));
+        return std::make_pair(std::unique_ptr<SlokedCorePlugin>(pluginGetter()),
+                              std::move(library));
     } else {
 #ifdef SLOKED_BOOTSTRAP_HAS_DEFAULT_CORE_PLUGIN
-        return std::make_pair(SlokedGetCorePlugin(), nullptr);
+        return std::make_pair(
+            std::unique_ptr<SlokedCorePlugin>(SlokedGetCorePlugin()), nullptr);
 #else
         throw SlokedError("Bootstrap: No default core plugin defined");
 #endif

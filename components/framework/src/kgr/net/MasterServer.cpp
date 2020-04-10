@@ -221,6 +221,7 @@ namespace sloked {
                     auto res = this->auth->ContinueLogin(keyId, result);
                     rsp.Result(res);
                     if (res) {
+                        this->net.Flush();
                         this->auth->FinalizeLogin();
                     }
                 } else {

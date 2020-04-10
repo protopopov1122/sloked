@@ -41,12 +41,11 @@ namespace sloked {
         std::vector<uint8_t> Read(std::size_t) final;
         void Write(SlokedSpan<const uint8_t>) final;
         void Write(uint8_t) final;
+        void Flush() final;
         std::unique_ptr<SlokedIOAwaitable> Awaitable() const final;
         SlokedSocketEncryption *GetEncryption() final;
 
      private:
-        void Flush();
-
         std::unique_ptr<SlokedSocket> socket;
         std::chrono::system_clock::duration timeout;
         SlokedScheduler &sched;

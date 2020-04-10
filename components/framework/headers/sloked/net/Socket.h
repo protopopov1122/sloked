@@ -59,6 +59,7 @@ namespace sloked {
         virtual std::vector<uint8_t> Read(std::size_t) = 0;
         virtual void Write(SlokedSpan<const uint8_t>) = 0;
         virtual void Write(uint8_t) = 0;
+        virtual void Flush() = 0;
         virtual std::unique_ptr<SlokedIOAwaitable> Awaitable() const = 0;
         virtual SlokedSocketEncryption *GetEncryption();
 

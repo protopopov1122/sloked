@@ -25,8 +25,7 @@ namespace sloked {
 
     SlokedDefaultIOPollThread::SlokedDefaultIOPollThread(
         SlokedIOPoll &poll, SlokedExecutor &executor)
-        : poll(poll), executor(executor),
-          work(false), nextId{0}, asyncTasks{0} {}
+        : poll(poll), executor(executor), work(false), nextId{0} {}
 
     SlokedDefaultIOPollThread::~SlokedDefaultIOPollThread() {
         this->Close();
@@ -75,7 +74,7 @@ namespace sloked {
                     auto awaitable = this->awaitables.at(id);
                     lock.unlock();
                     this->executor
-                        .Enqueue([this, awaitable = std::move(awaitable)] {
+                        .Enqueue([awaitable = std::move(awaitable)] {
                             awaitable->Process(true);
                         })
                         ->Wait();

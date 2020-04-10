@@ -82,20 +82,23 @@ namespace sloked {
         }
     }
 
-    std::unique_ptr<SlokedIOAwaitable> SlokedBufferedSocket::Awaitable() const {
-        return this->socket->Awaitable();
-    }
-
-    SlokedSocketEncryption *SlokedBufferedSocket::GetEncryption() {
-        return this->socket->GetEncryption();
-    }
-
     void SlokedBufferedSocket::Flush() {
         std::unique_lock lock(this->mtx);
         this->task->Cancel();
         this->socket->Write(
             SlokedSpan(this->buffer.data(), this->buffer.size()));
         this->buffer.clear();
+        if (this->task != nullptr && this->task->Pending()) {
+            this->task->Cancel();
+        }
+    }
+
+    std::unique_ptr<SlokedIOAwaitable> SlokedBufferedSocket::Awaitable() const {
+        return this->socket->Awaitable();
+    }
+
+    SlokedSocketEncryption *SlokedBufferedSocket::GetEncryption() {
+        return this->socket->GetEncryption();
     }
 
     SlokedBufferedServerSocket::SlokedBufferedServerSocket(

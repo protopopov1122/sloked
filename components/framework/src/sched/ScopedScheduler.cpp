@@ -135,8 +135,7 @@ namespace sloked {
         }
         auto id = this->nextId++;
         auto task = this->sched.Sleep(
-            td,
-            [this, callback = std::move(callback)]() mutable { callback(); });
+            td, [callback = std::move(callback)]() mutable { callback(); });
         auto scopedTask =
             std::make_shared<ScopedTimerTask>(*this, std::move(task), id);
         this->tasks.insert_or_assign(id, scopedTask);
