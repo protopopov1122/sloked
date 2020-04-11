@@ -109,6 +109,13 @@ namespace sloked {
     template <typename... TypeList>
     using UniqueVariant_t =
         typename UniqueVariant<Typelist<TypeList...>>::Result;
+
+    template <typename Fn, typename... T>
+    auto BindFirst(Fn &&callable, T &&... args1) {
+        return [=](auto &&... args2) {
+            return callable(args1..., std::forward<decltype(args2)>(args2)...);
+        };
+    }
 }  // namespace sloked
 
 #endif
