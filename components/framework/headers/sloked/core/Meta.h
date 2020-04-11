@@ -116,6 +116,13 @@ namespace sloked {
             return callable(args1..., std::forward<decltype(args2)>(args2)...);
         };
     }
+
+    template <template <typename...> class, typename...>
+    struct IsInstantiation : public std::false_type {};
+
+    template <template <typename...> class U, typename... T>
+    struct IsInstantiation<U, U<T...>> : public std::true_type {};
+
 }  // namespace sloked
 
 #endif

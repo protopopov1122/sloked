@@ -71,54 +71,47 @@ namespace sloked {
 
     TaskResult<KgrLocalServer::ServiceId> KgrLocalServer::Register(
         std::unique_ptr<KgrService> service) {
-        TaskResultSupplier<KgrLocalServer::ServiceId> supplier;
-        supplier.Wrap([&] {
-            if (service == nullptr) {
-                throw SlokedError("KgrServer: Service can't be null");
-            }
-            auto serviceId = this->serviceAllocator.Allocate();
-            this->services.emplace(serviceId, std::move(service));
-            return serviceId;
-        });
-        return supplier.Result();
+        using Result = TaskResult<KgrLocalServer::ServiceId>;
+        if (service == nullptr) {
+            return Result::Reject(std::make_exception_ptr(
+                SlokedError("KgrServer: Service can't be null")));
+        }
+        auto serviceId = this->serviceAllocator.Allocate();
+        this->services.emplace(serviceId, std::move(service));
+        return Result::Resolve(serviceId);
     }
 
     TaskResult<void> KgrLocalServer::Register(
         ServiceId serviceId, std::unique_ptr<KgrService> service) {
-        TaskResultSupplier<void> supplier;
-        supplier.Wrap([&] {
-            if (service == nullptr) {
-                throw SlokedError("KgrServer: Service can't be null");
-            }
-            if (this->services.count(serviceId) == 0) {
-                this->serviceAllocator.Set(serviceId, true);
-                this->services.emplace(serviceId, std::move(service));
-            } else {
-                throw SlokedError("KgrLocalServer: Sevice #" +
-                                  std::to_string(serviceId) +
-                                  " already allocated");
-            }
-        });
-        return supplier.Result();
+        using Result = TaskResult<void>;
+        if (service == nullptr) {
+            return Result::Reject(std::make_exception_ptr(
+                SlokedError("KgrServer: Service can't be null")));
+        }
+        if (this->services.count(serviceId) == 0) {
+            this->serviceAllocator.Set(serviceId, true);
+            this->services.emplace(serviceId, std::move(service));
+            return Result::Resolve();
+        } else {
+            return Result::Reject(std::make_exception_ptr(
+                SlokedError("KgrLocalServer: Sevice #" +
+                            std::to_string(serviceId) + " already allocated")));
+        }
     }
 
     TaskResult<bool> KgrLocalServer::Registered(ServiceId serviceId) {
-        TaskResultSupplier<bool> supplier;
-        supplier.Wrap([&] { return this->services.count(serviceId) != 0; });
-        return supplier.Result();
+        return TaskResult<bool>::Resolve(this->services.count(serviceId) != 0);
     }
 
     TaskResult<void> KgrLocalServer::Deregister(ServiceId serviceId) {
-        TaskResultSupplier<void> supplier;
-        supplier.Wrap([&] {
-            if (this->services.count(serviceId)) {
-                this->serviceAllocator.Set(serviceId, false);
-                this->services.erase(serviceId);
-            } else {
-                throw SlokedError("KgrServer: Unknown service #" +
-                                  std::to_string(serviceId));
-            }
-        });
-        return supplier.Result();
+        using Result = TaskResult<void>;
+        if (this->services.count(serviceId)) {
+            this->serviceAllocator.Set(serviceId, false);
+            this->services.erase(serviceId);
+            return Result::Resolve();
+        } else {
+            return Result::Reject(std::make_exception_ptr(SlokedError(
+                "KgrServer: Unknown service #" + std::to_string(serviceId))));
+        }
     }
 }  // namespace sloked

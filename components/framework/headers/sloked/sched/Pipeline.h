@@ -30,6 +30,76 @@
 
 namespace sloked {
 
+    template <typename Source, typename E = void>
+    struct UnwrapTaskResult {
+        using Type = Source;
+        static auto Run(Source &&task, std::weak_ptr<SlokedLifetime> lifetime) {
+            return std::move(task);
+        }
+    };
+
+    template <typename Source>
+    struct UnwrapTaskResult<Source,
+                            std::enable_if_t<IsInstantiation<
+                                TaskResult, typename Source::Result>::value>> {
+        using Type = typename UnwrapTaskResult<typename Source::Result>::Type;
+        static_assert(
+            std::is_same_v<typename Source::Error, typename Type::Error>);
+        static auto Run(Source &&task, std::weak_ptr<SlokedLifetime> lifetime) {
+            typename Type::Supplier supplier;
+            task.Notify(
+                [supplier, lifetime](const auto &unwrapped) {
+                    switch (unwrapped.State()) {
+                        case TaskResultStatus::Ready:
+                            UnwrapTaskResult<decltype(
+                                unwrapped.GetResult())>::Run(unwrapped
+                                                                 .GetResult(),
+                                                             lifetime)
+                                .Notify([supplier](const auto &result) {
+                                    switch (result.State()) {
+                                        case TaskResultStatus::Ready:
+                                            if constexpr (std::is_void_v<
+                                                              typename Type::
+                                                                  Result>) {
+                                                supplier.SetResult();
+                                            } else {
+                                                supplier.SetResult(std::move(
+                                                    result.GetResult()));
+                                            }
+                                            break;
+
+                                        case TaskResultStatus::Error:
+                                            supplier.SetError(
+                                                std::move(result.GetError()));
+                                            break;
+
+                                        case TaskResultStatus::Cancelled:
+                                            supplier.Cancel();
+                                            break;
+
+                                        default:
+                                            break;
+                                    }
+                                });
+                            break;
+
+                        case TaskResultStatus::Error:
+                            supplier.SetError(unwrapped.GetError());
+                            break;
+
+                        case TaskResultStatus::Cancelled:
+                            supplier.Cancel();
+                            break;
+
+                        default:
+                            break;
+                    }
+                },
+                lifetime);
+            return supplier.Result();
+        }
+    };
+
     template <typename... Stage>
     struct SlokedTaskPipelineApplier;
 
@@ -132,21 +202,24 @@ namespace sloked {
             template <typename StageFn, typename Source>
             static auto Invoke(const StageFn &stage, Source &&src,
                                std::weak_ptr<SlokedLifetime> lifetime) {
-                using Target =
-                    decltype(stage(std::forward<Source>(src), lifetime));
+                using Target = decltype(stage(
+                    std::declval<typename UnwrapTaskResult<Source>::Type>(),
+                    lifetime));
                 typename Target::Supplier supplier;
-                src.Notify(
-                    [stage, supplier, lifetime](const auto &result) {
-                        auto stageResult = stage(result, lifetime);
-                        stageResult.Notify(
-                            [supplier](const auto &stageResult) {
-                                Notify<decltype(stageResult),
-                                       decltype(supplier), Target>(stageResult,
-                                                                   supplier);
-                            },
-                            lifetime);
-                    },
-                    lifetime);
+                UnwrapTaskResult<Source>::Run(std::forward<Source>(src),
+                                              lifetime)
+                    .Notify(
+                        [stage, supplier, lifetime](const auto &result) {
+                            auto stageResult = stage(result, lifetime);
+                            stageResult.Notify(
+                                [supplier](const auto &stageResult) {
+                                    Notify<decltype(stageResult),
+                                           decltype(supplier), Target>(
+                                        stageResult, supplier);
+                                },
+                                lifetime);
+                        },
+                        lifetime);
                 return supplier.Result();
             }
 
@@ -400,7 +473,12 @@ namespace sloked {
 
                             case TaskResultStatus::Cancelled:
                                 try {
-                                    supplier.SetResult(generate());
+                                    if constexpr (std::is_void_v<Result>) {
+                                        generate();
+                                        supplier.SetResult();
+                                    } else {
+                                        supplier.SetResult(generate());
+                                    }
                                 } catch (const Error &err) {
                                     supplier.SetError(err);
                                 }
@@ -638,14 +716,18 @@ namespace sloked {
         template <typename Source>
         auto operator()(Source &&src,
                         std::weak_ptr<SlokedLifetime> lifetime) const {
-            return this->base(std::forward<Source>(src), std::move(lifetime));
+            auto result = this->base(std::forward<Source>(src), lifetime);
+            return UnwrapTaskResult<decltype(result)>::Run(std::move(result),
+                                                           std::move(lifetime));
         }
 
         template <typename State, typename Source>
         auto operator()(State &&state, Source &&src,
                         std::weak_ptr<SlokedLifetime> lifetime) const {
-            return this->base(std::forward<State>(state),
-                              std::forward<Source>(src), std::move(lifetime));
+            auto result = this->base(std::forward<State>(state),
+                                     std::forward<Source>(src), lifetime);
+            return UnwrapTaskResult<decltype(result)>::Run(std::move(result),
+                                                           std::move(lifetime));
         }
 
      private:

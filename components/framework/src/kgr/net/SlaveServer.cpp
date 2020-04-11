@@ -28,6 +28,7 @@
 #include "sloked/core/Error.h"
 #include "sloked/kgr/local/Pipe.h"
 #include "sloked/kgr/net/Config.h"
+#include "sloked/sched/Pipeline.h"
 
 namespace sloked {
 
@@ -140,46 +141,51 @@ namespace sloked {
 
     TaskResult<std::unique_ptr<KgrPipe>> KgrSlaveNetServer::Connect(
         const SlokedPath &service) {
-        TaskResultSupplier<std::unique_ptr<KgrPipe>> supplier;
-        supplier.Wrap([&]() -> std::unique_ptr<KgrPipe> {
-            if (!this->work.load()) {
-                return nullptr;
-            }
-            auto rsp = this->net.Invoke("connect", service.ToString())->Next();
-            if (rsp.WaitFor(KgrNetConfig::ResponseTimeout) ==
-                    TaskResultStatus::Ready &&
-                this->work.load()) {
-                const auto &res = rsp.Unwrap();
-                if (res.HasResult()) {
-                    std::unique_lock lock(this->mtx);
-                    int64_t pipeId = res.GetResult().AsInt();
-                    auto [pipe1, pipe2] = KgrLocalPipe::Make();
-                    pipe1->SetMessageListener([this, pipeId] {
-                        std::unique_lock lock(this->mtx);
-                        if (this->pipes.count(pipeId) == 0) {
-                            return;
-                        }
-                        auto &pipe = *this->pipes.at(pipeId);
-                        while (!pipe.Empty()) {
-                            this->net.Invoke(
-                                "send", KgrDictionary{{"pipe", pipeId},
-                                                      {"data", pipe.Read()}});
-                        }
-                        if (pipe.GetStatus() == KgrPipe::Status::Closed) {
-                            this->net.Invoke("close", pipeId);
-                            this->pipes.erase(pipeId);
-                        }
-                    });
-                    this->pipes.emplace(pipeId, std::move(pipe1));
-                    this->net.Invoke("activate", pipeId);
-                    return std::move(pipe2);
-                } else {
-                    throw SlokedError(res.GetError().AsString());
-                }
-            }
-            return nullptr;
-        });
-        return supplier.Result();
+        struct State {
+            State(KgrSlaveNetServer *self, const SlokedPath &service)
+                : self(self), service(service) {}
+            KgrSlaveNetServer *self;
+            SlokedPath service;
+        };
+        if (!this->work.load()) {
+            return TaskResult<std::unique_ptr<KgrPipe>>::Resolve(nullptr);
+        }
+
+        static const SlokedAsyncTaskPipeline Pipeline(
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> state,
+                   const SlokedNetResponseBroker::Response &res) {
+                    if (res.HasResult()) {
+                        std::unique_lock lock(state->self->mtx);
+                        int64_t pipeId = res.GetResult().AsInt();
+                        auto [pipe1, pipe2] = KgrLocalPipe::Make();
+                        pipe1->SetMessageListener([self = state->self, pipeId] {
+                            std::unique_lock lock(self->mtx);
+                            if (self->pipes.count(pipeId) == 0) {
+                                return;
+                            }
+                            auto &pipe = *self->pipes.at(pipeId);
+                            while (!pipe.Empty()) {
+                                self->net.Invoke(
+                                    "send",
+                                    KgrDictionary{{"pipe", pipeId},
+                                                  {"data", pipe.Read()}});
+                            }
+                            if (pipe.GetStatus() == KgrPipe::Status::Closed) {
+                                self->net.Invoke("close", pipeId);
+                                self->pipes.erase(pipeId);
+                            }
+                        });
+                        state->self->pipes.emplace(pipeId, std::move(pipe1));
+                        state->self->net.Invoke("activate", pipeId);
+                        return std::move(pipe2);
+                    } else {
+                        throw SlokedError(res.GetError().AsString());
+                    }
+                }));
+        return Pipeline(std::make_shared<State>(this, service),
+                        this->net.Invoke("connect", service.ToString())->Next(),
+                        this->lifetime);
     }
 
     KgrSlaveNetServer::Connector KgrSlaveNetServer::GetConnector(
@@ -189,107 +195,147 @@ namespace sloked {
 
     TaskResult<void> KgrSlaveNetServer::Register(
         const SlokedPath &serviceName, std::unique_ptr<KgrService> service) {
-        TaskResultSupplier<void> supplier;
-        supplier.Catch([&] {
-            auto id = serviceName.ToString();
-            auto rsp = this->localServer.Registered(serviceName);
-            rsp.Notify(
-                [this, supplier, id, serviceName,
-                 servicePtr = service.release()](const auto &result) mutable {
-                    std::unique_ptr<KgrService> service{servicePtr};
-                    servicePtr = nullptr;
-                    supplier.Catch([&] {
-                        if (result.State() == TaskResultStatus::Ready &&
-                            !result.Unwrap()) {
-                            this->localServer
-                                .Register(serviceName, std::move(service))
-                                .Notify(
-                                    [this, supplier, id,
-                                     serviceName](const auto &) {
-                                        supplier.Wrap([&] {
-                                            auto rsp =
-                                                this->net.Invoke("bind", id)
-                                                    ->Next();
-                                            if (!(rsp.WaitFor(
-                                                      KgrNetConfig::
-                                                          ResponseTimeout) ==
-                                                      TaskResultStatus::Ready &&
-                                                  this->work.load()) ||
-                                                !rsp.Unwrap()
-                                                     .GetResult()
-                                                     .AsBoolean()) {
-                                                this->localServer.Deregister(
-                                                    serviceName);
-                                                throw SlokedError(
-                                                    "KgrSlaveServer: Error "
-                                                    "registering "
-                                                    "service " +
-                                                    id);
-                                            }
-                                        });
-                                    },
-                                    this->lifetime);
-                        } else {
-                            throw SlokedError("KgrSlaveServer: Service " + id +
-                                              " already registered");
-                        }
-                    });
-                },
-                this->lifetime);
-        });
-        return supplier.Result();
+        struct State {
+            State(KgrSlaveNetServer *self, const SlokedPath &serviceName,
+                  std::unique_ptr<KgrService> service)
+                : self(self), serviceName(serviceName),
+                  service(std::move(service)) {}
+
+            KgrSlaveNetServer *self;
+            SlokedPath serviceName;
+            std::unique_ptr<KgrService> service;
+        };
+
+        static const SlokedAsyncTaskPipeline Pipeline(
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state, bool registered) {
+                    if (!registered) {
+                        return state->self->localServer.Register(
+                            state->serviceName, std::move(state->service));
+                    } else {
+                        throw SlokedError("KgrSlaveServer: Service " +
+                                          state->serviceName.ToString() +
+                                          " already registered");
+                    }
+                }),
+            SlokedTaskPipelineStages::MapCancelled(
+                [](const std::shared_ptr<State> &state) {
+                    throw SlokedError("KgrSlaveServer: Service " +
+                                      state->serviceName.ToString() +
+                                      " already registered");
+                }),
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state) {
+                    return state->self->net
+                        .Invoke("bind", state->serviceName.ToString())
+                        ->Next();
+                    ;
+                }),
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state,
+                   const SlokedNetResponseBroker::Response &rsp) {
+                    if (!rsp.HasResult() || !rsp.GetResult().AsBoolean()) {
+                        state->self->localServer.Deregister(state->serviceName);
+                        throw SlokedError("KgrSlaveServer: Error "
+                                          "registering "
+                                          "service " +
+                                          state->serviceName.ToString());
+                    }
+                }));
+
+        return Pipeline(
+            std::make_shared<State>(this, serviceName, std::move(service)),
+            this->localServer.Registered(serviceName), this->lifetime);
     }
 
     TaskResult<bool> KgrSlaveNetServer::Registered(const SlokedPath &service) {
-        TaskResultSupplier<bool> supplier;
-        supplier.Catch([&] {
-            this->localServer.Registered(service).Notify(
-                [this, supplier, service](const auto &result) {
-                    supplier.Wrap([&] {
-                        if (result.Unwrap()) {
-                            return true;
-                        } else {
-                            auto rsp =
-                                this->net.Invoke("bound", service.ToString())
-                                    ->Next();
-                            return rsp.WaitFor(KgrNetConfig::ResponseTimeout) ==
-                                       TaskResultStatus::Ready &&
-                                   this->work.load() &&
-                                   rsp.Unwrap().HasResult() &&
-                                   rsp.Unwrap().GetResult().AsBoolean();
-                        }
-                    });
-                },
-                this->lifetime);
-        });
-        return supplier.Result();
+        struct State {
+            State(KgrSlaveNetServer *self, const SlokedPath &service,
+                  std::weak_ptr<SlokedLifetime> lifetime)
+                : self(self), service(service), lifetime(std::move(lifetime)) {}
+            KgrSlaveNetServer *self;
+            SlokedPath service;
+            std::weak_ptr<SlokedLifetime> lifetime;
+        };
+
+        static const SlokedAsyncTaskPipeline NetPipeline(
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state,
+                   const SlokedNetResponseBroker::Response &response) {
+                    return state->self->work.load() && response.HasResult() &&
+                           response.GetResult().AsBoolean();
+                }),
+            SlokedTaskPipelineStages::Catch(
+                [](const std::shared_ptr<State> &state,
+                   const std::exception_ptr &err) { return false; }),
+            SlokedTaskPipelineStages::MapCancelled(
+                [](const std::shared_ptr<State> &state) { return false; }));
+
+        static const SlokedAsyncTaskPipeline MainPipeline(
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state, bool registered) {
+                    if (registered) {
+                        return TaskResult<bool>::Resolve(true);
+                    } else {
+                        return NetPipeline(
+                            state,
+                            state->self->net
+                                .Invoke("bound", state->service.ToString())
+                                ->Next(),
+                            state->lifetime);
+                    }
+                }));
+
+        return MainPipeline(
+            std::make_shared<State>(this, service, this->lifetime),
+            this->localServer.Registered(service), this->lifetime);
     }
 
     TaskResult<void> KgrSlaveNetServer::Deregister(const SlokedPath &service) {
-        TaskResultSupplier<void> supplier;
-        auto id = service.ToString();
-        this->localServer.Registered(service).Notify(
-            [this, service, supplier, id](const auto &result) {
-                supplier.Wrap([&] {
-                    if (result.State() == TaskResultStatus::Ready &&
-                        result.Unwrap()) {
-                        this->localServer.Deregister(service);
-                        auto rsp = this->net.Invoke("unbind", id)->Next();
-                        if (!(rsp.WaitFor(KgrNetConfig::ResponseTimeout) ==
-                                  TaskResultStatus::Ready &&
-                              this->work.load()) ||
-                            !rsp.Unwrap().GetResult().AsBoolean()) {
-                            throw SlokedError(
-                                "KgrSlaveServer: Error deregistering " + id);
-                        }
+        struct State {
+            State(KgrSlaveNetServer *self, const SlokedPath &service)
+                : self(self), service(service) {}
+            KgrSlaveNetServer *self;
+            SlokedPath service;
+        };
+
+        static const SlokedAsyncTaskPipeline Pipeline(
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state, bool registered) {
+                    if (registered) {
+                        return state->self->localServer.Deregister(
+                            state->service);
                     } else {
-                        throw SlokedError("KgrSlaveServer: Service " + id +
+                        throw SlokedError("KgrSlaveServer: Service " +
+                                          state->service.ToString() +
                                           " not registered");
                     }
-                });
-            },
-            this->lifetime);
-        return supplier.Result();
+                }),
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state) {
+                    return state->self->net
+                        .Invoke("unbind", state->service.ToString())
+                        ->Next();
+                }),
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state,
+                   const SlokedNetResponseBroker::Response &response) {
+                    if (!state->self->work.load() || !response.HasResult() ||
+                        !response.GetResult().AsBoolean()) {
+                        throw SlokedError(
+                            "KgrSlaveServer: Error deregistering " +
+                            state->service.ToString());
+                    }
+                }),
+            SlokedTaskPipelineStages::MapCancelled(
+                [](const std::shared_ptr<State> &state) {
+                    throw SlokedError("KgrSlaveServer: Service " +
+                                      state->service.ToString() +
+                                      " not registered");
+                }));
+
+        return Pipeline(std::make_shared<State>(this, service),
+                        this->localServer.Registered(service), this->lifetime);
     }
 
     void KgrSlaveNetServer::Authorize(const std::string &account) {

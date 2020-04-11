@@ -31,6 +31,7 @@
 #include "sloked/kgr/local/Pipe.h"
 #include "sloked/kgr/net/Config.h"
 #include "sloked/kgr/net/Interface.h"
+#include "sloked/sched/Pipeline.h"
 #include "sloked/sched/ScopedExecutor.h"
 
 using namespace std::chrono_literals;
@@ -288,67 +289,83 @@ namespace sloked {
          public:
             SlaveService(KgrMasterNetServerContext &srv,
                          const std::string &service)
-                : srv(srv), service(service) {}
+                : srv(srv), service(service),
+                  lifetime(std::make_shared<SlokedStandardLifetime>()) {}
+
+            ~SlaveService() {
+                this->lifetime->Close();
+            }
 
             TaskResult<void> Attach(std::unique_ptr<KgrPipe> pipe) final {
-                TaskResultSupplier<void> supplier;
+                struct State {
+                    State(SlaveService *self, std::unique_ptr<KgrPipe> pipe,
+                          int64_t pipeId)
+                        : self(self), pipe(std::move(pipe)), pipeId{pipeId} {}
+                    SlaveService *self;
+                    std::unique_ptr<KgrPipe> pipe;
+                    int64_t pipeId;
+                };
+
                 std::unique_lock lock(this->srv.mtx);
                 auto pipeId = this->srv.nextPipeId++;
                 lock.unlock();
-                this->srv.workers.Enqueue([this, pipeId, supplier,
-                                           pipePtr = pipe.release()] {
-                    supplier.Wrap([&] {
-                        auto rsp = this->srv.net
-                                       .Invoke("connect",
-                                               KgrDictionary{
-                                                   {"pipe", pipeId},
-                                                   {"service", this->service}})
-                                       ->Next();
-                        if (rsp.WaitFor(KgrNetConfig::ResponseTimeout) ==
-                            TaskResultStatus::Ready) {
-                            auto remotePipe = rsp.Unwrap().GetResult().AsInt();
-                            std::unique_ptr<KgrPipe> pipe{pipePtr};
-                            pipe->SetMessageListener([this, pipeId,
-                                                      remotePipe] {
-                                std::unique_lock lock(this->srv.mtx);
-                                if (this->srv.pipes.count(pipeId) != 0) {
-                                    auto &pipe = *this->srv.pipes.at(pipeId);
+
+                static const SlokedAsyncTaskPipeline Pipeline(
+                    SlokedTaskPipelineStages::Map(
+                        [](const std::shared_ptr<State> state,
+                           const SlokedNetResponseBroker::Response &response) {
+                            auto remotePipe = response.GetResult().AsInt();
+                            auto pipe = std::move(state->pipe);
+                            auto pipeId = state->pipeId;
+                            pipe->SetMessageListener([self = state->self,
+                                                      pipeId, remotePipe] {
+                                std::unique_lock lock(self->srv.mtx);
+                                if (self->srv.pipes.count(pipeId) != 0) {
+                                    auto &pipe = *self->srv.pipes.at(pipeId);
                                     while (!pipe.Empty()) {
-                                        this->srv.net.Invoke(
+                                        self->srv.net.Invoke(
                                             "send", KgrDictionary{
                                                         {"pipe", remotePipe},
                                                         {"data", pipe.Read()}});
                                     }
                                     if (pipe.GetStatus() ==
                                         KgrPipe::Status::Closed) {
-                                        this->srv.net.Invoke("close",
+                                        self->srv.net.Invoke("close",
                                                              remotePipe);
-                                        this->srv.pipes.erase(pipeId);
+                                        self->srv.pipes.erase(pipeId);
                                     }
                                 }
                             });
-                            std::unique_lock lock(this->srv.mtx);
+                            std::unique_lock lock(state->self->srv.mtx);
                             while (!pipe->Empty()) {
-                                this->srv.net.Invoke(
+                                state->self->srv.net.Invoke(
                                     "send",
                                     KgrDictionary{{"pipe", remotePipe},
                                                   {"data", pipe->Read()}});
                             }
                             if (pipe->GetStatus() == KgrPipe::Status::Closed) {
-                                this->srv.net.Invoke("close", remotePipe);
+                                state->self->srv.net.Invoke("close",
+                                                            remotePipe);
                             } else {
-                                this->srv.pipes.emplace(pipeId,
-                                                        std::move(pipe));
+                                state->self->srv.pipes.emplace(pipeId,
+                                                               std::move(pipe));
                             }
-                        }
-                    });
-                });
-                return supplier.Result();
+                        }));
+
+                return Pipeline(
+                    std::make_shared<State>(this, std::move(pipe), pipeId),
+                    this->srv.net
+                        .Invoke("connect",
+                                KgrDictionary{{"pipe", pipeId},
+                                              {"service", this->service}})
+                        ->Next(),
+                    this->lifetime);
             }
 
          private:
             KgrMasterNetServerContext &srv;
             std::string service;
+            std::shared_ptr<SlokedStandardLifetime> lifetime;
         };
 
         void Connect(std::unique_ptr<KgrPipe> pipe,
