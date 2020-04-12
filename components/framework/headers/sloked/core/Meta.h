@@ -113,7 +113,10 @@ namespace sloked {
     template <typename Fn, typename... T>
     auto BindFirst(Fn &&callable, T &&... args1) {
         return [=](auto &&... args2) {
-            return callable(args1..., std::forward<decltype(args2)>(args2)...);
+            return callable(
+                args1...,
+                std::forward<std::remove_reference_t<decltype(args2)>>(
+                    args2)...);
         };
     }
 

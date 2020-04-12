@@ -75,7 +75,7 @@ namespace sloked {
         if (this->netServer == nullptr) {
             this->netServer = std::make_unique<KgrMasterNetServer>(
                 this->GetServer(), socketFactory.Bind(addr), io, sched,
-                threadManager, restrictions, authFactory);
+                restrictions, authFactory);
         } else {
             throw SlokedError("Editor: network server already spawned");
         }

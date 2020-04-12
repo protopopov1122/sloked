@@ -44,7 +44,6 @@ namespace sloked {
         KgrMasterNetServer(KgrNamedServer &,
                            std::unique_ptr<SlokedServerSocket>,
                            SlokedIOPoller &, SlokedScheduler &,
-                           SlokedExecutor &,
                            SlokedNamedRestrictionAuthority * = nullptr,
                            SlokedAuthenticatorFactory * = nullptr);
         ~KgrMasterNetServer();
@@ -64,13 +63,10 @@ namespace sloked {
         };
         friend class Awaitable;
 
-        void DetachServices(std::vector<std::string>);
-
         KgrNamedServer &server;
         std::unique_ptr<SlokedServerSocket> srvSocket;
         SlokedIOPoller &poll;
         SlokedScheduler &sched;
-        SlokedExecutor &threadManager;
         SlokedNamedRestrictionAuthority *restrictions;
         SlokedAuthenticatorFactory *authFactory;
         SlokedIOPoller::Handle awaiterHandle;

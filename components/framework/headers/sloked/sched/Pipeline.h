@@ -258,7 +258,8 @@ namespace sloked {
 
             template <typename Arg, typename Fn>
             struct InvokeResult<Arg, Fn,
-                                std::enable_if_t<!std::is_void_v<Arg>>> {
+                                std::enable_if_t<!std::is_void_v<
+                                    std::remove_reference_t<Arg>>>> {
                 using Type = std::invoke_result_t<Fn, Arg>;
             };
 
@@ -500,15 +501,15 @@ namespace sloked {
             Scan(F scanner) : scanner(std::move(scanner)) {}
 
             template <typename Source>
-            Source operator()(Source &&src,
-                              std::weak_ptr<SlokedLifetime> lifetime) const {
+            auto operator()(Source &&src,
+                            std::weak_ptr<SlokedLifetime> lifetime) const {
                 return Invoke(this->scanner, std::forward<Source>(src),
                               std::move(lifetime));
             }
 
             template <typename State, typename Source>
-            Source operator()(State &&state, Source &&src,
-                              std::weak_ptr<SlokedLifetime> lifetime) const {
+            auto operator()(State &&state, Source &&src,
+                            std::weak_ptr<SlokedLifetime> lifetime) const {
                 return this->Invoke(
                     BindFirst(this->scanner, std::forward<State>(state)),
                     std::forward<Source>(src), std::move(lifetime));
@@ -521,8 +522,9 @@ namespace sloked {
                 src.Notify(
                     [scanner](const auto &value) {
                         if (value.State() == TaskResultStatus::Ready) {
-                            if constexpr (std::is_void_v<decltype(
-                                              value.GetResult())>) {
+                            if constexpr (std::is_void_v<
+                                              typename std::remove_reference_t<
+                                                  Source>::Result>) {
                                 scanner();
                             } else {
                                 scanner(value.GetResult());
@@ -530,7 +532,7 @@ namespace sloked {
                         }
                     },
                     lifetime);
-                return src;
+                return Source{std::move(src)};
             }
             F scanner;
         };
@@ -541,15 +543,15 @@ namespace sloked {
             ScanErrors(F scanner) : scanner(std::move(scanner)) {}
 
             template <typename Source>
-            Source operator()(Source &&src,
-                              std::weak_ptr<SlokedLifetime> lifetime) const {
+            auto operator()(Source &&src,
+                            std::weak_ptr<SlokedLifetime> lifetime) const {
                 return Invoke(this->scanner, std::forward<Source>(src),
                               std::move(lifetime));
             }
 
             template <typename State, typename Source>
-            Source operator()(State &state, Source &&src,
-                              std::weak_ptr<SlokedLifetime> lifetime) const {
+            auto operator()(State &state, Source &&src,
+                            std::weak_ptr<SlokedLifetime> lifetime) const {
                 return Invoke(
                     BindFirst(this->scanner, std::forward<State>(state)),
                     std::forward<Source>(src), std::move(lifetime));
@@ -566,7 +568,7 @@ namespace sloked {
                         }
                     },
                     lifetime);
-                return src;
+                return Source{std::move(src)};
             }
             F scanner;
         };
@@ -577,15 +579,15 @@ namespace sloked {
             ScanCancelled(F scanner) : scanner(std::move(scanner)) {}
 
             template <typename Source>
-            Source operator()(Source &&src,
-                              std::weak_ptr<SlokedLifetime> lifetime) const {
+            auto operator()(Source &&src,
+                            std::weak_ptr<SlokedLifetime> lifetime) const {
                 return Invoke(this->scanner, std::forward<Source>(src),
                               std::move(lifetime));
             }
 
             template <typename State, typename Source>
-            Source operator()(State &&state, Source &&src,
-                              std::weak_ptr<SlokedLifetime> lifetime) const {
+            auto operator()(State &&state, Source &&src,
+                            std::weak_ptr<SlokedLifetime> lifetime) const {
                 return Invoke(
                     BindFirst(this->scanner, std::forward<State>(state)),
                     std::forward<Source>(src), std::move(lifetime));
@@ -602,7 +604,7 @@ namespace sloked {
                         }
                     },
                     lifetime);
-                return src;
+                return Source{std::move(src)};
             }
             F scanner;
         };
