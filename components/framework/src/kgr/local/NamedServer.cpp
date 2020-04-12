@@ -56,16 +56,25 @@ namespace sloked {
 
     TaskResult<void> KgrLocalNamedServer::Register(
         const SlokedPath &name, std::unique_ptr<KgrService> service) {
+        struct State {
+            State(KgrLocalNamedServer *self, const SlokedPath &absPath)
+                : self(self), absPath(absPath) {}
+            KgrLocalNamedServer *self;
+            SlokedPath absPath;
+        };
+
+        static const SlokedAsyncTaskPipeline Pipeline(
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state,
+                   const KgrServer::ServiceId &id) {
+                    state->self->names.emplace(state->absPath, id);
+                }));
+
         auto absPath = name.IsAbsolute() ? name : name.RelativeTo(name.Root());
         std::unique_lock<std::mutex> lock(this->mtx);
         if (this->names.count(absPath) == 0) {
-            const SlokedAsyncTaskPipeline Pipeline(
-                SlokedTaskPipelineStages::Map(
-                    [absPath](KgrLocalNamedServer *self,
-                              const KgrServer::ServiceId &id) {
-                        self->names.emplace(absPath, id);
-                    }));
-            return Pipeline(this, this->server.Register(std::move(service)),
+            return Pipeline(std::make_shared<State>(this, absPath),
+                            this->server.Register(std::move(service)),
                             this->lifetime);
         } else {
             return TaskResult<void>::Reject(std::make_exception_ptr(
@@ -81,17 +90,25 @@ namespace sloked {
     }
 
     TaskResult<void> KgrLocalNamedServer::Deregister(const SlokedPath &name) {
+        struct State {
+            State(KgrLocalNamedServer *self, const SlokedPath &absPath)
+                : self(self), absPath(absPath) {}
+            KgrLocalNamedServer *self;
+            SlokedPath absPath;
+        };
+
+        static const SlokedAsyncTaskPipeline Pipeline(
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state) {
+                    state->self->names.erase(state->absPath);
+                }));
+
         auto absPath = name.IsAbsolute() ? name : name.RelativeTo(name.Root());
         std::unique_lock<std::mutex> lock(this->mtx);
         if (this->names.count(absPath) != 0) {
             auto srvId = this->names.at(absPath);
-            const SlokedAsyncTaskPipeline Pipeline(
-                SlokedTaskPipelineStages::Map(
-                    [absPath](KgrLocalNamedServer *self) {
-                        self->names.erase(absPath);
-                    }));
-            return Pipeline(this, this->server.Deregister(srvId),
-                            this->lifetime);
+            return Pipeline(std::make_shared<State>(this, absPath),
+                            this->server.Deregister(srvId), this->lifetime);
         } else {
             return TaskResult<void>::Reject(std::make_exception_ptr(SlokedError(
                 "KgrNamedServer: Unknown name \'" + name.ToString() + "\'")));

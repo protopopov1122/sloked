@@ -303,15 +303,13 @@ namespace sloked {
                 KgrToSocketAddress(serverConfig["netServer"].AsDictionary());
             if (editor.HasCrypto()) {
                 editor.GetServer().SpawnNetServer(
-                    editor.GetNetwork().GetEngine(),
-                    editor.GetThreadedExecutor(), editor.GetScheduler(),
+                    editor.GetNetwork().GetEngine(), editor.GetScheduler(),
                     address, editor.GetIO(),
                     &editor.GetCrypto().GetCredentialMaster(),
                     &editor.GetCrypto().GetAuthenticator());
             } else {
                 editor.GetServer().SpawnNetServer(
-                    editor.GetNetwork().GetEngine(),
-                    editor.GetThreadedExecutor(), editor.GetScheduler(),
+                    editor.GetNetwork().GetEngine(), editor.GetScheduler(),
                     address, editor.GetIO(), nullptr, nullptr);
             }
         }

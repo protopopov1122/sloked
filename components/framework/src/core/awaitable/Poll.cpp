@@ -42,6 +42,7 @@ namespace sloked {
                 this->poll.Await(timeout);
                 std::unique_lock lock(this->mtx);
                 std::vector<std::shared_ptr<SlokedExecutor::Task>> tasks;
+                tasks.reserve(this->awaitables.size());
                 for (const auto &kv : this->awaitables) {
                     tasks.emplace_back(
                         this->executor.Enqueue([awaitable = kv.second] {

@@ -126,6 +126,34 @@ namespace sloked {
     template <template <typename...> class U, typename... T>
     struct IsInstantiation<U, U<T...>> : public std::true_type {};
 
+    struct VoidType {};
+
+    template <typename T>
+    struct SafeVoidWrap {
+        using Type = T;
+    };
+
+    template <>
+    struct SafeVoidWrap<void> {
+        using Type = VoidType;
+    };
+
+    template <template <typename...> class C, typename UnfilteredList,
+              typename... FilteredTypes>
+    struct VoidSafe {
+        using Type = typename VoidSafe<
+            C, typename UnfilteredList::Tail, FilteredTypes...,
+            typename SafeVoidWrap<typename UnfilteredList::Head>::Type>::Type;
+    };
+
+    template <template <typename...> class C, typename... FilteredTypes>
+    struct VoidSafe<C, Typelist<>, FilteredTypes...> {
+        using Type = C<FilteredTypes...>;
+    };
+
+    template <template <typename...> class C, typename... T>
+    using VoidSafe_t = typename VoidSafe<C, Typelist<T...>>::Type;
+
 }  // namespace sloked
 
 #endif

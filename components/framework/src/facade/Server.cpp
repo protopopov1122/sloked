@@ -68,9 +68,9 @@ namespace sloked {
     }
 
     void SlokedServerFacade::SpawnNetServer(
-        SlokedSocketFactory &socketFactory, SlokedExecutor &threadManager,
-        SlokedScheduler &sched, const SlokedSocketAddress &addr,
-        SlokedIOPoller &io, SlokedNamedRestrictionAuthority *restrictions,
+        SlokedSocketFactory &socketFactory, SlokedScheduler &sched,
+        const SlokedSocketAddress &addr, SlokedIOPoller &io,
+        SlokedNamedRestrictionAuthority *restrictions,
         SlokedAuthenticatorFactory *authFactory) {
         if (this->netServer == nullptr) {
             this->netServer = std::make_unique<KgrMasterNetServer>(

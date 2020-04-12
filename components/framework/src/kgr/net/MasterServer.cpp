@@ -345,13 +345,6 @@ namespace sloked {
             if (this->net.Valid()) {
                 this->net.Close();
             }
-            auto &srv = this->server;
-            std::thread([handle = this->counterHandle,
-                         services = std::move(this->remoteServiceList), &srv] {
-                for (const auto &rService : services) {
-                    srv.Deregister({rService});
-                }
-            }).detach();
         }
 
         std::unique_ptr<SlokedIOAwaitable> GetAwaitable() const final {
@@ -375,11 +368,11 @@ namespace sloked {
                     this->pinged = true;
                 }
             }
-            if (!this->work.load()) {
+            if (!this->work.load() || !this->net.Valid()) {
                 if (this->net.Valid()) {
                     this->Accept();
                 }
-                this->awaitableHandle.Detach();
+                this->DeregisterAll();
             }
         }
 
@@ -548,6 +541,27 @@ namespace sloked {
             } else {
                 return false;
             }
+        }
+
+        void DeregisterAll() {
+            static const auto deregisterCallback =
+                [](KgrMasterNetServerContext *self) {
+                    if (!self->remoteServiceList.empty()) {
+                        auto it = self->remoteServiceList.begin();
+                        auto res = self->server.Deregister({*it});
+                        self->remoteServiceList.erase(it);
+                        return res;
+                    } else {
+                        return TaskResult<void>::Resolve();
+                    }
+                };
+            deregisterCallback(this).Notify([this](const auto &) {
+                if (!this->remoteServiceList.empty()) {
+                    this->DeregisterAll();
+                } else {
+                    this->awaitableHandle.Detach();
+                }
+            });
         }
 
         KgrNetInterface net;
