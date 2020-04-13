@@ -71,37 +71,70 @@ namespace sloked {
         this->net.BindMethod("connect", [this](const std::string &method,
                                                const KgrValue &params,
                                                auto &rsp) {
-            std::unique_lock lock(this->mtx);
+            struct State {
+                State(KgrSlaveNetServer *self, int64_t remotePipe,
+                      KgrNetInterface::Responder responder)
+                    : self(self), remotePipe(remotePipe),
+                      responder(std::move(responder)) {}
+
+                KgrSlaveNetServer *self;
+                int64_t remotePipe;
+                KgrNetInterface::Responder responder;
+            };
+
+            static const SlokedAsyncTaskPipeline Pipeline(
+                SlokedTaskPipelineStages::Map(
+                    [](const std::shared_ptr<State> &state,
+                       std::unique_ptr<KgrPipe> pipe) {
+                        std::unique_lock lock(state->self->mtx);
+                        if (pipe == nullptr) {
+                            throw SlokedError(
+                                "KgrSlaveServer: Pipe can't be null");
+                        }
+                        pipe->SetMessageListener([self = state->self,
+                                                  remotePipe =
+                                                      state->remotePipe] {
+                            std::unique_lock lock(self->mtx);
+                            auto &pipe = *self->pipes.at(remotePipe);
+                            while (!pipe.Empty()) {
+                                self->net.Invoke(
+                                    "send",
+                                    KgrDictionary{{"pipe", remotePipe},
+                                                  {"data", pipe.Read()}});
+                            }
+                            if (pipe.GetStatus() == KgrPipe::Status::Closed) {
+                                self->net.Invoke("close", remotePipe);
+                                self->pipes.erase(remotePipe);
+                            }
+                        });
+                        state->responder.Result(state->remotePipe);
+                        while (!pipe->Empty()) {
+                            state->self->net.Invoke(
+                                "send",
+                                KgrDictionary{{"pipe", state->remotePipe},
+                                              {"data", pipe->Read()}});
+                        }
+                        if (pipe->GetStatus() == KgrPipe::Status::Closed) {
+                            state->self->net.Invoke("close", state->remotePipe);
+                            state->self->pipes.erase(state->remotePipe);
+                        }
+                        state->self->pipes.emplace(state->remotePipe,
+                                                   std::move(pipe));
+                    }),
+                SlokedTaskPipelineStages::ScanErrors(
+                    [](const std::shared_ptr<State> &state,
+                       const std::exception_ptr &) {
+                        state->responder.Result(false);
+                    }),
+                SlokedTaskPipelineStages::ScanCancelled(
+                    [](const std::shared_ptr<State> &state, const auto &) {
+                        state->responder.Result(false);
+                    }));
+
             const auto &service = params.AsDictionary()["service"].AsString();
             auto remotePipe = params.AsDictionary()["pipe"].AsInt();
-            auto pipe =
-                std::move(this->localServer.Connect({service}).UnwrapWait());
-            if (pipe == nullptr) {
-                throw SlokedError("KgrSlaveServer: Pipe can't be null");
-            }
-            pipe->SetMessageListener([this, remotePipe] {
-                std::unique_lock lock(this->mtx);
-                auto &pipe = *this->pipes.at(remotePipe);
-                while (!pipe.Empty()) {
-                    this->net.Invoke("send",
-                                     KgrDictionary{{"pipe", remotePipe},
-                                                   {"data", pipe.Read()}});
-                }
-                if (pipe.GetStatus() == KgrPipe::Status::Closed) {
-                    this->net.Invoke("close", remotePipe);
-                    this->pipes.erase(remotePipe);
-                }
-            });
-            rsp.Result(remotePipe);
-            while (!pipe->Empty()) {
-                this->net.Invoke("send", KgrDictionary{{"pipe", remotePipe},
-                                                       {"data", pipe->Read()}});
-            }
-            if (pipe->GetStatus() == KgrPipe::Status::Closed) {
-                this->net.Invoke("close", remotePipe);
-                this->pipes.erase(remotePipe);
-            }
-            this->pipes.emplace(remotePipe, std::move(pipe));
+            Pipeline(std::make_shared<State>(this, remotePipe, std::move(rsp)),
+                     this->localServer.Connect({service}), this->lifetime);
         });
 
         this->net.BindMethod(
