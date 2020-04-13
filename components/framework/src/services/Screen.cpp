@@ -21,6 +21,7 @@
 
 #include "sloked/services/Screen.h"
 
+#include "sloked/sched/CompoundTask.h"
 #include "sloked/screen/components/ComponentTree.h"
 #include "sloked/screen/components/MultiplexerComponent.h"
 #include "sloked/screen/components/SplitterComponent.h"
@@ -40,7 +41,8 @@ namespace sloked {
             : SlokedServiceContext(std::move(pipe)), root(root),
               encoding(encoding), cursorService(std::move(cursorService)),
               renderService(std::move(renderService)),
-              notifyService(std::move(notifyService)) {
+              notifyService(std::move(notifyService)),
+              lifetime(std::make_shared<SlokedStandardLifetime>()) {
 
             this->BindMethod("handle.newMultiplexer",
                              &SlokedScreenContext::HandleNewMultiplexer);
@@ -94,6 +96,10 @@ namespace sloked {
             this->BindMethod("tabber.close", &SlokedScreenContext::TabberClose);
             this->BindMethod("tabber.moveWindow",
                              &SlokedScreenContext::TabberMoveWindow);
+        }
+
+        ~SlokedScreenContext() {
+            this->lifetime->Close();
         }
 
      private:
@@ -157,29 +163,41 @@ namespace sloked {
                 params.AsDictionary()["document"].AsInt());
             const std::string &tagger =
                 params.AsDictionary()["tagger"].AsString();
-            RootLock([this, path, documentId, tagger,
-                      rsp = std::move(rsp)](auto &screen) mutable {
-                try {
-                    auto &handle =
-                        SlokedComponentTree::Traverse(screen, SlokedPath{path})
-                            .AsHandle();
-                    auto initCursor = [&](auto &cursorClient) {
-                        this->Defer(cursorClient.Connect(
-                            documentId,
-                            [rsp = std::move(rsp)](auto res) mutable {
-                                rsp.Result(res);
-                            }));
-                    };
-                    handle.NewTextPane(std::make_unique<SlokedTextEditor>(
-                        this->encoding,
-                        std::move(this->cursorService().UnwrapWait()),
-                        std::move(initCursor),
-                        std::move(this->renderService().UnwrapWait()),
-                        std::move(this->notifyService().UnwrapWait()),
-                        documentId, tagger));
-                    rsp.Result(true);
-                } catch (const SlokedError &err) { rsp.Result(false); }
-            });
+            SlokedCompoundTask::All(this->lifetime, this->cursorService(),
+                                    this->renderService(),
+                                    this->notifyService())
+                .Notify(
+                    [this, path, documentId, tagger,
+                     rsp = std::move(rsp)](const auto &result) mutable {
+                        RootLock([this, path, documentId, tagger,
+                                  result = std::move(result),
+                                  rsp = std::move(rsp)](auto &screen) mutable {
+                            try {
+                                auto &handle = SlokedComponentTree::Traverse(
+                                                   screen, SlokedPath{path})
+                                                   .AsHandle();
+                                auto initCursor = [&](auto &cursorClient) {
+                                    this->Defer(cursorClient.Connect(
+                                        documentId, [rsp = std::move(rsp)](
+                                                        auto res) mutable {
+                                            rsp.Result(res);
+                                        }));
+                                };
+                                handle.NewTextPane(std::make_unique<
+                                                   SlokedTextEditor>(
+                                    this->encoding,
+                                    std::move(std::get<0>(result.GetResult())),
+                                    std::move(initCursor),
+                                    std::move(std::get<1>(result.GetResult())),
+                                    std::move(std::get<2>(result.GetResult())),
+                                    documentId, tagger));
+                                rsp.Result(true);
+                            } catch (const SlokedError &err) {
+                                rsp.Result(false);
+                            }
+                        });
+                    },
+                    this->lifetime);
         }
 
         void MultiplexerNewWindow(const std::string &method,
@@ -765,6 +783,7 @@ namespace sloked {
         KgrServer::Connector cursorService;
         KgrServer::Connector renderService;
         KgrServer::Connector notifyService;
+        std::shared_ptr<SlokedStandardLifetime> lifetime;
     };
 
     SlokedScreenService::SlokedScreenService(

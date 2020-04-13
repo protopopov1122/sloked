@@ -39,6 +39,7 @@ namespace sloked {
         std::unique_lock lock(this->mtx);
         if (this->state == SlokedExecutor::State::Pending ||
             this->state == SlokedExecutor::State::Running) {
+            this->callback = nullptr;
             this->state = SlokedExecutor::State::Canceled;
             this->cancel(*this);
             this->cv.notify_all();
@@ -65,14 +66,16 @@ namespace sloked {
             return;
         }
         this->state = SlokedExecutor::State::Running;
+        auto callback = this->callback;
         lock.unlock();
-        this->callback();
+        callback();
         lock.lock();
         if (this->interval.has_value()) {
             if (this->state != SlokedExecutor::State::Canceled) {
                 this->state = SlokedExecutor::State::Pending;
             }
         } else {
+            this->callback = nullptr;
             this->state = SlokedExecutor::State::Finished;
         }
         this->cv.notify_all();

@@ -22,15 +22,17 @@
 #ifndef SLOKED_KGR_LOCAL_CTX_MANAGER_RUNNABLECONTEXTMANAGER_H_
 #define SLOKED_KGR_LOCAL_CTX_MANAGER_RUNNABLECONTEXTMANAGER_H_
 
+#include <algorithm>
 #include <atomic>
 #include <condition_variable>
 #include <list>
+#include <map>
 #include <mutex>
-#include <thread>
 
 #include "sloked/core/Closeable.h"
 #include "sloked/core/Runnable.h"
 #include "sloked/kgr/ContextManager.h"
+#include "sloked/sched/Executor.h"
 
 namespace sloked {
 
@@ -101,11 +103,15 @@ namespace sloked {
     template <typename T>
     class KgrRunnableContextManagerHandle : public SlokedCloseable {
      public:
-        KgrRunnableContextManagerHandle() : work(false), notifications(0) {
+        KgrRunnableContextManagerHandle(SlokedExecutor &exec)
+            : exec(exec), work(false) {
             this->manager.SetActivationListener([&]() {
-                std::unique_lock<std::mutex> lock(this->notificationMutex);
-                this->notifications++;
-                this->notificationCV.notify_all();
+                std::unique_lock lock(this->mtx);
+                if (this->work) {
+                    auto id = this->nextId++;
+                    this->tasks.insert_or_assign(
+                        id, this->exec.Enqueue([this, id] { this->Run(id); }));
+                }
             });
         }
 
@@ -118,40 +124,51 @@ namespace sloked {
         }
 
         void Start() {
-            if (this->work.exchange(true)) {
-                return;
+            std::unique_lock lock(this->mtx);
+            if (!this->work) {
+                this->work = true;
+                this->nextId = 0;
             }
-            this->managerThread = std::thread([&]() {
-                while (this->work.load()) {
-                    std::unique_lock<std::mutex> notificationLock(
-                        this->notificationMutex);
-                    while (!this->manager.HasPendingActions() &&
-                           this->work.load() &&
-                           this->notifications.load() == 0) {
-                        this->notificationCV.wait(notificationLock);
-                    }
-                    this->notifications = 0;
-                    notificationLock.unlock();
-                    this->manager.Run();
-                }
-            });
         }
 
         void Close() final {
-            if (this->work.exchange(false) && this->managerThread.joinable()) {
-                this->notificationCV.notify_all();
-                this->managerThread.join();
+            std::unique_lock lock(this->mtx);
+            if (this->work) {
+                this->work = false;
+                for (const auto &task : this->tasks) {
+                    task.second->Cancel();
+                }
+                this->cv.wait(lock, [&] {
+                    return this->tasks.empty() ||
+                           std::all_of(this->tasks.begin(), this->tasks.end(),
+                                       [](const auto &task) {
+                                           return task.second->Complete();
+                                       });
+                });
+                this->tasks.clear();
                 this->manager.Clear();
             }
         }
 
      private:
+        void Run(std::size_t id) {
+            std::unique_lock lock(this->mtx);
+            if (this->work) {
+                lock.unlock();
+                this->manager.Run();
+                lock.lock();
+            }
+            this->tasks.erase(id);
+            this->cv.notify_all();
+        }
+
         KgrRunnableContextManager<T> manager;
-        std::atomic<bool> work;
-        std::atomic<uint32_t> notifications;
-        std::mutex notificationMutex;
-        std::condition_variable notificationCV;
-        std::thread managerThread;
+        SlokedExecutor &exec;
+        std::mutex mtx;
+        std::condition_variable cv;
+        bool work;
+        std::size_t nextId;
+        std::map<std::size_t, std::shared_ptr<SlokedExecutor::Task>> tasks;
     };
 }  // namespace sloked
 

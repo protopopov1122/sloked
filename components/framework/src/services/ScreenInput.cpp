@@ -83,6 +83,11 @@ namespace sloked {
             return state;
         }
 
+        void SetActivationListener(std::function<void()> callback) final {
+            this->KgrLocalContext::SetActivationListener(callback);
+            this->eventLoop.Notify(callback);
+        }
+
         void Run() final {
             while (!this->pipe->Empty()) {
                 auto msg = this->pipe->Read();

@@ -54,16 +54,21 @@ namespace sloked {
         if (this->state == SlokedExecutor::State::Pending) {
             this->state = SlokedExecutor::State::Canceled;
             this->cancel(*this);
+            this->callback = nullptr;
             this->cv.notify_all();
         }
     }
 
     void SlokedRunnableTask::Start() {
         std::unique_lock lock(this->mtx);
+        if (this->state != SlokedExecutor::State::Pending) {
+            return;
+        }
         this->state = SlokedExecutor::State::Running;
         lock.unlock();
         this->callback();
         lock.lock();
+        this->callback = nullptr;
         this->state = SlokedExecutor::State::Finished;
         this->cv.notify_all();
     }

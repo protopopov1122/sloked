@@ -40,6 +40,7 @@ namespace sloked {
 
      protected:
         std::unique_ptr<KgrPipe> pipe;
+        std::function<void()> activationCallback;
     };
 }  // namespace sloked
 

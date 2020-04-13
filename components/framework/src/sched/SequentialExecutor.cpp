@@ -39,7 +39,12 @@ namespace sloked {
             this->cv.notify_all();
             this->worker.join();
             std::unique_lock lock(this->mtx);
+            std::vector<std::shared_ptr<SlokedRunnableTask>> cancelQueue;
             for (auto task : this->queue) {
+                cancelQueue.push_back(task);
+            }
+            lock.unlock();
+            for (auto task : cancelQueue) {
                 task->Cancel();
             }
         }

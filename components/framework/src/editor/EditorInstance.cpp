@@ -63,7 +63,8 @@ namespace sloked {
 
     SlokedEditorInstance::SlokedEditorInstance(
         SlokedSharedEditorState &sharedState, SlokedSocketFactory &network)
-        : sharedState(sharedState), running{false}, network(network) {
+        : sharedState(sharedState), running{false}, network(network),
+          contextManager(sharedState.GetExecutor()) {
         this->closeables.Attach(this->contextManager);
     }
 

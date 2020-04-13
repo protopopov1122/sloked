@@ -49,6 +49,7 @@ namespace sloked {
 
     void KgrLocalContext::SetActivationListener(
         std::function<void()> callback) {
+        this->activationCallback = callback;
         if (this->pipe) {
             this->pipe->SetMessageListener(std::move(callback));
         }
