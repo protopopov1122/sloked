@@ -51,11 +51,12 @@ namespace sloked {
      public:
         SlokedTextRenderClient(std::unique_ptr<KgrPipe>,
                                SlokedEditorDocumentSet::DocumentId);
-        std::optional<TextPosition> RealPosition(TextPosition);
-        std::tuple<TextPosition::Line, TextPosition::Line, KgrValue> Render(
-            TextPosition::Line, TextPosition::Line);
-        std::tuple<TextPosition::Line, TextPosition::Line,
-                   std::vector<std::pair<TextPosition::Line, KgrValue>>>
+        TaskResult<std::optional<TextPosition>> RealPosition(TextPosition);
+        TaskResult<std::tuple<TextPosition::Line, TextPosition::Line, KgrValue>>
+            Render(TextPosition::Line, TextPosition::Line);
+        TaskResult<
+            std::tuple<TextPosition::Line, TextPosition::Line,
+                       std::vector<std::pair<TextPosition::Line, KgrValue>>>>
             PartialRender(TextPosition::Line, TextPosition::Line);
 
      private:

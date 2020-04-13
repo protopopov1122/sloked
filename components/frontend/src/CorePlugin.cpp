@@ -395,9 +395,10 @@ namespace sloked {
             std::move(secondaryServer.GetServer()
                           .Connect({"/document/manager"})
                           .UnwrapWait()));
-        documentClient.Open(inputPath.ToString(),
-                            mainConfig.Find("/encoding").AsString(),
-                            mainConfig.Find("/newline").AsString(), "default");
+        documentClient
+            .Open(inputPath.ToString(), mainConfig.Find("/encoding").AsString(),
+                  mainConfig.Find("/newline").AsString(), "default")
+            .UnwrapWait();
 
         // Screen layout
         screenClient.Handle.NewMultiplexer("/");
@@ -423,7 +424,8 @@ namespace sloked {
         screenClient.Handle.NewTabber("/0/0");
         auto tab1 = screenClient.Tabber.NewWindow("/0/0");
         screenClient.Handle.NewTextEditor(
-            tab1.value(), documentClient.GetId().value(), "default");
+            tab1.value(), documentClient.GetId().UnwrapWait().value(),
+            "default");
 
         SlokedTextPaneClient paneClient(
             std::move(secondaryServer.GetServer()
@@ -460,8 +462,10 @@ namespace sloked {
                         std::get<1>(evt.value) == SlokedControlKey::Escape) {
                         mainEditor.GetThreadedExecutor().Enqueue([&] {
                             logger.Debug() << "Saving document";
-                            documentClient.Save(outputPath.ToString());
-                            terminate.Notify();
+                            documentClient.Save(outputPath.ToString())
+                                .Notify([&terminate](const auto &) {
+                                    terminate.Notify();
+                                });
                         });
                     }
                 });

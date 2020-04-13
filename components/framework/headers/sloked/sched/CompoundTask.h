@@ -25,6 +25,7 @@
 #include <cassert>
 
 #include "sloked/core/Meta.h"
+#include "sloked/sched/Pipeline.h"
 #include "sloked/sched/Task.h"
 
 namespace sloked {
@@ -153,6 +154,21 @@ namespace sloked {
             NotifyAll<0, AllStorage<T...>, T...>::Apply(
                 storage, std::move(lifetime), std::forward<T>(tasks)...);
             return storage->supplier.Result();
+        }
+    };
+
+    class SlokedTaskTransformations {
+     public:
+        template <typename R, typename E, typename TransformFn>
+        static auto Transform(const TaskResult<R, E> &result,
+                              TransformFn transform) {
+            static const SlokedAsyncTaskPipeline Pipeline(
+                SlokedTaskPipelineStages::Map(
+                    [](const TransformFn &transform, const R &result) {
+                        return transform(result);
+                    }));
+            return Pipeline(std::move(transform), result,
+                            SlokedLifetime::Global);
         }
     };
 }  // namespace sloked

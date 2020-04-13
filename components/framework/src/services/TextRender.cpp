@@ -24,6 +24,7 @@
 #include "sloked/core/Error.h"
 #include "sloked/core/Locale.h"
 #include "sloked/core/OrderedCache.h"
+#include "sloked/sched/CompoundTask.h"
 #include "sloked/text/cursor/TransactionJournal.h"
 #include "sloked/text/fragment/Updater.h"
 
@@ -266,63 +267,77 @@ namespace sloked {
             "attach", KgrDictionary{{"document", static_cast<int64_t>(docId)}});
     }
 
-    std::optional<TextPosition> SlokedTextRenderClient::RealPosition(
-        TextPosition src) {
-        auto renderRes =
+    TaskResult<std::optional<TextPosition>>
+        SlokedTextRenderClient::RealPosition(TextPosition src) {
+        return SlokedTaskTransformations::Transform(
             this->client
                 .Invoke(
                     "realPosition",
                     KgrDictionary{{"line", static_cast<int64_t>(src.line)},
                                   {"column", static_cast<int64_t>(src.column)}})
-                ->Next()
-                .UnwrapWait();
-        if (!renderRes.HasResult()) {
-            return {};
-        }
-        return TextPosition{
-            static_cast<TextPosition::Line>(
-                renderRes.GetResult().AsDictionary()["line"].AsInt()),
-            static_cast<TextPosition::Column>(
-                renderRes.GetResult().AsDictionary()["column"].AsInt())};
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &renderRes) {
+                std::optional<TextPosition> result{};
+                if (renderRes.HasResult()) {
+                    result = TextPosition{static_cast<TextPosition::Line>(
+                                              renderRes.GetResult()
+                                                  .AsDictionary()["line"]
+                                                  .AsInt()),
+                                          static_cast<TextPosition::Column>(
+                                              renderRes.GetResult()
+                                                  .AsDictionary()["column"]
+                                                  .AsInt())};
+                }
+                return result;
+            });
     }
 
-    std::tuple<TextPosition::Line, TextPosition::Line, KgrValue>
+    TaskResult<std::tuple<TextPosition::Line, TextPosition::Line, KgrValue>>
         SlokedTextRenderClient::Render(TextPosition::Line line,
                                        TextPosition::Line height) {
-        auto renderRes =
+        return SlokedTaskTransformations::Transform(
             this->client
                 .Invoke("render",
                         KgrDictionary{{"height", static_cast<int64_t>(height)},
                                       {"line", static_cast<int64_t>(line)}})
-                ->Next()
-                .UnwrapWait();
-        const auto &result = renderRes.GetResult().AsDictionary();
-        return {result["start"].AsInt(), result["end"].AsInt(),
-                result["content"]};
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &renderRes)
+                -> std::tuple<TextPosition::Line, TextPosition::Line,
+                              KgrValue> {
+                const auto &result = renderRes.GetResult().AsDictionary();
+                return {result["start"].AsInt(), result["end"].AsInt(),
+                        result["content"]};
+            });
     }
 
-    std::tuple<TextPosition::Line, TextPosition::Line,
-               std::vector<std::pair<TextPosition::Line, KgrValue>>>
+    TaskResult<std::tuple<TextPosition::Line, TextPosition::Line,
+                          std::vector<std::pair<TextPosition::Line, KgrValue>>>>
         SlokedTextRenderClient::PartialRender(TextPosition::Line line,
                                               TextPosition::Line height) {
-        auto renderRes =
+        return SlokedTaskTransformations::Transform(
             this->client
                 .Invoke("render",
                         KgrDictionary{{"height", static_cast<int64_t>(height)},
                                       {"line", static_cast<int64_t>(line)},
                                       {"partial", true}})
-                ->Next()
-                .UnwrapWait();
-        if (!renderRes.HasResult()) {
-            return {};
-        }
-        const auto &res = renderRes.GetResult().AsDictionary();
-        std::vector<std::pair<TextPosition::Line, KgrValue>> result;
-        for (const auto &line : res["content"].AsArray()) {
-            result.emplace_back(
-                std::make_pair(line.AsDictionary()["line"].AsInt(),
-                               line.AsDictionary()["content"]));
-        }
-        return {res["start"].AsInt(), res["end"].AsInt(), std::move(result)};
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &renderRes)
+                -> std::tuple<
+                    TextPosition::Line, TextPosition::Line,
+                    std::vector<std::pair<TextPosition::Line, KgrValue>>> {
+                if (renderRes.HasResult()) {
+                    const auto &res = renderRes.GetResult().AsDictionary();
+                    std::vector<std::pair<TextPosition::Line, KgrValue>> result;
+                    for (const auto &line : res["content"].AsArray()) {
+                        result.emplace_back(
+                            std::make_pair(line.AsDictionary()["line"].AsInt(),
+                                           line.AsDictionary()["content"]));
+                    }
+                    return {res["start"].AsInt(), res["end"].AsInt(),
+                            std::move(result)};
+                } else {
+                    return {};
+                }
+            });
     }
 }  // namespace sloked

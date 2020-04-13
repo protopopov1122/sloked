@@ -116,7 +116,7 @@ namespace sloked {
     }
 
     void SlokedTextEditor::Render(SlokedTextPane &pane) {
-        auto cursorRsp = this->cursorClient.GetPosition();
+        auto cursorRsp = this->cursorClient.GetPosition().UnwrapWait();
         if (!cursorRsp.has_value()) {
             return;
         }
@@ -129,8 +129,9 @@ namespace sloked {
         }
 
         auto [firstLine, lastLine, partialRender] =
-            this->renderClient.PartialRender(this->cursorOffset.line,
-                                             pane.GetHeight() - 1);
+            this->renderClient
+                .PartialRender(this->cursorOffset.line, pane.GetHeight() - 1)
+                .UnwrapWait();
         this->renderCache.Insert(partialRender.begin(), partialRender.end());
         const auto &render = this->renderCache.Fetch(firstLine, lastLine);
         std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> lines;
@@ -150,7 +151,8 @@ namespace sloked {
         SlokedTaggedTextFrame<bool> visualFrame(this->conv.GetDestination(),
                                                 pane.GetFontProperties());
 
-        auto realPosition = this->renderClient.RealPosition(cursor);
+        auto realPosition =
+            this->renderClient.RealPosition(cursor).UnwrapWait();
         if (!realPosition.has_value()) {
             return;
         }

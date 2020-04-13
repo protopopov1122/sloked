@@ -24,17 +24,17 @@ namespace sloked {
     class SlokedDocumentSetClient {
      public:
         SlokedDocumentSetClient(std::unique_ptr<KgrPipe>);
-        std::optional<SlokedEditorDocumentSet::DocumentId> New(
+        TaskResult<std::optional<SlokedEditorDocumentSet::DocumentId>> New(
             const std::string &, const std::string &);
-        std::optional<SlokedEditorDocumentSet::DocumentId> Open(
+        TaskResult<std::optional<SlokedEditorDocumentSet::DocumentId>> Open(
             const std::string &, const std::string &, const std::string &,
             const std::string & = "");
-        bool Open(SlokedEditorDocumentSet::DocumentId);
-        bool Save();
-        bool Save(const std::string &);
+        TaskResult<bool> Open(SlokedEditorDocumentSet::DocumentId);
+        TaskResult<bool> Save();
+        TaskResult<bool> Save(const std::string &);
         void Close();
-        std::optional<SlokedEditorDocumentSet::DocumentId> GetId();
-        std::optional<std::string> GetUpstream();
+        TaskResult<std::optional<SlokedEditorDocumentSet::DocumentId>> GetId();
+        TaskResult<std::optional<std::string>> GetUpstream();
 
      private:
         SlokedServiceClient client;

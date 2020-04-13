@@ -21,6 +21,8 @@
 
 #include "sloked/services/DocumentSet.h"
 
+#include "sloked/sched/CompoundTask.h"
+
 namespace sloked {
 
     class SlokedDocumentSetContext : public SlokedServiceContext {
@@ -162,93 +164,113 @@ namespace sloked {
         std::unique_ptr<KgrPipe> pipe)
         : client(std::move(pipe)) {}
 
-    std::optional<SlokedEditorDocumentSet::DocumentId>
+    TaskResult<std::optional<SlokedEditorDocumentSet::DocumentId>>
         SlokedDocumentSetClient::New(const std::string &encoding,
                                      const std::string &newline) {
-        auto res = this->client
-                       .Invoke("new", KgrDictionary{{"encoding", encoding},
-                                                    {"newline", newline}})
-                       ->Next()
-                       .UnwrapWait();
-        if (res.HasResult()) {
-            return res.GetResult().AsInt();
-        } else {
-            return {};
-        }
+        return SlokedTaskTransformations::Transform(
+            this->client
+                .Invoke("new", KgrDictionary{{"encoding", encoding},
+                                             {"newline", newline}})
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<SlokedEditorDocumentSet::DocumentId> result;
+                if (res.HasResult()) {
+                    result = res.GetResult().AsInt();
+                }
+                return result;
+            });
     }
 
-    std::optional<SlokedEditorDocumentSet::DocumentId>
+    TaskResult<std::optional<SlokedEditorDocumentSet::DocumentId>>
         SlokedDocumentSetClient::Open(const std::string &path,
                                       const std::string &encoding,
                                       const std::string &newline,
                                       const std::string &tagger) {
-        auto res = this->client
-                       .Invoke("open", KgrDictionary{{"path", path},
-                                                     {"encoding", encoding},
-                                                     {"newline", newline},
-                                                     {"tagger", tagger}})
-                       ->Next()
-                       .UnwrapWait();
-        if (res.HasResult()) {
-            return res.GetResult().AsInt();
-        } else {
-            return {};
-        }
+        return SlokedTaskTransformations::Transform(
+            this->client
+                .Invoke("open", KgrDictionary{{"path", path},
+                                              {"encoding", encoding},
+                                              {"newline", newline},
+                                              {"tagger", tagger}})
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<SlokedEditorDocumentSet::DocumentId> result;
+                if (res.HasResult()) {
+                    result = res.GetResult().AsInt();
+                }
+                return result;
+            });
     }
 
-    bool SlokedDocumentSetClient::Open(
+    TaskResult<bool> SlokedDocumentSetClient::Open(
         SlokedEditorDocumentSet::DocumentId docId) {
-        auto res =
+        return SlokedTaskTransformations::Transform(
             this->client
                 .Invoke("openById",
                         KgrDictionary{{"id", static_cast<int64_t>(docId)}})
-                ->Next()
-                .UnwrapWait();
-        if (res.HasResult()) {
-            return res.GetResult().AsBoolean();
-        } else {
-            return false;
-        }
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                if (res.HasResult()) {
+                    return res.GetResult().AsBoolean();
+                } else {
+                    return false;
+                }
+            });
     }
 
-    bool SlokedDocumentSetClient::Save() {
-        auto res = this->client.Invoke("save", {})->Next().UnwrapWait();
-        if (res.HasResult()) {
-            return res.GetResult().AsBoolean();
-        } else {
-            return false;
-        }
+    TaskResult<bool> SlokedDocumentSetClient::Save() {
+        return SlokedTaskTransformations::Transform(
+            this->client.Invoke("save", {})->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                if (res.HasResult()) {
+                    return res.GetResult().AsBoolean();
+                } else {
+                    return false;
+                }
+            });
     }
 
-    bool SlokedDocumentSetClient::Save(const std::string &path) {
-        auto res = this->client.Invoke("saveAs", path)->Next().UnwrapWait();
-        if (res.HasResult()) {
-            return res.GetResult().AsBoolean();
-        } else {
-            return false;
-        }
+    TaskResult<bool> SlokedDocumentSetClient::Save(const std::string &path) {
+        return SlokedTaskTransformations::Transform(
+            this->client.Invoke("saveAs", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                if (res.HasResult()) {
+                    return res.GetResult().AsBoolean();
+                } else {
+                    return false;
+                }
+            });
     }
 
     void SlokedDocumentSetClient::Close() {
         this->client.Invoke("close", {});
     }
 
-    std::optional<SlokedEditorDocumentSet::DocumentId>
+    TaskResult<std::optional<SlokedEditorDocumentSet::DocumentId>>
         SlokedDocumentSetClient::GetId() {
-        auto res = this->client.Invoke("getId", {})->Next().UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::Integer)) {
-            return res.GetResult().AsInt();
-        } else {
-            return {};
-        }
+        return SlokedTaskTransformations::Transform(
+            this->client.Invoke("getId", {})->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<SlokedEditorDocumentSet::DocumentId> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::Integer)) {
+                    result = res.GetResult().AsInt();
+                }
+                return result;
+            });
     }
 
-    std::optional<std::string> SlokedDocumentSetClient::GetUpstream() {
-        auto res = this->client.Invoke("getUpstream", {})->Next().UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
-            return res.GetResult().AsString();
-        } else {
-            return {};
-        }
+    TaskResult<std::optional<std::string>>
+        SlokedDocumentSetClient::GetUpstream() {
+        return SlokedTaskTransformations::Transform(
+            this->client.Invoke("getUpstream", {})->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<std::string> result{};
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::String)) {
+                    result = res.GetResult().AsString();
+                }
+                return result;
+            });
     }
 }  // namespace sloked

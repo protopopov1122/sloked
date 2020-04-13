@@ -23,6 +23,7 @@
 
 #include "sloked/core/Error.h"
 #include "sloked/core/Locale.h"
+#include "sloked/sched/CompoundTask.h"
 #include "sloked/services/TextRender.h"
 #include "sloked/text/cursor/TransactionCursor.h"
 #include "sloked/text/cursor/TransactionJournal.h"
@@ -283,16 +284,19 @@ namespace sloked {
         this->client.Invoke("redo", {});
     }
 
-    std::optional<TextPosition> SlokedCursorClient::GetPosition() {
-        auto clientRes =
-            this->client.Invoke("getPosition", {})->Next().UnwrapWait();
-        if (!clientRes.HasResult()) {
-            return {};
-        } else {
-            const auto &cursor = clientRes.GetResult().AsDictionary();
-            return TextPosition{
-                static_cast<TextPosition::Line>(cursor["line"].AsInt()),
-                static_cast<TextPosition::Column>(cursor["column"].AsInt())};
-        }
+    TaskResult<std::optional<TextPosition>> SlokedCursorClient::GetPosition() {
+        return SlokedTaskTransformations::Transform(
+            this->client.Invoke("getPosition", {})->Next(),
+            [](const SlokedNetResponseBroker::Response &clientRes) {
+                std::optional<TextPosition> result{};
+                if (clientRes.HasResult()) {
+                    const auto &cursor = clientRes.GetResult().AsDictionary();
+                    result = TextPosition{
+                        static_cast<TextPosition::Line>(cursor["line"].AsInt()),
+                        static_cast<TextPosition::Column>(
+                            cursor["column"].AsInt())};
+                }
+                return result;
+            });
     }
 }  // namespace sloked

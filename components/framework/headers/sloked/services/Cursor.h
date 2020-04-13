@@ -62,7 +62,7 @@ namespace sloked {
         void DeleteForward();
         void Undo();
         void Redo();
-        std::optional<TextPosition> GetPosition();
+        TaskResult<std::optional<TextPosition>> GetPosition();
 
      private:
         SlokedServiceClient client;
