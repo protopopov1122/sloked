@@ -402,27 +402,37 @@ namespace sloked {
 
         // Screen layout
         screenClient.Handle.NewMultiplexer("/");
-        auto mainWindow = screenClient.Multiplexer.NewWindow(
-            "/", TextPosition{0, 0},
-            TextPosition{
-                screenServer.GetScreen().GetSize().GetScreenSize().line,
-                screenServer.GetScreen().GetSize().GetScreenSize().column});
+        auto mainWindow =
+            screenClient.Multiplexer
+                .NewWindow(
+                    "/", TextPosition{0, 0},
+                    TextPosition{
+                        screenServer.GetScreen().GetSize().GetScreenSize().line,
+                        screenServer.GetScreen()
+                            .GetSize()
+                            .GetScreenSize()
+                            .column})
+                .UnwrapWait();
         screenSizeClient.Listen([&](const auto &size) {
             mainEditor.GetThreadedExecutor().Enqueue([&, size] {
                 if (screenServer.IsRunning() && mainWindow.has_value()) {
-                    screenClient.Multiplexer.ResizeWindow(mainWindow.value(),
-                                                          size);
+                    screenClient.Multiplexer
+                        .ResizeWindow(mainWindow.value(), size)
+                        .UnwrapWait();
                 }
             });
         });
         screenClient.Handle.NewSplitter(mainWindow.value(),
                                         Splitter::Direction::Vertical);
-        screenClient.Splitter.NewWindow(mainWindow.value(),
-                                        Splitter::Constraints(1.0f));
-        auto tabber = screenClient.Splitter.NewWindow(
-            mainWindow.value(), Splitter::Constraints(0.0f, 1));
+        screenClient.Splitter
+            .NewWindow(mainWindow.value(), Splitter::Constraints(1.0f))
+            .UnwrapWait();
+        auto tabber =
+            screenClient.Splitter
+                .NewWindow(mainWindow.value(), Splitter::Constraints(0.0f, 1))
+                .UnwrapWait();
         screenClient.Handle.NewTabber("/0/0");
-        auto tab1 = screenClient.Tabber.NewWindow("/0/0");
+        auto tab1 = screenClient.Tabber.NewWindow("/0/0").UnwrapWait();
         screenClient.Handle.NewTextEditor(
             tab1.value(), documentClient.GetId().UnwrapWait().value(),
             "default");
@@ -432,7 +442,7 @@ namespace sloked {
                           .Connect({"/screen/component/text/pane"})
                           .UnwrapWait()),
             isScreenLocked);
-        paneClient.Connect("/0/1", false, {});
+        paneClient.Connect("/0/1", false, {}).UnwrapWait();
         auto &render = paneClient.GetRender();
 
         // Startup

@@ -56,11 +56,12 @@ namespace sloked {
         SlokedTextPaneClient(std::unique_ptr<KgrPipe>,
                              std::function<bool()> = nullptr);
         ~SlokedTextPaneClient();
-        bool Connect(const std::string &, bool,
-                     const std::vector<std::pair<SlokedControlKey, bool>> &);
+        TaskResult<bool> Connect(
+            const std::string &, bool,
+            const std::vector<std::pair<SlokedControlKey, bool>> &);
         Render &GetRender();
         void Close();
-        std::vector<SlokedKeyboardInput> GetInput();
+        TaskResult<std::vector<SlokedKeyboardInput>> GetInput();
 
      private:
         class SlokedTextPaneRender;

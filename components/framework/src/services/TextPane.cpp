@@ -24,6 +24,7 @@
 #include <set>
 
 #include "sloked/core/Locale.h"
+#include "sloked/sched/CompoundTask.h"
 #include "sloked/screen/components/ComponentTree.h"
 #include "sloked/screen/components/TextPane.h"
 
@@ -575,7 +576,7 @@ namespace sloked {
 
     SlokedTextPaneClient::~SlokedTextPaneClient() = default;
 
-    bool SlokedTextPaneClient::Connect(
+    TaskResult<bool> SlokedTextPaneClient::Connect(
         const std::string &path, bool text,
         const std::vector<std::pair<SlokedControlKey, bool>> &keys) {
         this->PreventDeadlock();
@@ -587,10 +588,11 @@ namespace sloked {
                               {"alt", key.second}});
         }
         params.Put("keys", std::move(array));
-        auto res = this->client.Invoke("connect", std::move(params))
-                       ->Next()
-                       .UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
+        return SlokedTaskTransformations::Transform(
+            this->client.Invoke("connect", std::move(params))->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
     void SlokedTextPaneClient::Close() {
@@ -601,29 +603,32 @@ namespace sloked {
         return *this->render;
     }
 
-    std::vector<SlokedKeyboardInput> SlokedTextPaneClient::GetInput() {
+    TaskResult<std::vector<SlokedKeyboardInput>>
+        SlokedTextPaneClient::GetInput() {
         this->PreventDeadlock();
-        auto res = this->client.Invoke("getInput", {})->Next().UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::Array)) {
-            const auto &array = res.GetResult().AsArray();
-            std::vector<SlokedKeyboardInput> input;
-            for (const auto &in : array) {
-                SlokedKeyboardInput event;
-                event.alt = in.AsDictionary()["alt"].AsBoolean();
-                if (in.AsDictionary().Has("text")) {
-                    event.value = in.AsDictionary()["text"].AsString();
-                } else if (in.AsDictionary().Has("key")) {
-                    event.value = static_cast<SlokedControlKey>(
-                        in.AsDictionary()["key"].AsInt());
-                } else {
-                    continue;
+        return SlokedTaskTransformations::Transform(
+            this->client.Invoke("getInput", {})->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::vector<SlokedKeyboardInput> input;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::Array)) {
+                    const auto &array = res.GetResult().AsArray();
+                    for (const auto &in : array) {
+                        SlokedKeyboardInput event;
+                        event.alt = in.AsDictionary()["alt"].AsBoolean();
+                        if (in.AsDictionary().Has("text")) {
+                            event.value = in.AsDictionary()["text"].AsString();
+                        } else if (in.AsDictionary().Has("key")) {
+                            event.value = static_cast<SlokedControlKey>(
+                                in.AsDictionary()["key"].AsInt());
+                        } else {
+                            continue;
+                        }
+                        input.push_back(event);
+                    }
                 }
-                input.push_back(event);
-            }
-            return input;
-        } else {
-            return {};
-        }
+                return input;
+            });
     }
 
     void SlokedTextPaneClient::PreventDeadlock() {

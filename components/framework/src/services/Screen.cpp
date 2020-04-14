@@ -827,58 +827,68 @@ namespace sloked {
         SlokedServiceClient &client, std::function<void()> preventDeadlock)
         : client(client), preventDeadlock(std::move(preventDeadlock)) {}
 
-    bool SlokedScreenClient::HandleClient::NewMultiplexer(
+    TaskResult<bool> SlokedScreenClient::HandleClient::NewMultiplexer(
         const std::string &path) const {
         this->preventDeadlock();
-        auto res =
-            client.Invoke("handle.newMultiplexer", path)->Next().UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("handle.newMultiplexer", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
-    bool SlokedScreenClient::HandleClient::NewSplitter(
+    TaskResult<bool> SlokedScreenClient::HandleClient::NewSplitter(
         const std::string &path, Splitter::Direction direction) const {
         this->preventDeadlock();
-        auto res = client
-                       .Invoke("handle.newSplitter",
-                               KgrDictionary{{"path", path},
-                                             {"direction",
-                                              static_cast<int64_t>(direction)}})
-                       ->Next()
-                       .UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
+        return SlokedTaskTransformations::Transform(
+            client
+                .Invoke("handle.newSplitter",
+                        KgrDictionary{
+                            {"path", path},
+                            {"direction", static_cast<int64_t>(direction)}})
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
-    bool SlokedScreenClient::HandleClient::NewTabber(
+    TaskResult<bool> SlokedScreenClient::HandleClient::NewTabber(
         const std::string &path) const {
         this->preventDeadlock();
-        auto res = client.Invoke("handle.newTabber", path)->Next().UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("handle.newTabber", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
-    bool SlokedScreenClient::HandleClient::NewTextEditor(
+    TaskResult<bool> SlokedScreenClient::HandleClient::NewTextEditor(
         const std::string &path, SlokedEditorDocumentSet::DocumentId document,
         const std::string &tagger) const {
         this->preventDeadlock();
-        auto res = client
-                       .Invoke("handle.newTextEditor",
-                               KgrDictionary{
-                                   {"path", path},
-                                   {"document", static_cast<int64_t>(document)},
-                                   {"tagger", tagger}})
-                       ->Next()
-                       .UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
+        return SlokedTaskTransformations::Transform(
+            client
+                .Invoke(
+                    "handle.newTextEditor",
+                    KgrDictionary{{"path", path},
+                                  {"document", static_cast<int64_t>(document)},
+                                  {"tagger", tagger}})
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
     SlokedScreenClient::MultiplexerClient::MultiplexerClient(
         SlokedServiceClient &client, std::function<void()> preventDeadlock)
         : client(client), preventDeadlock(std::move(preventDeadlock)) {}
 
-    std::optional<std::string> SlokedScreenClient::MultiplexerClient::NewWindow(
-        const std::string &path, const TextPosition &pos,
-        const TextPosition &dim) const {
+    TaskResult<std::optional<std::string>>
+        SlokedScreenClient::MultiplexerClient::NewWindow(
+            const std::string &path, const TextPosition &pos,
+            const TextPosition &dim) const {
         this->preventDeadlock();
-        auto res =
+        return SlokedTaskTransformations::Transform(
             client
                 .Invoke(
                     "multiplexer.newWindow",
@@ -892,74 +902,91 @@ namespace sloked {
                          KgrDictionary{
                              {"line", static_cast<int64_t>(dim.line)},
                              {"column", static_cast<int64_t>(dim.column)}}}})
-                ->Next()
-                .UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
-            return res.GetResult().AsString();
-        } else {
-            return {};
-        }
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<std::string> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::String)) {
+                    result = res.GetResult().AsString();
+                }
+                return result;
+            });
     }
 
-    std::size_t SlokedScreenClient::MultiplexerClient::GetWindowCount(
+    TaskResult<std::size_t>
+        SlokedScreenClient::MultiplexerClient::GetWindowCount(
+            const std::string &path) const {
+        this->preventDeadlock();
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("multiplexer.getInfo", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) -> std::size_t {
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::Object)) {
+                    return static_cast<std::size_t>(
+                        res.GetResult().AsDictionary()["windowCount"].AsInt());
+                } else {
+                    return 0;
+                }
+            });
+    }
+
+    TaskResult<std::optional<std::string>>
+        SlokedScreenClient::MultiplexerClient::GetFocus(
+            const std::string &path) const {
+        this->preventDeadlock();
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("multiplexer.getInfo", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<std::string> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::Object) &&
+                    res.GetResult().AsDictionary().Has("focus")) {
+                    result = res.GetResult().AsDictionary()["focus"].AsString();
+                }
+                return result;
+            });
+    }
+
+    TaskResult<std::optional<bool>>
+        SlokedScreenClient::MultiplexerClient::WindowHasFocus(
+            const std::string &path) const {
+        this->preventDeadlock();
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("multiplexer.windowHasFocus", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<bool> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::Boolean)) {
+                    result = res.GetResult().AsBoolean();
+                }
+                return result;
+            });
+    }
+
+    TaskResult<bool> SlokedScreenClient::MultiplexerClient::SetFocus(
         const std::string &path) const {
         this->preventDeadlock();
-        auto res =
-            client.Invoke("multiplexer.getInfo", path)->Next().UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object)) {
-            return static_cast<std::size_t>(
-                res.GetResult().AsDictionary()["windowCount"].AsInt());
-        } else {
-            return 0;
-        }
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("multiplexer.setFocus", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
-    std::optional<std::string> SlokedScreenClient::MultiplexerClient::GetFocus(
+    TaskResult<bool> SlokedScreenClient::MultiplexerClient::Close(
         const std::string &path) const {
         this->preventDeadlock();
-        auto res =
-            client.Invoke("multiplexer.getInfo", path)->Next().UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object) &&
-            res.GetResult().AsDictionary().Has("focus")) {
-            return res.GetResult().AsDictionary()["focus"].AsString();
-        } else {
-            return {};
-        }
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("multiplexer.close", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
-    std::optional<bool> SlokedScreenClient::MultiplexerClient::WindowHasFocus(
-        const std::string &path) const {
-        this->preventDeadlock();
-        auto res = client.Invoke("multiplexer.windowHasFocus", path)
-                       ->Next()
-                       .UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::Boolean)) {
-            return res.GetResult().AsBoolean();
-        } else {
-            return {};
-        }
-    }
-
-    bool SlokedScreenClient::MultiplexerClient::SetFocus(
-        const std::string &path) const {
-        this->preventDeadlock();
-        auto res =
-            client.Invoke("multiplexer.setFocus", path)->Next().UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
-    }
-
-    bool SlokedScreenClient::MultiplexerClient::Close(
-        const std::string &path) const {
-        this->preventDeadlock();
-        auto res =
-            client.Invoke("multiplexer.close", path)->Next().UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
-    }
-
-    bool SlokedScreenClient::MultiplexerClient::MoveWindow(
+    TaskResult<bool> SlokedScreenClient::MultiplexerClient::MoveWindow(
         const std::string &path, const TextPosition &pos) const {
         this->preventDeadlock();
-        auto res =
+        return SlokedTaskTransformations::Transform(
             client
                 .Invoke(
                     "multiplexer.moveWindow",
@@ -969,15 +996,16 @@ namespace sloked {
                          KgrDictionary{
                              {"line", static_cast<int64_t>(pos.line)},
                              {"column", static_cast<int64_t>(pos.column)}}}})
-                ->Next()
-                .UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
-    bool SlokedScreenClient::MultiplexerClient::ResizeWindow(
+    TaskResult<bool> SlokedScreenClient::MultiplexerClient::ResizeWindow(
         const std::string &path, const TextPosition &dim) const {
         this->preventDeadlock();
-        auto res =
+        return SlokedTaskTransformations::Transform(
             client
                 .Invoke(
                     "multiplexer.resizeWindow",
@@ -987,20 +1015,22 @@ namespace sloked {
                          KgrDictionary{
                              {"line", static_cast<int64_t>(dim.line)},
                              {"column", static_cast<int64_t>(dim.column)}}}})
-                ->Next()
-                .UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
     SlokedScreenClient::SplitterClient::SplitterClient(
         SlokedServiceClient &client, std::function<void()> preventDeadlock)
         : client(client), preventDeadlock(std::move(preventDeadlock)) {}
 
-    std::optional<std::string> SlokedScreenClient::SplitterClient::NewWindow(
-        const std::string &path,
-        const Splitter::Constraints &constraints) const {
+    TaskResult<std::optional<std::string>>
+        SlokedScreenClient::SplitterClient::NewWindow(
+            const std::string &path,
+            const Splitter::Constraints &constraints) const {
         this->preventDeadlock();
-        auto res =
+        return SlokedTaskTransformations::Transform(
             client
                 .Invoke("splitter.newWindow",
                         KgrDictionary{
@@ -1012,20 +1042,23 @@ namespace sloked {
                                              constraints.GetMinimum())},
                                  {"max", static_cast<int64_t>(
                                              constraints.GetMaximum())}}}})
-                ->Next()
-                .UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
-            return res.GetResult().AsString();
-        } else {
-            return {};
-        }
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<std::string> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::String)) {
+                    result = res.GetResult().AsString();
+                }
+                return result;
+            });
     }
 
-    std::optional<std::string> SlokedScreenClient::SplitterClient::NewWindow(
-        const std::string &path, SlokedComponentWindow::Id winId,
-        const Splitter::Constraints &constraints) const {
+    TaskResult<std::optional<std::string>>
+        SlokedScreenClient::SplitterClient::NewWindow(
+            const std::string &path, SlokedComponentWindow::Id winId,
+            const Splitter::Constraints &constraints) const {
         this->preventDeadlock();
-        auto res =
+        return SlokedTaskTransformations::Transform(
             client
                 .Invoke("splitter.insertWindow",
                         KgrDictionary{
@@ -1039,88 +1072,113 @@ namespace sloked {
                                              constraints.GetMinimum())},
                                  {"max", static_cast<int64_t>(
                                              constraints.GetMaximum())}}}})
-                ->Next()
-                .UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
-            return res.GetResult().AsString();
-        } else {
-            return {};
-        }
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<std::string> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::String)) {
+                    result = res.GetResult().AsString();
+                }
+                return result;
+            });
     }
 
-    std::size_t SlokedScreenClient::SplitterClient::GetWindowCount(
+    TaskResult<std::size_t> SlokedScreenClient::SplitterClient::GetWindowCount(
         const std::string &path) const {
         this->preventDeadlock();
-        auto res = client.Invoke("splitter.getInfo", path)->Next().UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object)) {
-            return static_cast<std::size_t>(
-                res.GetResult().AsDictionary()["windowCount"].AsInt());
-        } else {
-            return 0;
-        }
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("splitter.getInfo", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) -> std::size_t {
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::Object)) {
+                    return static_cast<std::size_t>(
+                        res.GetResult().AsDictionary()["windowCount"].AsInt());
+                } else {
+                    return 0;
+                }
+            });
     }
 
-    std::optional<std::string> SlokedScreenClient::SplitterClient::GetFocus(
+    TaskResult<std::optional<std::string>>
+        SlokedScreenClient::SplitterClient::GetFocus(
+            const std::string &path) const {
+        this->preventDeadlock();
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("splitter.getInfo", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<std::string> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::Object) &&
+                    res.GetResult().AsDictionary().Has("focus")) {
+                    result = res.GetResult().AsDictionary()["focus"].AsString();
+                }
+                return result;
+            });
+    }
+
+    TaskResult<std::optional<bool>>
+        SlokedScreenClient::SplitterClient::WindowHasFocus(
+            const std::string &path) const {
+        this->preventDeadlock();
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("splitter.windowHasFocus", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<bool> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::Boolean)) {
+                    result = res.GetResult().AsBoolean();
+                }
+                return result;
+            });
+    }
+
+    TaskResult<bool> SlokedScreenClient::SplitterClient::SetFocus(
         const std::string &path) const {
         this->preventDeadlock();
-        auto res = client.Invoke("splitter.getInfo", path)->Next().UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object) &&
-            res.GetResult().AsDictionary().Has("focus")) {
-            return res.GetResult().AsDictionary()["focus"].AsString();
-        } else {
-            return {};
-        }
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("splitter.setFocus", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
-    std::optional<bool> SlokedScreenClient::SplitterClient::WindowHasFocus(
+    TaskResult<bool> SlokedScreenClient::SplitterClient::Close(
         const std::string &path) const {
         this->preventDeadlock();
-        auto res =
-            client.Invoke("splitter.windowHasFocus", path)->Next().UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::Boolean)) {
-            return res.GetResult().AsBoolean();
-        } else {
-            return {};
-        }
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("splitter.close", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
-    bool SlokedScreenClient::SplitterClient::SetFocus(
-        const std::string &path) const {
+    TaskResult<std::optional<std::string>>
+        SlokedScreenClient::SplitterClient::MoveWindow(
+            const std::string &path, SlokedComponentWindow::Id winId) const {
         this->preventDeadlock();
-        auto res =
-            client.Invoke("splitter.setFocus", path)->Next().UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
+        return SlokedTaskTransformations::Transform(
+            client
+                .Invoke(
+                    "splitter.moveWindow",
+                    KgrDictionary{{"path", path},
+                                  {"position", static_cast<int64_t>(winId)}})
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<std::string> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::String)) {
+                    result = res.GetResult().AsString();
+                }
+                return result;
+            });
     }
 
-    bool SlokedScreenClient::SplitterClient::Close(
-        const std::string &path) const {
+    TaskResult<bool>
+        SlokedScreenClient::SplitterClient::UpdateWindowConstraints(
+            const std::string &path,
+            const Splitter::Constraints &constraints) const {
         this->preventDeadlock();
-        auto res = client.Invoke("splitter.close", path)->Next().UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
-    }
-
-    std::optional<std::string> SlokedScreenClient::SplitterClient::MoveWindow(
-        const std::string &path, SlokedComponentWindow::Id winId) const {
-        this->preventDeadlock();
-        auto res = client
-                       .Invoke("splitter.moveWindow",
-                               KgrDictionary{
-                                   {"path", path},
-                                   {"position", static_cast<int64_t>(winId)}})
-                       ->Next()
-                       .UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
-            return res.GetResult().AsString();
-        } else {
-            return {};
-        }
-    }
-
-    bool SlokedScreenClient::SplitterClient::UpdateWindowConstraints(
-        const std::string &path,
-        const Splitter::Constraints &constraints) const {
-        this->preventDeadlock();
-        auto res =
+        return SlokedTaskTransformations::Transform(
             client
                 .Invoke("splitter.updateWindowConstraints",
                         KgrDictionary{
@@ -1132,111 +1190,141 @@ namespace sloked {
                                              constraints.GetMinimum())},
                                  {"max", static_cast<int64_t>(
                                              constraints.GetMaximum())}}}})
-                ->Next()
-                .UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
     SlokedScreenClient::TabberClient::TabberClient(
         SlokedServiceClient &client, std::function<void()> preventDeadlock)
         : client(client), preventDeadlock(std::move(preventDeadlock)) {}
 
-    std::optional<std::string> SlokedScreenClient::TabberClient::NewWindow(
-        const std::string &path) const {
+    TaskResult<std::optional<std::string>>
+        SlokedScreenClient::TabberClient::NewWindow(
+            const std::string &path) const {
         this->preventDeadlock();
-        auto res =
+        return SlokedTaskTransformations::Transform(
             client.Invoke("tabber.newWindow", KgrDictionary{{"path", path}})
-                ->Next()
-                .UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
-            return res.GetResult().AsString();
-        } else {
-            return {};
-        }
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<std::string> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::String)) {
+                    result = res.GetResult().AsString();
+                }
+                return result;
+            });
     }
 
-    std::optional<std::string> SlokedScreenClient::TabberClient::NewWindow(
-        const std::string &path, SlokedComponentWindow::Id winId) const {
+    TaskResult<std::optional<std::string>>
+        SlokedScreenClient::TabberClient::NewWindow(
+            const std::string &path, SlokedComponentWindow::Id winId) const {
         this->preventDeadlock();
-        auto res =
+        return SlokedTaskTransformations::Transform(
             client
                 .Invoke("tabber.insertWindow",
                         KgrDictionary{{"path", SlokedPath(path)
                                                    .Child(std::to_string(winId))
                                                    .ToString()}})
-                ->Next()
-                .UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
-            return res.GetResult().AsString();
-        } else {
-            return {};
-        }
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<std::string> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::String)) {
+                    result = res.GetResult().AsString();
+                }
+                return result;
+            });
     }
 
-    std::size_t SlokedScreenClient::TabberClient::GetWindowCount(
+    TaskResult<std::size_t> SlokedScreenClient::TabberClient::GetWindowCount(
         const std::string &path) const {
         this->preventDeadlock();
-        auto res = client.Invoke("tabber.getInfo", path)->Next().UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object)) {
-            return static_cast<std::size_t>(
-                res.GetResult().AsDictionary()["windowCount"].AsInt());
-        } else {
-            return 0;
-        }
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("tabber.getInfo", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) -> std::size_t {
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::Object)) {
+                    return static_cast<std::size_t>(
+                        res.GetResult().AsDictionary()["windowCount"].AsInt());
+                } else {
+                    return 0;
+                }
+            });
     }
 
-    std::optional<std::string> SlokedScreenClient::TabberClient::GetFocus(
+    TaskResult<std::optional<std::string>>
+        SlokedScreenClient::TabberClient::GetFocus(
+            const std::string &path) const {
+        this->preventDeadlock();
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("tabber.getInfo", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<std::string> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::Object) &&
+                    res.GetResult().AsDictionary().Has("focus")) {
+                    result = res.GetResult().AsDictionary()["focus"].AsString();
+                }
+                return result;
+            });
+    }
+
+    TaskResult<std::optional<bool>>
+        SlokedScreenClient::TabberClient::WindowHasFocus(
+            const std::string &path) const {
+        this->preventDeadlock();
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("tabber.windowHasFocus", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<bool> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::Boolean)) {
+                    result = res.GetResult().AsBoolean();
+                }
+                return result;
+            });
+    }
+
+    TaskResult<bool> SlokedScreenClient::TabberClient::SetFocus(
         const std::string &path) const {
         this->preventDeadlock();
-        auto res = client.Invoke("tabber.getInfo", path)->Next().UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::Object) &&
-            res.GetResult().AsDictionary().Has("focus")) {
-            return res.GetResult().AsDictionary()["focus"].AsString();
-        } else {
-            return {};
-        }
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("tabber.setFocus", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
-    std::optional<bool> SlokedScreenClient::TabberClient::WindowHasFocus(
+    TaskResult<bool> SlokedScreenClient::TabberClient::Close(
         const std::string &path) const {
         this->preventDeadlock();
-        auto res =
-            client.Invoke("tabber.windowHasFocus", path)->Next().UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::Boolean)) {
-            return res.GetResult().AsBoolean();
-        } else {
-            return {};
-        }
+        return SlokedTaskTransformations::Transform(
+            client.Invoke("tabber.close", path)->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                return res.HasResult() && res.GetResult().AsBoolean();
+            });
     }
 
-    bool SlokedScreenClient::TabberClient::SetFocus(
-        const std::string &path) const {
+    TaskResult<std::optional<std::string>>
+        SlokedScreenClient::TabberClient::MoveWindow(
+            const std::string &path, SlokedComponentWindow::Id winId) const {
         this->preventDeadlock();
-        auto res = client.Invoke("tabber.setFocus", path)->Next().UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
-    }
-
-    bool SlokedScreenClient::TabberClient::Close(
-        const std::string &path) const {
-        this->preventDeadlock();
-        auto res = client.Invoke("tabber.close", path)->Next().UnwrapWait();
-        return res.HasResult() && res.GetResult().AsBoolean();
-    }
-
-    std::optional<std::string> SlokedScreenClient::TabberClient::MoveWindow(
-        const std::string &path, SlokedComponentWindow::Id winId) const {
-        this->preventDeadlock();
-        auto res = client
-                       .Invoke("tabber.moveWindow",
-                               KgrDictionary{
-                                   {"path", path},
-                                   {"position", static_cast<int64_t>(winId)}})
-                       ->Next()
-                       .UnwrapWait();
-        if (res.HasResult() && res.GetResult().Is(KgrValueType::String)) {
-            return res.GetResult().AsString();
-        } else {
-            return {};
-        }
+        return SlokedTaskTransformations::Transform(
+            client
+                .Invoke(
+                    "tabber.moveWindow",
+                    KgrDictionary{{"path", path},
+                                  {"position", static_cast<int64_t>(winId)}})
+                ->Next(),
+            [](const SlokedNetResponseBroker::Response &res) {
+                std::optional<std::string> result;
+                if (res.HasResult() &&
+                    res.GetResult().Is(KgrValueType::String)) {
+                    result = res.GetResult().AsString();
+                }
+                return result;
+            });
     }
 }  // namespace sloked

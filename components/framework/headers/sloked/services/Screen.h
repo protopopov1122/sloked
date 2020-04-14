@@ -56,12 +56,13 @@ namespace sloked {
         class HandleClient {
          public:
             HandleClient(SlokedServiceClient &, std::function<void()>);
-            bool NewMultiplexer(const std::string &) const;
-            bool NewSplitter(const std::string &, Splitter::Direction) const;
-            bool NewTabber(const std::string &) const;
-            bool NewTextEditor(const std::string &,
-                               SlokedEditorDocumentSet::DocumentId,
-                               const std::string & = "") const;
+            TaskResult<bool> NewMultiplexer(const std::string &) const;
+            TaskResult<bool> NewSplitter(const std::string &,
+                                         Splitter::Direction) const;
+            TaskResult<bool> NewTabber(const std::string &) const;
+            TaskResult<bool> NewTextEditor(const std::string &,
+                                           SlokedEditorDocumentSet::DocumentId,
+                                           const std::string & = "") const;
 
          private:
             SlokedServiceClient &client;
@@ -71,16 +72,20 @@ namespace sloked {
         class MultiplexerClient {
          public:
             MultiplexerClient(SlokedServiceClient &, std::function<void()>);
-            std::optional<std::string> NewWindow(const std::string &,
-                                                 const TextPosition &,
-                                                 const TextPosition &) const;
-            std::size_t GetWindowCount(const std::string &) const;
-            std::optional<std::string> GetFocus(const std::string &) const;
-            std::optional<bool> WindowHasFocus(const std::string &) const;
-            bool SetFocus(const std::string &) const;
-            bool Close(const std::string &) const;
-            bool MoveWindow(const std::string &, const TextPosition &) const;
-            bool ResizeWindow(const std::string &, const TextPosition &) const;
+            TaskResult<std::optional<std::string>> NewWindow(
+                const std::string &, const TextPosition &,
+                const TextPosition &) const;
+            TaskResult<std::size_t> GetWindowCount(const std::string &) const;
+            TaskResult<std::optional<std::string>> GetFocus(
+                const std::string &) const;
+            TaskResult<std::optional<bool>> WindowHasFocus(
+                const std::string &) const;
+            TaskResult<bool> SetFocus(const std::string &) const;
+            TaskResult<bool> Close(const std::string &) const;
+            TaskResult<bool> MoveWindow(const std::string &,
+                                        const TextPosition &) const;
+            TaskResult<bool> ResizeWindow(const std::string &,
+                                          const TextPosition &) const;
 
          private:
             SlokedServiceClient &client;
@@ -90,20 +95,22 @@ namespace sloked {
         class SplitterClient {
          public:
             SplitterClient(SlokedServiceClient &, std::function<void()>);
-            std::optional<std::string> NewWindow(
+            TaskResult<std::optional<std::string>> NewWindow(
                 const std::string &, const Splitter::Constraints &) const;
-            std::optional<std::string> NewWindow(
+            TaskResult<std::optional<std::string>> NewWindow(
                 const std::string &, SlokedComponentWindow::Id,
                 const Splitter::Constraints &) const;
-            std::size_t GetWindowCount(const std::string &) const;
-            std::optional<std::string> GetFocus(const std::string &) const;
-            std::optional<bool> WindowHasFocus(const std::string &) const;
-            bool SetFocus(const std::string &) const;
-            bool Close(const std::string &) const;
-            std::optional<std::string> MoveWindow(
+            TaskResult<std::size_t> GetWindowCount(const std::string &) const;
+            TaskResult<std::optional<std::string>> GetFocus(
+                const std::string &) const;
+            TaskResult<std::optional<bool>> WindowHasFocus(
+                const std::string &) const;
+            TaskResult<bool> SetFocus(const std::string &) const;
+            TaskResult<bool> Close(const std::string &) const;
+            TaskResult<std::optional<std::string>> MoveWindow(
                 const std::string &, SlokedComponentWindow::Id) const;
-            bool UpdateWindowConstraints(const std::string &,
-                                         const Splitter::Constraints &) const;
+            TaskResult<bool> UpdateWindowConstraints(
+                const std::string &, const Splitter::Constraints &) const;
 
          private:
             SlokedServiceClient &client;
@@ -113,15 +120,18 @@ namespace sloked {
         class TabberClient {
          public:
             TabberClient(SlokedServiceClient &, std::function<void()>);
-            std::optional<std::string> NewWindow(const std::string &) const;
-            std::optional<std::string> NewWindow(
+            TaskResult<std::optional<std::string>> NewWindow(
+                const std::string &) const;
+            TaskResult<std::optional<std::string>> NewWindow(
                 const std::string &, SlokedComponentWindow::Id) const;
-            std::size_t GetWindowCount(const std::string &) const;
-            std::optional<std::string> GetFocus(const std::string &) const;
-            std::optional<bool> WindowHasFocus(const std::string &) const;
-            bool SetFocus(const std::string &) const;
-            bool Close(const std::string &) const;
-            std::optional<std::string> MoveWindow(
+            TaskResult<std::size_t> GetWindowCount(const std::string &) const;
+            TaskResult<std::optional<std::string>> GetFocus(
+                const std::string &) const;
+            TaskResult<std::optional<bool>> WindowHasFocus(
+                const std::string &) const;
+            TaskResult<bool> SetFocus(const std::string &) const;
+            TaskResult<bool> Close(const std::string &) const;
+            TaskResult<std::optional<std::string>> MoveWindow(
                 const std::string &, SlokedComponentWindow::Id) const;
 
          private:
