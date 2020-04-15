@@ -22,6 +22,7 @@
 #include "sloked/screen/terminal/components/MultiplexerComponent.h"
 
 #include "sloked/core/Error.h"
+#include "sloked/sched/CompoundTask.h"
 
 namespace sloked {
 
@@ -121,9 +122,19 @@ namespace sloked {
         }
     }
 
-    void TerminalMultiplexerComponent::TerminalMultiplexerWindow::Render() {
+    TaskResult<void> TerminalMultiplexerComponent::TerminalMultiplexerWindow::
+        RenderSurface() {
         if (this->component) {
-            this->component->Render();
+            return this->component->RenderSurface();
+        } else {
+            return TaskResult<void>::Resolve();
+        }
+    }
+
+    void
+        TerminalMultiplexerComponent::TerminalMultiplexerWindow::ShowSurface() {
+        if (this->component) {
+            this->component->ShowSurface();
         }
     }
 
@@ -197,9 +208,18 @@ namespace sloked {
         return window;
     }
 
-    void TerminalMultiplexerComponent::Render() {
+    TaskResult<void> TerminalMultiplexerComponent::RenderSurface() {
+        std::vector<TaskResult<void>> results;
         for (auto id : this->focus) {
-            this->windows.at(id)->Render();
+            results.emplace_back(this->windows.at(id)->RenderSurface());
+        }
+        auto compound = SlokedCompoundTask::All(results.begin(), results.end());
+        return SlokedTaskTransformations::Voidify(compound);
+    }
+
+    void TerminalMultiplexerComponent::ShowSurface() {
+        for (auto id : this->focus) {
+            this->windows.at(id)->ShowSurface();
         }
     }
 

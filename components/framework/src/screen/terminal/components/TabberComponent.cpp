@@ -111,9 +111,18 @@ namespace sloked {
         }
     }
 
-    void TerminalTabberComponent::TerminalTabberWindow::Render() {
+    TaskResult<void>
+        TerminalTabberComponent::TerminalTabberWindow::RenderSurface() {
         if (this->component) {
-            this->component->Render();
+            return this->component->RenderSurface();
+        } else {
+            return TaskResult<void>::Resolve();
+        }
+    }
+
+    void TerminalTabberComponent::TerminalTabberWindow::ShowSurface() {
+        if (this->component) {
+            this->component->ShowSurface();
         }
     }
 
@@ -192,10 +201,19 @@ namespace sloked {
         return window;
     }
 
-    void TerminalTabberComponent::Render() {
+    TaskResult<void> TerminalTabberComponent::RenderSurface() {
         auto idx = this->tabber.GetCurrentTab();
         if (idx.has_value() && idx < this->components.size()) {
-            this->components.at(idx.value())->Render();
+            return this->components.at(idx.value())->RenderSurface();
+        } else {
+            return TaskResult<void>::Resolve();
+        }
+    }
+
+    void TerminalTabberComponent::ShowSurface() {
+        auto idx = this->tabber.GetCurrentTab();
+        if (idx.has_value() && idx < this->components.size()) {
+            this->components.at(idx.value())->ShowSurface();
         }
     }
 

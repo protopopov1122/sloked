@@ -125,7 +125,13 @@ namespace sloked {
             return this->frame.ProcessInput(event);
         }
 
-        void Render(SlokedTextPane &pane) override {
+        TaskResult<void> RenderSurface(SlokedGraphicsPoint::Coordinate,
+                                       TextPosition::Line,
+                                       const SlokedFontProperties &) override {
+            return TaskResult<void>::Resolve();
+        }
+
+        void ShowSurface(SlokedTextPane &pane) override {
             auto render = this->frame.GetRender();
             if (render == nullptr) {
                 return;

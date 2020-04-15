@@ -30,9 +30,19 @@ namespace sloked {
         : SlokedTextPaneComponent(Type::TextPane), term(term),
           widget(std::move(widget)), screen(term) {}
 
-    void TerminalTextPaneComponent::Render() {
+    TaskResult<void> TerminalTextPaneComponent::RenderSurface() {
         if (this->widget) {
-            this->widget->Render(this->screen);
+            return this->widget->RenderSurface(
+                this->screen.GetMaxWidth(), this->screen.GetHeight(),
+                this->screen.GetFontProperties());
+        } else {
+            return TaskResult<void>::Resolve();
+        }
+    }
+
+    void TerminalTextPaneComponent::ShowSurface() {
+        if (this->widget) {
+            this->widget->ShowSurface(this->screen);
         }
     }
 

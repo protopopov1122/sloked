@@ -178,6 +178,8 @@ namespace sloked {
     };
 
     namespace SlokedTaskPipelineStages {
+
+        class Cancel : public std::exception {};
         template <typename Stage>
         class Async {
          public:
@@ -348,6 +350,8 @@ namespace sloked {
                                                           decltype(result)>>::
                                                 Make(transform, result));
                                     }
+                                } catch (const Cancel &) {
+                                    supplier.Cancel();
                                 } catch (const Error &err) {
                                     supplier.SetError(err);
                                 }

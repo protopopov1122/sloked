@@ -100,9 +100,17 @@ namespace sloked {
         this->component.reset();
     }
 
-    void TerminalComponentHandle::Render() {
+    TaskResult<void> TerminalComponentHandle::RenderSurface() {
         if (this->component) {
-            this->component->Render();
+            return this->component->RenderSurface();
+        } else {
+            return TaskResult<void>::Resolve();
+        }
+    }
+
+    void TerminalComponentHandle::ShowSurface() {
+        if (this->component) {
+            this->component->ShowSurface();
         }
     }
 

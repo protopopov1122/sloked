@@ -37,22 +37,23 @@ namespace sloked {
         TerminalComponentHandle(SlokedTerminal &, const Encoding &,
                                 const SlokedCharPreset &);
 
-        void Render() override;
-        void UpdateDimensions() override;
-        TextPosition GetDimensions() override;
-        void OnUpdate(std::function<void()>) override;
+        TaskResult<void> RenderSurface() final;
+        void ShowSurface() final;
+        void UpdateDimensions() final;
+        TextPosition GetDimensions() final;
+        void OnUpdate(std::function<void()>) final;
 
-        bool HasComponent() const override;
-        SlokedScreenComponent &GetComponent() const override;
+        bool HasComponent() const final;
+        SlokedScreenComponent &GetComponent() const final;
         SlokedTextPaneComponent &NewTextPane(
-            std::unique_ptr<SlokedTextPaneWidget>) override;
-        SlokedSplitterComponent &NewSplitter(Splitter::Direction) override;
-        SlokedTabberComponent &NewTabber() override;
-        SlokedMultiplexerComponent &NewMultiplexer() override;
-        void Close() override;
+            std::unique_ptr<SlokedTextPaneWidget>) final;
+        SlokedSplitterComponent &NewSplitter(Splitter::Direction) final;
+        SlokedTabberComponent &NewTabber() final;
+        SlokedMultiplexerComponent &NewMultiplexer() final;
+        void Close() final;
 
      protected:
-        void ProcessComponentInput(const SlokedKeyboardInput &) override;
+        void ProcessComponentInput(const SlokedKeyboardInput &) final;
 
      private:
         SlokedTerminal &terminal;

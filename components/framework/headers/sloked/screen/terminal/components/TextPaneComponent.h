@@ -36,15 +36,16 @@ namespace sloked {
         TerminalTextPaneComponent(SlokedTerminal &,
                                   std::unique_ptr<SlokedTextPaneWidget>);
 
-        void Render() override;
-        void UpdateDimensions() override;
-        TextPosition GetDimensions() override;
-        void OnUpdate(std::function<void()>) override;
-        const SlokedFontProperties &GetFontProperties() const override;
+        TaskResult<void> RenderSurface() final;
+        void ShowSurface() final;
+        void UpdateDimensions() final;
+        TextPosition GetDimensions() final;
+        void OnUpdate(std::function<void()>) final;
+        const SlokedFontProperties &GetFontProperties() const final;
 
      protected:
         using SlokedTextPaneComponent::SlokedTextPaneComponent;
-        void ProcessComponentInput(const SlokedKeyboardInput &) override;
+        void ProcessComponentInput(const SlokedKeyboardInput &) final;
 
      private:
         SlokedTerminal &term;

@@ -22,6 +22,7 @@
 #include "sloked/screen/terminal/components/SplitterComponent.h"
 
 #include "sloked/core/Error.h"
+#include "sloked/sched/CompoundTask.h"
 
 namespace sloked {
 
@@ -130,9 +131,18 @@ namespace sloked {
         }
     }
 
-    void TerminalSplitterComponent::TerminalSplitterWindow::Render() {
+    TaskResult<void>
+        TerminalSplitterComponent::TerminalSplitterWindow::RenderSurface() {
         if (this->component) {
-            this->component->Render();
+            return this->component->RenderSurface();
+        } else {
+            return TaskResult<void>::Resolve();
+        }
+    }
+
+    void TerminalSplitterComponent::TerminalSplitterWindow::ShowSurface() {
+        if (this->component) {
+            this->component->ShowSurface();
         }
     }
 
@@ -207,14 +217,29 @@ namespace sloked {
         return window;
     }
 
-    void TerminalSplitterComponent::Render() {
+    TaskResult<void> TerminalSplitterComponent::RenderSurface() {
+        std::vector<TaskResult<void>> results;
         for (std::size_t i = 0; i < this->components.size(); i++) {
             if (i != this->focus) {
-                this->components.at(i)->Render();
+                results.emplace_back(this->components.at(i)->RenderSurface());
             }
         }
         if (this->focus < this->components.size()) {
-            this->components.at(this->focus)->Render();
+            results.emplace_back(
+                this->components.at(this->focus)->RenderSurface());
+        }
+        auto compound = SlokedCompoundTask::All(results.begin(), results.end());
+        return SlokedTaskTransformations::Voidify(compound);
+    }
+
+    void TerminalSplitterComponent::ShowSurface() {
+        for (std::size_t i = 0; i < this->components.size(); i++) {
+            if (i != this->focus) {
+                this->components.at(i)->ShowSurface();
+            }
+        }
+        if (this->focus < this->components.size()) {
+            this->components.at(this->focus)->ShowSurface();
         }
     }
 

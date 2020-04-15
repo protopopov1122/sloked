@@ -26,6 +26,7 @@
 #include <map>
 
 #include "sloked/core/Position.h"
+#include "sloked/sched/Task.h"
 #include "sloked/screen/Keyboard.h"
 
 namespace sloked {
@@ -66,7 +67,8 @@ namespace sloked {
         SlokedComponentListener AttachInputHandler(InputHandler);
         void DetachInputHandle(const SlokedComponentListener &);
 
-        virtual void Render() = 0;
+        virtual TaskResult<void> RenderSurface() = 0;
+        virtual void ShowSurface() = 0;
         virtual void UpdateDimensions() = 0;
         virtual TextPosition GetDimensions() = 0;
         virtual void OnUpdate(std::function<void()>) = 0;

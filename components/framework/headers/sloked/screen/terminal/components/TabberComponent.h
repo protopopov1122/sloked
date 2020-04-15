@@ -39,37 +39,39 @@ namespace sloked {
         TerminalTabberComponent(SlokedTerminal &, const Encoding &,
                                 const SlokedCharPreset &);
 
-        std::size_t GetWindowCount() const override;
-        std::shared_ptr<Window> GetFocus() const override;
-        std::shared_ptr<Window> GetWindow(Window::Id) const override;
+        std::size_t GetWindowCount() const final;
+        std::shared_ptr<Window> GetFocus() const final;
+        std::shared_ptr<Window> GetWindow(Window::Id) const final;
 
-        std::shared_ptr<Window> NewWindow() override;
-        std::shared_ptr<Window> NewWindow(Window::Id) override;
+        std::shared_ptr<Window> NewWindow() final;
+        std::shared_ptr<Window> NewWindow(Window::Id) final;
 
-        void Render() override;
-        void UpdateDimensions() override;
-        TextPosition GetDimensions() override;
-        void OnUpdate(std::function<void()>) override;
+        TaskResult<void> RenderSurface() final;
+        void ShowSurface() final;
+        void UpdateDimensions() final;
+        TextPosition GetDimensions() final;
+        void OnUpdate(std::function<void()>) final;
 
      protected:
-        void ProcessComponentInput(const SlokedKeyboardInput &) override;
+        void ProcessComponentInput(const SlokedKeyboardInput &) final;
 
      private:
         class TerminalTabberWindow : public Window {
          public:
             TerminalTabberWindow(Id, std::unique_ptr<TerminalComponentHandle>,
                                  TerminalTabberComponent &);
-            bool IsOpened() const override;
-            bool HasFocus() const override;
-            SlokedComponentHandle &GetComponent() const override;
-            Id GetId() const override;
+            bool IsOpened() const final;
+            bool HasFocus() const final;
+            SlokedComponentHandle &GetComponent() const final;
+            Id GetId() const final;
             void SetId(Id);
 
-            void SetFocus() override;
-            void Move(Id) override;
-            void Close() override;
+            void SetFocus() final;
+            void Move(Id) final;
+            void Close() final;
 
-            void Render();
+            TaskResult<void> RenderSurface();
+            void ShowSurface();
             void Update();
             void ProcessInput(const SlokedKeyboardInput &);
 

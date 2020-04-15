@@ -38,20 +38,21 @@ namespace sloked {
                                      const SlokedCharPreset &);
         virtual ~TerminalMultiplexerComponent();
 
-        std::shared_ptr<Window> GetFocus() const override;
-        std::shared_ptr<Window> GetWindow(Window::Id) const override;
-        std::size_t GetWindowCount() const override;
+        std::shared_ptr<Window> GetFocus() const final;
+        std::shared_ptr<Window> GetWindow(Window::Id) const final;
+        std::size_t GetWindowCount() const final;
 
         std::shared_ptr<Window> NewWindow(const TextPosition &,
-                                          const TextPosition &) override;
+                                          const TextPosition &) final;
 
-        void Render() override;
-        void UpdateDimensions() override;
-        TextPosition GetDimensions() override;
-        void OnUpdate(std::function<void()>) override;
+        TaskResult<void> RenderSurface() final;
+        void ShowSurface() final;
+        void UpdateDimensions() final;
+        TextPosition GetDimensions() final;
+        void OnUpdate(std::function<void()>) final;
 
      protected:
-        void ProcessComponentInput(const SlokedKeyboardInput &) override;
+        void ProcessComponentInput(const SlokedKeyboardInput &) final;
 
      private:
         class TerminalMultiplexerWindow : public Window {
@@ -62,17 +63,18 @@ namespace sloked {
                                       TerminalMultiplexerComponent &);
             virtual ~TerminalMultiplexerWindow();
 
-            bool IsOpened() const override;
-            bool HasFocus() const override;
-            SlokedComponentHandle &GetComponent() const override;
-            Id GetId() const override;
+            bool IsOpened() const final;
+            bool HasFocus() const final;
+            SlokedComponentHandle &GetComponent() const final;
+            Id GetId() const final;
 
-            void SetFocus() override;
-            void Move(const TextPosition &) override;
-            void Resize(const TextPosition &) override;
-            void Close() override;
+            void SetFocus() final;
+            void Move(const TextPosition &) final;
+            void Resize(const TextPosition &) final;
+            void Close() final;
 
-            void Render();
+            TaskResult<void> RenderSurface();
+            void ShowSurface();
             void Update();
             void ProcessInput(const SlokedKeyboardInput &);
 

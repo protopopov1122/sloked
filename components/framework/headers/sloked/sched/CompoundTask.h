@@ -32,11 +32,11 @@ namespace sloked {
 
     class SlokedCompoundTask {
         template <typename... T>
-        using TupleStorage =
+        using AlignedStorageTuple =
             std::tuple<std::aligned_storage_t<sizeof(T), alignof(T)>...>;
 
         template <typename Storage, typename Result, typename Int, Int... Ints>
-        static auto UnwrapTupleStorageImpl(
+        static auto UnwrapAlignedStorageTupleImpl(
             const std::integer_sequence<Int, Ints...> &seq, Storage &storage,
             const Result *) {
             return std::make_tuple(
@@ -46,28 +46,28 @@ namespace sloked {
         }
 
         template <typename... T>
-        static auto UnwrapTupleStorage(
-            VoidSafe_t<TupleStorage, T...> &storage) {
-            return UnwrapTupleStorageImpl(
+        static auto UnwrapAlignedStorageTuple(
+            VoidSafe_t<AlignedStorageTuple, T...> &storage) {
+            return UnwrapAlignedStorageTupleImpl(
                 std::index_sequence_for<T...>(), storage,
                 static_cast<VoidSafe_t<std::tuple, T...> *>(nullptr));
         }
 
         template <typename... Task>
-        struct AllStorage {
+        struct StaticCompoundStorage {
             using ResultType = VoidSafe_t<std::tuple, typename Task::Result...>;
             using ErrorType = UniqueVariant_t<typename Task::Error...>;
             using Supplier = TaskResultSupplier<ResultType, ErrorType>;
 
             Supplier supplier;
-            VoidSafe_t<TupleStorage, typename Task::Result...> results;
+            VoidSafe_t<AlignedStorageTuple, typename Task::Result...> results;
             ErrorType errors;
             std::atomic<std::size_t> pending{sizeof...(Task)};
             std::atomic_bool rejected{0};
             std::atomic_bool cancelled{false};
 
             auto Unwrap() {
-                return UnwrapTupleStorage<typename Task::Result...>(
+                return UnwrapAlignedStorageTuple<typename Task::Result...>(
                     this->results);
             }
         };
@@ -147,12 +147,86 @@ namespace sloked {
             }
         };
 
+        template <typename T>
+        struct DynamicCompoundStorage {
+            using SafeType = typename SafeVoidWrap<typename T::Result>::Type;
+            using Result = std::vector<SafeType>;
+            using Error = typename T::Error;
+            using Supplier = TaskResultSupplier<Result, Error>;
+
+            DynamicCompoundStorage(std::size_t sz) {
+                this->result.reserve(sz);
+            }
+
+            Supplier supplier;
+            Result result;
+        };
+
+        template <typename Iter>
+        using DynamicTaskResultType =
+            std::remove_reference_t<decltype(*std::declval<Iter>())>;
+
+        template <typename Iter>
+        static void IterateTaskResults(
+            const Iter &current, const Iter &end,
+            const std::shared_ptr<
+                DynamicCompoundStorage<DynamicTaskResultType<Iter>>> &storage) {
+            if (current != end) {
+                auto taskResult = *current;
+                taskResult.Notify([next = std::next(current), end,
+                                   storage](const auto &result) {
+                    switch (result.State()) {
+                        case TaskResultStatus::Ready:
+                            if constexpr (std::is_void_v<
+                                              typename DynamicTaskResultType<
+                                                  Iter>::Result>) {
+                                storage->result.emplace_back(VoidType{});
+                            } else {
+                                storage->result.emplace_back(
+                                    std::move(result.GetResult()));
+                            }
+                            if (next != end) {
+                                IterateTaskResults(next, end, storage);
+                            } else {
+                                storage->supplier.SetResult(
+                                    std::move(storage->result));
+                            }
+                            break;
+
+                        case TaskResultStatus::Error:
+                            storage->result.clear();
+                            storage->supplier.SetError(
+                                std::move(result.GetError()));
+                            break;
+
+                        case TaskResultStatus::Cancelled:
+                            storage->result.clear();
+                            storage->supplier.Cancel();
+                            break;
+
+                        default:
+                            assert(false);
+                            break;
+                    }
+                });
+            }
+        }
+
      public:
         template <typename... T>
         static auto All(std::weak_ptr<SlokedLifetime> lifetime, T &&... tasks) {
-            auto storage = std::make_shared<AllStorage<T...>>();
-            NotifyAll<0, AllStorage<T...>, T...>::Apply(
+            auto storage = std::make_shared<StaticCompoundStorage<T...>>();
+            NotifyAll<0, StaticCompoundStorage<T...>, T...>::Apply(
                 storage, std::move(lifetime), std::forward<T>(tasks)...);
+            return storage->supplier.Result();
+        }
+
+        template <typename Iter>
+        static auto All(const Iter &begin, const Iter &end) {
+            auto storage = std::make_shared<
+                DynamicCompoundStorage<DynamicTaskResultType<Iter>>>(
+                std::distance(begin, end));
+            IterateTaskResults(begin, end, storage);
             return storage->supplier.Result();
         }
     };
@@ -169,6 +243,11 @@ namespace sloked {
                     }));
             return Pipeline(std::move(transform), result,
                             SlokedLifetime::Global);
+        }
+
+        template <typename R, typename E>
+        static auto Voidify(const TaskResult<R, E> &result) {
+            return Transform(result, [](const R &) {});
         }
     };
 }  // namespace sloked

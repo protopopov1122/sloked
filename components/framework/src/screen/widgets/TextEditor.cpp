@@ -22,6 +22,7 @@
 #include "sloked/screen/widgets/TextEditor.h"
 
 #include "sloked/core/Locale.h"
+#include "sloked/sched/Pipeline.h"
 #include "sloked/screen/TaggedFrame.h"
 #include "sloked/services/Cursor.h"
 
@@ -41,7 +42,8 @@ namespace sloked {
           background(bg), foreground(fg), cursorOffset{0, 0},
           renderCache([](const auto &, const auto &) -> std::vector<KgrValue> {
               throw SlokedError("TextEditor: Unexpected cache miss");
-          }) {
+          }),
+          lifetime(std::make_shared<SlokedStandardLifetime>()) {
         if (initClient) {
             initClient(this->cursorClient);
         }
@@ -50,6 +52,10 @@ namespace sloked {
                 this->updateListener();
             }
         });
+    }
+
+    SlokedTextEditor::~SlokedTextEditor() {
+        this->lifetime->Close();
     }
 
     bool SlokedTextEditor::ProcessInput(const SlokedKeyboardInput &cmd) {
@@ -115,62 +121,116 @@ namespace sloked {
         return true;
     }
 
-    void SlokedTextEditor::Render(SlokedTextPane &pane) {
-        auto cursorRsp = this->cursorClient.GetPosition().UnwrapWait();
-        if (!cursorRsp.has_value()) {
-            return;
-        }
-        const auto &cursor = cursorRsp.value();
-        if (this->cursorOffset.line + pane.GetHeight() - 1 < cursor.line) {
-            this->cursorOffset.line = cursor.line - pane.GetHeight() + 1;
-        }
-        if (cursor.line < this->cursorOffset.line) {
-            this->cursorOffset.line = cursor.line;
-        }
+    TaskResult<void> SlokedTextEditor::RenderSurface(
+        SlokedGraphicsPoint::Coordinate maxWidth, TextPosition::Line height,
+        const SlokedFontProperties &fontProperties) {
+        struct State {
+            State(SlokedTextEditor *self,
+                  SlokedGraphicsPoint::Coordinate maxWidth,
+                  TextPosition::Line height,
+                  const SlokedFontProperties &fontProperties)
+                : self(self), maxWidth(maxWidth), height(height),
+                  fontProperties(fontProperties), cursor{0, 0},
+                  cursorOffset(self->cursorOffset), realPosition{0, 0} {}
 
-        auto [firstLine, lastLine, partialRender] =
-            this->renderClient
-                .PartialRender(this->cursorOffset.line, pane.GetHeight() - 1)
-                .UnwrapWait();
-        this->renderCache.Insert(partialRender.begin(), partialRender.end());
-        const auto &render = this->renderCache.Fetch(firstLine, lastLine);
-        std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> lines;
-        lines.reserve(pane.GetHeight());
-        for (auto it = render.first; it != render.second; ++it) {
-            SlokedTaggedTextFrame<bool>::TaggedLine taggedLine;
-            const auto &fragments = it->second.AsArray();
-            for (const auto &fragment : fragments) {
-                auto tag = fragment.AsDictionary()["tag"].AsBoolean();
-                const auto &text =
-                    fragment.AsDictionary()["content"].AsString();
-                taggedLine.fragments.push_back({tag, text});
-            }
-            lines.emplace_back(std::move(taggedLine));
-        }
+            SlokedTextEditor *self;
+            const SlokedGraphicsPoint::Coordinate maxWidth;
+            const TextPosition::Line height;
+            const SlokedFontProperties &fontProperties;
 
-        SlokedTaggedTextFrame<bool> visualFrame(this->conv.GetDestination(),
-                                                pane.GetFontProperties());
+            TextPosition cursor;
+            TextPosition cursorOffset;
+            TextPosition realPosition;
+            std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> rendered;
+        };
 
-        auto realPosition =
-            this->renderClient.RealPosition(cursor).UnwrapWait();
-        if (!realPosition.has_value()) {
-            return;
-        }
-        auto currentLineOffset = cursor.line - this->cursorOffset.line;
-        if (currentLineOffset < lines.size()) {
-            const auto &currentLine = lines.at(currentLineOffset);
-            while (this->cursorOffset.column +
-                       visualFrame.GetMaxLength(currentLine,
-                                                this->cursorOffset.column,
-                                                pane.GetMaxWidth()) <
-                   realPosition.value().column) {
-                this->cursorOffset.column++;
-            }
-            if (realPosition.value().column < this->cursorOffset.column) {
-                this->cursorOffset.column = realPosition.value().column;
-            }
-        }
+        static const SlokedAsyncTaskPipeline Pipeline(
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state,
+                   std::optional<TextPosition> cursor) {
+                    if (!cursor.has_value()) {
+                        throw SlokedTaskPipelineStages::Cancel{};
+                    }
+                    state->cursor = cursor.value();
+                    if (state->cursorOffset.line + state->height - 1 <
+                        state->cursor.line) {
+                        state->cursorOffset.line =
+                            state->cursor.line - state->height + 1;
+                    }
+                    if (state->cursor.line < state->cursorOffset.line) {
+                        state->cursorOffset.line = state->cursor.line;
+                    }
+                    return state->self->renderClient.PartialRender(
+                        state->cursorOffset.line, state->height - 1);
+                }),
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state,
+                   std::tuple<
+                       TextPosition::Line, TextPosition::Line,
+                       std::vector<std::pair<TextPosition::Line, KgrValue>>>
+                       result) {
+                    state->self->renderCache.Insert(std::get<2>(result).begin(),
+                                                    std::get<2>(result).end());
+                    const auto &render = state->self->renderCache.Fetch(
+                        std::get<0>(result), std::get<1>(result));
+                    state->rendered.clear();
+                    state->rendered.reserve(state->height);
+                    for (auto it = render.first; it != render.second; ++it) {
+                        SlokedTaggedTextFrame<bool>::TaggedLine taggedLine;
+                        const auto &fragments = it->second.AsArray();
+                        for (const auto &fragment : fragments) {
+                            auto tag =
+                                fragment.AsDictionary()["tag"].AsBoolean();
+                            const auto &text =
+                                fragment.AsDictionary()["content"].AsString();
+                            taggedLine.fragments.push_back({tag, text});
+                        }
+                        state->rendered.emplace_back(std::move(taggedLine));
+                    }
+                    return state->self->renderClient.RealPosition(
+                        state->cursor);
+                }),
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> &state,
+                   std::optional<TextPosition> realPosition) {
+                    if (!realPosition.has_value()) {
+                        throw SlokedTaskPipelineStages::Cancel{};
+                    }
+                    state->realPosition = realPosition.value();
+                    SlokedTaggedTextFrame<bool> visualFrame(
+                        state->self->conv.GetDestination(),
+                        state->fontProperties);
+                    auto currentLineOffset =
+                        state->cursor.line - state->cursorOffset.line;
+                    if (currentLineOffset < state->rendered.size()) {
+                        const auto &currentLine =
+                            state->rendered.at(currentLineOffset);
+                        while (state->cursorOffset.column +
+                                   visualFrame.GetMaxLength(
+                                       currentLine, state->cursorOffset.column,
+                                       state->maxWidth) <
+                               realPosition.value().column) {
+                            state->cursorOffset.column++;
+                        }
+                        if (realPosition.value().column <
+                            state->cursorOffset.column) {
+                            state->cursorOffset.column =
+                                realPosition.value().column;
+                        }
 
+                        state->self->cursorOffset =
+                            std::move(state->cursorOffset);
+                        state->self->realPosition =
+                            std::move(state->realPosition);
+                        state->self->rendered = std::move(state->rendered);
+                    }
+                }));
+        return Pipeline(
+            std::make_shared<State>(this, maxWidth, height, fontProperties),
+            this->cursorClient.GetPosition(), this->lifetime);
+    }
+
+    void SlokedTextEditor::ShowSurface(SlokedTextPane &pane) {
         pane.SetGraphicsMode(SlokedTextGraphics::Off);
         pane.SetGraphicsMode(this->background);
         pane.SetGraphicsMode(this->foreground);
@@ -178,7 +238,9 @@ namespace sloked {
         pane.SetPosition(0, 0);
 
         TextPosition::Line lineIdx{0};
-        for (const auto &line : lines) {
+        SlokedTaggedTextFrame<bool> visualFrame(this->conv.GetDestination(),
+                                                pane.GetFontProperties());
+        for (const auto &line : this->rendered) {
             pane.SetPosition(lineIdx++, 0);
             auto result = visualFrame.Slice(line, this->cursorOffset.column,
                                             pane.GetMaxWidth());
@@ -194,9 +256,8 @@ namespace sloked {
             }
         }
 
-        pane.SetPosition(
-            cursor.line - this->cursorOffset.line,
-            realPosition.value().column - this->cursorOffset.column);
+        pane.SetPosition(this->realPosition.line - this->cursorOffset.line,
+                         this->realPosition.column - this->cursorOffset.column);
     }
 
     void SlokedTextEditor::OnUpdate(std::function<void()> listener) {

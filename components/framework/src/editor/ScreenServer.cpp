@@ -109,7 +109,8 @@ namespace sloked {
                 this->renderRequested = false;
                 this->provider.Render([&](auto &screen) {
                     screen.UpdateDimensions();
-                    screen.Render();
+                    screen.RenderSurface().Wait();
+                    screen.ShowSurface();
                 });
             }
 

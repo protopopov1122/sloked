@@ -25,6 +25,7 @@
 #include "sloked/core/Encoding.h"
 #include "sloked/core/OrderedCache.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
+#include "sloked/screen/TaggedFrame.h"
 #include "sloked/screen/widgets/TextPane.h"
 #include "sloked/screen/widgets/TextPaneWidget.h"
 #include "sloked/services/Cursor.h"
@@ -42,10 +43,14 @@ namespace sloked {
             const std::string &,
             SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black,
             SlokedForegroundGraphics = SlokedForegroundGraphics::White);
+        ~SlokedTextEditor();
 
-        bool ProcessInput(const SlokedKeyboardInput &) override;
-        void Render(SlokedTextPane &) override;
-        void OnUpdate(std::function<void()>) override;
+        bool ProcessInput(const SlokedKeyboardInput &) final;
+        TaskResult<void> RenderSurface(SlokedGraphicsPoint::Coordinate,
+                                       TextPosition::Line,
+                                       const SlokedFontProperties &) final;
+        void ShowSurface(SlokedTextPane &) final;
+        void OnUpdate(std::function<void()>) final;
 
      private:
         EncodingConverter conv;
@@ -57,7 +62,10 @@ namespace sloked {
         SlokedForegroundGraphics foreground;
         std::function<void()> updateListener;
         TextPosition cursorOffset;
+        TextPosition realPosition;
         SlokedOrderedCache<TextPosition::Line, KgrValue> renderCache;
+        std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> rendered;
+        std::shared_ptr<SlokedStandardLifetime> lifetime;
     };
 }  // namespace sloked
 
