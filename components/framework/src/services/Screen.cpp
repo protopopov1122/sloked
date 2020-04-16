@@ -809,27 +809,15 @@ namespace sloked {
         return supplier.Result();
     }
 
-    SlokedScreenClient::SlokedScreenClient(std::unique_ptr<KgrPipe> pipe,
-                                           std::function<bool()> holdsLock)
-        : client(std::move(pipe)), holdsLock(std::move(holdsLock)),
-          Handle(client, [this] { this->PreventDeadlock(); }),
-          Multiplexer(client, [this] { this->PreventDeadlock(); }),
-          Splitter(client, [this] { this->PreventDeadlock(); }),
-          Tabber(client, [this] { this->PreventDeadlock(); }) {}
+    SlokedScreenClient::SlokedScreenClient(std::unique_ptr<KgrPipe> pipe)
+        : client(std::move(pipe)), Handle(client), Multiplexer(client),
+          Splitter(client), Tabber(client) {}
 
-    void SlokedScreenClient::PreventDeadlock() {
-        if (this->holdsLock && this->holdsLock()) {
-            throw SlokedError("ScreenService: Deadlock prevented");
-        }
-    }
-
-    SlokedScreenClient::HandleClient::HandleClient(
-        SlokedServiceClient &client, std::function<void()> preventDeadlock)
-        : client(client), preventDeadlock(std::move(preventDeadlock)) {}
+    SlokedScreenClient::HandleClient::HandleClient(SlokedServiceClient &client)
+        : client(client) {}
 
     TaskResult<bool> SlokedScreenClient::HandleClient::NewMultiplexer(
         const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("handle.newMultiplexer", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -839,7 +827,6 @@ namespace sloked {
 
     TaskResult<bool> SlokedScreenClient::HandleClient::NewSplitter(
         const std::string &path, Splitter::Direction direction) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke("handle.newSplitter",
@@ -854,7 +841,6 @@ namespace sloked {
 
     TaskResult<bool> SlokedScreenClient::HandleClient::NewTabber(
         const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("handle.newTabber", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -865,7 +851,6 @@ namespace sloked {
     TaskResult<bool> SlokedScreenClient::HandleClient::NewTextEditor(
         const std::string &path, SlokedEditorDocumentSet::DocumentId document,
         const std::string &tagger) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke(
@@ -880,14 +865,13 @@ namespace sloked {
     }
 
     SlokedScreenClient::MultiplexerClient::MultiplexerClient(
-        SlokedServiceClient &client, std::function<void()> preventDeadlock)
-        : client(client), preventDeadlock(std::move(preventDeadlock)) {}
+        SlokedServiceClient &client)
+        : client(client) {}
 
     TaskResult<std::optional<std::string>>
         SlokedScreenClient::MultiplexerClient::NewWindow(
             const std::string &path, const TextPosition &pos,
             const TextPosition &dim) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke(
@@ -916,7 +900,6 @@ namespace sloked {
     TaskResult<std::size_t>
         SlokedScreenClient::MultiplexerClient::GetWindowCount(
             const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("multiplexer.getInfo", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) -> std::size_t {
@@ -933,7 +916,6 @@ namespace sloked {
     TaskResult<std::optional<std::string>>
         SlokedScreenClient::MultiplexerClient::GetFocus(
             const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("multiplexer.getInfo", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -950,7 +932,6 @@ namespace sloked {
     TaskResult<std::optional<bool>>
         SlokedScreenClient::MultiplexerClient::WindowHasFocus(
             const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("multiplexer.windowHasFocus", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -965,7 +946,6 @@ namespace sloked {
 
     TaskResult<bool> SlokedScreenClient::MultiplexerClient::SetFocus(
         const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("multiplexer.setFocus", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -975,7 +955,6 @@ namespace sloked {
 
     TaskResult<bool> SlokedScreenClient::MultiplexerClient::Close(
         const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("multiplexer.close", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -985,7 +964,6 @@ namespace sloked {
 
     TaskResult<bool> SlokedScreenClient::MultiplexerClient::MoveWindow(
         const std::string &path, const TextPosition &pos) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke(
@@ -1004,7 +982,6 @@ namespace sloked {
 
     TaskResult<bool> SlokedScreenClient::MultiplexerClient::ResizeWindow(
         const std::string &path, const TextPosition &dim) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke(
@@ -1022,14 +999,13 @@ namespace sloked {
     }
 
     SlokedScreenClient::SplitterClient::SplitterClient(
-        SlokedServiceClient &client, std::function<void()> preventDeadlock)
-        : client(client), preventDeadlock(std::move(preventDeadlock)) {}
+        SlokedServiceClient &client)
+        : client(client) {}
 
     TaskResult<std::optional<std::string>>
         SlokedScreenClient::SplitterClient::NewWindow(
             const std::string &path,
             const Splitter::Constraints &constraints) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke("splitter.newWindow",
@@ -1057,7 +1033,6 @@ namespace sloked {
         SlokedScreenClient::SplitterClient::NewWindow(
             const std::string &path, SlokedComponentWindow::Id winId,
             const Splitter::Constraints &constraints) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke("splitter.insertWindow",
@@ -1085,7 +1060,6 @@ namespace sloked {
 
     TaskResult<std::size_t> SlokedScreenClient::SplitterClient::GetWindowCount(
         const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("splitter.getInfo", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) -> std::size_t {
@@ -1102,7 +1076,6 @@ namespace sloked {
     TaskResult<std::optional<std::string>>
         SlokedScreenClient::SplitterClient::GetFocus(
             const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("splitter.getInfo", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -1119,7 +1092,6 @@ namespace sloked {
     TaskResult<std::optional<bool>>
         SlokedScreenClient::SplitterClient::WindowHasFocus(
             const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("splitter.windowHasFocus", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -1134,7 +1106,6 @@ namespace sloked {
 
     TaskResult<bool> SlokedScreenClient::SplitterClient::SetFocus(
         const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("splitter.setFocus", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -1144,7 +1115,6 @@ namespace sloked {
 
     TaskResult<bool> SlokedScreenClient::SplitterClient::Close(
         const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("splitter.close", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -1155,7 +1125,6 @@ namespace sloked {
     TaskResult<std::optional<std::string>>
         SlokedScreenClient::SplitterClient::MoveWindow(
             const std::string &path, SlokedComponentWindow::Id winId) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke(
@@ -1177,7 +1146,6 @@ namespace sloked {
         SlokedScreenClient::SplitterClient::UpdateWindowConstraints(
             const std::string &path,
             const Splitter::Constraints &constraints) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke("splitter.updateWindowConstraints",
@@ -1196,14 +1164,12 @@ namespace sloked {
             });
     }
 
-    SlokedScreenClient::TabberClient::TabberClient(
-        SlokedServiceClient &client, std::function<void()> preventDeadlock)
-        : client(client), preventDeadlock(std::move(preventDeadlock)) {}
+    SlokedScreenClient::TabberClient::TabberClient(SlokedServiceClient &client)
+        : client(client) {}
 
     TaskResult<std::optional<std::string>>
         SlokedScreenClient::TabberClient::NewWindow(
             const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("tabber.newWindow", KgrDictionary{{"path", path}})
                 ->Next(),
@@ -1220,7 +1186,6 @@ namespace sloked {
     TaskResult<std::optional<std::string>>
         SlokedScreenClient::TabberClient::NewWindow(
             const std::string &path, SlokedComponentWindow::Id winId) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke("tabber.insertWindow",
@@ -1240,7 +1205,6 @@ namespace sloked {
 
     TaskResult<std::size_t> SlokedScreenClient::TabberClient::GetWindowCount(
         const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("tabber.getInfo", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) -> std::size_t {
@@ -1257,7 +1221,6 @@ namespace sloked {
     TaskResult<std::optional<std::string>>
         SlokedScreenClient::TabberClient::GetFocus(
             const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("tabber.getInfo", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -1274,7 +1237,6 @@ namespace sloked {
     TaskResult<std::optional<bool>>
         SlokedScreenClient::TabberClient::WindowHasFocus(
             const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("tabber.windowHasFocus", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -1289,7 +1251,6 @@ namespace sloked {
 
     TaskResult<bool> SlokedScreenClient::TabberClient::SetFocus(
         const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("tabber.setFocus", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -1299,7 +1260,6 @@ namespace sloked {
 
     TaskResult<bool> SlokedScreenClient::TabberClient::Close(
         const std::string &path) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client.Invoke("tabber.close", path)->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
@@ -1310,7 +1270,6 @@ namespace sloked {
     TaskResult<std::optional<std::string>>
         SlokedScreenClient::TabberClient::MoveWindow(
             const std::string &path, SlokedComponentWindow::Id winId) const {
-        this->preventDeadlock();
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke(

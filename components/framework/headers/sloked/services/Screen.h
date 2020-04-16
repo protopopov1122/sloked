@@ -55,7 +55,7 @@ namespace sloked {
      public:
         class HandleClient {
          public:
-            HandleClient(SlokedServiceClient &, std::function<void()>);
+            HandleClient(SlokedServiceClient &);
             TaskResult<bool> NewMultiplexer(const std::string &) const;
             TaskResult<bool> NewSplitter(const std::string &,
                                          Splitter::Direction) const;
@@ -66,12 +66,11 @@ namespace sloked {
 
          private:
             SlokedServiceClient &client;
-            std::function<void()> preventDeadlock;
         };
 
         class MultiplexerClient {
          public:
-            MultiplexerClient(SlokedServiceClient &, std::function<void()>);
+            MultiplexerClient(SlokedServiceClient &);
             TaskResult<std::optional<std::string>> NewWindow(
                 const std::string &, const TextPosition &,
                 const TextPosition &) const;
@@ -89,12 +88,11 @@ namespace sloked {
 
          private:
             SlokedServiceClient &client;
-            std::function<void()> preventDeadlock;
         };
 
         class SplitterClient {
          public:
-            SplitterClient(SlokedServiceClient &, std::function<void()>);
+            SplitterClient(SlokedServiceClient &);
             TaskResult<std::optional<std::string>> NewWindow(
                 const std::string &, const Splitter::Constraints &) const;
             TaskResult<std::optional<std::string>> NewWindow(
@@ -114,12 +112,11 @@ namespace sloked {
 
          private:
             SlokedServiceClient &client;
-            std::function<void()> preventDeadlock;
         };
 
         class TabberClient {
          public:
-            TabberClient(SlokedServiceClient &, std::function<void()>);
+            TabberClient(SlokedServiceClient &);
             TaskResult<std::optional<std::string>> NewWindow(
                 const std::string &) const;
             TaskResult<std::optional<std::string>> NewWindow(
@@ -136,16 +133,12 @@ namespace sloked {
 
          private:
             SlokedServiceClient &client;
-            std::function<void()> preventDeadlock;
         };
 
-        SlokedScreenClient(std::unique_ptr<KgrPipe>,
-                           std::function<bool()> = nullptr);
+        SlokedScreenClient(std::unique_ptr<KgrPipe>);
 
      private:
-        void PreventDeadlock();
         SlokedServiceClient client;
-        std::function<bool()> holdsLock;
 
      public:
         const HandleClient Handle;

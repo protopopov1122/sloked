@@ -379,14 +379,10 @@ namespace sloked {
         auto &screenServer = secondaryEditor.GetScreen();
 
         // Editor initialization
-        auto isScreenLocked = [&screenServer] {
-            return screenServer.GetScreen().GetScreen().IsHolder();
-        };
         SlokedScreenClient screenClient(
             std::move(secondaryServer.GetServer()
                           .Connect({"/screen/manager"})
-                          .UnwrapWait()),
-            isScreenLocked);
+                          .UnwrapWait()));
         SlokedScreenSizeNotificationClient screenSizeClient(
             std::move(secondaryServer.GetServer()
                           .Connect({"/screen/size/notify"})
@@ -440,8 +436,7 @@ namespace sloked {
         SlokedTextPaneClient paneClient(
             std::move(secondaryServer.GetServer()
                           .Connect({"/screen/component/text/pane"})
-                          .UnwrapWait()),
-            isScreenLocked);
+                          .UnwrapWait()));
         paneClient.Connect("/0/1", false, {}).UnwrapWait();
         auto &render = paneClient.GetRender();
 
@@ -462,7 +457,7 @@ namespace sloked {
             std::move(secondaryServer.GetServer()
                           .Connect({"/screen/component/input/notify"})
                           .UnwrapWait()),
-            Encoding::Get("system"), isScreenLocked);
+            Encoding::Get("system"));
         screenInput.Listen(
             "/",
             [&](auto &evt) {

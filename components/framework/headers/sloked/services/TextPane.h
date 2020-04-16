@@ -53,8 +53,7 @@ namespace sloked {
             virtual void Flush() = 0;
         };
 
-        SlokedTextPaneClient(std::unique_ptr<KgrPipe>,
-                             std::function<bool()> = nullptr);
+        SlokedTextPaneClient(std::unique_ptr<KgrPipe>);
         ~SlokedTextPaneClient();
         TaskResult<bool> Connect(
             const std::string &, bool,
@@ -65,10 +64,8 @@ namespace sloked {
 
      private:
         class SlokedTextPaneRender;
-        void PreventDeadlock();
 
         SlokedServiceClient client;
-        std::function<bool()> holdsLock;
         std::unique_ptr<Render> render;
     };
 }  // namespace sloked
