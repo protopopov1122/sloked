@@ -244,7 +244,7 @@ namespace sloked {
                               TransformFn transform) {
             static const SlokedAsyncTaskPipeline Pipeline(
                 SlokedTaskPipelineStages::Map(
-                    [](const TransformFn &transform, const R &result) {
+                    [](TransformFn transform, const R &result) {
                         return transform(result);
                     }));
             return Pipeline(std::move(transform), result,

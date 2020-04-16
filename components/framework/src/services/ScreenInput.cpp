@@ -24,6 +24,7 @@
 #include <set>
 
 #include "sloked/core/Locale.h"
+#include "sloked/sched/CompoundTask.h"
 #include "sloked/sched/EventLoop.h"
 #include "sloked/screen/components/ComponentTree.h"
 
@@ -213,10 +214,10 @@ namespace sloked {
     SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(
         std::unique_ptr<KgrPipe> pipe, const Encoding &encoding,
         std::function<bool()> holdsLock)
-        : pipe(std::move(pipe)), encoding(encoding),
+        : pipe(std::move(pipe)), asyncPipe(*this->pipe), encoding(encoding),
           holdsLock(std::move(holdsLock)) {}
 
-    void SlokedScreenInputNotificationClient::Listen(
+    TaskResult<void> SlokedScreenInputNotificationClient::Listen(
         const std::string &path, bool text,
         const std::vector<std::pair<SlokedControlKey, bool>> &keys,
         Callback callback, bool forwardInput) {
@@ -233,42 +234,49 @@ namespace sloked {
                               {"alt", key.second}});
         }
         params.Put("keys", std::move(array));
-        this->pipe->Write(std::move(params));
-        this->pipe->ReadWait();
-        this->pipe->SetMessageListener([this, callback = std::move(callback)] {
-            while (!this->pipe->Empty()) {
-                auto msg = this->pipe->Read();
-                if (callback) {
-                    callback(KgrToEvent(this->encoding, msg));
-                }
-            }
-        });
+        this->asyncPipe.Write(std::move(params));
+        return SlokedTaskTransformations::Transform(
+            this->asyncPipe.Read(),
+            [this, callback = std::move(callback)](const KgrValue &) mutable {
+                this->asyncPipe.SetMessageListener(
+                    [this, callback = std::move(callback)] {
+                        while (!this->asyncPipe.Empty()) {
+                            auto msg = this->asyncPipe.Read().UnwrapWait();
+                            if (callback) {
+                                callback(KgrToEvent(this->encoding, msg));
+                            }
+                        }
+                    });
+            });
     }
 
-    void SlokedScreenInputNotificationClient::Listen(const std::string &path,
-                                                     Callback callback,
-                                                     bool forwardInput) {
+    TaskResult<void> SlokedScreenInputNotificationClient::Listen(
+        const std::string &path, Callback callback, bool forwardInput) {
         if (this->holdsLock && this->holdsLock()) {
             throw SlokedError(
                 "ScreenInputNotificationService: Deadlock prevented");
         }
         KgrDictionary params{
             {"path", path}, {"forward", forwardInput}, {"all", true}};
-        this->pipe->Write(std::move(params));
-        this->pipe->ReadWait();
-        this->pipe->SetMessageListener([this, callback = std::move(callback)] {
-            while (!this->pipe->Empty()) {
-                auto msg = this->pipe->Read();
-                if (callback) {
-                    callback(KgrToEvent(this->encoding, msg));
-                }
-            }
-        });
+        this->asyncPipe.Write(std::move(params));
+        return SlokedTaskTransformations::Transform(
+            this->asyncPipe.Read(),
+            [this, callback = std::move(callback)](const KgrValue &) mutable {
+                this->asyncPipe.SetMessageListener(
+                    [this, callback = std::move(callback)] {
+                        while (!this->asyncPipe.Empty()) {
+                            auto msg = this->asyncPipe.Read().UnwrapWait();
+                            if (callback) {
+                                callback(KgrToEvent(this->encoding, msg));
+                            }
+                        }
+                    });
+            });
     }
 
     void SlokedScreenInputNotificationClient::Close() {
-        this->pipe->Write({});
-        this->pipe = nullptr;
+        this->asyncPipe.Write({});
+        this->asyncPipe.Close();
     }
 
     class SlokedScreenInputForwardingContext : public SlokedServiceContext {

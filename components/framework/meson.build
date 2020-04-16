@@ -37,6 +37,7 @@ sloked_src = [
   'src/json/Lexer.cpp',
   'src/json/Parser.cpp',
   'src/kgr/Path.cpp',
+  'src/kgr/Pipe.cpp',
   'src/kgr/RestrictedServer.cpp',
   'src/kgr/Serialize.cpp',
   'src/kgr/Value.cpp',

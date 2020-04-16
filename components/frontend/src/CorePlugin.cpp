@@ -458,24 +458,27 @@ namespace sloked {
                           .Connect({"/screen/component/input/notify"})
                           .UnwrapWait()),
             Encoding::Get("system"));
-        screenInput.Listen(
-            "/",
-            [&](auto &evt) {
-                mainEditor.GetExecutor().Enqueue([&, evt] {
-                    renderStatus();
-                    if (evt.value.index() != 0 &&
-                        std::get<1>(evt.value) == SlokedControlKey::Escape) {
-                        mainEditor.GetThreadedExecutor().Enqueue([&] {
-                            logger.Debug() << "Saving document";
-                            documentClient.Save(outputPath.ToString())
-                                .Notify([&terminate](const auto &) {
-                                    terminate.Notify();
-                                });
-                        });
-                    }
-                });
-            },
-            true);
+        screenInput
+            .Listen(
+                "/",
+                [&](auto &evt) {
+                    mainEditor.GetExecutor().Enqueue([&, evt] {
+                        renderStatus();
+                        if (evt.value.index() != 0 &&
+                            std::get<1>(evt.value) ==
+                                SlokedControlKey::Escape) {
+                            mainEditor.GetThreadedExecutor().Enqueue([&] {
+                                logger.Debug() << "Saving document";
+                                documentClient.Save(outputPath.ToString())
+                                    .Notify([&terminate](const auto &) {
+                                        terminate.Notify();
+                                    });
+                            });
+                        }
+                    });
+                },
+                true)
+            .Wait();
 
         // Scripting engine startup
         std::unique_ptr<SlokedScriptEngine> scriptEngine;

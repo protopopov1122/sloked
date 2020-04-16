@@ -23,8 +23,11 @@
 #define SLOKED_KGR_PIPE_H_
 
 #include <functional>
+#include <mutex>
+#include <queue>
 
 #include "sloked/kgr/Value.h"
+#include "sloked/sched/Task.h"
 
 namespace sloked {
 
@@ -48,6 +51,33 @@ namespace sloked {
 
         virtual void Write(KgrValue &&) = 0;
         virtual bool WriteNX(KgrValue &&) = 0;
+    };
+
+    class KgrAsyncPipe {
+     public:
+        KgrAsyncPipe(KgrPipe &);
+        ~KgrAsyncPipe();
+        KgrPipe::Status GetStatus() const;
+        bool Empty() const;
+        std::size_t Count() const;
+        void Close();
+
+        TaskResult<KgrValue> Read();
+        TaskResult<void> Wait(std::size_t = 1);
+        void SetMessageListener(std::function<void()>);
+        void Drop(std::size_t = 1);
+        void DropAll();
+
+        void Write(KgrValue &&);
+        bool WriteNX(KgrValue &&);
+
+     private:
+        void Notify();
+
+        KgrPipe &pipe;
+        std::mutex mtx;
+        std::queue<std::function<void(std::unique_lock<std::mutex>)>> callbacks;
+        std::function<void()> baseCallback;
     };
 }  // namespace sloked
 
