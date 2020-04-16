@@ -170,45 +170,50 @@ namespace sloked {
         static void IterateTaskResults(
             const Iter &current, const Iter &end,
             const std::shared_ptr<
-                DynamicCompoundStorage<DynamicTaskResultType<Iter>>> &storage) {
+                DynamicCompoundStorage<DynamicTaskResultType<Iter>>> &storage,
+            std::weak_ptr<SlokedLifetime> lifetime) {
             if (current != end) {
                 auto taskResult = *current;
-                taskResult.Notify([next = std::next(current), end,
-                                   storage](const auto &result) {
-                    switch (result.State()) {
-                        case TaskResultStatus::Ready:
-                            if constexpr (std::is_void_v<
-                                              typename DynamicTaskResultType<
-                                                  Iter>::Result>) {
-                                storage->result.emplace_back(VoidType{});
-                            } else {
-                                storage->result.emplace_back(
-                                    std::move(result.GetResult()));
-                            }
-                            if (next != end) {
-                                IterateTaskResults(next, end, storage);
-                            } else {
-                                storage->supplier.SetResult(
-                                    std::move(storage->result));
-                            }
-                            break;
+                taskResult.Notify(
+                    [next = std::next(current), end, storage,
+                     lifetime](const auto &result) {
+                        switch (result.State()) {
+                            case TaskResultStatus::Ready:
+                                if constexpr (
+                                    std::is_void_v<
+                                        typename DynamicTaskResultType<
+                                            Iter>::Result>) {
+                                    storage->result.emplace_back(VoidType{});
+                                } else {
+                                    storage->result.emplace_back(
+                                        std::move(result.GetResult()));
+                                }
+                                if (next != end) {
+                                    IterateTaskResults(next, end, storage,
+                                                       lifetime);
+                                } else {
+                                    storage->supplier.SetResult(
+                                        std::move(storage->result));
+                                }
+                                break;
 
-                        case TaskResultStatus::Error:
-                            storage->result.clear();
-                            storage->supplier.SetError(
-                                std::move(result.GetError()));
-                            break;
+                            case TaskResultStatus::Error:
+                                storage->result.clear();
+                                storage->supplier.SetError(
+                                    std::move(result.GetError()));
+                                break;
 
-                        case TaskResultStatus::Cancelled:
-                            storage->result.clear();
-                            storage->supplier.Cancel();
-                            break;
+                            case TaskResultStatus::Cancelled:
+                                storage->result.clear();
+                                storage->supplier.Cancel();
+                                break;
 
-                        default:
-                            assert(false);
-                            break;
-                    }
-                });
+                            default:
+                                assert(false);
+                                break;
+                        }
+                    },
+                    lifetime);
             }
         }
 
@@ -222,11 +227,12 @@ namespace sloked {
         }
 
         template <typename Iter>
-        static auto All(const Iter &begin, const Iter &end) {
+        static auto All(const Iter &begin, const Iter &end,
+                        std::weak_ptr<SlokedLifetime> lifetime) {
             auto storage = std::make_shared<
                 DynamicCompoundStorage<DynamicTaskResultType<Iter>>>(
                 std::distance(begin, end));
-            IterateTaskResults(begin, end, storage);
+            IterateTaskResults(begin, end, storage, std::move(lifetime));
             return storage->supplier.Result();
         }
     };

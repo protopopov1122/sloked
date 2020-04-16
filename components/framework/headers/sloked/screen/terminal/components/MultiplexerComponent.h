@@ -95,6 +95,7 @@ namespace sloked {
         std::list<Window::Id> focus;
         Window::Id nextId;
         std::function<void()> updateListener;
+        std::shared_ptr<SlokedStandardLifetime> lifetime;
     };
 }  // namespace sloked
 

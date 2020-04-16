@@ -23,20 +23,20 @@
 
 namespace sloked {
 
-    OnDestroy::OnDestroy(std::function<void()> callback)
+    AtScopeExit::AtScopeExit(std::function<void()> callback)
         : callback(std::move(callback)) {}
 
-    OnDestroy::OnDestroy(OnDestroy &&scope) : callback(scope.callback) {
+    AtScopeExit::AtScopeExit(AtScopeExit &&scope) : callback(scope.callback) {
         scope.callback = nullptr;
     }
 
-    OnDestroy::~OnDestroy() {
+    AtScopeExit::~AtScopeExit() {
         if (this->callback) {
             this->callback();
         }
     }
 
-    OnDestroy &OnDestroy::operator=(OnDestroy &&scope) {
+    AtScopeExit &AtScopeExit::operator=(AtScopeExit &&scope) {
         if (this->callback) {
             this->callback();
         }
@@ -45,7 +45,7 @@ namespace sloked {
         return *this;
     }
 
-    void OnDestroy::Detach() {
+    void AtScopeExit::Detach() {
         if (this->callback) {
             this->callback();
             this->callback = nullptr;

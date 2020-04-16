@@ -654,8 +654,13 @@ namespace sloked {
 
                             case TaskResultStatus::Error:
                                 try {
-                                    supplier.SetResult(
-                                        catcher(result.GetError()));
+                                    if constexpr (std::is_void_v<Result>) {
+                                        catcher(result.GetError());
+                                        supplier.SetResult();
+                                    } else {
+                                        supplier.SetResult(
+                                            catcher(result.GetError()));
+                                    }
                                 } catch (const Error &err) {
                                     supplier.SetError(err);
                                 }

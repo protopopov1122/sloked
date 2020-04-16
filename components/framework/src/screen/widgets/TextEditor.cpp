@@ -224,6 +224,14 @@ namespace sloked {
                             std::move(state->realPosition);
                         state->self->rendered = std::move(state->rendered);
                     }
+                }),
+            SlokedTaskPipelineStages::Catch(
+                [](const std::shared_ptr<State> &, const std::exception_ptr &) {
+                    // Skip
+                }),
+            SlokedTaskPipelineStages::MapCancelled(
+                [](const std::shared_ptr<State> &) {
+                    // Skip
                 }));
         return Pipeline(
             std::make_shared<State>(this, maxWidth, height, fontProperties),

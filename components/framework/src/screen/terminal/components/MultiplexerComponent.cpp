@@ -156,9 +156,11 @@ namespace sloked {
         SlokedTerminal &term, const Encoding &encoding,
         const SlokedCharPreset &charPreset)
         : SlokedMultiplexerComponent(Type::Multiplexer), terminal(term),
-          encoding(encoding), charPreset(charPreset), focus(0), nextId(0) {}
+          encoding(encoding), charPreset(charPreset), focus(0), nextId(0),
+          lifetime(std::make_shared<SlokedStandardLifetime>()) {}
 
     TerminalMultiplexerComponent::~TerminalMultiplexerComponent() {
+        this->lifetime->Close();
         for (auto it = this->windows.begin(); it != this->windows.end();) {
             auto current = it->second;
             ++it;
@@ -213,7 +215,8 @@ namespace sloked {
         for (auto id : this->focus) {
             results.emplace_back(this->windows.at(id)->RenderSurface());
         }
-        auto compound = SlokedCompoundTask::All(results.begin(), results.end());
+        auto compound = SlokedCompoundTask::All(results.begin(), results.end(),
+                                                this->lifetime);
         return SlokedTaskTransformations::Voidify(compound);
     }
 

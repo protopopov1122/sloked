@@ -107,11 +107,14 @@ namespace sloked {
         while (work.load()) {
             if (this->renderRequested.load()) {
                 this->renderRequested = false;
-                this->provider.Render([&](auto &screen) {
-                    screen.UpdateDimensions();
-                    screen.RenderSurface().Wait();
-                    screen.ShowSurface();
-                });
+                auto surfaceRenderer =
+                    this->provider.GetScreen().Lock([&](auto &screen) {
+                        screen.UpdateDimensions();
+                        return screen.RenderSurface();
+                    });
+                surfaceRenderer.Wait();
+                this->provider.Render(
+                    [&](auto &screen) { screen.ShowSurface(); });
             }
 
             auto input = this->provider.ReceiveInput(timeout);

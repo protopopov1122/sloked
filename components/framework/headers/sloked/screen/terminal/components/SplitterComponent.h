@@ -38,6 +38,7 @@ namespace sloked {
      public:
         TerminalSplitterComponent(SlokedTerminal &, Splitter::Direction,
                                   const Encoding &, const SlokedCharPreset &);
+        ~TerminalSplitterComponent();
 
         std::shared_ptr<Window> GetFocus() const final;
         std::shared_ptr<Window> GetWindow(Window::Id) const final;
@@ -92,6 +93,7 @@ namespace sloked {
         std::vector<std::shared_ptr<TerminalSplitterWindow>> components;
         Window::Id focus;
         std::function<void()> updateListener;
+        std::shared_ptr<SlokedStandardLifetime> lifetime;
     };
 }  // namespace sloked
 

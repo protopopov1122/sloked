@@ -28,15 +28,15 @@
 
 namespace sloked {
 
-    class OnDestroy {
+    class AtScopeExit {
      public:
-        OnDestroy(std::function<void()> = nullptr);
-        OnDestroy(const OnDestroy &) = delete;
-        OnDestroy(OnDestroy &&);
-        ~OnDestroy();
+        AtScopeExit(std::function<void()> = nullptr);
+        AtScopeExit(const AtScopeExit &) = delete;
+        AtScopeExit(AtScopeExit &&);
+        ~AtScopeExit();
 
-        OnDestroy &operator=(const OnDestroy &) = delete;
-        OnDestroy &operator=(OnDestroy &&);
+        AtScopeExit &operator=(const AtScopeExit &) = delete;
+        AtScopeExit &operator=(AtScopeExit &&);
 
         void Detach();
 

@@ -158,7 +158,11 @@ namespace sloked {
         const SlokedCharPreset &chWidth)
         : SlokedSplitterComponent(Type::Splitter),
           splitter(term, dir, enc, chWidth), encoding(enc), charPreset(chWidth),
-          focus(0) {}
+          focus(0), lifetime(std::make_shared<SlokedStandardLifetime>()) {}
+
+    TerminalSplitterComponent::~TerminalSplitterComponent() {
+        this->lifetime->Close();
+    }
 
     std::shared_ptr<TerminalSplitterComponent::Window>
         TerminalSplitterComponent::GetFocus() const {
@@ -228,7 +232,8 @@ namespace sloked {
             results.emplace_back(
                 this->components.at(this->focus)->RenderSurface());
         }
-        auto compound = SlokedCompoundTask::All(results.begin(), results.end());
+        auto compound = SlokedCompoundTask::All(results.begin(), results.end(),
+                                                this->lifetime);
         return SlokedTaskTransformations::Voidify(compound);
     }
 

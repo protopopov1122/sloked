@@ -37,7 +37,7 @@ namespace sloked {
 
     class SlokedIOPoller {
      public:
-        using Handle = OnDestroy;
+        using Handle = AtScopeExit;
 
         class Awaitable {
          public:

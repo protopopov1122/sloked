@@ -275,7 +275,7 @@ namespace sloked {
                 std::to_string(port) +
                 "; address resolution error: " + std::to_string(err));
         }
-        OnDestroy freeResult([&result] { freeaddrinfo(result); });
+        AtScopeExit freeResult([&result] { freeaddrinfo(result); });
         // Open a socket
         int fd =
             socket(result->ai_family, result->ai_socktype, result->ai_protocol);
@@ -342,7 +342,7 @@ namespace sloked {
                 std::to_string(port) +
                 "; address resolution error: " + std::to_string(err));
         }
-        OnDestroy freeResult([&result] { freeaddrinfo(result); });
+        AtScopeExit freeResult([&result] { freeaddrinfo(result); });
         // Open a socket
         int fd =
             socket(result->ai_family, result->ai_socktype, result->ai_protocol);
