@@ -60,7 +60,7 @@ namespace sloked {
         void DropAll() override;
 
         void Write(KgrValue &&) override;
-        bool WriteNX(KgrValue &&) override;
+        bool SafeWrite(KgrValue &&) override;
 
         static std::pair<std::unique_ptr<KgrPipe>, std::unique_ptr<KgrPipe>>
             Make();

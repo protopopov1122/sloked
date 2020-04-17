@@ -45,13 +45,17 @@ namespace sloked {
     class SlokedScreenSizeNotificationClient {
      public:
         using Callback = std::function<void(const TextPosition &)>;
-        SlokedScreenSizeNotificationClient(std::unique_ptr<KgrPipe>);
+        SlokedScreenSizeNotificationClient();
+        ~SlokedScreenSizeNotificationClient();
+
+        TaskResult<void> Connect(std::unique_ptr<KgrPipe>);
         TextPosition GetSize() const;
         void Listen(Callback);
         void Close();
 
      private:
-        std::unique_ptr<KgrPipe> pipe;
+        KgrAsyncPipe pipe;
+        std::shared_ptr<SlokedStandardLifetime> lifetime;
         std::atomic<TextPosition> currentSize;
     };
 }  // namespace sloked

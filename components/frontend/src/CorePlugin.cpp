@@ -383,10 +383,12 @@ namespace sloked {
             std::move(secondaryServer.GetServer()
                           .Connect({"/screen/manager"})
                           .UnwrapWait()));
-        SlokedScreenSizeNotificationClient screenSizeClient(
-            std::move(secondaryServer.GetServer()
-                          .Connect({"/screen/size/notify"})
-                          .UnwrapWait()));
+        SlokedScreenSizeNotificationClient screenSizeClient;
+        screenSizeClient
+            .Connect(std::move(secondaryServer.GetServer()
+                                   .Connect({"/screen/size/notify"})
+                                   .UnwrapWait()))
+            .UnwrapWait();
         SlokedDocumentSetClient documentClient(
             std::move(secondaryServer.GetServer()
                           .Connect({"/document/manager"})

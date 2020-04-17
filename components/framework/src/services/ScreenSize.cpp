@@ -21,6 +21,8 @@
 
 #include "sloked/services/ScreenSize.h"
 
+#include "sloked/sched/CompoundTask.h"
+
 namespace sloked {
 
     class SlokedScreenSizeNotificationContext : public KgrLocalContext {
@@ -75,15 +77,26 @@ namespace sloked {
         return supplier.Result();
     }
 
-    SlokedScreenSizeNotificationClient::SlokedScreenSizeNotificationClient(
-        std::unique_ptr<KgrPipe> pipe)
-        : pipe(std::move(pipe)) {
-        this->pipe->Write({});
-        auto sz = this->pipe->ReadWait();
-        this->currentSize = {static_cast<TextPosition::Column>(
-                                 sz.AsDictionary()["height"].AsInt()),
-                             static_cast<TextPosition::Line>(
-                                 sz.AsDictionary()["width"].AsInt())};
+    SlokedScreenSizeNotificationClient::SlokedScreenSizeNotificationClient()
+        : pipe(nullptr), lifetime(std::make_shared<SlokedStandardLifetime>()) {}
+
+    SlokedScreenSizeNotificationClient::~SlokedScreenSizeNotificationClient() {
+        this->lifetime->Close();
+    }
+
+    TaskResult<void> SlokedScreenSizeNotificationClient::Connect(
+        std::unique_ptr<KgrPipe> pipe) {
+        this->pipe.ChangePipe(std::move(pipe));
+        this->pipe.Write({});
+        return SlokedTaskTransformations::Transform(
+            this->pipe.Read(),
+            [this](const KgrValue &sz) {
+                this->currentSize = {static_cast<TextPosition::Column>(
+                                         sz.AsDictionary()["height"].AsInt()),
+                                     static_cast<TextPosition::Line>(
+                                         sz.AsDictionary()["width"].AsInt())};
+            },
+            this->lifetime);
     }
 
     TextPosition SlokedScreenSizeNotificationClient::GetSize() const {
@@ -91,21 +104,21 @@ namespace sloked {
     }
 
     void SlokedScreenSizeNotificationClient::Listen(Callback listener) {
-        this->pipe->SetMessageListener([this, listener = std::move(listener)] {
-            while (!this->pipe->Empty()) {
-                auto sz = this->pipe->Read();
+        this->pipe.SetMessageListener([this, listener = std::move(listener)] {
+            while (!this->pipe.Empty()) {
+                auto sz = this->pipe.Read().UnwrapWait();
                 this->currentSize = {static_cast<TextPosition::Column>(
                                          sz.AsDictionary()["height"].AsInt()),
                                      static_cast<TextPosition::Line>(
                                          sz.AsDictionary()["width"].AsInt())};
             }
-            if (this->pipe->GetStatus() == KgrPipe::Status::Open) {
+            if (this->pipe.GetStatus() == KgrPipe::Status::Open) {
                 listener(this->currentSize.load());
             }
         });
     }
 
     void SlokedScreenSizeNotificationClient::Close() {
-        this->pipe->Close();
+        this->pipe.Close();
     }
 }  // namespace sloked

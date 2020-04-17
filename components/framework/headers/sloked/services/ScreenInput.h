@@ -58,7 +58,6 @@ namespace sloked {
         void Close();
 
      private:
-        std::unique_ptr<KgrPipe> pipe;
         KgrAsyncPipe asyncPipe;
         const Encoding &encoding;
         std::function<bool()> holdsLock;

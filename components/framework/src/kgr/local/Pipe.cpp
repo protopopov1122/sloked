@@ -132,7 +132,7 @@ namespace sloked {
         }
     }
 
-    bool KgrLocalPipe::WriteNX(KgrValue &&msg) {
+    bool KgrLocalPipe::SafeWrite(KgrValue &&msg) {
         std::unique_lock<std::mutex> lock(this->output->content_mtx);
         if (this->descriptor->status != Status::Open) {
             return false;

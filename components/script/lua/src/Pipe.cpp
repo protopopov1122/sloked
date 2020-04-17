@@ -395,7 +395,7 @@ namespace sloked {
         }
     }
 
-    static int SlokedPipe_WriteNX(lua_State *state) {
+    static int SlokedPipe_SafeWrite(lua_State *state) {
         int top = lua_gettop(state);
         if (top != 2) {
             return luaL_error(state,
@@ -408,7 +408,7 @@ namespace sloked {
                 lua_pushvalue(state, 2);
                 auto msg = LuaToKgrValue(state);
                 lua_pop(state, 1);
-                lua_pushboolean(state, pipe->pipe->WriteNX(std::move(msg)));
+                lua_pushboolean(state, pipe->pipe->SafeWrite(std::move(msg)));
                 return 1;
             } else {
                 return luaL_error(state, "sloked.pipe.tryWrite: Expected pipe");
@@ -482,7 +482,7 @@ namespace sloked {
             lua_setfield(state, -2, "dropAll");
             lua_pushcfunction(state, SlokedPipe_Write);
             lua_setfield(state, -2, "write");
-            lua_pushcfunction(state, SlokedPipe_WriteNX);
+            lua_pushcfunction(state, SlokedPipe_SafeWrite);
             lua_setfield(state, -2, "tryWrite");
             lua_pushlightuserdata(state, std::addressof(eventLoop));
             lua_pushcclosure(state, SlokedPipe_Listen, 1);

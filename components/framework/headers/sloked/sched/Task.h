@@ -49,9 +49,21 @@ namespace sloked {
 
     enum class TaskResultStatus { Pending, Ready, Error, Cancelled };
 
+    template <typename T>
+    struct TaskResultUnwrapWaitReturns {
+        using Type = T &;
+    };
+
+    template <>
+    struct TaskResultUnwrapWaitReturns<void> {
+        using Type = void;
+    };
+
     template <template <typename, typename, typename = void> class C,
               typename R, typename E>
     class TaskResultBase {
+        using UnwrapWaitType = typename TaskResultUnwrapWaitReturns<R>::Type;
+
      public:
         using Listener = std::function<void(const TaskResult<R, E, void> &)>;
         using DetachListener = std::function<void()>;
@@ -132,7 +144,7 @@ namespace sloked {
             }
         }
 
-        auto &UnwrapWait() const {
+        auto UnwrapWait() const -> UnwrapWaitType {
             this->Wait();
             if constexpr (std::is_void_v<R>) {
                 static_cast<const C<R, E> *>(this)->Unwrap();
@@ -142,7 +154,7 @@ namespace sloked {
         }
 
         template <typename D>
-        auto &UnwrapWaitFor(D duration) const {
+        auto UnwrapWaitFor(D duration) const -> UnwrapWaitType {
             this->WaitFor<D>(duration);
             if constexpr (std::is_void_v<R>) {
                 static_cast<const C<R, E> *>(this)->Unwrap();
@@ -152,7 +164,7 @@ namespace sloked {
         }
 
         template <typename Tp>
-        auto &UnwrapWaitUntil(Tp tpoint) const {
+        auto UnwrapWaitUntil(Tp tpoint) const -> UnwrapWaitType {
             this->WaitUntil<Tp>(tpoint);
             if constexpr (std::is_void_v<R>) {
                 static_cast<const C<R, E> *>(this)->Unwrap();

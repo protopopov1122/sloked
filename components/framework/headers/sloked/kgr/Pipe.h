@@ -50,13 +50,17 @@ namespace sloked {
         virtual void DropAll() = 0;
 
         virtual void Write(KgrValue &&) = 0;
-        virtual bool WriteNX(KgrValue &&) = 0;
+        virtual bool SafeWrite(KgrValue &&) = 0;
     };
 
     class KgrAsyncPipe {
      public:
-        KgrAsyncPipe(KgrPipe &);
+        KgrAsyncPipe(std::unique_ptr<KgrPipe>);
         ~KgrAsyncPipe();
+
+        std::unique_ptr<KgrPipe> ChangePipe(std::unique_ptr<KgrPipe> = nullptr);
+        bool Valid() const;
+
         KgrPipe::Status GetStatus() const;
         bool Empty() const;
         std::size_t Count() const;
@@ -69,13 +73,13 @@ namespace sloked {
         void DropAll();
 
         void Write(KgrValue &&);
-        bool WriteNX(KgrValue &&);
+        bool SafeWrite(KgrValue &&);
 
      private:
         void Notify();
 
-        KgrPipe &pipe;
-        std::mutex mtx;
+        mutable std::mutex mtx;
+        std::unique_ptr<KgrPipe> pipe;
         std::queue<std::function<void(std::unique_lock<std::mutex>)>> callbacks;
         std::function<void()> baseCallback;
     };

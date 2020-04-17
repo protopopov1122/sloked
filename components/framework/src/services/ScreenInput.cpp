@@ -214,7 +214,7 @@ namespace sloked {
     SlokedScreenInputNotificationClient::SlokedScreenInputNotificationClient(
         std::unique_ptr<KgrPipe> pipe, const Encoding &encoding,
         std::function<bool()> holdsLock)
-        : pipe(std::move(pipe)), asyncPipe(*this->pipe), encoding(encoding),
+        : asyncPipe(std::move(pipe)), encoding(encoding),
           holdsLock(std::move(holdsLock)) {}
 
     TaskResult<void> SlokedScreenInputNotificationClient::Listen(

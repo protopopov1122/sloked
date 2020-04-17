@@ -240,15 +240,15 @@ namespace sloked {
     class SlokedTaskTransformations {
      public:
         template <typename R, typename E, typename TransformFn>
-        static auto Transform(const TaskResult<R, E> &result,
-                              TransformFn transform) {
+        static auto Transform(
+            const TaskResult<R, E> &result, TransformFn transform,
+            std::weak_ptr<SlokedLifetime> lifetime = SlokedLifetime::Global) {
             static const SlokedAsyncTaskPipeline Pipeline(
                 SlokedTaskPipelineStages::Map(
                     [](TransformFn transform, const R &result) {
                         return transform(result);
                     }));
-            return Pipeline(std::move(transform), result,
-                            SlokedLifetime::Global);
+            return Pipeline(std::move(transform), result, std::move(lifetime));
         }
 
         template <typename R, typename E>
