@@ -68,7 +68,6 @@ namespace sloked {
         if (socket > this->max_socket.load()) {
             this->max_socket.store(socket);
         }
-        this->callbacks.reserve(this->sockets.size());
         return [this, socket] {
             std::unique_lock lock(this->mtx);
             if (this->sockets.count(socket) != 0) {

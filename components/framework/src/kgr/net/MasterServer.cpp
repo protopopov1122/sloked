@@ -353,15 +353,18 @@ namespace sloked {
 
         void Process(bool success) final {
             if (success || this->net.Available() > 0) {
-                this->pinged = false;
-                this->Accept();
+                if (success && this->net.Available() == 0) {
+                    this->net.Close();
+                } else {
+                    this->pinged = false;
+                    this->Accept();
+                }
             } else if (this->work.load() && this->net.Valid()) {
                 auto now = std::chrono::system_clock::now();
                 auto idle = now - this->lastActivity;
                 if (idle > KgrNetConfig::InactivityThreshold && this->pinged) {
-                    throw SlokedError(
-                        "KgrMasterServer: Connection inactive for " +
-                        std::to_string(idle.count()) + " ns");
+                    // Kicking inactive client out
+                    this->net.Close();
                 } else if (idle > KgrNetConfig::InactivityTimeout &&
                            !this->pinged) {
                     this->net.Invoke("ping", {});
@@ -500,9 +503,9 @@ namespace sloked {
 
         void Accept(std::size_t count = 0) {
             if (this->net.Wait(KgrNetConfig::RequestTimeout)) {
+                this->lastActivity = std::chrono::system_clock::now();
                 this->net.Receive();
                 this->net.Process(count);
-                this->lastActivity = std::chrono::system_clock::now();
             }
         }
 
