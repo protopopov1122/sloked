@@ -42,13 +42,17 @@ namespace sloked {
     class SlokedLuaEngine : public SlokedScriptEngine {
      public:
         SlokedLuaEngine(SlokedEditorInstanceContainer &, SlokedScheduler &,
-                        SlokedExecutor &, const std::string & = "");
+                        SlokedExecutor &, const KgrValue & = {});
         ~SlokedLuaEngine();
-        void Start(const std::string &) final;
+        void Start() final;
+        TaskResult<void> Load(const std::string &) final;
+        TaskResult<KgrValue> Invoke(const std::string &,
+                                    const KgrValue &) final;
+        TaskResult<KgrValue> Eval(const std::string &) final;
         void Close() final;
 
      private:
-        void Run(const std::string &);
+        void Run();
         void InitializePath();
         void InitializeApps();
         void InitializeGlobals();
@@ -61,7 +65,7 @@ namespace sloked {
         SlokedDefaultEventLoop eventLoop;
         SlokedScopedScheduler sched;
         SlokedScopedExecutor executor;
-        std::string path;
+        KgrValue params;
         SlokedLogger logger;
     };
 }  // namespace sloked

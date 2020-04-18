@@ -144,7 +144,8 @@ int main(int argc, const char **argv) {
 
     auto [corePlugin, corePluginLibrary] =
         LoadCorePlugin(argc, argv, BaseInterface);
-    auto rc = corePlugin->Start(argc, argv, BaseInterface, *startup);
+    auto rc = corePlugin->Start(argc, argv, BaseInterface, sharedEditorState,
+                                *startup);
 
     closeables.Close();
     corePlugin.reset();

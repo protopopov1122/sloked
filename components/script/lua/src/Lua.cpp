@@ -24,6 +24,7 @@
 #include <iostream>
 
 #include "sloked/core/Error.h"
+#include "sloked/kgr/Path.h"
 #include "sloked/script/lua/Common.h"
 #include "sloked/script/lua/Editor.h"
 #include "sloked/script/lua/Logger.h"
@@ -35,9 +36,9 @@ namespace sloked {
     SlokedLuaEngine::SlokedLuaEngine(SlokedEditorInstanceContainer &apps,
                                      SlokedScheduler &sched,
                                      SlokedExecutor &executor,
-                                     const std::string &path)
+                                     const KgrValue &params)
         : state{nullptr}, work{false}, apps(apps), sched(sched),
-          executor(executor), path{path}, logger(SlokedLoggerTag) {
+          executor(executor), params{params}, logger(SlokedLoggerTag) {
         this->eventLoop.Notify([this] { this->activity.Notify(); });
     }
 
@@ -45,10 +46,67 @@ namespace sloked {
         this->Close();
     }
 
-    void SlokedLuaEngine::Start(const std::string &script) {
+    void SlokedLuaEngine::Start() {
         if (!this->work.exchange(true)) {
-            this->workerThread =
-                std::thread([this, script] { this->Run(script); });
+            this->workerThread = std::thread([this] { this->Run(); });
+        }
+    }
+
+    TaskResult<void> SlokedLuaEngine::Load(const std::string &script) {
+        if (this->work.load()) {
+            TaskResultSupplier<void> supplier;
+            this->eventLoop.Attach([this, script, supplier] {
+                if (luaL_dofile(this->state, script.c_str())) {
+                    supplier.SetError(std::make_exception_ptr(
+                        std::string{luaL_tolstring(this->state, -1, nullptr)}));
+                    lua_pop(this->state, 1);
+                } else {
+                    supplier.SetResult();
+                }
+            });
+            return supplier.Result();
+        } else {
+            return TaskResult<void>::Cancel();
+        }
+    }
+
+    TaskResult<KgrValue> SlokedLuaEngine::Invoke(const std::string &method,
+                                                 const KgrValue &params) {
+        if (this->work.load()) {
+            TaskResultSupplier<KgrValue> supplier;
+            this->eventLoop.Attach([this, method, params, supplier] {
+                lua_getglobal(this->state, method.c_str());
+                KgrValueToLua(this->state, params);
+                if (lua_pcall(this->state, 1, 1, 0)) {
+                    supplier.SetError(std::make_exception_ptr(
+                        std::string{luaL_tolstring(this->state, -1, nullptr)}));
+                    lua_pop(this->state, 1);
+                } else {
+                    supplier.SetResult(LuaToKgrValue(this->state));
+                }
+            });
+            return supplier.Result();
+        } else {
+            return TaskResult<KgrValue>::Cancel();
+        }
+    }
+
+    TaskResult<KgrValue> SlokedLuaEngine::Eval(const std::string &script) {
+        if (this->work.load()) {
+            TaskResultSupplier<KgrValue> supplier;
+            this->eventLoop.Attach([this, script, supplier] {
+                if (luaL_loadstring(this->state, script.c_str()) ||
+                    lua_pcall(this->state, 0, 1, 0)) {
+                    supplier.SetError(std::make_exception_ptr(
+                        std::string{luaL_tolstring(this->state, -1, nullptr)}));
+                    lua_pop(this->state, 1);
+                } else {
+                    supplier.SetResult(LuaToKgrValue(this->state));
+                }
+            });
+            return supplier.Result();
+        } else {
+            return TaskResult<KgrValue>::Cancel();
         }
     }
 
@@ -59,24 +117,19 @@ namespace sloked {
         }
     }
 
-    void SlokedLuaEngine::Run(const std::string &script) {
+    void SlokedLuaEngine::Run() {
         this->state = luaL_newstate();
         this->InitializeGlobals();
         this->InitializePath();
-        if (luaL_dofile(this->state, script.c_str())) {
-            logger.To(SlokedLogLevel::Error)
-                << luaL_tolstring(state, -1, nullptr);
-        } else {
-            try {
-                while (this->work.load()) {
-                    this->activity.WaitAll();
-                    if (this->work.load() && this->eventLoop.HasPending()) {
-                        this->eventLoop.Run();
-                    }
+        try {
+            while (this->work.load()) {
+                this->activity.WaitAll();
+                if (this->work.load() && this->eventLoop.HasPending()) {
+                    this->eventLoop.Run();
                 }
-            } catch (const SlokedError &err) {
-                logger.To(SlokedLogLevel::Error) << err.what();
             }
+        } catch (const SlokedError &err) {
+            logger.To(SlokedLogLevel::Error) << err.what();
         }
         this->executor.Close();
         this->sched.Close();
@@ -85,11 +138,12 @@ namespace sloked {
     }
 
     void SlokedLuaEngine::InitializePath() {
-        if (!this->path.empty()) {
+        auto path = KgrPath::Traverse(this->params, {"/path"});
+        if (path.has_value()) {
             lua_getglobal(state, "package");
             lua_getfield(state, -1, "path");
             lua_pushstring(state, ";");
-            lua_pushstring(state, this->path.c_str());
+            lua_pushstring(state, path.value().AsString().c_str());
             lua_concat(state, 3);
             lua_setfield(state, -2, "path");
             lua_pop(state, 1);

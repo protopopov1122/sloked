@@ -43,3 +43,8 @@ async(function(await)
         end
     end
 end):unwrapError()
+
+
+function method1(params)
+    return params.x + params.y
+end

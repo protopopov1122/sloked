@@ -63,8 +63,8 @@ namespace sloked {
             OnTerminalResize) const = 0;
         virtual bool HasScripting() const = 0;
         virtual std::unique_ptr<SlokedScriptEngine> NewScriptEngine(
-            SlokedEditorInstanceContainer &, SlokedScheduler &,
-            SlokedExecutor &, const std::string &) const = 0;
+            SlokedEditorInstanceContainer &, SlokedSharedEditorState &,
+            const KgrValue &) const = 0;
     };
 }  // namespace sloked
 

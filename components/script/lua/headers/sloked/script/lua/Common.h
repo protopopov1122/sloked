@@ -24,6 +24,7 @@
 
 #include <lua.hpp>
 
+#include "sloked/kgr/Value.h"
 #include "sloked/sched/EventLoop.h"
 
 namespace sloked {
@@ -43,6 +44,9 @@ namespace sloked {
     };
 
     std::function<void()> LuaCallback(lua_State *, SlokedEventLoop &);
+
+    void KgrValueToLua(lua_State *, const KgrValue &);
+    KgrValue LuaToKgrValue(lua_State *);
 }  // namespace sloked
 
 #endif

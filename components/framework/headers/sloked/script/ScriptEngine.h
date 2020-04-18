@@ -26,13 +26,18 @@
 #include "sloked/editor/EditorInstance.h"
 #include "sloked/kgr/NamedServer.h"
 #include "sloked/sched/Scheduler.h"
+#include "sloked/sched/Task.h"
 
 namespace sloked {
 
     class SlokedScriptEngine : public SlokedCloseable {
      public:
         virtual ~SlokedScriptEngine() = default;
-        virtual void Start(const std::string &) = 0;
+        virtual void Start() = 0;
+        virtual TaskResult<void> Load(const std::string &) = 0;
+        virtual TaskResult<KgrValue> Invoke(const std::string &,
+                                            const KgrValue &) = 0;
+        virtual TaskResult<KgrValue> Eval(const std::string &) = 0;
     };
 }  // namespace sloked
 

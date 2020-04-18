@@ -39,8 +39,8 @@ namespace sloked {
         }
 
         static std::unique_ptr<SlokedScriptEngine> GetEngine(
-            SlokedEditorInstanceContainer &, SlokedScheduler &,
-            SlokedExecutor &, const std::string &);
+            SlokedEditorInstanceContainer &, SlokedSharedEditorState &,
+            const KgrValue &);
     };
 }  // namespace sloked
 

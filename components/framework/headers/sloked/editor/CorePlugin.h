@@ -37,7 +37,7 @@ namespace sloked {
      public:
         virtual ~SlokedCorePlugin() = default;
         virtual int Start(int, const char **, const SlokedBaseInterface &,
-                          SlokedEditorManager &) = 0;
+                          SlokedSharedEditorState &, SlokedEditorManager &) = 0;
     };
 
     using SlokedCorePluginFactory = SlokedCorePlugin *(*) ();

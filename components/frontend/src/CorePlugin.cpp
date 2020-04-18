@@ -38,7 +38,7 @@ namespace sloked {
     class SlokedFrontendDefaultCorePlugin : public SlokedCorePlugin {
      public:
         int Start(int, const char **, const SlokedBaseInterface &,
-                  SlokedEditorManager &) final;
+                  SlokedSharedEditorState &, SlokedEditorManager &) final;
     };
 
     class TestFragment
@@ -218,7 +218,7 @@ namespace sloked {
 
     int SlokedFrontendDefaultCorePlugin::Start(
         int argc, const char **argv, const SlokedBaseInterface &baseInterface,
-        SlokedEditorManager &manager) {
+        SlokedSharedEditorState &sharedState, SlokedEditorManager &manager) {
         SlokedCloseablePool closeables;
         SlokedLoggingManager::Global.SetSink(
             SlokedLogLevel::Debug,
@@ -486,11 +486,12 @@ namespace sloked {
         std::unique_ptr<SlokedScriptEngine> scriptEngine;
         if (baseInterface.HasScripting() && mainConfig.Has("/script/init")) {
             scriptEngine = baseInterface.NewScriptEngine(
-                manager, mainEditor.GetScheduler(), mainEditor.GetExecutor(),
-                mainConfig.Find("/script/path").AsString());
+                manager, sharedState, mainConfig.Find("/script"));
             if (scriptEngine) {
                 closeables.Attach(*scriptEngine);
-                scriptEngine->Start(mainConfig.Find("/script/init").AsString());
+                scriptEngine->Start();
+                scriptEngine->Load(mainConfig.Find("/script/init").AsString())
+                    .UnwrapWait();
             }
         }
         terminate.WaitAll();
