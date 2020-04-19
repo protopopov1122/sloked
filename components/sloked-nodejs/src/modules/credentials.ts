@@ -1,8 +1,8 @@
-import Crypto from './int/crypto'
-import { CredentialAccount, CredentialStorage } from './int/credentials'
+import { Crypto } from '../types/crypto'
+import { CredentialAccount, CredentialStorage } from '../types/credentials'
 
 class DefaultCredentialAccount implements CredentialAccount {
-    constructor (crypto: Crypto, id: string, password: string) {
+    constructor(crypto: Crypto, id: string, password: string) {
         this._crypto = crypto
         this._id = id
         this._password = password
@@ -30,11 +30,11 @@ class DefaultCredentialAccount implements CredentialAccount {
 }
 
 export class DefaultCredentialStorage implements CredentialStorage {
-    constructor (crypto: Crypto) {
+    constructor(crypto: Crypto) {
         this._crypto = crypto
     }
 
-    newAccount( id: string, password: string) {
+    newAccount(id: string, password: string) {
         this._accounts[id] = new DefaultCredentialAccount(this._crypto, id, password)
     }
 
@@ -51,5 +51,5 @@ export class DefaultCredentialStorage implements CredentialStorage {
     }
 
     private _crypto: Crypto;
-    private _accounts: {[id: string]: DefaultCredentialAccount} = {}
+    private _accounts: { [id: string]: DefaultCredentialAccount } = {}
 }

@@ -1,4 +1,4 @@
-export default interface Pipe {
+export interface Pipe {
     isOpen(): boolean;
     available(): number;
     empty(): boolean;

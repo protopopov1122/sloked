@@ -1,5 +1,5 @@
 import * as crypto from 'crypto'
-import Crypto from './int/crypto'
+import { Crypto } from '../types/crypto'
 
 export class DefaultCrypto implements Crypto {
     deriveKey(password: string, salt: string): Promise<Buffer> {
@@ -63,5 +63,13 @@ export class DefaultCrypto implements Crypto {
 
     blockSize(): number {
         return 16 // AES-256-CBC
+    }
+
+    IVSize(): number {
+        return 16 // AES-256-CBC
+    }
+
+    RandomBytes(count: number): Buffer {
+        return crypto.randomBytes(count)
     }
 }

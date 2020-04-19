@@ -1,4 +1,4 @@
-import { Serializer } from './serialize'
+import { Serializer } from '../types/serialize'
 import { Duplex } from 'stream'
 
 type AwaitingResult = {
@@ -83,7 +83,7 @@ export default class NetInterface {
         this._nextId = 0
         this._awaiting = {}
         this._socket = socket
-        this._socket.on('data', this._receiveData.bind(this))
+        this._socket.on('readable', this._receiveData.bind(this))
         this._socket.on('end', this._receiveEnd.bind(this))
     }
 
@@ -126,8 +126,11 @@ export default class NetInterface {
         this._methods = {}
     }
 
-    _receiveData(rawData: Buffer) {
-        let data = rawData
+    _receiveData() {
+        let data = this._socket.read()
+        if (data === null) {
+            return // End of stream reached
+        }
         if (typeof data === 'string') {
             data = Buffer.from(data, 'utf8')
         }

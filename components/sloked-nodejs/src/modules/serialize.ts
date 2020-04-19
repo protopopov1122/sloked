@@ -1,4 +1,4 @@
-import Serializer from './int/serialize'
+import { Serializer } from '../types/serialize'
 
 export class JsonSerializer implements Serializer {
     serialize(msg: any): Buffer {
@@ -34,7 +34,7 @@ export class BinarySerializer implements Serializer {
     }
 
     _serialize (value: any): Buffer {
-        if (value === null) {
+        if (value === null || typeof value === 'undefined') {
             return Buffer.from([BinarySerializerType.Null])
         } else if (typeof value === 'number' && Number.isInteger(value)) {
             const type = Buffer.from([BinarySerializerType.Integer64])
@@ -77,6 +77,7 @@ export class BinarySerializer implements Serializer {
             }
             return Buffer.concat([type, length, buf])
         } else {
+            console.log(value)
             throw new Error('Unsupported type')
         }
     }
@@ -141,6 +142,7 @@ export class BinarySerializer implements Serializer {
                 return [object, offset]
             }
         }
+        console.log(buffer)
         throw new Error("Unsupported type")
     }
 }

@@ -1,4 +1,4 @@
-import Pipe from './int/pipe'
+import { Pipe } from '../types/pipe'
 
 class PipeDescriptor {
     constructor() {

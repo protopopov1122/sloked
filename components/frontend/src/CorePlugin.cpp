@@ -291,11 +291,11 @@ namespace sloked {
                            {"defaultUser",
                             KgrDictionary{
                                 {"restrictAccess",
-                                 KgrDictionary{{"whitelist", true},
+                                 KgrDictionary{{"whitelist", false},
                                                {"content", KgrArray{}}}},
                                 {"restrictModification",
                                  KgrDictionary{
-                                     {"whitelist", true},
+                                     {"whitelist", false},
                                      {"content", KgrArray{}}}}}}}}}}}},
             {"network",
              KgrDictionary{{"buffering", 5},

@@ -1,8 +1,8 @@
-import NetInterface from './net-interface'
-import DefaultPipe from './pipe'
-import Pipe from './int/pipe'
+import NetInterface from '../modules/net-interface'
+import DefaultPipe from '../modules/pipe'
+import { Pipe } from '../types/pipe'
 import { Duplex } from 'stream'
-import Serializer from './int/serialize'
+import { Serializer } from '../types/serialize'
 
 export default class SlaveServer {
     constructor (socket: Duplex, serializer: Serializer) {
