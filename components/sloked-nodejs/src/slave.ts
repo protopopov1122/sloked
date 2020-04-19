@@ -1,7 +1,8 @@
 import NetInterface from './net-interface'
-import Pipe from './pipe'
+import DefaultPipe from './pipe'
+import Pipe from './int/pipe'
 import { Duplex } from 'stream'
-import { Serializer } from './serialize'
+import Serializer from './int/serialize'
 
 export default class SlaveServer {
     constructor (socket: Duplex, serializer: Serializer) {
@@ -14,7 +15,7 @@ export default class SlaveServer {
 
     async connect (service: string) {
         const pipeId = await this._net.invoke('connect', service)()
-        const [pipe1, pipe2] = Pipe.make()
+        const [pipe1, pipe2] = DefaultPipe.make()
         pipe1.listen(async () => {
             while (!pipe1.empty()) {
                 this._net.invoke('send', {

@@ -12,8 +12,7 @@ type AwaitingCallback = {
 }
 
 class Awaiting {
-
-    next () {
+    next() {
         return new Promise<any>((resolve, reject) => {
             if (this._queue.length > 0) {
                 const value = this._queue[0];
@@ -32,7 +31,7 @@ class Awaiting {
         })
     }
 
-    push (value: AwaitingResult) {
+    push(value: AwaitingResult) {
         if (this._callbacks.length > 0) {
             const callback = this._callbacks[0]
             this._callbacks.splice(0, 1)
@@ -46,14 +45,14 @@ class Awaiting {
         }
     }
 
-    notify (fn: () => void, timeout: number) {
+    notify(fn: () => void, timeout: number) {
         if (this._timeout !== null) {
             clearTimeout(this._timeout)
         }
         setTimeout(fn, timeout)
     }
 
-    reset () {
+    reset() {
         if (this._timeout !== null) {
             clearTimeout(this._timeout)
         }

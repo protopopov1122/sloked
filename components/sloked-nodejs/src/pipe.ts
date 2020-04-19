@@ -1,3 +1,5 @@
+import Pipe from './int/pipe'
+
 class PipeDescriptor {
     constructor() {
         this._open = true
@@ -82,7 +84,7 @@ class SimplexPipe {
     private _callback: (() => void) | null;
 }
 
-export default class Pipe {
+export default class DefaultPipe implements Pipe {
     constructor(input: SimplexPipe, output: SimplexPipe) {
         this._in = input
         this._out = output
@@ -121,7 +123,7 @@ export default class Pipe {
         const descriptor = new PipeDescriptor()
         const input = new SimplexPipe(descriptor)
         const output = new SimplexPipe(descriptor)
-        return [new Pipe(input, output), new Pipe(output, input)]
+        return [new DefaultPipe(input, output), new DefaultPipe(output, input)]
     }
 
     private _in: SimplexPipe;

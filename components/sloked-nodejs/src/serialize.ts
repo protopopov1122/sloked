@@ -1,7 +1,4 @@
-export interface Serializer {
-    serialize(msg: any): Buffer;
-    deserialize(buffer: Buffer): any;
-}
+import Serializer from './int/serialize'
 
 export class JsonSerializer implements Serializer {
     serialize(msg: any): Buffer {
