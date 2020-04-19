@@ -84,10 +84,11 @@ namespace sloked {
 
     void SlokedBufferedSocket::Flush() {
         std::unique_lock lock(this->mtx);
-        this->task->Cancel();
-        this->socket->Write(
-            SlokedSpan(this->buffer.data(), this->buffer.size()));
-        this->buffer.clear();
+        if (!this->buffer.empty()) {
+            this->socket->Write(
+                SlokedSpan(this->buffer.data(), this->buffer.size()));
+            this->buffer.clear();
+        }
         if (this->task != nullptr && this->task->Pending()) {
             this->task->Cancel();
         }

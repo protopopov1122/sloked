@@ -118,7 +118,13 @@ namespace sloked {
         }
     }
 
-    void SlokedCompressedSocket::Write(uint8_t data) {}
+    void SlokedCompressedSocket::Write(uint8_t data) {
+        if (this->Valid()) {
+            this->Put(&data, 1);
+        } else {
+            throw SlokedError("CompressedSocket: Invalid socket");
+        }
+    }
 
     void SlokedCompressedSocket::Flush() {
         if (this->Valid()) {

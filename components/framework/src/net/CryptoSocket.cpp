@@ -166,6 +166,9 @@ namespace sloked {
     }
 
     void SlokedCryptoSocket::Put(const uint8_t *bytes, std::size_t length) {
+        if (length == 0) {
+            return;
+        }
         std::size_t totalLength = length;
         if (length % this->cipher->BlockSize() != 0) {
             totalLength = (length / this->cipher->BlockSize() + 1) *
