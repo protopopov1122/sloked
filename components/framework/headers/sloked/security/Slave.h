@@ -25,40 +25,38 @@
 #include <map>
 #include <mutex>
 
-#include "sloked/security/Provider.h"
+#include "sloked/core/Event.h"
+#include "sloked/security/CredentialStorage.h"
 
 namespace sloked {
 
-    class SlokedCredentialSlave : public SlokedCredentialProvider {
+    class SlokedCredentialSlave : public SlokedCredentialStorage {
      public:
-        class Account : public SlokedCredentialProvider::Account {
+        class Account : public SlokedCredentialStorage::Account {
          public:
             Account(SlokedCrypto &, const std::string &, const std::string &);
             ~Account();
-            std::string GetName() const final;
-            std::string GetCredentials() const final;
+            std::string GetIdentifier() const final;
+            std::string GetPassword() const final;
             std::unique_ptr<SlokedCrypto::Key> DeriveKey(
                 const std::string &) const final;
             Callback Watch(Callback) final;
             void ChangeCredentials(std::string);
 
          private:
-            void TriggerWatchers(std::unique_lock<std::mutex> &);
-
             mutable std::mutex mtx;
             SlokedCrypto &crypto;
-            const std::string name;
-            std::string credentials;
-            uint64_t nextWatcherId;
-            std::map<uint64_t, Callback> watchers;
+            const std::string identifier;
+            std::string password;
+            SlokedEventEmitter<void> changeEmitter;
         };
 
         SlokedCredentialSlave(SlokedCrypto &);
-        std::weak_ptr<Account> New(const std::string &, const std::string &);
+        std::shared_ptr<Account> New(const std::string &, const std::string &);
         bool Has(const std::string &) const final;
-        std::weak_ptr<SlokedCredentialProvider::Account> GetByName(
+        std::shared_ptr<SlokedCredentialStorage::Account> GetByName(
             const std::string &) const final;
-        std::weak_ptr<Account> GetAccountByName(const std::string &) const;
+        std::shared_ptr<Account> GetAccountByName(const std::string &) const;
 
      private:
         SlokedCrypto &crypto;

@@ -24,14 +24,14 @@
 
 #include "sloked/core/Crypto.h"
 #include "sloked/net/Socket.h"
-#include "sloked/security/Provider.h"
+#include "sloked/security/CredentialStorage.h"
 
 namespace sloked {
 
     class SlokedBaseAuthenticator {
      public:
         using Challenge = uint32_t;
-        SlokedBaseAuthenticator(SlokedCrypto &, SlokedCredentialProvider &,
+        SlokedBaseAuthenticator(SlokedCrypto &, SlokedCredentialStorage &,
                                 std::string, SlokedSocketEncryption *);
         virtual ~SlokedBaseAuthenticator();
         bool IsLoggedIn() const;
@@ -43,16 +43,16 @@ namespace sloked {
         void SetupEncryption();
 
         SlokedCrypto &crypto;
-        SlokedCredentialProvider &provider;
+        SlokedCredentialStorage &provider;
         const std::string salt;
         SlokedSocketEncryption *encryption;
         std::optional<std::string> account;
-        SlokedCredentialProvider::Account::Callback unwatchCredentials;
+        SlokedCredentialStorage::Account::Callback unwatchCredentials;
     };
 
     class SlokedMasterAuthenticator : public SlokedBaseAuthenticator {
      public:
-        SlokedMasterAuthenticator(SlokedCrypto &, SlokedCredentialProvider &,
+        SlokedMasterAuthenticator(SlokedCrypto &, SlokedCredentialStorage &,
                                   std::string,
                                   SlokedSocketEncryption * = nullptr);
         ~SlokedMasterAuthenticator();
@@ -68,7 +68,7 @@ namespace sloked {
     class SlokedSlaveAuthenticator : public SlokedBaseAuthenticator {
      public:
         using Challenge = SlokedMasterAuthenticator::Challenge;
-        SlokedSlaveAuthenticator(SlokedCrypto &, SlokedCredentialProvider &,
+        SlokedSlaveAuthenticator(SlokedCrypto &, SlokedCredentialStorage &,
                                  std::string,
                                  SlokedSocketEncryption * = nullptr);
         ~SlokedSlaveAuthenticator();
@@ -79,7 +79,7 @@ namespace sloked {
 
     class SlokedAuthenticatorFactory {
      public:
-        SlokedAuthenticatorFactory(SlokedCrypto &, SlokedCredentialProvider &,
+        SlokedAuthenticatorFactory(SlokedCrypto &, SlokedCredentialStorage &,
                                    std::string);
         std::unique_ptr<SlokedMasterAuthenticator> NewMaster(
             SlokedSocketEncryption * = nullptr);
@@ -88,7 +88,7 @@ namespace sloked {
 
      private:
         SlokedCrypto &crypto;
-        SlokedCredentialProvider &provider;
+        SlokedCredentialStorage &provider;
         std::string salt;
     };
 }  // namespace sloked

@@ -353,14 +353,13 @@ namespace sloked {
                      KgrDictionary{
                          {"slave",
                           KgrDictionary{
-                              {"users", KgrArray{KgrDictionary{
-                                            {"id", "user1"},
-                                            {"credentials",
-                                             mainEditor.GetCrypto()
-                                                 .GetCredentialMaster()
-                                                 .GetAccountByName("user1")
-                                                 .lock()
-                                                 ->GetCredentials()}}}}}}}}});
+                              {"users",
+                               KgrArray{KgrDictionary{
+                                   {"id", "user1"},
+                                   {"password", mainEditor.GetCrypto()
+                                                    .GetCredentialMaster()
+                                                    .GetAccountByName("user1")
+                                                    ->GetPassword()}}}}}}}}});
         }
 
         auto &secondaryEditor =

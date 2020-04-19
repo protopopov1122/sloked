@@ -237,7 +237,10 @@ namespace sloked {
             for (const auto &usr : masterConfig["users"].AsArray()) {
                 const auto &userConfig = usr.AsDictionary();
                 auto userAccount =
-                    authMaster.New(userConfig["id"].AsString()).lock();
+                    userConfig.Has("password")
+                        ? authMaster.New(userConfig["id"].AsString(),
+                                         userConfig["password"].AsString())
+                        : authMaster.New(userConfig["id"].AsString());
                 if (userConfig.Has("restrictAccess")) {
                     userAccount->SetAccessRestrictions(KgrToRestriction(
                         userConfig["restrictAccess"].AsDictionary()));
@@ -249,7 +252,7 @@ namespace sloked {
             }
         }
         if (masterConfig.Has("defaultUser")) {
-            auto userAccount = authMaster.EnableDefaultAccount(true).lock();
+            auto userAccount = authMaster.EnableDefaultAccount(true);
             const auto &userConfig = masterConfig["defaultUser"].AsDictionary();
             if (userConfig.Has("restrictAccess")) {
                 userAccount->SetAccessRestrictions(KgrToRestriction(
@@ -273,7 +276,7 @@ namespace sloked {
             for (const auto &usr : slaveConfig["users"].AsArray()) {
                 const auto &userConfig = usr.AsDictionary();
                 authSlave.New(userConfig["id"].AsString(),
-                              userConfig["credentials"].AsString());
+                              userConfig["password"].AsString());
             }
         }
     }

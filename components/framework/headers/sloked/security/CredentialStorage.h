@@ -19,8 +19,8 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SECURITY_PROVIDER_H_
-#define SLOKED_SECURITY_PROVIDER_H_
+#ifndef SLOKED_SECURITY_CREDENTIALSTORAGE_H_
+#define SLOKED_SECURITY_CREDENTIALSTORAGE_H_
 
 #include <functional>
 #include <string>
@@ -29,22 +29,23 @@
 
 namespace sloked {
 
-    class SlokedCredentialProvider {
+    class SlokedCredentialStorage {
      public:
         class Account {
          public:
             using Callback = std::function<void()>;
             virtual ~Account() = default;
-            virtual std::string GetName() const = 0;
-            virtual std::string GetCredentials() const = 0;
+            virtual std::string GetIdentifier() const = 0;
+            virtual std::string GetPassword() const = 0;
             virtual std::unique_ptr<SlokedCrypto::Key> DeriveKey(
                 const std::string &) const = 0;
             virtual Callback Watch(Callback) = 0;
         };
 
-        virtual ~SlokedCredentialProvider() = default;
+        virtual ~SlokedCredentialStorage() = default;
         virtual bool Has(const std::string &) const = 0;
-        virtual std::weak_ptr<Account> GetByName(const std::string &) const = 0;
+        virtual std::shared_ptr<Account> GetByName(
+            const std::string &) const = 0;
     };
 }  // namespace sloked
 

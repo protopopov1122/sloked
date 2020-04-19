@@ -24,66 +24,47 @@
 namespace sloked {
 
     SlokedCredentialSlave::Account::Account(SlokedCrypto &crypto,
-                                            const std::string &name,
-                                            const std::string &credentials)
-        : crypto(crypto), name(name),
-          credentials(credentials), nextWatcherId{0} {}
+                                            const std::string &identifier,
+                                            const std::string &password)
+        : crypto(crypto), identifier(identifier), password(password) {}
 
     SlokedCredentialSlave::Account::~Account() {
-        std::unique_lock lock(this->mtx);
-        this->TriggerWatchers(lock);
+        this->changeEmitter.Emit();
     }
 
-    std::string SlokedCredentialSlave::Account::GetName() const {
+    std::string SlokedCredentialSlave::Account::GetIdentifier() const {
         std::unique_lock lock(this->mtx);
-        return this->name;
+        return this->identifier;
     }
 
-    std::string SlokedCredentialSlave::Account::GetCredentials() const {
+    std::string SlokedCredentialSlave::Account::GetPassword() const {
         std::unique_lock lock(this->mtx);
-        return this->credentials;
+        return this->password;
     }
 
     std::unique_ptr<SlokedCrypto::Key>
         SlokedCredentialSlave::Account::DeriveKey(
             const std::string &salt) const {
         std::unique_lock lock(this->mtx);
-        return this->crypto.DeriveKey(this->credentials, salt);
+        return this->crypto.DeriveKey(this->password, salt);
     }
 
-    SlokedCredentialProvider::Account::Callback
+    SlokedCredentialStorage::Account::Callback
         SlokedCredentialSlave::Account::Watch(Callback watcher) {
-        std::unique_lock lock(this->mtx);
-        int64_t watcherId = this->nextWatcherId++;
-        this->watchers.emplace(watcherId, std::move(watcher));
-        return [this, watcherId] {
-            std::unique_lock lock(this->mtx);
-            if (this->watchers.count(watcherId) != 0) {
-                this->watchers.erase(watcherId);
-            }
-        };
+        return this->changeEmitter.Listen(std::move(watcher));
     }
 
     void SlokedCredentialSlave::Account::ChangeCredentials(std::string cred) {
         std::unique_lock lock(this->mtx);
-        this->credentials = std::move(cred);
-        this->TriggerWatchers(lock);
-    }
-
-    void SlokedCredentialSlave::Account::TriggerWatchers(
-        std::unique_lock<std::mutex> &lock) {
-        for (auto it = this->watchers.begin(); it != this->watchers.end();) {
-            auto current = it++;
-            lock.unlock();
-            current->second();
-            lock.lock();
-        }
+        this->password = std::move(cred);
+        lock.unlock();
+        this->changeEmitter.Emit();
     }
 
     SlokedCredentialSlave::SlokedCredentialSlave(SlokedCrypto &crypto)
         : crypto(crypto) {}
 
-    std::weak_ptr<SlokedCredentialSlave::Account> SlokedCredentialSlave::New(
+    std::shared_ptr<SlokedCredentialSlave::Account> SlokedCredentialSlave::New(
         const std::string &name, const std::string &credentials) {
         std::unique_lock lock(this->mtx);
         if (this->accounts.count(name) == 0) {
@@ -102,7 +83,7 @@ namespace sloked {
         return this->accounts.count(name) != 0;
     }
 
-    std::weak_ptr<SlokedCredentialProvider::Account>
+    std::shared_ptr<SlokedCredentialStorage::Account>
         SlokedCredentialSlave::GetByName(const std::string &name) const {
         std::unique_lock lock(this->mtx);
         if (this->accounts.count(name) != 0) {
@@ -113,7 +94,7 @@ namespace sloked {
         }
     }
 
-    std::weak_ptr<SlokedCredentialSlave::Account>
+    std::shared_ptr<SlokedCredentialSlave::Account>
         SlokedCredentialSlave::GetAccountByName(const std::string &name) const {
         std::unique_lock lock(this->mtx);
         if (this->accounts.count(name) != 0) {

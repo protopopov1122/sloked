@@ -26,7 +26,7 @@
 namespace sloked {
 
     SlokedBaseAuthenticator::SlokedBaseAuthenticator(
-        SlokedCrypto &crypto, SlokedCredentialProvider &provider,
+        SlokedCrypto &crypto, SlokedCredentialStorage &provider,
         std::string salt, SlokedSocketEncryption *encryption)
         : crypto(crypto), provider(provider), salt(std::move(salt)),
           encryption(encryption) {}
@@ -51,7 +51,7 @@ namespace sloked {
 
     std::unique_ptr<SlokedCrypto::Cipher> SlokedBaseAuthenticator::DeriveCipher(
         const std::string &account) {
-        if (auto acc = this->provider.GetByName(account).lock()) {
+        if (auto acc = this->provider.GetByName(account)) {
             auto key = acc->DeriveKey(this->salt);
             auto cipher = this->crypto.NewCipher(std::move(key));
             return cipher;
@@ -70,7 +70,7 @@ namespace sloked {
         constexpr std::size_t NonceSize = sizeof(Challenge) / sizeof(uint8_t);
         union {
             uint8_t bytes[NonceSize];
-            uint32_t value;
+            Challenge value;
         } nonce;
         nonce.value = ch;
         std::vector<uint8_t> raw;
@@ -94,8 +94,7 @@ namespace sloked {
         if (this->encryption) {
             auto cipher = this->DeriveCipher(this->account.value());
             this->encryption->SetEncryption(std::move(cipher));
-            if (auto acc =
-                    this->provider.GetByName(this->account.value()).lock()) {
+            if (auto acc = this->provider.GetByName(this->account.value())) {
                 this->unwatchCredentials = acc->Watch([this] {
                     if (this->account.has_value()) {
                         auto cipher = this->DeriveCipher(this->account.value());
@@ -111,7 +110,7 @@ namespace sloked {
     }
 
     SlokedMasterAuthenticator::SlokedMasterAuthenticator(
-        SlokedCrypto &crypto, SlokedCredentialProvider &provider,
+        SlokedCrypto &crypto, SlokedCredentialStorage &provider,
         std::string salt, SlokedSocketEncryption *encryption)
         : SlokedBaseAuthenticator(crypto, provider, std::move(salt),
                                   encryption),
@@ -151,7 +150,7 @@ namespace sloked {
     }
 
     SlokedSlaveAuthenticator::SlokedSlaveAuthenticator(
-        SlokedCrypto &crypto, SlokedCredentialProvider &provider,
+        SlokedCrypto &crypto, SlokedCredentialStorage &provider,
         std::string salt, SlokedSocketEncryption *encryption)
         : SlokedBaseAuthenticator(crypto, provider, std::move(salt),
                                   encryption) {}
@@ -181,7 +180,7 @@ namespace sloked {
     }
 
     SlokedAuthenticatorFactory::SlokedAuthenticatorFactory(
-        SlokedCrypto &crypto, SlokedCredentialProvider &provider,
+        SlokedCrypto &crypto, SlokedCredentialStorage &provider,
         std::string salt)
         : crypto(crypto), provider(provider), salt(std::move(salt)) {}
 

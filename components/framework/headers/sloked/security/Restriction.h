@@ -79,9 +79,9 @@ namespace sloked {
         };
 
         virtual ~SlokedNamedRestrictionAuthority() = default;
-        virtual std::weak_ptr<Account> GetRestrictionsByName(
+        virtual std::shared_ptr<Account> GetRestrictionsByName(
             const std::string &) = 0;
-        virtual std::weak_ptr<Account> GetDefaultRestrictions() = 0;
+        virtual std::shared_ptr<Account> GetDefaultRestrictions() = 0;
     };
 }  // namespace sloked
 

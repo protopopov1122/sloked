@@ -28,103 +28,69 @@
 
 namespace sloked {
 
-    const std::string &SlokedCredentialMaster::AccountToken::GetName() const {
-        return this->name;
-    }
-
-    SlokedCredentialMaster::AccountToken &
-        SlokedCredentialMaster::AccountToken::operator=(
-            const AccountToken &token) {
-        this->name = token.name;
-        this->nonce = token.nonce;
-        this->credentials = token.credentials;
-        return *this;
-    }
-
-    SlokedCredentialMaster::AccountToken &
-        SlokedCredentialMaster::AccountToken::operator=(AccountToken &&token) {
-        this->name = std::move(token.name);
-        this->nonce = token.nonce;
-        token.nonce = {};
-        this->credentials = std::move(token.credentials);
-        return *this;
-    }
-
-    bool SlokedCredentialMaster::AccountToken::operator==(
-        const AccountToken &token) const {
-        return this->name == token.name && this->nonce == token.nonce;
-    }
-
-    SlokedCredentialMaster::AccountToken::AccountToken(
-        const SlokedCredentialMaster &auth, const std::string &name)
-        : name(name), nonce(auth.NextNonce()), credentials{} {
-        this->GenerateCredentials(auth);
-    }
-
-    SlokedCredentialMaster::AccountToken::AccountToken(
-        const SlokedCredentialMaster &auth, std::string name, NonceType nonce)
-        : name(std::move(name)), nonce(std::move(nonce)), credentials{} {
-        this->GenerateCredentials(auth);
-    }
-
-    void SlokedCredentialMaster::AccountToken::GenerateCredentials(
-        const SlokedCredentialMaster &auth) {
-        std::stringstream ss;
-        for (std::size_t i = 0; i < this->nonce.size(); i++) {
-            ss << std::to_string(this->nonce[i]);
-            if (i + 1 < this->nonce.size()) {
-                ss << ',';
-            }
-        }
-        ss << ':' << this->name;
-        this->credentials = auth.Encode(ss.str());
+    SlokedCredentialMaster::Account::Account(SlokedCredentialMaster &auth,
+                                             const std::string &name)
+        : auth(auth), identifier(name),
+          accessRestrictions(SlokedNamedBlacklist::Make({})),
+          modificationRestrictions(SlokedNamedBlacklist::Make({})) {
+        this->RandomizePassword();
     }
 
     SlokedCredentialMaster::Account::Account(SlokedCredentialMaster &auth,
-                                             const std::string &name)
-        : auth(auth), token(auth, name), nextWatcherId{0},
+                                             const std::string &name,
+                                             const std::string &password)
+        : auth(auth), identifier(name), password(password),
           accessRestrictions(SlokedNamedBlacklist::Make({})),
           modificationRestrictions(SlokedNamedBlacklist::Make({})) {}
 
     SlokedCredentialMaster::Account::~Account() {
         std::unique_lock lock(this->mtx);
-        this->TriggerWatchers(lock);
+        this->changeEmitter.Emit();
     }
 
-    std::string SlokedCredentialMaster::Account::GetName() const {
+    std::string SlokedCredentialMaster::Account::GetIdentifier() const {
         std::unique_lock lock(this->mtx);
-        return this->token.GetName();
+        return this->identifier;
     }
 
-    void SlokedCredentialMaster::Account::RevokeCredentials() {
+    void SlokedCredentialMaster::Account::SetPassword(std::string password) {
         std::unique_lock lock(this->mtx);
-        this->token = AccountToken{this->auth, this->token.GetName()};
-        this->TriggerWatchers(lock);
+        this->password = std::move(password);
+        lock.unlock();
+        this->changeEmitter.Emit();
     }
 
-    std::string SlokedCredentialMaster::Account::GetCredentials() const {
+    void SlokedCredentialMaster::Account::RandomizePassword() {
         std::unique_lock lock(this->mtx);
-        return this->token.credentials;
+        auto seed = this->auth.NextSeed();
+        std::stringstream ss;
+        for (std::size_t i = 0; i < seed.size(); i++) {
+            ss << std::to_string(seed[i]);
+            if (i + 1 < seed.size()) {
+                ss << ':';
+            }
+        }
+        ss << '/' << this->identifier;
+        this->password = auth.Encode(ss.str());
+        lock.unlock();
+        this->changeEmitter.Emit();
+    }
+
+    std::string SlokedCredentialMaster::Account::GetPassword() const {
+        std::unique_lock lock(this->mtx);
+        return this->password;
     }
 
     std::unique_ptr<SlokedCrypto::Key>
         SlokedCredentialMaster::Account::DeriveKey(
             const std::string &salt) const {
         std::unique_lock lock(this->mtx);
-        return this->auth.crypto.DeriveKey(this->token.credentials, salt);
+        return this->auth.crypto.DeriveKey(this->password, salt);
     }
 
     SlokedCredentialMaster::Account::Callback
         SlokedCredentialMaster::Account::Watch(Callback watcher) {
-        std::unique_lock lock(this->mtx);
-        int64_t watcherId = this->nextWatcherId++;
-        this->watchers.emplace(watcherId, std::move(watcher));
-        return [this, watcherId] {
-            std::unique_lock lock(this->mtx);
-            if (this->watchers.count(watcherId) != 0) {
-                this->watchers.erase(watcherId);
-            }
-        };
+        return this->changeEmitter.Listen(std::move(watcher));
     }
 
     std::shared_ptr<SlokedNamedRestrictions>
@@ -151,54 +117,14 @@ namespace sloked {
         this->modificationRestrictions = restrictions;
     }
 
-    bool SlokedCredentialMaster::Account::VerifyToken(
-        const AccountToken &token) const {
-        std::unique_lock lock(this->mtx);
-        return token == this->token;
-    }
-
-    SlokedCredentialMaster::AccountToken
-        SlokedCredentialMaster::Account::ParseCredentials(
-            const SlokedCredentialMaster &auth,
-            const std::string &credentials) {
-        auto data = auth.Decode(credentials);
-        auto separator = data.find(':');
-        if (separator == data.npos) {
-            throw SlokedError("Auth: Invalid token");
-        }
-        std::string rawNonce = data.substr(0, separator);
-        const std::string &name = data.substr(separator + 1);
-        AccountToken::NonceType nonce;
-        std::size_t lastSeparator = 0;
-        for (std::size_t i = 0; i < nonce.size(); i++) {
-            if (lastSeparator == rawNonce.npos) {
-                throw SlokedError("Auth: Invalid token");
-            }
-            separator = rawNonce.find(',', lastSeparator);
-            nonce[i] = std::stoul(rawNonce.substr(lastSeparator, separator));
-            lastSeparator = separator + 1;
-        }
-        return SlokedCredentialMaster::AccountToken{auth, name, nonce};
-    }
-
-    void SlokedCredentialMaster::Account::TriggerWatchers(
-        std::unique_lock<std::mutex> &lock) {
-        for (auto it = this->watchers.begin(); it != this->watchers.end();) {
-            auto current = it++;
-            lock.unlock();
-            current->second();
-            lock.lock();
-        }
-    }
-
     SlokedCredentialMaster::SlokedCredentialMaster(SlokedCrypto &crypto,
                                                    SlokedCrypto::Key &key)
         : crypto(crypto), cipher(crypto.NewCipher(key)),
           random(crypto.NewRandom()),
           defaultAccount(std::make_shared<Account>(*this, "")) {}
 
-    std::weak_ptr<SlokedCredentialMaster::Account> SlokedCredentialMaster::New(
-        const std::string &name) {
+    std::shared_ptr<SlokedCredentialMaster::Account>
+        SlokedCredentialMaster::New(const std::string &name) {
         if (name.empty()) {
             throw SlokedError(
                 "CredentialMaster: Can't create account with empty name");
@@ -213,7 +139,24 @@ namespace sloked {
         }
     }
 
-    std::weak_ptr<SlokedCredentialMaster::Account>
+    std::shared_ptr<SlokedCredentialMaster::Account>
+        SlokedCredentialMaster::New(const std::string &name,
+                                    const std::string &password) {
+        if (name.empty()) {
+            throw SlokedError(
+                "CredentialMaster: Can't create account with empty name");
+        }
+        std::unique_lock lock(this->mtx);
+        if (this->accounts.count(name) == 0) {
+            auto account = std::make_shared<Account>(*this, name, password);
+            this->accounts.emplace(name, std::move(account));
+            return this->accounts.at(name);
+        } else {
+            throw SlokedError("Auth: Account \'" + name + "\' already exists");
+        }
+    }
+
+    std::shared_ptr<SlokedCredentialMaster::Account>
         SlokedCredentialMaster::EnableDefaultAccount(bool en) {
         if (en) {
             this->defaultAccount = std::make_shared<Account>(*this, "");
@@ -223,7 +166,7 @@ namespace sloked {
         return this->defaultAccount;
     }
 
-    std::weak_ptr<SlokedCredentialMaster::Account>
+    std::shared_ptr<SlokedCredentialMaster::Account>
         SlokedCredentialMaster::GetDefaultAccount() {
         return this->defaultAccount;
     }
@@ -233,7 +176,7 @@ namespace sloked {
         return this->accounts.count(name) != 0;
     }
 
-    std::weak_ptr<SlokedCredentialProvider::Account>
+    std::shared_ptr<SlokedCredentialStorage::Account>
         SlokedCredentialMaster::GetByName(const std::string &name) const {
         std::unique_lock lock(this->mtx);
         if (this->accounts.count(name) != 0) {
@@ -243,7 +186,7 @@ namespace sloked {
         }
     }
 
-    std::weak_ptr<SlokedCredentialMaster::Account>
+    std::shared_ptr<SlokedCredentialMaster::Account>
         SlokedCredentialMaster::GetAccountByName(
             const std::string &name) const {
         std::unique_lock lock(this->mtx);
@@ -254,21 +197,7 @@ namespace sloked {
         }
     }
 
-    SlokedCredentialMaster::Account &
-        SlokedCredentialMaster::GetAccountByCredential(
-            const std::string &credentials) const {
-        std::unique_lock lock(this->mtx);
-        auto token = Account::ParseCredentials(*this, credentials);
-        auto account = this->GetAccountByName(token.GetName()).lock();
-        if (account && account->VerifyToken(token)) {
-            return *account;
-        } else {
-            throw SlokedError("Auth: Invalid account \'" + account->GetName() +
-                              "\' credentials");
-        }
-    }
-
-    std::weak_ptr<SlokedNamedRestrictionAuthority::Account>
+    std::shared_ptr<SlokedNamedRestrictionAuthority::Account>
         SlokedCredentialMaster::GetRestrictionsByName(const std::string &name) {
         std::unique_lock lock(this->mtx);
         if (this->accounts.count(name) != 0) {
@@ -278,18 +207,18 @@ namespace sloked {
         }
     }
 
-    std::weak_ptr<SlokedNamedRestrictionAuthority::Account>
+    std::shared_ptr<SlokedNamedRestrictionAuthority::Account>
         SlokedCredentialMaster::GetDefaultRestrictions() {
         return this->defaultAccount;
     }
 
-    SlokedCredentialMaster::AccountToken::NonceType
-        SlokedCredentialMaster::NextNonce() const {
-        AccountToken::NonceType nonce;
-        for (std::size_t i = 0; i < nonce.size(); i++) {
-            nonce[i] = this->random->NextByte();
+    SlokedCredentialMaster::RandomSeed SlokedCredentialMaster::NextSeed()
+        const {
+        RandomSeed seed;
+        for (std::size_t i = 0; i < seed.size(); i++) {
+            seed[i] = this->random->NextByte();
         }
-        return nonce;
+        return seed;
     }
 
     std::string SlokedCredentialMaster::Encode(std::string_view data) const {
