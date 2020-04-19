@@ -1,69 +1,74 @@
-class JsonSerializer {
-    serialize(msg) {
+export interface Serializer {
+    serialize(msg: any): Buffer;
+    deserialize(buffer: Buffer): any;
+}
+
+export class JsonSerializer implements Serializer {
+    serialize(msg: any): Buffer {
         return Buffer.from(JSON.stringify(msg))
     }
 
-    deserialize(buffer) {
+    deserialize(buffer: Buffer) {
         return JSON.parse(buffer.toString())
     }
 }
 
-class BinarySerializer {
-    static Types = {
-        Null: 1,
-        Integer8: 2,
-        Integer16: 3,
-        Integer32: 4,
-        Integer64: 5,
-        Float: 6,
-        BooleanTrue: 7,
-        BooleanFalse: 8,
-        String: 9,
-        Array: 10,
-        Object: 11
-    }
+enum BinarySerializerType {
+    Null = 1,
+    Integer8,
+    Integer16,
+    Integer32,
+    Integer64,
+    Float,
+    BooleanTrue,
+    BooleanFalse,
+    String,
+    Array,
+    Object
+}
 
-    serialize (value) {
+export class BinarySerializer implements Serializer {
+    serialize (value: any): Buffer {
         return this._serialize(value)
     }
 
-    deserialize (buffer) {
+    deserialize (buffer: Buffer): any {
         return this._deserialize(buffer)[0]
     }
 
-    _serialize (value) {
+    _serialize (value: any): Buffer {
         if (value === null) {
-            return Buffer.from([BinarySerializer.Types.Null])
+            return Buffer.from([BinarySerializerType.Null])
         } else if (typeof value === 'number' && Number.isInteger(value)) {
-            const type = Buffer.from([BinarySerializer.Types.Integer64])
+            const type = Buffer.from([BinarySerializerType.Integer64])
             const buf = Buffer.alloc(8)
             buf.writeInt32LE(value & 0xffffffff, 0)
             buf.writeInt32LE((value >> 16) >> 16, 4)
             return Buffer.concat([type, buf])
         } else if (typeof value === 'number') {
-            const type = Buffer.from([BinarySerializer.Types.Float])
+            const type = Buffer.from([BinarySerializerType.Float])
             const buf = Buffer.alloc(8)
             buf.writeFloatLE(value)
             return Buffer.concat([type, buf])
         } else if (typeof value === 'boolean') {
-            return Buffer.from([value ? BinarySerializer.Types.BooleanTrue : BinarySerializer.Types.BooleanFalse])
+            return Buffer.from([value ? BinarySerializerType.BooleanTrue : BinarySerializerType.BooleanFalse])
         } else if (typeof value === 'string') {
-            const type = Buffer.from([BinarySerializer.Types.String])
+            const type = Buffer.from([BinarySerializerType.String])
             const length = Buffer.alloc(4)
             length.writeInt32LE(value.length, 0)
             const buf = Buffer.from(value)
             return Buffer.concat([type, length, buf])
         } else if (typeof value === 'object' && Array.isArray(value)) {
-            const type = Buffer.from([BinarySerializer.Types.Array])
+            const type = Buffer.from([BinarySerializerType.Array])
             const length = Buffer.alloc(4)
             length.writeInt32LE(value.length, 0)
             let buf = Buffer.alloc(0)
-            for (let i = 0; i < length; i++) {
+            for (let i = 0; i < value.length; i++) {
                 buf = Buffer.concat([buf, this._serialize(value[i])])
             }
             return Buffer.concat([type, length, buf])
         } else if (typeof value === 'object') {
-            const type = Buffer.from([BinarySerializer.Types.Object])
+            const type = Buffer.from([BinarySerializerType.Object])
             const length = Buffer.alloc(4)
             length.writeInt32LE(Object.keys(value).length, 0)
             let buf = Buffer.alloc(0)
@@ -74,42 +79,44 @@ class BinarySerializer {
                 buf = Buffer.concat([buf, keyLength, keyValue, this._serialize(value[key])])
             }
             return Buffer.concat([type, length, buf])
+        } else {
+            throw new Error('Unsupported type')
         }
     }
 
-    _deserialize (buffer) {
+    _deserialize (buffer: Buffer): [any, number] {
         switch (buffer[0]) {
-            case BinarySerializer.Types.Null:
+            case BinarySerializerType.Null:
                 return [null, 1]
 
-            case BinarySerializer.Types.Integer8:
+            case BinarySerializerType.Integer8:
                 return [buffer.readInt8(1), 2]
 
-            case BinarySerializer.Types.Integer16:
+            case BinarySerializerType.Integer16:
                 return [buffer.readInt16LE(1), 3]
 
-            case BinarySerializer.Types.Integer32:
+            case BinarySerializerType.Integer32:
                 return [buffer.readInt32LE(1), 5]
 
-            case BinarySerializer.Types.Integer64:
+            case BinarySerializerType.Integer64:
                 return [buffer.readInt32LE(1) | ((buffer.readInt32LE(5) << 16) << 16), 9]
             
-            case BinarySerializer.Types.Float:
+            case BinarySerializerType.Float:
                 return [buffer.readDoubleLE(1), 9]
 
-            case BinarySerializer.Types.BooleanTrue:
+            case BinarySerializerType.BooleanTrue:
                 return [true, 1]
 
-            case BinarySerializer.Types.BooleanFalse:
+            case BinarySerializerType.BooleanFalse:
                 return [false, 1]
           
-            case BinarySerializer.Types.String: {
+            case BinarySerializerType.String: {
                 const length = buffer.readInt32LE(1)
                 const subbuf = buffer.slice(5, 5 + length)
                 return [subbuf.toString(), 5 + length]
             }
 
-            case BinarySerializer.Types.Array: {
+            case BinarySerializerType.Array: {
                 const length = buffer.readInt32LE(1)
                 const array = []
                 let offset = 5
@@ -121,9 +128,9 @@ class BinarySerializer {
                 return [array, offset]
             }
 
-            case BinarySerializer.Types.Object: {
+            case BinarySerializerType.Object: {
                 const length = buffer.readInt32LE(1)
-                const object = {}
+                const object: {[key: string]: any} = {}
                 let offset = 5
                 for (let i = 0; i < length; i++) {
                     const keyLength = buffer.readInt32LE(offset)
@@ -137,10 +144,6 @@ class BinarySerializer {
                 return [object, offset]
             }
         }
+        throw new Error("Unsupported type")
     }
-}
-
-module.exports = {
-    JsonSerializer,
-    BinarySerializer
 }

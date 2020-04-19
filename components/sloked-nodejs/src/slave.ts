@@ -1,8 +1,10 @@
-const NetInterface = require('./net-interface')
-const Pipe = require('./pipe')
+import NetInterface from './net-interface'
+import Pipe from './pipe'
+import { Duplex } from 'stream'
+import { Serializer } from './serialize'
 
-class SlaveServer {
-    constructor (socket, serializer) {
+export default class SlaveServer {
+    constructor (socket: Duplex, serializer: Serializer) {
         this._net = new NetInterface(socket, serializer)
         this._net.bindMethod('ping', this._ping.bind(this))
         this._net.bindMethod('send', this._send.bind(this))
@@ -10,7 +12,7 @@ class SlaveServer {
         this._pipes = {}
     }
 
-    async connect (service) {
+    async connect (service: string) {
         const pipeId = await this._net.invoke('connect', service)()
         const [pipe1, pipe2] = Pipe.make()
         pipe1.listen(async () => {
@@ -30,7 +32,7 @@ class SlaveServer {
         return pipe2
     }
 
-    connector (service) {
+    connector (service: string) {
         return this.connect.bind(this, service)
     }
 
@@ -39,14 +41,14 @@ class SlaveServer {
         for (const pipe of Object.values(this._pipes)) {
             pipe.close()
         }
-        this._pipes = null
+        this._pipes = {}
     }
 
     async _ping () {
         return 'pong'
     }
 
-    async _send (params) {
+    async _send (params: any) {
         const id = params.pipe
         const data = params.data
         if (this._pipes[id]) {
@@ -57,13 +59,16 @@ class SlaveServer {
         }
     }
 
-    async _close (params) {
+    async _close (params: any) {
         const id = params
         if (this._pipes[id]) {
             this._pipes[id].close()
             delete this._pipes[id]
         }
     }
+
+    private _net: NetInterface
+    private _pipes: {[id: number]: Pipe}
 }
 
 module.exports = SlaveServer

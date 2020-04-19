@@ -1,6 +1,6 @@
-const SlaveServer = require('./slave')
-const { BinarySerializer } = require('./serialize')
-const net = require('net')
+import SlaveServer from './slave'
+import { BinarySerializer } from './serialize'
+import * as net from 'net'
 
 const socket = new net.Socket()
 socket.connect(1234, '::1', async () => {

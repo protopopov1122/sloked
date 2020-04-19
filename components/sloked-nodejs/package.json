@@ -2,10 +2,15 @@
   "name": "sloked-nodejs",
   "version": "0.0.1",
   "description": "",
-  "main": "sample.js",
+  "main": "dist/sample.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "tsc && node dist/sample.js"
   },
   "author": "Jevgenijs Protopopovs",
-  "license": "LGPL-3.0"
+  "license": "LGPL-3.0",
+  "devDependencies": {
+    "@types/node": "^13.13.0",
+    "tslint": "^6.1.1",
+    "typescript": "^3.8.3"
+  }
 }
