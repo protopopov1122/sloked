@@ -401,7 +401,6 @@ namespace sloked {
                               account + "\'");
         }
         this->auth->ContinueLogin(account);
-        this->net.Flush();
         this->auth->FinalizeLogin();
     }
 

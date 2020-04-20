@@ -75,6 +75,9 @@ namespace sloked {
         std::string InitiateLogin(const std::string, Challenge);
         void ContinueLogin(const std::string &);
         void FinalizeLogin();
+
+     private:
+        std::function<void()> unbindEncryptionListener;
     };
 
     class SlokedAuthenticatorFactory {

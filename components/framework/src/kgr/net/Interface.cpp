@@ -62,6 +62,10 @@ namespace sloked {
                    : 0;
     }
 
+    bool KgrNetInterface::Closed() const {
+        return this->socket->Closed();
+    }
+
     bool KgrNetInterface::Valid() const {
         return this->socket->Valid();
     }

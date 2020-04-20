@@ -69,6 +69,15 @@ namespace sloked {
         }
     }
 
+    bool SlokedCompressedSocket::Closed() {
+        if (this->Valid()) {
+            this->Fetch();
+            return this->socket->Closed();
+        } else {
+            throw SlokedError("CompressedSocket: Invalid socket");
+        }
+    }
+
     bool SlokedCompressedSocket::Wait(
         std::chrono::system_clock::duration timeout) {
         if (this->Valid()) {

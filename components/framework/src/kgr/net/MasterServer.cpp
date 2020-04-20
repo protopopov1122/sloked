@@ -353,7 +353,7 @@ namespace sloked {
 
         void Process(bool success) final {
             if (success || this->net.Available() > 0) {
-                if (success && this->net.Available() == 0) {
+                if (this->net.Closed()) {
                     this->net.Close();
                 } else {
                     this->pinged = false;

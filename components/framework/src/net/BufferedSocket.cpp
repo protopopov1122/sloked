@@ -50,6 +50,10 @@ namespace sloked {
         return this->socket->Available();
     }
 
+    bool SlokedBufferedSocket::Closed() {
+        return this->socket->Closed();
+    }
+
     bool SlokedBufferedSocket::Wait(
         std::chrono::system_clock::duration timeout) {
         return this->socket->Wait(std::move(timeout));
@@ -84,11 +88,11 @@ namespace sloked {
 
     void SlokedBufferedSocket::Flush() {
         std::unique_lock lock(this->mtx);
-        if (!this->buffer.empty()) {
-            this->socket->Write(
-                SlokedSpan(this->buffer.data(), this->buffer.size()));
-            this->buffer.clear();
-        }
+        // if (!this->buffer.empty()) {
+        this->socket->Write(
+            SlokedSpan(this->buffer.data(), this->buffer.size()));
+        this->buffer.clear();
+        // }
         if (this->task != nullptr && this->task->Pending()) {
             this->task->Cancel();
         }

@@ -93,6 +93,27 @@ namespace sloked {
         }
     }
 
+    bool SlokedPosixSocket::Closed() {
+        if (IsSocketValid(this->socket)) {
+            int size;
+            ioctl(this->socket, FIONREAD, &size);
+            if (size == 0) {
+                struct timeval tv;
+                tv.tv_sec = 0;
+                tv.tv_usec = 0;
+                fd_set rfds;
+                FD_ZERO(&rfds);
+                FD_SET(this->socket, &rfds);
+                return select(this->socket + 1, &rfds, nullptr, nullptr, &tv) >
+                       0;
+            } else {
+                return false;
+            }
+        } else {
+            throw SlokedError("PosixSocket: Invalid socket");
+        }
+    }
+
     bool SlokedPosixSocket::Wait(std::chrono::system_clock::duration timeout) {
         if (IsSocketValid(this->socket)) {
             struct timeval tv;

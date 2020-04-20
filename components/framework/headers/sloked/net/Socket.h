@@ -40,6 +40,10 @@ namespace sloked {
         virtual ~SlokedSocketEncryption() = default;
         virtual void SetEncryption(std::unique_ptr<SlokedCrypto::Cipher>) = 0;
         virtual void RestoreDedaultEncryption() = 0;
+        virtual void KeyChanged() = 0;
+        virtual std::function<void()> NotifyOnKeyChange(
+            std::function<void(SlokedSocketEncryption &)>) = 0;
+        virtual void AutoDecrypt(bool) = 0;
     };
 
     class SlokedSocket {
@@ -53,6 +57,7 @@ namespace sloked {
         virtual bool Valid() = 0;
         virtual void Close() = 0;
         virtual std::size_t Available() = 0;
+        virtual bool Closed() = 0;
         virtual bool Wait(std::chrono::system_clock::duration =
                               std::chrono::system_clock::duration::zero()) = 0;
         virtual std::optional<uint8_t> Read() = 0;

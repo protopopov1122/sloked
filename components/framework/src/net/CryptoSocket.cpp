@@ -29,18 +29,145 @@
 
 namespace sloked {
 
+    template <typename T>
+    constexpr uint8_t ByteAt(T value, std::size_t idx) {
+        assert(idx < sizeof(T));
+        return (value >> (idx << 3)) & 0xff;
+    }
+
+    class SlokedCryptoSocket::Frame {
+     public:
+        enum class Type : uint8_t { Data = 0, KeyChange };
+
+        Frame(Type type, SlokedSpan<const uint8_t> payload)
+            : type(type), checksum(SlokedCrc32::Calculate(
+                              payload.Data(), payload.Data() + payload.Size())),
+              payload(payload.Data(), payload.Data() + payload.Size()) {}
+
+        Type GetType() const {
+            return this->type;
+        }
+
+        SlokedCrc32::Checksum GetChecksum() const {
+            return this->checksum;
+        }
+
+        const std::vector<uint8_t> &GetPayload() const {
+            return this->payload;
+        }
+
+        std::vector<uint8_t> Encrypt(SlokedCrypto::Cipher &cipher,
+                                     SlokedCrypto::Random &random) const {
+            if (!this->payload.empty()) {
+                std::size_t totalLength = this->payload.size();
+                if (this->payload.size() % cipher.BlockSize() != 0) {
+                    totalLength =
+                        (this->payload.size() / cipher.BlockSize() + 1) *
+                        cipher.BlockSize();
+                }
+                auto raw = this->payload;
+                raw.insert(raw.end(), totalLength - this->payload.size(), 0);
+                SlokedCrypto::Data init_vector;
+                for (std::size_t i = 0; i < cipher.IVSize(); i++) {
+                    init_vector.push_back(random.NextByte());
+                }
+                std::vector<uint8_t> encrypted;
+                if (!raw.empty()) {
+                    encrypted = cipher.Encrypt(raw, init_vector);
+                }
+                std::vector<uint8_t> header{static_cast<uint8_t>(this->type),
+                                            ByteAt(this->payload.size(), 0),
+                                            ByteAt(this->payload.size(), 1),
+                                            ByteAt(this->payload.size(), 2),
+                                            ByteAt(this->payload.size(), 3),
+                                            ByteAt(this->checksum, 0),
+                                            ByteAt(this->checksum, 1),
+                                            ByteAt(this->checksum, 2),
+                                            ByteAt(this->checksum, 3)};
+                header.insert(header.end(), init_vector.begin(),
+                              init_vector.end());
+                encrypted.insert(encrypted.begin(), header.begin(),
+                                 header.end());
+                return encrypted;
+            } else {
+                std::vector<uint8_t> message{static_cast<uint8_t>(this->type),
+                                             0u, 0u, 0u, 0u};
+                return message;
+            }
+        }
+
+        static std::optional<Frame> Decrypt(std::vector<uint8_t> &input,
+                                            SlokedCrypto::Cipher &cipher) {
+            constexpr std::size_t MinimalHeaderLength = 5;
+            if (input.size() < MinimalHeaderLength) {
+                return std::optional<Frame>{};
+            }
+            if (input.at(0) > static_cast<uint8_t>(Type::KeyChange)) {
+                throw SlokedError("CryptoSocket: Invalid frame type");
+            }
+            Type type = static_cast<Type>(input.at(0));
+            const std::size_t length = input.at(1) + (input.at(2) << 8) +
+                                       (input.at(3) << 16) +
+                                       (input.at(4) << 24);
+            if (length > 0) {
+                const std::size_t EncryptedHeaderSize = 9 + cipher.IVSize();
+                const SlokedCrc32::Checksum crc32 =
+                    input.at(5) + (input.at(6) << 8) + (input.at(7) << 16) +
+                    (input.at(8) << 24);
+                std::size_t totalLength = length;
+                if (length % cipher.BlockSize() != 0) {
+                    totalLength =
+                        (length / cipher.BlockSize() + 1) * cipher.BlockSize();
+                }
+                if (input.size() < totalLength + EncryptedHeaderSize) {
+                    return std::optional<Frame>{};
+                }
+
+                SlokedCrypto::Data init_vector;
+                init_vector.insert(
+                    init_vector.end(),
+                    input.begin() + EncryptedHeaderSize - cipher.IVSize(),
+                    input.begin() + EncryptedHeaderSize);
+                std::vector<uint8_t> encrypted(
+                    input.begin() + EncryptedHeaderSize,
+                    input.begin() + EncryptedHeaderSize + totalLength);
+                input.erase(input.begin(),
+                            input.begin() + EncryptedHeaderSize + totalLength);
+                const auto raw = cipher.Decrypt(encrypted, init_vector);
+                auto actualCrc32 =
+                    SlokedCrc32::Calculate(raw.begin(), raw.begin() + length);
+                if (actualCrc32 != crc32) {
+                    throw SlokedError(
+                        "CryptoSocket: Actual CRC32 doesn't equal to expected");
+                }
+                return Frame(type, SlokedSpan(raw.data(), length));
+            } else {
+                input.erase(input.begin(), input.begin() + MinimalHeaderLength);
+                return Frame(type, SlokedSpan<const uint8_t>(nullptr, 0));
+            }
+        }
+
+     private:
+        Frame(Type type, SlokedCrc32::Checksum checksum,
+              std::vector<uint8_t> payload)
+            : type(type), checksum(checksum), payload(payload) {}
+        Type type;
+        SlokedCrc32::Checksum checksum;
+        std::vector<uint8_t> payload;
+    };
+
     SlokedCryptoSocket::SlokedCryptoSocket(
         std::unique_ptr<SlokedSocket> socket,
         std::unique_ptr<SlokedCrypto::Cipher> cipher,
         std::unique_ptr<SlokedCrypto::Random> random)
         : socket(std::move(socket)), cipher(std::move(cipher)),
-          random(std::move(random)) {}
+          random(std::move(random)), autoDecrypt(true) {}
 
     SlokedCryptoSocket::SlokedCryptoSocket(SlokedCryptoSocket &&socket)
         : socket(std::move(socket.socket)), cipher(std::move(socket.cipher)),
           defaultCipher(std::move(socket.defaultCipher)),
           encryptedBuffer(std::move(socket.encryptedBuffer)),
-          buffer(std::move(socket.buffer)) {}
+          buffer(std::move(socket.buffer)), autoDecrypt(socket.autoDecrypt) {}
 
     SlokedCryptoSocket &SlokedCryptoSocket::operator=(
         SlokedCryptoSocket &&socket) {
@@ -49,6 +176,7 @@ namespace sloked {
         this->defaultCipher = std::move(socket.defaultCipher);
         this->encryptedBuffer = std::move(socket.encryptedBuffer);
         this->buffer = std::move(socket.buffer);
+        this->autoDecrypt = socket.autoDecrypt;
         return *this;
     }
 
@@ -68,6 +196,15 @@ namespace sloked {
         if (this->Valid()) {
             this->Fetch();
             return this->buffer.size();
+        } else {
+            throw SlokedError("CryptoSocket: Invalid socket");
+        }
+    }
+
+    bool SlokedCryptoSocket::Closed() {
+        if (this->Valid()) {
+            this->Fetch();
+            return this->socket->Closed();
         } else {
             throw SlokedError("CryptoSocket: Invalid socket");
         }
@@ -159,88 +296,66 @@ namespace sloked {
         }
     }
 
-    template <typename T>
-    constexpr uint8_t ByteAt(T value, std::size_t idx) {
-        assert(idx < sizeof(T));
-        return (value >> (idx << 3)) & 0xff;
+    void SlokedCryptoSocket::KeyChanged() {
+        Frame frame(Frame::Type::KeyChange,
+                    SlokedSpan<const uint8_t>(nullptr, 0));
+        auto encrypted = frame.Encrypt(*this->cipher, *this->random);
+        this->socket->Write(SlokedSpan(encrypted.data(), encrypted.size()));
+        this->Flush();
+    }
+
+    std::function<void()> SlokedCryptoSocket::NotifyOnKeyChange(
+        std::function<void(SlokedSocketEncryption &)> listener) {
+        return this->keyChangeEmitter.Listen(std::move(listener));
+    }
+
+    void SlokedCryptoSocket::AutoDecrypt(bool enable) {
+        this->autoDecrypt = enable;
+        if (this->autoDecrypt) {
+            auto frame = Frame::Decrypt(this->encryptedBuffer, *this->cipher);
+            while (this->autoDecrypt && frame.has_value()) {
+                this->InsertFrame(frame.value());
+                frame = Frame::Decrypt(this->encryptedBuffer, *this->cipher);
+            }
+        }
     }
 
     void SlokedCryptoSocket::Put(const uint8_t *bytes, std::size_t length) {
-        if (length == 0) {
-            return;
-        }
-        std::size_t totalLength = length;
-        if (length % this->cipher->BlockSize() != 0) {
-            totalLength = (length / this->cipher->BlockSize() + 1) *
-                          this->cipher->BlockSize();
-        }
-        std::vector<uint8_t> raw(bytes, bytes + length);
-        raw.insert(raw.end(), totalLength - length, 0);
-        auto crc32 = SlokedCrc32::Calculate(raw.begin(), raw.end());
-        SlokedCrypto::Data init_vector;
-        for (std::size_t i = 0; i < this->cipher->IVSize(); i++) {
-            init_vector.push_back(this->random->NextByte());
-        }
-        auto encrypted = this->cipher->Encrypt(raw, init_vector);
-        std::vector<uint8_t> header{ByteAt(length, 0), ByteAt(length, 1),
-                                    ByteAt(length, 2), ByteAt(length, 3),
-                                    ByteAt(crc32, 0),  ByteAt(crc32, 1),
-                                    ByteAt(crc32, 2),  ByteAt(crc32, 3)};
-        header.insert(header.end(), init_vector.begin(), init_vector.end());
-        encrypted.insert(encrypted.begin(), header.begin(), header.end());
+        Frame frame(Frame::Type::Data, SlokedSpan(bytes, length));
+        auto encrypted = frame.Encrypt(*this->cipher, *this->random);
         this->socket->Write(SlokedSpan(encrypted.data(), encrypted.size()));
     }
 
     void SlokedCryptoSocket::Fetch(std::size_t sz) {
-        const std::size_t EncryptedHeaderSize = 8 + this->cipher->IVSize();
         do {
             auto chunk = this->socket->Read(this->socket->Available());
             this->encryptedBuffer.insert(this->encryptedBuffer.end(),
                                          chunk.begin(), chunk.end());
-            if (this->encryptedBuffer.size() < EncryptedHeaderSize) {
-                continue;
+            if (this->autoDecrypt) {
+                auto frame =
+                    Frame::Decrypt(this->encryptedBuffer, *this->cipher);
+                if (frame.has_value()) {
+                    this->InsertFrame(frame.value());
+                }
             }
+        } while ((this->autoDecrypt && this->buffer.size() < sz) ||
+                 this->socket->Available() > 0);
+    }
 
-            std::size_t length = this->encryptedBuffer.at(0) +
-                                 (this->encryptedBuffer.at(1) << 8) +
-                                 (this->encryptedBuffer.at(2) << 16) +
-                                 (this->encryptedBuffer.at(3) << 24);
-            uint32_t crc32 = this->encryptedBuffer.at(4) +
-                             (this->encryptedBuffer.at(5) << 8) +
-                             (this->encryptedBuffer.at(6) << 16) +
-                             (this->encryptedBuffer.at(7) << 24);
-            std::size_t totalLength = length;
-            if (length % this->cipher->BlockSize() != 0) {
-                totalLength = (length / this->cipher->BlockSize() + 1) *
-                              this->cipher->BlockSize();
-            }
-            if (this->encryptedBuffer.size() <
-                totalLength + EncryptedHeaderSize) {
-                continue;
-            }
+    void SlokedCryptoSocket::InsertFrame(const Frame &frame) {
+        switch (frame.GetType()) {
+            case Frame::Type::Data:
+                if (!frame.GetPayload().empty()) {
+                    this->buffer.insert(this->buffer.end(),
+                                        frame.GetPayload().begin(),
+                                        frame.GetPayload().end());
+                }
+                break;
 
-            SlokedCrypto::Data init_vector;
-            init_vector.insert(
-                init_vector.end(),
-                this->encryptedBuffer.begin() + EncryptedHeaderSize -
-                    this->cipher->IVSize(),
-                this->encryptedBuffer.begin() + EncryptedHeaderSize);
-            std::vector<uint8_t> encrypted(
-                this->encryptedBuffer.begin() + EncryptedHeaderSize,
-                this->encryptedBuffer.begin() + EncryptedHeaderSize +
-                    totalLength);
-            this->encryptedBuffer.erase(this->encryptedBuffer.begin(),
-                                        this->encryptedBuffer.begin() +
-                                            EncryptedHeaderSize + totalLength);
-            auto raw = this->cipher->Decrypt(encrypted, init_vector);
-            auto actualCrc32 = SlokedCrc32::Calculate(raw.begin(), raw.end());
-            if (actualCrc32 != crc32) {
-                throw SlokedError(
-                    "CryptoSocket: Actual CRC32 doesn't equal to expected");
-            }
-            this->buffer.insert(this->buffer.end(), raw.begin(),
-                                raw.begin() + length);
-        } while (this->buffer.size() < sz || this->socket->Available() > 0);
+            case Frame::Type::KeyChange:
+                this->keyChangeEmitter.Emit(*this);
+                break;
+        }
     }
 
     SlokedCryptoServerSocket::SlokedCryptoServerSocket(

@@ -58,6 +58,7 @@ namespace sloked {
         bool Wait(std::chrono::system_clock::duration =
                       std::chrono::system_clock::duration::zero()) const;
         std::size_t Available() const;
+        bool Closed() const;
         bool Valid() const;
         void Receive();
         void Process(std::size_t = 0);

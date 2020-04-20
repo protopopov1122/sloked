@@ -45,6 +45,7 @@ namespace sloked {
         bool Valid() final;
         void Close() final;
         std::size_t Available() final;
+        bool Closed() final;
         bool Wait(std::chrono::system_clock::duration =
                       std::chrono::system_clock::duration::zero()) final;
         std::optional<uint8_t> Read() final;

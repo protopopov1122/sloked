@@ -23,6 +23,7 @@
 #define SLOKED_NET_CRYPTOSOCKET_H_
 
 #include "sloked/core/Crypto.h"
+#include "sloked/core/Event.h"
 #include "sloked/net/Socket.h"
 
 namespace sloked {
@@ -45,6 +46,7 @@ namespace sloked {
         bool Valid() final;
         void Close() final;
         std::size_t Available() final;
+        bool Closed() final;
         bool Wait(std::chrono::system_clock::duration =
                       std::chrono::system_clock::duration::zero()) final;
         std::optional<uint8_t> Read() final;
@@ -57,10 +59,16 @@ namespace sloked {
 
         void SetEncryption(std::unique_ptr<SlokedCrypto::Cipher>) final;
         void RestoreDedaultEncryption() final;
+        void KeyChanged() final;
+        virtual std::function<void()> NotifyOnKeyChange(
+            std::function<void(SlokedSocketEncryption &)>) final;
+        virtual void AutoDecrypt(bool) final;
 
      private:
+        class Frame;
         void Put(const uint8_t *, std::size_t);
         void Fetch(std::size_t = 0);
+        void InsertFrame(const Frame &);
 
         std::unique_ptr<SlokedSocket> socket;
         std::unique_ptr<SlokedCrypto::Cipher> cipher;
@@ -68,6 +76,8 @@ namespace sloked {
         std::unique_ptr<SlokedCrypto::Random> random;
         std::vector<uint8_t> encryptedBuffer;
         std::vector<uint8_t> buffer;
+        SlokedEventEmitter<SlokedSocketEncryption &> keyChangeEmitter;
+        bool autoDecrypt;
     };
 
     class SlokedCryptoServerSocket : public SlokedServerSocket {

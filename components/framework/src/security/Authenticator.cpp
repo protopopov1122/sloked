@@ -146,6 +146,7 @@ namespace sloked {
     }
 
     void SlokedMasterAuthenticator::FinalizeLogin() {
+        this->encryption->KeyChanged();
         this->SetupEncryption();
     }
 
@@ -153,9 +154,20 @@ namespace sloked {
         SlokedCrypto &crypto, SlokedCredentialStorage &provider,
         std::string salt, SlokedSocketEncryption *encryption)
         : SlokedBaseAuthenticator(crypto, provider, std::move(salt),
-                                  encryption) {}
+                                  encryption),
+          unbindEncryptionListener{nullptr} {
+
+        if (this->encryption) {
+            this->unbindEncryptionListener =
+                this->encryption->NotifyOnKeyChange(
+                    [](auto &encryption) { encryption.AutoDecrypt(false); });
+        }
+    }
 
     SlokedSlaveAuthenticator::~SlokedSlaveAuthenticator() {
+        if (this->unbindEncryptionListener) {
+            this->unbindEncryptionListener();
+        }
         if (this->unwatchCredentials) {
             this->unwatchCredentials();
         }
@@ -177,6 +189,7 @@ namespace sloked {
 
     void SlokedSlaveAuthenticator::FinalizeLogin() {
         this->SetupEncryption();
+        this->encryption->AutoDecrypt(true);
     }
 
     SlokedAuthenticatorFactory::SlokedAuthenticatorFactory(
