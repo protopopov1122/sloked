@@ -63,7 +63,7 @@ namespace sloked {
             int64_t hB = HEIGHT(this->begin);
             int64_t hE = HEIGHT(this->end);
             int64_t balance = hB - hE;
-            if (balance < -2 && balance > 2) {
+            if (balance > -2 && balance < 2) {
                 this->AvlUpdate();
                 return;
             } else if (balance == 2) {
