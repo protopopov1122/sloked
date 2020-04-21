@@ -371,35 +371,49 @@ namespace sloked {
                         this->localServer.Registered(service), this->lifetime);
     }
 
-    void KgrSlaveNetServer::Authorize(const std::string &account) {
+    TaskResult<void> KgrSlaveNetServer::Authorize(const std::string &account) {
         if (this->auth == nullptr) {
-            throw SlokedError("KgrSlaveServer: Authenticator not defined");
+            return TaskResult<void>::Reject(std::make_exception_ptr(
+                SlokedError("KgrSlaveServer: Authenticator not defined")));
         }
-        // Sending login request
-        auto loginRequest = this->net.Invoke("auth-request", {})->Next();
-        if (!(loginRequest.WaitFor(KgrNetConfig::ResponseTimeout) ==
-                  TaskResultStatus::Ready &&
-              this->work.load())) {
-            throw SlokedError("KgrSlaveServer: Error requesting login for \'" +
-                              account + "\'");
-        }
-        auto nonce = static_cast<SlokedSlaveAuthenticator::Challenge>(
-            loginRequest.Unwrap().GetResult().AsDictionary()["nonce"].AsInt());
-        auto result = this->auth->InitiateLogin(account, nonce);
 
-        // Sending result
-        auto loginResponse =
-            this->net
-                .Invoke("auth-response",
-                        KgrDictionary{{"id", account}, {"result", result}})
-                ->Next();
-        if (!(loginResponse.WaitFor(KgrNetConfig::ResponseTimeout) ==
-                  TaskResultStatus::Ready &&
-              this->work.load() &&
-              loginResponse.Unwrap().GetResult().AsBoolean())) {
-            throw SlokedError("KgrSlaveServer: Error requesting login for \'" +
-                              account + "\'");
-        }
+        struct State {
+            State(KgrSlaveNetServer *self, const std::string &account)
+                : self(self), account(account) {}
+            KgrSlaveNetServer *self;
+            std::string account;
+        };
+
+        static const SlokedAsyncTaskPipeline Pipeline(
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> state,
+                   const SlokedNetResponseBroker::Response &loginRequest) {
+                    auto nonce =
+                        static_cast<SlokedSlaveAuthenticator::Challenge>(
+                            loginRequest.GetResult()
+                                .AsDictionary()["nonce"]
+                                .AsInt());
+                    auto result =
+                        state->self->auth->InitiateLogin(state->account, nonce);
+                    return state->self->net
+                        .Invoke("auth-response",
+                                KgrDictionary{{"id", state->account},
+                                              {"result", result}})
+                        ->Next();
+                }),
+            SlokedTaskPipelineStages::Map(
+                [](const std::shared_ptr<State> state,
+                   const SlokedNetResponseBroker::Response &loginResponse) {
+                    if (!(state->self->work.load() &&
+                          loginResponse.GetResult().AsBoolean())) {
+                        throw SlokedError(
+                            "KgrSlaveServer: Error requesting login for \'" +
+                            state->account + "\'");
+                    }
+                }));
+        return Pipeline(std::make_shared<State>(this, account),
+                        this->net.Invoke("auth-request", {})->Next(),
+                        this->lifetime);
     }
 
     void KgrSlaveNetServer::Accept() {

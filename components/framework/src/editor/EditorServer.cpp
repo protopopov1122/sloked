@@ -63,7 +63,8 @@ namespace sloked {
     void SlokedRemoteEditorServer::Start() {
         this->unrestrictedServer.Start();
         if (this->deferredAuth.has_value()) {
-            this->unrestrictedServer.Authorize(this->deferredAuth.value());
+            this->unrestrictedServer.Authorize(this->deferredAuth.value())
+                .UnwrapWait();
             this->deferredAuth.reset();
         }
     }
@@ -74,7 +75,7 @@ namespace sloked {
 
     void SlokedRemoteEditorServer::Authorize(const std::string &user) {
         if (this->unrestrictedServer.IsRunning()) {
-            this->unrestrictedServer.Authorize(user);
+            this->unrestrictedServer.Authorize(user).UnwrapWait();
         } else {
             this->deferredAuth = user;
         }

@@ -55,7 +55,7 @@ namespace sloked {
         TaskResult<bool> Registered(const SlokedPath &) override;
         TaskResult<void> Deregister(const SlokedPath &) override;
 
-        void Authorize(const std::string &);
+        TaskResult<void> Authorize(const std::string &);
 
      private:
         void Accept();
