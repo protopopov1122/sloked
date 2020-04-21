@@ -2,6 +2,98 @@ import { Transform, TransformOptions, TransformCallback, Duplex, DuplexOptions }
 import { Crypto } from '../types/crypto'
 import Crc32 from '../modules/crc32'
 
+enum FrameType {
+    Data = 0,
+    KeyChange = 1
+}
+
+class Frame {
+    constructor (type: FrameType, payload: Buffer) {
+        this._type = type
+        this._checksum = Crc32.Calculate(payload)
+        this._payload = payload
+    }
+
+    getType(): FrameType {
+        return this._type
+    }
+
+    getChecksum(): number {
+        return this._checksum
+    }
+
+    getPayload(): Buffer {
+        return this._payload
+    }
+
+    async encrypt(crypto: Crypto, key: Buffer) {
+        if (this._payload.length > 0) {
+            let totalLength: number = this._payload.length
+            if (totalLength % crypto.blockSize() != 0) {
+                totalLength =
+                    Math.ceil(totalLength / crypto.blockSize()) *
+                    crypto.blockSize()
+            }
+            const raw: Buffer = Buffer.alloc(totalLength)
+            this._payload.copy(raw)
+            const iv = crypto.RandomBytes(crypto.IVSize())
+            const encrypted = await crypto.encrypt(raw, key, iv)
+            const result: Buffer = Buffer.alloc(9 + iv.length + encrypted.length)
+            result.writeUInt8(this._type)
+            result.writeUInt32LE(this._payload.length, 1)
+            result.writeUInt32LE(this._checksum, 5)
+            iv.copy(result, 9)
+            encrypted.copy(result, 9 + iv.length)
+            console.log(result)
+            return result;
+        } else {
+            return Buffer.from([this._type, 0, 0, 0, 0])
+        }
+    }
+
+    static async decrypt(crypto: Crypto, key: Buffer, input: Buffer): Promise<[Frame, number] | null> {
+        const MinimalHeaderLength: number = 5;
+        if (input.length < MinimalHeaderLength) {
+            return null
+        }
+        if (typeof FrameType[input[0]] === 'undefined') {
+            throw new Error("CryptoSocket: Invalid frame type");
+        }
+        const type: FrameType = input[0]
+        const length: number = input.readUInt32LE(1)
+        if (length > 0) {
+            const EncryptedHeaderSize: number = 9 + crypto.IVSize();
+            const crc32: number = input.readUInt32LE(5)
+            let totalLength: number = length
+            if (totalLength % crypto.blockSize() != 0) {
+                totalLength =
+                    Math.ceil(totalLength / crypto.blockSize()) *
+                    crypto.blockSize()
+            }
+            if (input.length < totalLength + EncryptedHeaderSize) {
+                return null
+            }
+
+            const iv: Buffer = input.slice(EncryptedHeaderSize - crypto.IVSize(), EncryptedHeaderSize)
+            const encrypted: Buffer = input.slice(EncryptedHeaderSize, EncryptedHeaderSize + totalLength)
+            const raw = (await crypto.decrypt(encrypted, key, iv)).slice(0, length)
+            const actualCrc32: number = 
+                Crc32.Calculate(raw);
+            if (actualCrc32 != crc32) {
+                throw new Error(
+                    "CryptoSocket: Actual CRC32 doesn't equal to expected");
+            }
+            return [new Frame(type, raw), EncryptedHeaderSize + totalLength]
+        } else {
+            return [new Frame(type, Buffer.alloc(0)), MinimalHeaderLength]
+        }
+    }
+
+    private _type: FrameType
+    private _checksum: number
+    private _payload: Buffer
+}
+
 export class EncryptionStream extends Transform {
     constructor(crypto: Crypto, key: Buffer, options?: TransformOptions) {
         super(options)
@@ -18,21 +110,8 @@ export class EncryptionStream extends Transform {
     }
 
     private async _transformBlock(chunk: Buffer, key: Buffer) {
-        const blockSize = this._crypto.blockSize()
-        const totalLength: number = chunk.length % blockSize != 0
-            ? (Math.floor(chunk.length / blockSize) + 1) * blockSize
-            : chunk.length
-        const raw: Buffer = Buffer.alloc(totalLength)
-        chunk.copy(raw)
-        const iv = this._crypto.RandomBytes(this._crypto.IVSize())
-        const crc32 = Crc32.Calculate(raw)
-        const encrypted = await this._crypto.encrypt(raw, key, iv)
-        const result: Buffer = Buffer.alloc(8 + iv.length + encrypted.length)
-        result.writeUInt32LE(chunk.length, 0)
-        result.writeUInt32LE(crc32, 4)
-        iv.copy(result, 8)
-        encrypted.copy(result, 8 + iv.length)
-        return result
+        const frame: Frame = new Frame(FrameType.Data, chunk)
+        return frame.encrypt(this._crypto, key)
     }
 
     private _crypto: Crypto
@@ -56,36 +135,17 @@ export class DecryptionStream extends Transform {
     }
 
     async _transformData(chunk: Buffer, key: Buffer): Promise<Buffer | null> {
-        this._encBuffer = Buffer.concat([this._encBuffer, chunk])
-        const EncryptedHeaderSize = 8 + this._crypto.IVSize()
-        if (this._encBuffer.length < EncryptedHeaderSize) {
+        const result = await Frame.decrypt(this._crypto, key, chunk)
+        if (result !== null) {
+            this._encBuffer = this._encBuffer.slice(result[1])
+            if (result[0].getType() == FrameType.Data) {
+                return result[0].getPayload()
+            } else {
+                return null
+            }
+        } else {
             return null
         }
-        let result: Buffer | null = null
-        const blockSize = this._crypto.blockSize()
-        while (this._encBuffer.length >= EncryptedHeaderSize) {
-            const length = this._encBuffer.readUInt32LE(0)
-            const totalLength: number = length % blockSize != 0
-                ? (Math.floor(length / blockSize) + 1) * blockSize
-                : length
-            if (this._encBuffer.length < EncryptedHeaderSize + totalLength) {
-                break
-            }
-            const crc32 = this._encBuffer.readUInt32LE(4)
-            const iv = this._encBuffer.slice(8, 8 + this._crypto.IVSize())
-            const encrypted = this._encBuffer.slice(EncryptedHeaderSize, EncryptedHeaderSize + totalLength)
-            this._encBuffer = this._encBuffer.slice(EncryptedHeaderSize + totalLength)
-            const decrypted = await this._crypto.decrypt(encrypted, key, iv)
-            const raw = decrypted.slice(0, length)
-            const actualCrc32 = Crc32.Calculate(decrypted)
-            if (actualCrc32 != crc32) {
-                throw new Error('CRC32 mismatch')
-            }
-            result = result !== null
-                ? Buffer.concat([result, raw])
-                : raw
-        }
-        return result
     }
 
     private _crypto: Crypto
