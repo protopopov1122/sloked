@@ -48,6 +48,8 @@ namespace sloked {
 
         virtual ~SlokedIOPoller() = default;
         virtual Handle Attach(std::unique_ptr<Awaitable>) = 0;
+        virtual void SetErrorHandler(
+            std::function<void(std::exception_ptr)>) = 0;
     };
 
     class SlokedDefaultIOPollThread : public SlokedIOPoller,
@@ -58,8 +60,11 @@ namespace sloked {
         void Start(std::chrono::system_clock::duration);
         void Close() final;
         Handle Attach(std::unique_ptr<Awaitable>) final;
+        void SetErrorHandler(std::function<void(std::exception_ptr)>) final;
 
      private:
+        void ProcessError(std::exception_ptr);
+
         SlokedIOPoll &poll;
         SlokedExecutor &executor;
         std::thread worker;
@@ -68,6 +73,7 @@ namespace sloked {
         std::size_t nextId;
         std::mutex mtx;
         std::condition_variable cv;
+        std::function<void(std::exception_ptr)> error_handler;
     };
 }  // namespace sloked
 

@@ -25,7 +25,8 @@ namespace sloked {
 
     SlokedDefaultIOPollThread::SlokedDefaultIOPollThread(
         SlokedIOPoll &poll, SlokedExecutor &executor)
-        : poll(poll), executor(executor), work(false), nextId{0} {}
+        : poll(poll), executor(executor),
+          work(false), nextId{0}, error_handler{nullptr} {}
 
     SlokedDefaultIOPollThread::~SlokedDefaultIOPollThread() {
         this->Close();
@@ -45,8 +46,12 @@ namespace sloked {
                 tasks.reserve(this->awaitables.size());
                 for (const auto &kv : this->awaitables) {
                     tasks.emplace_back(
-                        this->executor.Enqueue([awaitable = kv.second] {
-                            awaitable->Process(false);
+                        this->executor.Enqueue([this, awaitable = kv.second] {
+                            try {
+                                awaitable->Process(false);
+                            } catch (...) {
+                                this->ProcessError(std::current_exception());
+                            }
                         }));
                 }
                 lock.unlock();
@@ -75,8 +80,12 @@ namespace sloked {
                     auto awaitable = this->awaitables.at(id);
                     lock.unlock();
                     this->executor
-                        .Enqueue([awaitable = std::move(awaitable)] {
-                            awaitable->Process(true);
+                        .Enqueue([this, awaitable = std::move(awaitable)] {
+                            try {
+                                awaitable->Process(true);
+                            } catch (...) {
+                                this->ProcessError(std::current_exception());
+                            }
                         })
                         ->Wait();
                 }
@@ -88,5 +97,24 @@ namespace sloked {
                 this->awaitables.erase(id);
             }
         });
+    }
+
+    void SlokedDefaultIOPollThread::SetErrorHandler(
+        std::function<void(std::exception_ptr)> error_handler) {
+        std::unique_lock lock(this->mtx);
+        this->error_handler = std::move(error_handler);
+    }
+
+    void SlokedDefaultIOPollThread::ProcessError(std::exception_ptr ex) {
+        std::unique_lock lock(this->mtx);
+        if (this->error_handler) {
+            auto handler = this->error_handler;
+            lock.unlock();
+            handler(ex);
+        } else {
+            try {
+                std::rethrow_exception(ex);
+            } catch (...) { std::terminate(); }
+        }
     }
 }  // namespace sloked
