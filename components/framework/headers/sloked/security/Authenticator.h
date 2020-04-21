@@ -40,7 +40,7 @@ namespace sloked {
      protected:
         std::unique_ptr<SlokedCrypto::Cipher> DeriveCipher(const std::string &);
         std::string GenerateToken(SlokedCrypto::Cipher &, Challenge);
-        void SetupEncryption();
+        void SetupEncryption(bool);
 
         SlokedCrypto &crypto;
         SlokedCredentialStorage &provider;
@@ -73,11 +73,10 @@ namespace sloked {
                                  SlokedSocketEncryption * = nullptr);
         ~SlokedSlaveAuthenticator();
         std::string InitiateLogin(const std::string, Challenge);
-        void ContinueLogin(const std::string &);
-        void FinalizeLogin();
 
      private:
         std::function<void()> unbindEncryptionListener;
+        std::optional<std::string> pending;
     };
 
     class SlokedAuthenticatorFactory {

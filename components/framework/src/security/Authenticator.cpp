@@ -83,7 +83,7 @@ namespace sloked {
                                     encrypted.data() + encrypted.size());
     }
 
-    void SlokedBaseAuthenticator::SetupEncryption() {
+    void SlokedBaseAuthenticator::SetupEncryption(bool sendNotification) {
         if (!this->account.has_value()) {
             throw SlokedError("Authenticator: Log in required");
         }
@@ -93,12 +93,18 @@ namespace sloked {
         }
         if (this->encryption) {
             auto cipher = this->DeriveCipher(this->account.value());
-            this->encryption->SetEncryption(std::move(cipher));
+            this->encryption->SetEncryption(std::move(cipher),
+                                            sendNotification
+                                                ? this->account
+                                                : std::optional<std::string>{});
             if (auto acc = this->provider.GetByName(this->account.value())) {
-                this->unwatchCredentials = acc->Watch([this] {
+                this->unwatchCredentials = acc->Watch([this, sendNotification] {
                     if (this->account.has_value()) {
                         auto cipher = this->DeriveCipher(this->account.value());
-                        this->encryption->SetEncryption(std::move(cipher));
+                        this->encryption->SetEncryption(
+                            std::move(cipher),
+                            sendNotification ? this->account
+                                             : std::optional<std::string>{});
                     }
                 });
             } else {
@@ -146,8 +152,7 @@ namespace sloked {
     }
 
     void SlokedMasterAuthenticator::FinalizeLogin() {
-        this->encryption->KeyChanged();
-        this->SetupEncryption();
+        this->SetupEncryption(true);
     }
 
     SlokedSlaveAuthenticator::SlokedSlaveAuthenticator(
@@ -155,12 +160,21 @@ namespace sloked {
         std::string salt, SlokedSocketEncryption *encryption)
         : SlokedBaseAuthenticator(crypto, provider, std::move(salt),
                                   encryption),
-          unbindEncryptionListener{nullptr} {
+          unbindEncryptionListener{nullptr}, pending{} {
 
         if (this->encryption) {
             this->unbindEncryptionListener =
-                this->encryption->NotifyOnKeyChange(
-                    [](auto &encryption) { encryption.AutoDecrypt(false); });
+                this->encryption->OnKeyChange([this](auto &keyId) {
+                    if (keyId == this->pending) {
+                        this->account = std::move(this->pending);
+                        this->pending.reset();
+                        this->SetupEncryption(false);
+                    } else {
+                        this->pending.reset();
+                        throw SlokedError("SlaveAuthenticator: Unexpected "
+                                          "encryption key change");
+                    }
+                });
         }
     }
 
@@ -176,20 +190,9 @@ namespace sloked {
     std::string SlokedSlaveAuthenticator::InitiateLogin(const std::string keyId,
                                                         Challenge ch) {
         this->account.reset();
+        this->pending = keyId;
         auto cipher = this->DeriveCipher(keyId);
         return this->GenerateToken(*cipher, ch);
-    }
-
-    void SlokedSlaveAuthenticator::ContinueLogin(const std::string &keyId) {
-        if (this->account.has_value()) {
-            throw SlokedError("SlaveAuthenticator: Login is not initiated");
-        }
-        this->account = keyId;
-    }
-
-    void SlokedSlaveAuthenticator::FinalizeLogin() {
-        this->SetupEncryption();
-        this->encryption->AutoDecrypt(true);
     }
 
     SlokedAuthenticatorFactory::SlokedAuthenticatorFactory(

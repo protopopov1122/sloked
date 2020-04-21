@@ -400,8 +400,6 @@ namespace sloked {
             throw SlokedError("KgrSlaveServer: Error requesting login for \'" +
                               account + "\'");
         }
-        this->auth->ContinueLogin(account);
-        this->auth->FinalizeLogin();
     }
 
     void KgrSlaveNetServer::Accept() {

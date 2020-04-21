@@ -24,6 +24,7 @@
 #include <cassert>
 #include <iostream>
 
+#include "sloked/core/Encoding.h"
 #include "sloked/core/Error.h"
 #include "sloked/core/Hash.h"
 
@@ -161,13 +162,13 @@ namespace sloked {
         std::unique_ptr<SlokedCrypto::Cipher> cipher,
         std::unique_ptr<SlokedCrypto::Random> random)
         : socket(std::move(socket)), cipher(std::move(cipher)),
-          random(std::move(random)), autoDecrypt(true) {}
+          random(std::move(random)) {}
 
     SlokedCryptoSocket::SlokedCryptoSocket(SlokedCryptoSocket &&socket)
         : socket(std::move(socket.socket)), cipher(std::move(socket.cipher)),
           defaultCipher(std::move(socket.defaultCipher)),
           encryptedBuffer(std::move(socket.encryptedBuffer)),
-          buffer(std::move(socket.buffer)), autoDecrypt(socket.autoDecrypt) {}
+          buffer(std::move(socket.buffer)) {}
 
     SlokedCryptoSocket &SlokedCryptoSocket::operator=(
         SlokedCryptoSocket &&socket) {
@@ -176,7 +177,6 @@ namespace sloked {
         this->defaultCipher = std::move(socket.defaultCipher);
         this->encryptedBuffer = std::move(socket.encryptedBuffer);
         this->buffer = std::move(socket.buffer);
-        this->autoDecrypt = socket.autoDecrypt;
         return *this;
     }
 
@@ -283,40 +283,49 @@ namespace sloked {
     }
 
     void SlokedCryptoSocket::SetEncryption(
-        std::unique_ptr<SlokedCrypto::Cipher> cipher) {
+        std::unique_ptr<SlokedCrypto::Cipher> cipher,
+        std::optional<std::string> keyId) {
+
+        Frame frame(Frame::Type::KeyChange,
+                    keyId.has_value()
+                        ? SlokedSpan<const uint8_t>(
+                              reinterpret_cast<const uint8_t *>(keyId->c_str()),
+                              keyId->size())
+                        : SlokedSpan<const uint8_t>(nullptr, 0));
+        auto encrypted = frame.Encrypt(*this->cipher, *this->random);
+        this->socket->Write(SlokedSpan(encrypted.data(), encrypted.size()));
+        this->Flush();
         if (this->defaultCipher == nullptr) {
             this->defaultCipher = std::move(this->cipher);
         }
         this->cipher = std::move(cipher);
     }
 
-    void SlokedCryptoSocket::RestoreDedaultEncryption() {
+    void SlokedCryptoSocket::RestoreDefaultEncryption(
+        std::optional<std::string> keyId) {
         if (this->defaultCipher) {
             this->cipher = std::move(this->defaultCipher);
         }
     }
 
-    void SlokedCryptoSocket::KeyChanged() {
-        Frame frame(Frame::Type::KeyChange,
-                    SlokedSpan<const uint8_t>(nullptr, 0));
-        auto encrypted = frame.Encrypt(*this->cipher, *this->random);
-        this->socket->Write(SlokedSpan(encrypted.data(), encrypted.size()));
-        this->Flush();
-    }
-
-    std::function<void()> SlokedCryptoSocket::NotifyOnKeyChange(
-        std::function<void(SlokedSocketEncryption &)> listener) {
+    std::function<void()> SlokedCryptoSocket::OnKeyChange(
+        std::function<void(const std::optional<std::string> &)> listener) {
         return this->keyChangeEmitter.Listen(std::move(listener));
     }
 
-    void SlokedCryptoSocket::AutoDecrypt(bool enable) {
-        this->autoDecrypt = enable;
-        if (this->autoDecrypt) {
-            auto frame = Frame::Decrypt(this->encryptedBuffer, *this->cipher);
-            while (this->autoDecrypt && frame.has_value()) {
-                this->InsertFrame(frame.value());
-                frame = Frame::Decrypt(this->encryptedBuffer, *this->cipher);
-            }
+    void SlokedCryptoSocket::SendKeyChangeNofitication(
+        const std::optional<std::string> &keyId) {
+        if (keyId.has_value()) {
+            EncodingConverter conv(Encoding::Get("system"), Encoding::Utf8);
+            auto encodedKeyId = conv.Convert(keyId.value());
+            Frame frame(
+                Frame::Type::KeyChange,
+                SlokedSpan<const uint8_t>(
+                    reinterpret_cast<const uint8_t *>(encodedKeyId.c_str()),
+                    keyId->size()));
+            auto encrypted = frame.Encrypt(*this->cipher, *this->random);
+            this->socket->Write(SlokedSpan(encrypted.data(), encrypted.size()));
+            this->Flush();
         }
     }
 
@@ -331,15 +340,11 @@ namespace sloked {
             auto chunk = this->socket->Read(this->socket->Available());
             this->encryptedBuffer.insert(this->encryptedBuffer.end(),
                                          chunk.begin(), chunk.end());
-            if (this->autoDecrypt) {
-                auto frame =
-                    Frame::Decrypt(this->encryptedBuffer, *this->cipher);
-                if (frame.has_value()) {
-                    this->InsertFrame(frame.value());
-                }
+            auto frame = Frame::Decrypt(this->encryptedBuffer, *this->cipher);
+            if (frame.has_value()) {
+                this->InsertFrame(frame.value());
             }
-        } while ((this->autoDecrypt && this->buffer.size() < sz) ||
-                 this->socket->Available() > 0);
+        } while (this->buffer.size() < sz || this->socket->Available() > 0);
     }
 
     void SlokedCryptoSocket::InsertFrame(const Frame &frame) {
@@ -352,9 +357,16 @@ namespace sloked {
                 }
                 break;
 
-            case Frame::Type::KeyChange:
-                this->keyChangeEmitter.Emit(*this);
-                break;
+            case Frame::Type::KeyChange: {
+                std::optional<std::string> param;
+                if (!frame.GetPayload().empty()) {
+                    EncodingConverter conv(Encoding::Utf8,
+                                           Encoding::Get("system"));
+                    param = conv.Convert(std::string(frame.GetPayload().begin(),
+                                                     frame.GetPayload().end()));
+                }
+                this->keyChangeEmitter.Emit(param);
+            } break;
         }
     }
 

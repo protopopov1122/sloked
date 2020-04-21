@@ -57,15 +57,15 @@ namespace sloked {
         std::unique_ptr<SlokedIOAwaitable> Awaitable() const final;
         SlokedSocketEncryption *GetEncryption() final;
 
-        void SetEncryption(std::unique_ptr<SlokedCrypto::Cipher>) final;
-        void RestoreDedaultEncryption() final;
-        void KeyChanged() final;
-        virtual std::function<void()> NotifyOnKeyChange(
-            std::function<void(SlokedSocketEncryption &)>) final;
-        virtual void AutoDecrypt(bool) final;
+        void SetEncryption(std::unique_ptr<SlokedCrypto::Cipher>,
+                           std::optional<std::string> = {}) final;
+        void RestoreDefaultEncryption(std::optional<std::string> = {}) final;
+        virtual std::function<void()> OnKeyChange(
+            std::function<void(const std::optional<std::string> &)>) final;
 
      private:
         class Frame;
+        void SendKeyChangeNofitication(const std::optional<std::string> &);
         void Put(const uint8_t *, std::size_t);
         void Fetch(std::size_t = 0);
         void InsertFrame(const Frame &);
@@ -76,8 +76,7 @@ namespace sloked {
         std::unique_ptr<SlokedCrypto::Random> random;
         std::vector<uint8_t> encryptedBuffer;
         std::vector<uint8_t> buffer;
-        SlokedEventEmitter<SlokedSocketEncryption &> keyChangeEmitter;
-        bool autoDecrypt;
+        SlokedEventEmitter<const std::optional<std::string> &> keyChangeEmitter;
     };
 
     class SlokedCryptoServerSocket : public SlokedServerSocket {
