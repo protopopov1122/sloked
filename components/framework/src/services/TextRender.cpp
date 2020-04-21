@@ -182,9 +182,9 @@ namespace sloked {
                             current = std::addressof(*iter);
                             ++iter;
                         }
-                        std::string_view fragment =
+                        std::string fragment =
                             it.value != U'\t'
-                                ? line.substr(it.start, it.length)
+                                ? std::string{line.substr(it.start, it.length)}
                                 : this->charPreset.GetTab(
                                       this->document->encoding, width);
                         buffer += fragment;
