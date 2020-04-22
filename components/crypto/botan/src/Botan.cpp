@@ -34,7 +34,7 @@ namespace sloked {
         reinterpret_cast<intptr_t>(std::addressof(SlokedBotanCrypto::engineId));
 
     static SlokedCrypto::CipherParameters CurrentCipherParameters{
-        32, 16, 16, "AES-256/CBC", {}};
+        32, 16, 16, "AES-256/CBC", "PKCS"};
 
     SlokedBotanCrypto::BotanKey::BotanKey(std::vector<uint8_t> key)
         : Key(SlokedBotanCrypto::Engine), key(std::move(key)) {}
@@ -54,12 +54,13 @@ namespace sloked {
 
     struct SlokedBotanCrypto::BotanCipher::Impl {
         Impl()
-            : encryption(Botan::Cipher_Mode::create("AES-256/CBC/NoPadding",
+            : encryption(Botan::Cipher_Mode::create("AES-256/CBC/PKCS7",
                                                     Botan::ENCRYPTION)),
-              decryption(Botan::Cipher_Mode::create("AES-256/CBC/NoPadding",
+              decryption(Botan::Cipher_Mode::create("AES-256/CBC/PKCS7",
                                                     Botan::DECRYPTION)) {
             if (this->encryption == nullptr || this->decryption == nullptr) {
-                throw SlokedError("BotanCrypto: Cipher AES-256/CBC not found");
+                throw SlokedError(
+                    "BotanCrypto: Cipher AES-256/CBC/PKCS7 not found");
             }
         }
 
