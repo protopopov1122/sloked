@@ -37,6 +37,7 @@ namespace sloked {
 
         SlokedCryptoSocket(std::unique_ptr<SlokedSocket>,
                            std::unique_ptr<SlokedCrypto::Cipher>,
+                           std::unique_ptr<SlokedCrypto::Key>,
                            std::unique_ptr<SlokedCrypto::Random>);
         SlokedCryptoSocket(const SlokedCryptoSocket &) = delete;
         SlokedCryptoSocket(SlokedCryptoSocket &&);
@@ -57,7 +58,7 @@ namespace sloked {
         std::unique_ptr<SlokedIOAwaitable> Awaitable() const final;
         SlokedSocketEncryption *GetEncryption() final;
 
-        void SetEncryption(std::unique_ptr<SlokedCrypto::Cipher>,
+        void SetEncryption(std::unique_ptr<SlokedCrypto::Key>,
                            std::optional<std::string> = {}) final;
         void RestoreDefaultEncryption(std::optional<std::string> = {}) final;
         virtual std::function<void()> OnKeyChange(
@@ -72,7 +73,8 @@ namespace sloked {
 
         std::unique_ptr<SlokedSocket> socket;
         std::unique_ptr<SlokedCrypto::Cipher> cipher;
-        std::unique_ptr<SlokedCrypto::Cipher> defaultCipher;
+        std::unique_ptr<SlokedCrypto::Key> defaultKey;
+        std::unique_ptr<SlokedCrypto::Key> key;
         std::unique_ptr<SlokedCrypto::Random> random;
         std::vector<uint8_t> encryptedBuffer;
         std::vector<uint8_t> buffer;
@@ -82,7 +84,8 @@ namespace sloked {
     class SlokedCryptoServerSocket : public SlokedServerSocket {
      public:
         SlokedCryptoServerSocket(std::unique_ptr<SlokedServerSocket>,
-                                 SlokedCrypto &, SlokedCrypto::Key &);
+                                 SlokedCrypto &,
+                                 std::unique_ptr<SlokedCrypto::Key>);
         SlokedCryptoServerSocket(const SlokedCryptoServerSocket &) = delete;
         SlokedCryptoServerSocket(SlokedCryptoServerSocket &&);
         SlokedCryptoServerSocket &operator=(const SlokedCryptoServerSocket &) =
@@ -101,13 +104,13 @@ namespace sloked {
      private:
         std::unique_ptr<SlokedServerSocket> serverSocket;
         SlokedCrypto &crypto;
-        SlokedCrypto::Key &key;
+        std::unique_ptr<SlokedCrypto::Key> defaultKey;
     };
 
     class SlokedCryptoSocketFactory : public SlokedSocketFactory {
      public:
         SlokedCryptoSocketFactory(SlokedSocketFactory &, SlokedCrypto &,
-                                  SlokedCrypto::Key &);
+                                  std::unique_ptr<SlokedCrypto::Key>);
         SlokedCryptoSocketFactory(const SlokedCryptoSocketFactory &) = delete;
         SlokedCryptoSocketFactory(SlokedCryptoSocketFactory &&);
 
@@ -124,7 +127,7 @@ namespace sloked {
      private:
         SlokedSocketFactory &socketFactory;
         SlokedCrypto &crypto;
-        SlokedCrypto::Key &key;
+        std::unique_ptr<SlokedCrypto::Key> defaultKey;
     };
 }  // namespace sloked
 

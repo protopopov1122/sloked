@@ -24,6 +24,7 @@
 
 #include <cinttypes>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -41,6 +42,7 @@ namespace sloked {
          public:
             virtual ~Key() = default;
             virtual std::size_t Length() const = 0;
+            virtual std::unique_ptr<Key> Clone() const = 0;
 
             const EngineId Engine;
 
@@ -48,13 +50,20 @@ namespace sloked {
             Key(EngineId engine) : Engine(engine) {}
         };
 
+        struct CipherParameters {
+            std::size_t KeySize;
+            std::size_t BlockSize;
+            std::size_t IVSize;
+            std::string algorithm;
+            std::optional<std::string> Padding;
+        };
+
         class Cipher {
          public:
             virtual ~Cipher() = default;
-            virtual Data Encrypt(const Data &, const Data & = {}) = 0;
-            virtual Data Decrypt(const Data &, const Data & = {}) = 0;
-            virtual std::size_t BlockSize() const = 0;
-            virtual std::size_t IVSize() const = 0;
+            virtual Data Encrypt(const Data &, const Key &, const Data &) = 0;
+            virtual Data Decrypt(const Data &, const Key &, const Data &) = 0;
+            virtual const CipherParameters &Parameters() const = 0;
 
             const EngineId Engine;
 
@@ -80,10 +89,11 @@ namespace sloked {
         };
 
         virtual ~SlokedCrypto() = default;
-        virtual std::unique_ptr<Key> DeriveKey(const std::string &,
+        virtual const std::string &KDFName() const = 0;
+        virtual const CipherParameters &GetCipherParameters() const = 0;
+        virtual std::unique_ptr<Key> DeriveKey(std::size_t, const std::string &,
                                                const std::string &) = 0;
-        virtual std::unique_ptr<Cipher> NewCipher(const Key &) = 0;
-        virtual std::unique_ptr<Cipher> NewCipher(std::unique_ptr<Key>) = 0;
+        virtual std::unique_ptr<Cipher> NewCipher() = 0;
         virtual std::unique_ptr<Random> NewRandom() = 0;
     };
 }  // namespace sloked

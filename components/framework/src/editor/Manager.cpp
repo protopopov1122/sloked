@@ -186,7 +186,9 @@ namespace sloked {
                                           const KgrDictionary &cryptoConfig) {
         std::unique_ptr<SlokedCrypto::Key> masterKey;
         editor.InitializeCrypto(*this->cryptoEngine);
+        auto cipher = editor.GetCrypto().GetEngine().NewCipher();
         masterKey = editor.GetCrypto().GetEngine().DeriveKey(
+            cipher->Parameters().KeySize,
             cryptoConfig["masterPassword"].AsString(),
             cryptoConfig["salt"].AsString());
         if (cryptoConfig.Has("authentication")) {
@@ -195,7 +197,7 @@ namespace sloked {
             if (authConfig.Has("master")) {
                 const auto &masterConfig = authConfig["master"].AsDictionary();
                 this->SetupMasterAuth(editor, masterConfig,
-                                      cryptoConfig["salt"].AsString());
+                                      cryptoConfig["salt"].AsString(), *cipher);
             } else if (authConfig.Has("slave")) {
                 const auto &slaveConfig = authConfig["slave"].AsDictionary();
                 this->SetupSlaveAuth(editor, slaveConfig,
@@ -225,8 +227,10 @@ namespace sloked {
 
     void SlokedEditorManager::SetupMasterAuth(SlokedEditorInstance &editor,
                                               const KgrDictionary &masterConfig,
-                                              const std::string &salt) {
+                                              const std::string &salt,
+                                              SlokedCrypto::Cipher &cipher) {
         auto masterKey = editor.GetCrypto().GetEngine().DeriveKey(
+            cipher.Parameters().KeySize,
             masterConfig["masterPassword"].AsString(),
             masterConfig["salt"].AsString());
         auto &authMaster = editor.GetCrypto().SetupCredentialMaster(*masterKey);

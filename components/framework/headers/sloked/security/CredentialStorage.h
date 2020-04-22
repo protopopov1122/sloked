@@ -38,7 +38,7 @@ namespace sloked {
             virtual std::string GetIdentifier() const = 0;
             virtual std::string GetPassword() const = 0;
             virtual std::unique_ptr<SlokedCrypto::Key> DeriveKey(
-                const std::string &) const = 0;
+                std::size_t, const std::string &) const = 0;
             virtual Callback Watch(Callback) = 0;
         };
 

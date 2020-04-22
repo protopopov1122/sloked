@@ -27,6 +27,13 @@
 
 namespace sloked {
 
+    static SlokedCrypto::CipherParameters CurrentCipherParameters{
+        static_cast<std::size_t>(EVP_CIPHER_key_length(EVP_aes_256_cbc())),
+        static_cast<std::size_t>(EVP_CIPHER_block_size(EVP_aes_256_cbc())),
+        static_cast<std::size_t>(EVP_CIPHER_iv_length(EVP_aes_256_cbc())),
+        "AES-256/CBC",
+        {}};
+
     int SlokedOpenSSLCrypto::engineId = 0;
     const SlokedCrypto::EngineId SlokedOpenSSLCrypto::Engine =
         reinterpret_cast<intptr_t>(
@@ -45,18 +52,23 @@ namespace sloked {
     std::size_t SlokedOpenSSLCrypto::OpenSSLKey::Length() const {
         return this->key.size();
     }
+
+    std::unique_ptr<SlokedCrypto::Key> SlokedOpenSSLCrypto::OpenSSLKey::Clone()
+        const {
+        return std::make_unique<OpenSSLKey>(this->key);
+    }
+
     const std::vector<uint8_t> &SlokedOpenSSLCrypto::OpenSSLKey::Get() const {
         return this->key;
     }
 
     struct SlokedOpenSSLCrypto::OpenSSLCipher::Impl {
-        const OpenSSLKey &key;
         EVP_CIPHER_CTX *cipher;
     };
 
-    SlokedOpenSSLCrypto::OpenSSLCipher::OpenSSLCipher(const OpenSSLKey &key)
+    SlokedOpenSSLCrypto::OpenSSLCipher::OpenSSLCipher()
         : Cipher(SlokedOpenSSLCrypto::Engine),
-          impl(std::make_unique<Impl>(Impl{key, nullptr})) {
+          impl(std::make_unique<Impl>(Impl{nullptr})) {
         this->impl->cipher = EVP_CIPHER_CTX_new();
         if (this->impl->cipher == nullptr) {
             throw SlokedError("OpenSSLCrypto: Error creating cipher context");
@@ -68,15 +80,19 @@ namespace sloked {
     }
 
     SlokedCrypto::Data SlokedOpenSSLCrypto::OpenSSLCipher::Encrypt(
-        const Data &data, const Data &ivdata) {
+        const Data &data, const Key &key, const Data &ivdata) {
         std::unique_lock lock(this->mtx);
         auto cipher = this->impl->cipher;
-        const unsigned char *iv = nullptr;
-        if (ivdata.size() == this->IVSize()) {
-            iv = ivdata.data();
+        if (ivdata.size() != CurrentCipherParameters.IVSize) {
+            throw SlokedError("OpenSSLCrypto: Invalid nonce");
         }
+        const unsigned char *iv = ivdata.data();
+        if (key.Engine != SlokedOpenSSLCrypto::Engine) {
+            throw SlokedError("OpenSSLCrypto: Non-OpenSSL key");
+        }
+        const OpenSSLKey &openSSLKey = static_cast<const OpenSSLKey &>(key);
         CheckErrors(EVP_CipherInit_ex(cipher, EVP_aes_256_cbc(), nullptr,
-                                      this->impl->key.Get().data(), iv, true),
+                                      openSSLKey.Get().data(), iv, true),
                     "cipher initialization");
         CheckErrors(EVP_CIPHER_CTX_set_padding(cipher, false),
                     "cipher initialization");
@@ -97,15 +113,19 @@ namespace sloked {
     }
 
     SlokedCrypto::Data SlokedOpenSSLCrypto::OpenSSLCipher::Decrypt(
-        const Data &data, const Data &ivdata) {
+        const Data &data, const Key &key, const Data &ivdata) {
         std::unique_lock lock(this->mtx);
         auto cipher = this->impl->cipher;
-        const unsigned char *iv = nullptr;
-        if (ivdata.size() == this->IVSize()) {
-            iv = ivdata.data();
+        if (ivdata.size() != CurrentCipherParameters.IVSize) {
+            throw SlokedError("OpenSSLCrypto: Invalid nonce");
         }
+        const unsigned char *iv = ivdata.data();
+        if (key.Engine != SlokedOpenSSLCrypto::Engine) {
+            throw SlokedError("OpenSSLCrypto: Non-OpenSSL key");
+        }
+        const OpenSSLKey &openSSLKey = static_cast<const OpenSSLKey &>(key);
         CheckErrors(EVP_CipherInit_ex(cipher, EVP_aes_256_cbc(), nullptr,
-                                      this->impl->key.Get().data(), iv, false),
+                                      openSSLKey.Get().data(), iv, false),
                     "cipher initialization");
         CheckErrors(EVP_CIPHER_CTX_set_padding(cipher, false),
                     "cipher initialization");
@@ -125,24 +145,10 @@ namespace sloked {
         return output;
     }
 
-    std::size_t SlokedOpenSSLCrypto::OpenSSLCipher::BlockSize() const {
-        std::unique_lock lock(this->mtx);
-        CheckErrors(
-            EVP_CipherInit_ex(this->impl->cipher, EVP_aes_256_cbc(), nullptr,
-                              this->impl->key.Get().data(), nullptr, true),
-            "cipher initialization");
-        auto size = EVP_CIPHER_CTX_block_size(this->impl->cipher);
-        CheckErrors(EVP_CIPHER_CTX_reset(this->impl->cipher), "cipher reset");
-        return size;
+    const SlokedCrypto::CipherParameters &
+        SlokedOpenSSLCrypto::OpenSSLCipher::Parameters() const {
+        return CurrentCipherParameters;
     }
-
-    std::size_t SlokedOpenSSLCrypto::OpenSSLCipher::IVSize() const {
-        return EVP_CIPHER_iv_length(EVP_aes_256_cbc());
-    }
-
-    SlokedOpenSSLCrypto::OpenSSLOwningCipher::OpenSSLOwningCipher(
-        std::unique_ptr<OpenSSLKey> key)
-        : OpenSSLCipher(*key), key(std::move(key)) {}
 
     uint8_t SlokedOpenSSLCrypto::OpenSSLRandom::NextByte() {
         uint8_t value;
@@ -152,9 +158,19 @@ namespace sloked {
         return value;
     }
 
+    const std::string &SlokedOpenSSLCrypto::KDFName() const {
+        static std::string KDF{"Scrypt"};
+        return KDF;
+    }
+
+    const SlokedCrypto::CipherParameters &
+        SlokedOpenSSLCrypto::GetCipherParameters() const {
+        return CurrentCipherParameters;
+    }
+
     std::unique_ptr<SlokedCrypto::Key> SlokedOpenSSLCrypto::DeriveKey(
-        const std::string &password, const std::string &salt) {
-        constexpr std::size_t key_length = 32;
+        std::size_t key_length, const std::string &password,
+        const std::string &salt) {
         std::vector<uint8_t> key;
         key.insert(key.end(), key_length, 0);
         EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_SCRYPT, NULL);
@@ -176,23 +192,8 @@ namespace sloked {
         return std::make_unique<OpenSSLKey>(std::move(key));
     }
 
-    std::unique_ptr<SlokedCrypto::Cipher> SlokedOpenSSLCrypto::NewCipher(
-        const SlokedCrypto::Key &key) {
-        if (key.Engine != SlokedOpenSSLCrypto::Engine) {
-            throw SlokedError("OpenSSLCrypto: Non-OpenSSL key");
-        }
-        const OpenSSLKey &openSSlKey = static_cast<const OpenSSLKey &>(key);
-        return std::make_unique<OpenSSLCipher>(openSSlKey);
-    }
-
-    std::unique_ptr<SlokedCrypto::Cipher> SlokedOpenSSLCrypto::NewCipher(
-        std::unique_ptr<SlokedCrypto::Key> key) {
-        if (key->Engine != SlokedOpenSSLCrypto::Engine) {
-            throw SlokedError("OpenSSLCrypto: Non-OpenSSL key");
-        }
-        std::unique_ptr<OpenSSLKey> openSSLKey{
-            static_cast<OpenSSLKey *>(key.release())};
-        return std::make_unique<OpenSSLOwningCipher>(std::move(openSSLKey));
+    std::unique_ptr<SlokedCrypto::Cipher> SlokedOpenSSLCrypto::NewCipher() {
+        return std::make_unique<OpenSSLCipher>();
     }
 
     std::unique_ptr<SlokedCrypto::Random> SlokedOpenSSLCrypto::NewRandom() {

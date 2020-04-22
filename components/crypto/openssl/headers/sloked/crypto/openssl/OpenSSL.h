@@ -34,6 +34,7 @@ namespace sloked {
          public:
             OpenSSLKey(std::vector<uint8_t>);
             std::size_t Length() const final;
+            std::unique_ptr<Key> Clone() const final;
             const std::vector<uint8_t> &Get() const;
 
          private:
@@ -42,12 +43,11 @@ namespace sloked {
 
         class OpenSSLCipher : public Cipher {
          public:
-            OpenSSLCipher(const OpenSSLKey &);
-            virtual ~OpenSSLCipher();
-            Data Encrypt(const Data &, const Data & = {}) final;
-            Data Decrypt(const Data &, const Data & = {}) final;
-            std::size_t BlockSize() const final;
-            std::size_t IVSize() const final;
+            OpenSSLCipher();
+            ~OpenSSLCipher();
+            Data Encrypt(const Data &, const Key &, const Data &) final;
+            Data Decrypt(const Data &, const Key &, const Data &) final;
+            const CipherParameters &Parameters() const;
 
             struct Impl;
 
@@ -56,24 +56,16 @@ namespace sloked {
             mutable std::mutex mtx;
         };
 
-        class OpenSSLOwningCipher : public OpenSSLCipher {
-         public:
-            OpenSSLOwningCipher(std::unique_ptr<OpenSSLKey>);
-
-         private:
-            std::unique_ptr<OpenSSLKey> key;
-        };
-
         class OpenSSLRandom : public Random {
          public:
             uint8_t NextByte() final;
         };
 
-        std::unique_ptr<Key> DeriveKey(const std::string &,
+        const std::string &KDFName() const final;
+        const CipherParameters &GetCipherParameters() const final;
+        std::unique_ptr<Key> DeriveKey(std::size_t, const std::string &,
                                        const std::string &) final;
-        std::unique_ptr<Cipher> NewCipher(const SlokedCrypto::Key &) final;
-        std::unique_ptr<Cipher> NewCipher(
-            std::unique_ptr<SlokedCrypto::Key>) final;
+        std::unique_ptr<Cipher> NewCipher() final;
         std::unique_ptr<Random> NewRandom() final;
 
         static const EngineId Engine;

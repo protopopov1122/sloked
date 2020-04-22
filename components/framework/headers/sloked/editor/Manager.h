@@ -78,7 +78,7 @@ namespace sloked {
      private:
         void SetupCrypto(SlokedEditorInstance &, const KgrDictionary &);
         void SetupMasterAuth(SlokedEditorInstance &, const KgrDictionary &,
-                             const std::string &);
+                             const std::string &, SlokedCrypto::Cipher &);
         void SetupSlaveAuth(SlokedEditorInstance &, const KgrDictionary &,
                             const std::string &);
         void SetupServer(SlokedEditorInstance &, const KgrDictionary &);

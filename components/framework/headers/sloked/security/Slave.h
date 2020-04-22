@@ -39,7 +39,7 @@ namespace sloked {
             std::string GetIdentifier() const final;
             std::string GetPassword() const final;
             std::unique_ptr<SlokedCrypto::Key> DeriveKey(
-                const std::string &) const final;
+                std::size_t, const std::string &) const final;
             Callback Watch(Callback) final;
             void ChangeCredentials(std::string);
 

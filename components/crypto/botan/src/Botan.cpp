@@ -33,6 +33,9 @@ namespace sloked {
     const SlokedCrypto::EngineId SlokedBotanCrypto::Engine =
         reinterpret_cast<intptr_t>(std::addressof(SlokedBotanCrypto::engineId));
 
+    static SlokedCrypto::CipherParameters CurrentCipherParameters{
+        32, 16, 16, "AES-256/CBC", {}};
+
     SlokedBotanCrypto::BotanKey::BotanKey(std::vector<uint8_t> key)
         : Key(SlokedBotanCrypto::Engine), key(std::move(key)) {}
 
@@ -40,21 +43,23 @@ namespace sloked {
         return this->key.size();
     }
 
+    std::unique_ptr<SlokedCrypto::Key> SlokedBotanCrypto::BotanKey::Clone()
+        const {
+        return std::make_unique<BotanKey>(this->key);
+    }
+
     const std::vector<uint8_t> &SlokedBotanCrypto::BotanKey::Get() const {
         return this->key;
     }
 
     struct SlokedBotanCrypto::BotanCipher::Impl {
-        Impl(const BotanKey &key)
+        Impl()
             : encryption(Botan::Cipher_Mode::create("AES-256/CBC/NoPadding",
                                                     Botan::ENCRYPTION)),
               decryption(Botan::Cipher_Mode::create("AES-256/CBC/NoPadding",
                                                     Botan::DECRYPTION)) {
             if (this->encryption == nullptr || this->decryption == nullptr) {
                 throw SlokedError("BotanCrypto: Cipher AES-256/CBC not found");
-            } else {
-                this->encryption->set_key(key.Get());
-                this->decryption->set_key(key.Get());
             }
         }
 
@@ -62,57 +67,61 @@ namespace sloked {
         std::unique_ptr<Botan::Cipher_Mode> decryption;
     };
 
-    SlokedBotanCrypto::BotanCipher::BotanCipher(const BotanKey &key)
-        : Cipher(SlokedBotanCrypto::Engine), impl(std::make_unique<Impl>(key)) {
-    }
+    SlokedBotanCrypto::BotanCipher::BotanCipher()
+        : Cipher(SlokedBotanCrypto::Engine), impl(std::make_unique<Impl>()) {}
 
     SlokedBotanCrypto::BotanCipher::~BotanCipher() = default;
 
     SlokedCrypto::Data SlokedBotanCrypto::BotanCipher::Encrypt(
-        const Data &input, const Data &iv) {
+        const Data &input, const Key &key, const Data &iv) {
         Botan::secure_vector<uint8_t> output(input.begin(), input.end());
-        if (iv.size() == this->impl->encryption->default_nonce_length()) {
-            this->impl->encryption->start(iv);
-        } else {
-            std::vector<uint8_t> emptyNonce(
-                this->impl->encryption->default_nonce_length(), 0);
-            this->impl->encryption->start(emptyNonce);
+        if (key.Engine != SlokedBotanCrypto::Engine) {
+            throw SlokedError("BotanCrypto: Non-botan key");
         }
+        const BotanKey &botanKey = static_cast<const BotanKey &>(key);
+        this->impl->encryption->set_key(botanKey.Get());
+        this->impl->encryption->start(iv);
         this->impl->encryption->finish(output);
         this->impl->encryption->reset();
         return std::vector(output.begin(), output.end());
     }
 
     SlokedCrypto::Data SlokedBotanCrypto::BotanCipher::Decrypt(
-        const Data &input, const Data &iv) {
+        const Data &input, const Key &key, const Data &iv) {
         Botan::secure_vector<uint8_t> output(input.begin(), input.end());
-        if (iv.size() == this->impl->decryption->default_nonce_length()) {
-            this->impl->decryption->start(iv);
-        } else {
-            std::vector<uint8_t> emptyNonce(
-                this->impl->encryption->default_nonce_length(), 0);
-            this->impl->decryption->start(emptyNonce);
+        if (key.Engine != SlokedBotanCrypto::Engine) {
+            throw SlokedError("BotanCrypto: Non-botan key");
         }
+        const BotanKey &botanKey = static_cast<const BotanKey &>(key);
+        this->impl->decryption->set_key(botanKey.Get());
+        this->impl->decryption->start(iv);
         this->impl->decryption->finish(output);
         this->impl->decryption->reset();
         return std::vector(output.begin(), output.end());
     }
 
-    std::size_t SlokedBotanCrypto::BotanCipher::BlockSize() const {
-        constexpr std::size_t AESBlockSize = 16;
-        return AESBlockSize;
+    const SlokedCrypto::CipherParameters &
+        SlokedBotanCrypto::BotanCipher::Parameters() const {
+        return CurrentCipherParameters;
     }
 
-    std::size_t SlokedBotanCrypto::BotanCipher::IVSize() const {
-        return this->impl->encryption->default_nonce_length();
+    struct SlokedBotanCrypto::BotanRandom::Impl {
+        std::unique_ptr<Botan::RandomNumberGenerator> rng;
+    };
+
+    SlokedBotanCrypto::BotanRandom::BotanRandom()
+        : impl(std::make_unique<Impl>()) {
+#if defined(BOTAN_HAS_SYSTEM_RNG)
+        this->impl->rng = std::make_unique<Botan::System_RNG>();
+#else
+        this->impl->rng = std::make_unique<Botan::AutoSeeded_RNG>();
+#endif
     }
 
-    SlokedBotanCrypto::BotanOwningCipher::BotanOwningCipher(
-        std::unique_ptr<BotanKey> key)
-        : BotanCipher(*key), key(std::move(key)) {}
+    SlokedBotanCrypto::BotanRandom::~BotanRandom() = default;
 
     uint8_t SlokedBotanCrypto::BotanRandom::NextByte() {
-        return Botan::system_rng().next_byte();
+        return this->impl->rng->next_byte();
     }
 
     struct SlokedBotanCrypto::Impl {
@@ -131,9 +140,19 @@ namespace sloked {
 
     SlokedBotanCrypto::~SlokedBotanCrypto() = default;
 
+    const std::string &SlokedBotanCrypto::KDFName() const {
+        static std::string KDF{"Scrypt"};
+        return KDF;
+    }
+
+    const SlokedCrypto::CipherParameters &
+        SlokedBotanCrypto::GetCipherParameters() const {
+        return CurrentCipherParameters;
+    }
+
     std::unique_ptr<SlokedCrypto::Key> SlokedBotanCrypto::DeriveKey(
-        const std::string &password, const std::string &salt) {
-        constexpr std::size_t key_length = 32;
+        std::size_t key_length, const std::string &password,
+        const std::string &salt) {
         std::vector<uint8_t> key;
         key.insert(key.end(), key_length, 0);
         this->impl->hash->derive_key(
@@ -142,23 +161,8 @@ namespace sloked {
         return std::make_unique<BotanKey>(std::move(key));
     }
 
-    std::unique_ptr<SlokedCrypto::Cipher> SlokedBotanCrypto::NewCipher(
-        const Key &key) {
-        if (key.Engine != SlokedBotanCrypto::Engine) {
-            throw SlokedError("BotanCrypto: Non-botan key");
-        }
-        const BotanKey &botanKey = static_cast<const BotanKey &>(key);
-        return std::make_unique<BotanCipher>(botanKey);
-    }
-
-    std::unique_ptr<SlokedCrypto::Cipher> SlokedBotanCrypto::NewCipher(
-        std::unique_ptr<Key> key) {
-        if (key->Engine != SlokedBotanCrypto::Engine) {
-            throw SlokedError("BotanCrypto: Non-botan key");
-        }
-        std::unique_ptr<BotanKey> botanKey{
-            static_cast<BotanKey *>(key.release())};
-        return std::make_unique<BotanOwningCipher>(std::move(botanKey));
+    std::unique_ptr<SlokedCrypto::Cipher> SlokedBotanCrypto::NewCipher() {
+        return std::make_unique<BotanCipher>();
     }
 
     std::unique_ptr<SlokedCrypto::Random> SlokedBotanCrypto::NewRandom() {

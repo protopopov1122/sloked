@@ -34,20 +34,20 @@ namespace sloked {
          public:
             BotanKey(std::vector<uint8_t>);
             std::size_t Length() const final;
-            const std::vector<uint8_t> &Get() const;
+            std::unique_ptr<Key> Clone() const final;
+            const Data &Get() const;
 
          private:
-            std::vector<uint8_t> key;
+            Data key;
         };
 
         class BotanCipher : public Cipher {
          public:
-            BotanCipher(const BotanKey &);
-            virtual ~BotanCipher();
-            Data Encrypt(const Data &, const Data & = {}) final;
-            Data Decrypt(const Data &, const Data & = {}) final;
-            std::size_t BlockSize() const final;
-            std::size_t IVSize() const final;
+            BotanCipher();
+            ~BotanCipher();
+            Data Encrypt(const Data &, const Key &, const Data &) final;
+            Data Decrypt(const Data &, const Key &, const Data &) final;
+            const CipherParameters &Parameters() const final;
 
             struct Impl;
 
@@ -55,25 +55,25 @@ namespace sloked {
             std::unique_ptr<Impl> impl;
         };
 
-        class BotanOwningCipher : public BotanCipher {
-         public:
-            BotanOwningCipher(std::unique_ptr<BotanKey>);
-
-         private:
-            std::unique_ptr<BotanKey> key;
-        };
-
         class BotanRandom : public Random {
          public:
+            BotanRandom();
+            ~BotanRandom();
             uint8_t NextByte() final;
+
+            struct Impl;
+
+         private:
+            std::unique_ptr<Impl> impl;
         };
 
         SlokedBotanCrypto();
         virtual ~SlokedBotanCrypto();
-        std::unique_ptr<Key> DeriveKey(const std::string &,
+        const std::string &KDFName() const final;
+        const CipherParameters &GetCipherParameters() const final;
+        std::unique_ptr<Key> DeriveKey(std::size_t, const std::string &,
                                        const std::string &) final;
-        std::unique_ptr<Cipher> NewCipher(const Key &) final;
-        std::unique_ptr<Cipher> NewCipher(std::unique_ptr<Key>) final;
+        std::unique_ptr<Cipher> NewCipher() final;
         std::unique_ptr<Random> NewRandom() final;
 
         static const EngineId Engine;

@@ -38,7 +38,7 @@ namespace sloked {
     class SlokedSocketEncryption {
      public:
         virtual ~SlokedSocketEncryption() = default;
-        virtual void SetEncryption(std::unique_ptr<SlokedCrypto::Cipher>,
+        virtual void SetEncryption(std::unique_ptr<SlokedCrypto::Key>,
                                    std::optional<std::string> = {}) = 0;
         virtual void RestoreDefaultEncryption(
             std::optional<std::string> = {}) = 0;

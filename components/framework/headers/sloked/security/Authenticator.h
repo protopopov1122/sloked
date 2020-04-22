@@ -38,8 +38,10 @@ namespace sloked {
         std::string GetAccount() const;
 
      protected:
-        std::unique_ptr<SlokedCrypto::Cipher> DeriveCipher(const std::string &);
-        std::string GenerateToken(SlokedCrypto::Cipher &, Challenge);
+        std::unique_ptr<SlokedCrypto::Key> DeriveKey(std::size_t,
+                                                     const std::string &);
+        std::string GenerateToken(SlokedCrypto::Cipher &, SlokedCrypto::Key &,
+                                  Challenge);
         void SetupEncryption(bool);
 
         SlokedCrypto &crypto;
@@ -61,6 +63,7 @@ namespace sloked {
         void FinalizeLogin();
 
      private:
+        std::unique_ptr<SlokedCrypto::Cipher> cipher;
         std::unique_ptr<SlokedCrypto::Random> random;
         std::optional<Challenge> nonce;
     };
@@ -75,6 +78,7 @@ namespace sloked {
         std::string InitiateLogin(const std::string, Challenge);
 
      private:
+        std::unique_ptr<SlokedCrypto::Cipher> cipher;
         std::function<void()> unbindEncryptionListener;
         std::optional<std::string> pending;
     };

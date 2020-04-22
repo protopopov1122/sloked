@@ -49,7 +49,7 @@ namespace sloked {
             void RandomizePassword();
             std::string GetPassword() const final;
             std::unique_ptr<SlokedCrypto::Key> DeriveKey(
-                const std::string &) const final;
+                std::size_t, const std::string &) const final;
             Callback Watch(Callback) final;
 
             std::shared_ptr<SlokedNamedRestrictions> GetAccessRestrictions()
@@ -100,6 +100,7 @@ namespace sloked {
         SlokedCrypto &crypto;
         mutable std::mutex mtx;
         std::unique_ptr<SlokedCrypto::Cipher> cipher;
+        std::unique_ptr<SlokedCrypto::Key> key;
         std::unique_ptr<SlokedCrypto::Random> random;
         std::shared_ptr<Account> defaultAccount;
         std::map<std::string, std::shared_ptr<Account>> accounts;

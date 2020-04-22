@@ -44,9 +44,9 @@ namespace sloked {
 
     std::unique_ptr<SlokedCrypto::Key>
         SlokedCredentialSlave::Account::DeriveKey(
-            const std::string &salt) const {
+            std::size_t keyLength, const std::string &salt) const {
         std::unique_lock lock(this->mtx);
-        return this->crypto.DeriveKey(this->password, salt);
+        return this->crypto.DeriveKey(keyLength, this->password, salt);
     }
 
     SlokedCredentialStorage::Account::Callback

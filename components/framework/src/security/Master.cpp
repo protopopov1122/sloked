@@ -83,9 +83,9 @@ namespace sloked {
 
     std::unique_ptr<SlokedCrypto::Key>
         SlokedCredentialMaster::Account::DeriveKey(
-            const std::string &salt) const {
+            std::size_t keyLength, const std::string &salt) const {
         std::unique_lock lock(this->mtx);
-        return this->auth.crypto.DeriveKey(this->password, salt);
+        return this->auth.crypto.DeriveKey(keyLength, this->password, salt);
     }
 
     SlokedCredentialMaster::Account::Callback
@@ -119,7 +119,7 @@ namespace sloked {
 
     SlokedCredentialMaster::SlokedCredentialMaster(SlokedCrypto &crypto,
                                                    SlokedCrypto::Key &key)
-        : crypto(crypto), cipher(crypto.NewCipher(key)),
+        : crypto(crypto), cipher(crypto.NewCipher()), key(key.Clone()),
           random(crypto.NewRandom()),
           defaultAccount(std::make_shared<Account>(*this, "")) {}
 
@@ -223,19 +223,23 @@ namespace sloked {
 
     std::string SlokedCredentialMaster::Encode(std::string_view data) const {
         SlokedCrypto::Data bytes(data.data(), data.data() + data.size());
-        if (bytes.size() % this->cipher->BlockSize() != 0) {
-            std::size_t zeros = this->cipher->BlockSize() -
-                                (bytes.size() % this->cipher->BlockSize());
+        if (bytes.size() % this->cipher->Parameters().BlockSize != 0) {
+            std::size_t zeros =
+                this->cipher->Parameters().BlockSize -
+                (bytes.size() % this->cipher->Parameters().BlockSize);
             bytes.insert(bytes.end(), zeros, '\0');
         }
-        auto encrypted = this->cipher->Encrypt(std::move(bytes));
+        SlokedCrypto::Data iv(this->cipher->Parameters().IVSize, 0);
+        auto encrypted =
+            this->cipher->Encrypt(std::move(bytes), *this->key, iv);
         return SlokedBase64::Encode(encrypted.data(),
                                     encrypted.data() + encrypted.size());
     }
 
     std::string SlokedCredentialMaster::Decode(std::string_view data) const {
         SlokedCrypto::Data encrypted = SlokedBase64::Decode(data);
-        auto bytes = this->cipher->Decrypt(encrypted);
+        SlokedCrypto::Data iv(this->cipher->Parameters().IVSize, 0);
+        auto bytes = this->cipher->Decrypt(encrypted, *this->key, iv);
         std::string result{bytes.begin(), bytes.end()};
         auto zero = result.find('\0');
         if (zero != result.npos) {
