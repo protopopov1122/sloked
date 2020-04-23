@@ -55,7 +55,7 @@ namespace sloked {
             std::size_t BlockSize;
             std::size_t IVSize;
             std::string algorithm;
-            std::optional<std::string> Padding;
+            std::string Padding;
         };
 
         class Cipher {
