@@ -31,8 +31,7 @@ namespace sloked {
         static_cast<std::size_t>(EVP_CIPHER_key_length(EVP_aes_256_cbc())),
         static_cast<std::size_t>(EVP_CIPHER_block_size(EVP_aes_256_cbc())),
         static_cast<std::size_t>(EVP_CIPHER_iv_length(EVP_aes_256_cbc())),
-        "AES-256/CBC",
-        {}};
+        "AES-256/CBC", "PKCS7"};
 
     int SlokedOpenSSLCrypto::engineId = 0;
     const SlokedCrypto::EngineId SlokedOpenSSLCrypto::Engine =
@@ -94,21 +93,21 @@ namespace sloked {
         CheckErrors(EVP_CipherInit_ex(cipher, EVP_aes_256_cbc(), nullptr,
                                       openSSLKey.Get().data(), iv, true),
                     "cipher initialization");
-        CheckErrors(EVP_CIPHER_CTX_set_padding(cipher, false),
+        CheckErrors(EVP_CIPHER_CTX_set_padding(cipher, true),
                     "cipher initialization");
         const int BlockSize = EVP_CIPHER_CTX_block_size(cipher);
         Data output;
-        output.insert(output.end(), data.size(), 0);
-        int outsize;
-        for (std::size_t i = 0; i < data.size() / BlockSize; i++) {
-            CheckErrors(EVP_CipherUpdate(cipher, output.data() + i * BlockSize,
-                                         &outsize, data.data() + i * BlockSize,
-                                         BlockSize),
-                        "encryption");
-        }
+        const std::size_t OutputSize =
+            data.size() + (BlockSize - (data.size() % BlockSize));
+        output.insert(output.end(), OutputSize, 0);
+        int outsize, finsize;
+        CheckErrors(EVP_CipherUpdate(cipher, output.data(), &outsize,
+                                     data.data(), data.size()),
+                    "encryption");
         CheckErrors(
-            EVP_CipherFinal_ex(cipher, output.data() + data.size(), &outsize),
+            EVP_CipherFinal_ex(cipher, output.data() + outsize, &finsize),
             "cipher finalization");
+        output.erase(output.begin() + outsize + finsize, output.end());
         return output;
     }
 
@@ -127,21 +126,18 @@ namespace sloked {
         CheckErrors(EVP_CipherInit_ex(cipher, EVP_aes_256_cbc(), nullptr,
                                       openSSLKey.Get().data(), iv, false),
                     "cipher initialization");
-        CheckErrors(EVP_CIPHER_CTX_set_padding(cipher, false),
+        CheckErrors(EVP_CIPHER_CTX_set_padding(cipher, true),
                     "cipher initialization");
         Data output;
         output.insert(output.end(), data.size(), 0);
-        const int BlockSize = EVP_CIPHER_CTX_block_size(cipher);
-        int outsize;
-        for (std::size_t i = 0; i < data.size() / BlockSize; i++) {
-            CheckErrors(EVP_CipherUpdate(cipher, output.data() + i * BlockSize,
-                                         &outsize, data.data() + i * BlockSize,
-                                         BlockSize),
-                        "decryption");
-        }
+        int outsize, finsize;
+        CheckErrors(EVP_CipherUpdate(cipher, output.data(), &outsize,
+                                     data.data(), data.size()),
+                    "decryption");
         CheckErrors(
-            EVP_CipherFinal_ex(cipher, output.data() + data.size(), &outsize),
+            EVP_CipherFinal_ex(cipher, output.data() + outsize, &finsize),
             "cipher finalization");
+        output.erase(output.begin() + outsize + finsize, output.end());
         return output;
     }
 
