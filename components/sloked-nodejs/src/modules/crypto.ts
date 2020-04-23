@@ -23,7 +23,6 @@ export class DefaultCrypto implements Crypto {
         const Algorithm = 'aes-256-cbc'
         return new Promise<Buffer>((resolve, reject) => {
             const cipher = crypto.createCipheriv(Algorithm, key, iv)
-            cipher.setAutoPadding(false)
             let encrypted = Buffer.alloc(0)
             cipher.on('readable', () => {
                 let chunk;
@@ -44,7 +43,6 @@ export class DefaultCrypto implements Crypto {
         const Algorithm = 'aes-256-cbc'
         return new Promise<Buffer>((resolve, reject) => {
             const cipher = crypto.createDecipheriv(Algorithm, key, iv)
-            cipher.setAutoPadding(false)
             let encrypted = Buffer.alloc(0)
             cipher.on('readable', () => {
                 let chunk;

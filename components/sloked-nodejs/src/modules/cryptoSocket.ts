@@ -28,20 +28,13 @@ class Frame {
 
     async encrypt(crypto: Crypto, key: Buffer) {
         if (this._payload.length > 0) {
-            let totalLength: number = this._payload.length
-            if (totalLength % crypto.blockSize() != 0) {
-                totalLength =
-                    Math.ceil(totalLength / crypto.blockSize()) *
-                    crypto.blockSize()
-            }
-            const raw: Buffer = Buffer.alloc(totalLength)
-            this._payload.copy(raw)
             const iv = crypto.RandomBytes(crypto.IVSize())
-            const encrypted = await crypto.encrypt(raw, key, iv)
+            const encrypted = await crypto.encrypt(this._payload, key, iv)
             const result: Buffer = Buffer.alloc(9 + iv.length + encrypted.length)
+            const signature = await Frame.sign(this._checksum, async (buf: Buffer) => crypto.encrypt(buf, key, iv))
             result.writeUInt8(this._type)
-            result.writeUInt32LE(this._payload.length, 1)
-            result.writeUInt32LE(this._checksum, 5)
+            result.writeUInt32LE(encrypted.length, 1)
+            result.writeUInt32LE(signature, 5)
             iv.copy(result, 9)
             encrypted.copy(result, 9 + iv.length)
             console.log(result)
@@ -60,26 +53,19 @@ class Frame {
             throw new Error("CryptoSocket: Invalid frame type");
         }
         const type: FrameType = input[0]
-        const length: number = input.readUInt32LE(1)
-        if (length > 0) {
+        const totalLength: number = input.readUInt32LE(1)
+        if (totalLength > 0) {
             const EncryptedHeaderSize: number = 9 + crypto.IVSize();
-            const crc32: number = input.readUInt32LE(5)
-            let totalLength: number = length
-            if (totalLength % crypto.blockSize() != 0) {
-                totalLength =
-                    Math.ceil(totalLength / crypto.blockSize()) *
-                    crypto.blockSize()
-            }
+            const signature: number = input.readUInt32LE(5)
             if (input.length < totalLength + EncryptedHeaderSize) {
                 return null
             }
 
             const iv: Buffer = input.slice(EncryptedHeaderSize - crypto.IVSize(), EncryptedHeaderSize)
             const encrypted: Buffer = input.slice(EncryptedHeaderSize, EncryptedHeaderSize + totalLength)
-            const raw = (await crypto.decrypt(encrypted, key, iv)).slice(0, length)
-            const actualCrc32: number = 
-                Crc32.Calculate(raw);
-            if (actualCrc32 != crc32) {
+            const raw = await crypto.decrypt(encrypted, key, iv)
+            const actualSignature = await Frame.sign(Crc32.Calculate(raw), async (buf: Buffer) => crypto.encrypt(buf, key, iv))
+            if (actualSignature != signature) {
                 throw new Error(
                     "CryptoSocket: Actual CRC32 doesn't equal to expected");
             }
@@ -87,6 +73,13 @@ class Frame {
         } else {
             return [new Frame(type, Buffer.alloc(0)), MinimalHeaderLength]
         }
+    }
+
+    static async sign(checksum: number, encrypt: (buf: Buffer) => Promise<Buffer>): Promise<number> {
+        const rawSignatureBuffer = Buffer.alloc(4)
+        rawSignatureBuffer.writeUInt32LE(checksum)
+        const signatureBuffer = await encrypt(rawSignatureBuffer)
+        return Crc32.Calculate(signatureBuffer)   
     }
 
     private _type: FrameType
