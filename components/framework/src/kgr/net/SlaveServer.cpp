@@ -28,6 +28,7 @@
 #include "sloked/core/Error.h"
 #include "sloked/kgr/local/Pipe.h"
 #include "sloked/kgr/net/Config.h"
+#include "sloked/sched/CompoundTask.h"
 #include "sloked/sched/Pipeline.h"
 
 namespace sloked {
@@ -414,6 +415,16 @@ namespace sloked {
         return Pipeline(std::make_shared<State>(this, account),
                         this->net.Invoke("auth-request", {})->Next(),
                         this->lifetime);
+    }
+
+    TaskResult<void> KgrSlaveNetServer::Logout() {
+        if (this->auth == nullptr) {
+            return TaskResult<void>::Reject(std::make_exception_ptr(
+                SlokedError("KgrSlaveServer: Authenticator not defined")));
+        }
+
+        return SlokedTaskTransformations::Voidify(
+            this->net.Invoke("auth-logout", {})->Next());
     }
 
     void KgrSlaveNetServer::Accept() {

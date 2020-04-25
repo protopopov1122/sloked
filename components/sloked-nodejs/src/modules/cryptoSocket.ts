@@ -27,12 +27,14 @@ class Frame {
         return this._payload
     }
 
-    async encrypt(crypto: Crypto, key: Buffer) {
+    async encrypt(crypto: Crypto, key?: Buffer) {
         if (this._payload.length > 0) {
             const iv = crypto.RandomBytes(crypto.IVSize())
-            const encrypted = await crypto.encrypt(this._payload, key, iv)
+            const encrypted = key
+                ? await crypto.encrypt(this._payload, key, iv)
+                : this._payload
             const result: Buffer = Buffer.alloc(9 + iv.length + encrypted.length)
-            const signature = await Frame.sign(this._checksum, async (buf: Buffer) => crypto.encrypt(buf, key, iv))
+            const signature = await Frame.sign(this._checksum, async (buf: Buffer) => key ? crypto.encrypt(buf, key, iv) : buf)
             result.writeUInt8(this._type)
             result.writeUInt32LE(encrypted.length, 1)
             result.writeUInt32LE(signature, 5)
@@ -44,7 +46,7 @@ class Frame {
         }
     }
 
-    static async decrypt(crypto: Crypto, key: Buffer, input: Buffer): Promise<[Frame, number] | null> {
+    static async decrypt(crypto: Crypto, input: Buffer, key?: Buffer): Promise<[Frame, number] | null> {
         const MinimalHeaderLength: number = 5;
         if (input.length < MinimalHeaderLength) {
             return null
@@ -63,8 +65,10 @@ class Frame {
 
             const iv: Buffer = input.slice(EncryptedHeaderSize - crypto.IVSize(), EncryptedHeaderSize)
             const encrypted: Buffer = input.slice(EncryptedHeaderSize, EncryptedHeaderSize + totalLength)
-            const raw = await crypto.decrypt(encrypted, key, iv)
-            const actualSignature = await Frame.sign(Crc32.Calculate(raw), async (buf: Buffer) => crypto.encrypt(buf, key, iv))
+            const raw = key
+                ? await crypto.decrypt(encrypted, key, iv)
+                : encrypted
+            const actualSignature = await Frame.sign(Crc32.Calculate(raw), async (buf: Buffer) => key ? crypto.encrypt(buf, key, iv) : buf)
             if (actualSignature != signature) {
                 throw new Error(
                     "CryptoSocket: Actual CRC32 doesn't equal to expected");
@@ -88,15 +92,15 @@ class Frame {
 }
 
 export class EncryptionStream extends Transform {
-    constructor(crypto: Crypto, key: Buffer, options?: TransformOptions) {
+    constructor(crypto: Crypto, key?: Buffer, options?: TransformOptions) {
         super(options)
         this._crypto = crypto
         this._key = key
         this._pending = Buffer.alloc(0)
     }
 
-    async setKey (key: Buffer, id?: string) {
-        if (this._key && id) {
+    async setKey (key?: Buffer, id?: string) {
+        if (id) {
             const frame: Frame = new Frame(FrameType.KeyChange, id !== null ? Buffer.from(id) : Buffer.alloc(0))
             const encrypted = await frame.encrypt(this._crypto, this._key)
             this._pending = Buffer.concat([this._pending, encrypted])
@@ -106,7 +110,7 @@ export class EncryptionStream extends Transform {
 
     async _transform(chunk: Buffer, _: string, done: TransformCallback) {
         let result = Buffer.alloc(0)
-        if (this._key && chunk != null) {
+        if (chunk != null) {
             result = await this._transformBlock(chunk, this._key)
         }
         result = Buffer.concat([this._pending, result])
@@ -114,7 +118,7 @@ export class EncryptionStream extends Transform {
         done(null, result)
     }
 
-    private async _transformBlock(chunk: Buffer, key: Buffer) {
+    private async _transformBlock(chunk: Buffer, key?: Buffer) {
         const frame: Frame = new Frame(FrameType.Data, chunk)
         return frame.encrypt(this._crypto, key)
     }
@@ -125,7 +129,7 @@ export class EncryptionStream extends Transform {
 }
 
 export class DecryptionStream extends Transform {
-    constructor(crypto: Crypto, key: Buffer, keyChangeEmitter: EventEmitter<string | null>, options?: TransformOptions) {
+    constructor(crypto: Crypto, keyChangeEmitter: EventEmitter<string | null>, key?: Buffer, options?: TransformOptions) {
         super(options)
         this._crypto = crypto
         this._key = key
@@ -133,12 +137,12 @@ export class DecryptionStream extends Transform {
         this._keyChangeEmitter = keyChangeEmitter
     }
 
-    setKey (key: Buffer) {
+    setKey (key?: Buffer) {
         this._key = key
     }
 
     _transform(chunk: Buffer, _: string, done: TransformCallback) {
-        if (typeof this._key === 'undefined' || chunk == null) {
+        if (chunk == null) {
             done(null, chunk)
         } else {
             this._transformData(chunk, this._key).then(result => {
@@ -151,8 +155,8 @@ export class DecryptionStream extends Transform {
         }
     }
 
-    async _transformData(chunk: Buffer, key: Buffer): Promise<Buffer | null> {
-        const result = await Frame.decrypt(this._crypto, key, chunk)
+    async _transformData(chunk: Buffer, key?: Buffer): Promise<Buffer | null> {
+        const result = await Frame.decrypt(this._crypto, chunk, key)
         if (result !== null) {
             const [frame, length] = result
             this._encBuffer = this._encBuffer.slice(length)
@@ -175,14 +179,14 @@ export class DecryptionStream extends Transform {
 }
 
 export class CryptoStream extends EncryptedDuplexStream implements StreamEncryption {
-    constructor (rawStream: Duplex, crypto: Crypto, key: Buffer, options?: DuplexOptions) {
+    constructor (rawStream: Duplex, crypto: Crypto, key?: Buffer, options?: DuplexOptions) {
         super(options)
         this._raw = rawStream
         this._buffer = []
         this._autopush = false
         this._keyChangeEmitter = new EventEmitter<string | null>()
-        this._defaultKey = key
-        this._in = new DecryptionStream(crypto, key, this._keyChangeEmitter)
+        this._key = key
+        this._in = new DecryptionStream(crypto, this._keyChangeEmitter, key)
         this._out = new EncryptionStream(crypto, key)
         this._raw.pipe(this._in)
         this._out.pipe(this._raw)
@@ -215,14 +219,13 @@ export class CryptoStream extends EncryptedDuplexStream implements StreamEncrypt
         return this
     }
 
-    setEncryption(key: Buffer, id?: string): void {
+    setEncryptionKey(key?: Buffer, id?: string): void {
         this._in.setKey(key)
         this._out.setKey(key, id)
     }
 
-    restoreDefaultEncryption(id?: string): void {
-        this._in.setKey(this._defaultKey)
-        this._out.setKey(this._defaultKey, id)
+    getEncryptionKey(): Buffer | undefined {
+        return this._key
     }
 
     onKeyChange(listener: ((id?: string) => Promise<void>) | ((id?: string) => void)): () => void {
@@ -257,6 +260,6 @@ export class CryptoStream extends EncryptedDuplexStream implements StreamEncrypt
     private _out: EncryptionStream
     private _buffer: Buffer[]
     private _autopush: boolean
-    private _defaultKey: Buffer
+    private _key?: Buffer
     private _keyChangeEmitter: EventEmitter<string | null>
 }

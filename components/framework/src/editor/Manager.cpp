@@ -184,13 +184,17 @@ namespace sloked {
 
     void SlokedEditorManager::SetupCrypto(SlokedEditorInstance &editor,
                                           const KgrDictionary &cryptoConfig) {
-        std::unique_ptr<SlokedCrypto::Key> masterKey;
+        std::unique_ptr<SlokedCrypto::Key> defaultKey;
         editor.InitializeCrypto(*this->cryptoEngine);
         auto cipher = editor.GetCrypto().GetEngine().NewCipher();
-        masterKey = editor.GetCrypto().GetEngine().DeriveKey(
-            cipher->Parameters().KeySize,
-            cryptoConfig["masterPassword"].AsString(),
-            cryptoConfig["salt"].AsString());
+        if (cryptoConfig.Has("defaultKey")) {
+            defaultKey = editor.GetCrypto().GetEngine().DeriveKey(
+                cipher->Parameters().KeySize,
+                cryptoConfig["defaultKey"]
+                    .AsDictionary()["password"]
+                    .AsString(),
+                cryptoConfig["salt"].AsString());
+        }
         if (cryptoConfig.Has("authentication")) {
             const auto &authConfig =
                 cryptoConfig["authentication"].AsDictionary();
@@ -205,9 +209,7 @@ namespace sloked {
             }
         }
         editor.GetNetwork().EncryptionLayer(editor.GetCrypto().GetEngine(),
-                                            *masterKey);
-        editor.Attach(SlokedTypedDataHandle<SlokedCrypto::Key>::Wrap(
-            std::move(masterKey)));
+                                            std::move(defaultKey));
     }
 
     static std::unique_ptr<SlokedNamedRestrictions> KgrToRestriction(

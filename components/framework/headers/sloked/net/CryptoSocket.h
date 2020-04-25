@@ -58,9 +58,9 @@ namespace sloked {
         std::unique_ptr<SlokedIOAwaitable> Awaitable() const final;
         SlokedSocketEncryption *GetEncryption() final;
 
-        void SetEncryption(std::unique_ptr<SlokedCrypto::Key>,
-                           std::optional<std::string> = {}) final;
-        void RestoreDefaultEncryption(std::optional<std::string> = {}) final;
+        std::unique_ptr<SlokedCrypto::Key> GetEncryptionKey() final;
+        void SetEncryptionKey(std::unique_ptr<SlokedCrypto::Key>,
+                              std::optional<std::string> = {}) final;
         virtual std::function<void()> OnKeyChange(
             std::function<void(const std::optional<std::string> &)>) final;
 
@@ -73,7 +73,6 @@ namespace sloked {
 
         std::unique_ptr<SlokedSocket> socket;
         std::unique_ptr<SlokedCrypto::Cipher> cipher;
-        std::unique_ptr<SlokedCrypto::Key> defaultKey;
         std::unique_ptr<SlokedCrypto::Key> key;
         std::unique_ptr<SlokedCrypto::Random> random;
         std::vector<uint8_t> encryptedBuffer;

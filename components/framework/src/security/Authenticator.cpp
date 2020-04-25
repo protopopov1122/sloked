@@ -29,7 +29,11 @@ namespace sloked {
         SlokedCrypto &crypto, SlokedCredentialStorage &provider,
         std::string salt, SlokedSocketEncryption *encryption)
         : crypto(crypto), provider(provider), salt(std::move(salt)),
-          encryption(encryption) {}
+          encryption(encryption) {
+        if (this->encryption) {
+            this->initialKey = this->encryption->GetEncryptionKey();
+        }
+    }
 
     SlokedBaseAuthenticator::~SlokedBaseAuthenticator() {
         if (this->unwatchCredentials) {
@@ -46,6 +50,22 @@ namespace sloked {
             return this->account.value();
         } else {
             throw SlokedError("BaseAuthenticator: Not logged in");
+        }
+    }
+
+    void SlokedBaseAuthenticator::Logout() {
+        if (this->unwatchCredentials) {
+            this->unwatchCredentials();
+            this->unwatchCredentials = nullptr;
+        }
+        this->account.reset();
+        if (this->encryption) {
+            if (this->initialKey) {
+                this->encryption->SetEncryptionKey(this->initialKey->Clone(),
+                                                   "");
+            } else {
+                this->encryption->SetEncryptionKey(nullptr, "");
+            }
         }
     }
 
@@ -88,10 +108,10 @@ namespace sloked {
             auto key =
                 this->DeriveKey(this->crypto.GetCipherParameters().KeySize,
                                 this->account.value());
-            this->encryption->SetEncryption(std::move(key),
-                                            sendNotification
-                                                ? this->account
-                                                : std::optional<std::string>{});
+            this->encryption->SetEncryptionKey(
+                std::move(key), sendNotification
+                                    ? this->account
+                                    : std::optional<std::string>{});
             if (auto acc = this->provider.GetByName(this->account.value())) {
                 this->unwatchCredentials = acc->Watch(
                     [this, sendNotification,
@@ -99,7 +119,7 @@ namespace sloked {
                         if (this->account.has_value()) {
                             auto key =
                                 this->DeriveKey(keySize, this->account.value());
-                            this->encryption->SetEncryption(
+                            this->encryption->SetEncryptionKey(
                                 std::move(key),
                                 sendNotification
                                     ? this->account
@@ -167,9 +187,14 @@ namespace sloked {
             this->unbindEncryptionListener =
                 this->encryption->OnKeyChange([this](auto &keyId) {
                     if (keyId == this->pending) {
-                        this->account = std::move(this->pending);
-                        this->pending.reset();
-                        this->SetupEncryption(false);
+                        if (keyId.has_value()) {
+                            this->account = std::move(this->pending);
+                            this->pending.reset();
+                            this->SetupEncryption(false);
+                        } else {
+                            this->pending.reset();
+                            this->Logout();
+                        }
                     } else {
                         this->pending.reset();
                         throw SlokedError("SlaveAuthenticator: Unexpected "

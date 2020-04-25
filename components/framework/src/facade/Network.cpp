@@ -65,9 +65,9 @@ namespace sloked {
             this->GetEngine(), compression));
     }
 
-    void SlokedNetworkFacade::EncryptionLayer(SlokedCrypto &crypto,
-                                              SlokedCrypto::Key &key) {
+    void SlokedNetworkFacade::EncryptionLayer(
+        SlokedCrypto &crypto, std::unique_ptr<SlokedCrypto::Key> key) {
         this->layers.push(std::make_unique<SlokedCryptoSocketFactory>(
-            this->GetEngine(), crypto, key.Clone()));
+            this->GetEngine(), crypto, std::move(key)));
     }
 }  // namespace sloked

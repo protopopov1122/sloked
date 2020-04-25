@@ -10,8 +10,8 @@ export interface Crypto {
 }
 
 export interface StreamEncryption {
-    setEncryption(key: Buffer, id?: string): void
-    restoreDefaultEncryption(id?: string): void
+    setEncryptionKey(key?: Buffer, id?: string): void
+    getEncryptionKey(): Buffer | undefined
     onKeyChange(listener: ((id?: string) => Promise<void>) | ((id?: string) => void)): () => void
 }
 

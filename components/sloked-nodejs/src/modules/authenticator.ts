@@ -11,11 +11,17 @@ export class SlaveAuthenticator implements Authenticator {
         this._account = undefined
         this._pending = undefined
         this._unwatchCredentials = undefined
+        this._initialKey = encryption.getEncryptionKey()
         this._unwatchKeyChange = this._encryption.onKeyChange(async (id?: string) => {
-            if (id && id == this._pending) {
-                this._account = this._pending
-                this._pending = undefined
-                await this._setupEncryption()
+            if (id === this._pending) {
+                if (id) {
+                    this._account = this._pending
+                    this._pending = undefined
+                    await this._setupEncryption()
+                } else {
+                    this._account = undefined
+                    this._logout()
+                }
             } else {
                 throw new Error('Unexpected key change')
             }
@@ -50,11 +56,19 @@ export class SlaveAuthenticator implements Authenticator {
             const acc = this._credentialProvider.getAccount(this._account)
             this._unwatchCredentials = acc.watch(async () => {
                 const key: Buffer = await acc.deriveKey(this._salt)
-                this._encryption.setEncryption(key)
+                this._encryption.setEncryptionKey(key)
             })
             const key: Buffer = await acc.deriveKey(this._salt)
-            this._encryption.setEncryption(key)
+            this._encryption.setEncryptionKey(key)
         }
+    }
+
+    private _logout(): void {
+        if (this._unwatchCredentials) {
+            this._unwatchCredentials()
+            this._unwatchCredentials = undefined
+        }
+        this._encryption.setEncryptionKey(this._initialKey)
     }
 
     private _crypto: Crypto
@@ -65,4 +79,5 @@ export class SlaveAuthenticator implements Authenticator {
     private _pending?: string
     private _unwatchKeyChange?: () => void
     private _unwatchCredentials?: () => void
+    private _initialKey?: Buffer
 }

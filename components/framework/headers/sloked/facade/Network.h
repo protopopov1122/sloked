@@ -41,7 +41,8 @@ namespace sloked {
         void BufferingLayer(std::chrono::system_clock::duration,
                             SlokedScheduler &);
         void CompressionLayer(SlokedCompression &);
-        void EncryptionLayer(SlokedCrypto &, SlokedCrypto::Key &);
+        void EncryptionLayer(SlokedCrypto &,
+                             std::unique_ptr<SlokedCrypto::Key>);
 
      private:
         SlokedSocketFactory &baseEngine;

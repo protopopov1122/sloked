@@ -64,6 +64,7 @@ namespace sloked {
         void Start() final;
         void Close() final;
         void Authorize(const std::string &);
+        void Logout();
 
      private:
         KgrSlaveNetServer unrestrictedServer;

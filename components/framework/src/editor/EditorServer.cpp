@@ -80,4 +80,12 @@ namespace sloked {
             this->deferredAuth = user;
         }
     }
+
+    void SlokedRemoteEditorServer::Logout() {
+        if (this->unrestrictedServer.IsRunning()) {
+            this->unrestrictedServer.Logout().UnwrapWait();
+        } else {
+            this->deferredAuth.reset();
+        }
+    }
 }  // namespace sloked

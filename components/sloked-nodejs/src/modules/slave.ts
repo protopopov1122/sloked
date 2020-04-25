@@ -39,7 +39,7 @@ export default class SlaveServer {
         return this.connect.bind(this, service)
     }
 
-    async authorize (account: string) {
+    async authorize (account: string): Promise<boolean> {
         if (this._authenticator) {
             const authRequest = await this._net.invoke('auth-request', null)()
             const nonce: number = authRequest['nonce']
@@ -49,6 +49,14 @@ export default class SlaveServer {
                 'result': token
             })()
             return authResponse
+        } else {
+            throw new Error('Authenticator not defined')
+        }
+    }
+
+    async logout(): Promise<void> {
+        if (this._authenticator) {
+            await this._net.invoke('auth-logout', null)()
         } else {
             throw new Error('Authenticator not defined')
         }

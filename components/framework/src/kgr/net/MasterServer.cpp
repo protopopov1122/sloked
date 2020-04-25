@@ -332,6 +332,18 @@ namespace sloked {
                     rsp.Error("KgrMasterServer: Authentication not supported");
                 }
             });
+
+            this->net.BindMethod(
+                "auth-logout", [this](const std::string &method,
+                                      const KgrValue &params, auto &rsp) {
+                    if (this->auth) {
+                        this->auth->Logout();
+                        rsp.Result(true);
+                    } else {
+                        rsp.Error(
+                            "KgrMasterServer: Authentication not supported");
+                    }
+                });
         }
 
         virtual ~KgrMasterNetServerContext() {

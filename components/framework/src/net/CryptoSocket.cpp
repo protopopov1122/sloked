@@ -36,6 +36,15 @@ namespace sloked {
         return (value >> (idx << 3)) & 0xff;
     }
 
+    static std::unique_ptr<SlokedCrypto::Key> CloneKey(
+        SlokedCrypto::Key *orig) {
+        if (orig) {
+            return orig->Clone();
+        } else {
+            return nullptr;
+        }
+    }
+
     class SlokedCryptoSocket::Frame {
      public:
         enum class Type : uint8_t { Data = 0, KeyChange };
@@ -58,7 +67,7 @@ namespace sloked {
         }
 
         std::vector<uint8_t> Encrypt(SlokedCrypto::Cipher &cipher,
-                                     SlokedCrypto::Key &key,
+                                     SlokedCrypto::Key *key,
                                      SlokedCrypto::Random &random) const {
             if (!this->payload.empty()) {
                 SlokedCrypto::Data init_vector;
@@ -68,11 +77,21 @@ namespace sloked {
                 std::vector<uint8_t> rawSignature{
                     ByteAt(this->checksum, 0), ByteAt(this->checksum, 1),
                     ByteAt(this->checksum, 2), ByteAt(this->checksum, 3)};
-                auto signature = cipher.Encrypt(rawSignature, key, init_vector);
+                SlokedCrypto::Data signature;
+                if (key) {
+                    signature = cipher.Encrypt(rawSignature, *key, init_vector);
+                } else {
+                    signature = std::move(rawSignature);
+                }
                 auto signatureCrc32 =
                     SlokedCrc32::Calculate(signature.begin(), signature.end());
-                auto encrypted =
-                    cipher.Encrypt(this->payload, key, init_vector);
+                SlokedCrypto::Data encrypted;
+                if (key) {
+                    encrypted =
+                        cipher.Encrypt(this->payload, *key, init_vector);
+                } else {
+                    encrypted = this->payload;
+                }
                 std::vector<uint8_t> header{static_cast<uint8_t>(this->type),
                                             ByteAt(encrypted.size(), 0),
                                             ByteAt(encrypted.size(), 1),
@@ -96,7 +115,7 @@ namespace sloked {
 
         static std::optional<Frame> Decrypt(std::vector<uint8_t> &input,
                                             SlokedCrypto::Cipher &cipher,
-                                            SlokedCrypto::Key &key) {
+                                            SlokedCrypto::Key *key) {
             constexpr std::size_t MinimalHeaderLength = 5;
             if (input.size() < MinimalHeaderLength) {
                 return std::optional<Frame>{};
@@ -128,15 +147,25 @@ namespace sloked {
                     input.begin() + EncryptedHeaderSize + totalLength);
                 input.erase(input.begin(),
                             input.begin() + EncryptedHeaderSize + totalLength);
-                const auto raw = cipher.Decrypt(encrypted, key, init_vector);
+                SlokedCrypto::Data raw;
+                if (key) {
+                    raw = cipher.Decrypt(encrypted, *key, init_vector);
+                } else {
+                    raw = std::move(encrypted);
+                }
 
                 auto actualCrc32 =
                     SlokedCrc32::Calculate(raw.begin(), raw.end());
                 std::vector<uint8_t> rawSignature{
                     ByteAt(actualCrc32, 0), ByteAt(actualCrc32, 1),
                     ByteAt(actualCrc32, 2), ByteAt(actualCrc32, 3)};
-                auto actualSignature =
-                    cipher.Encrypt(rawSignature, key, init_vector);
+                SlokedCrypto::Data actualSignature;
+                if (key) {
+                    actualSignature =
+                        cipher.Encrypt(rawSignature, *key, init_vector);
+                } else {
+                    actualSignature = std::move(rawSignature);
+                }
                 auto actualSignatureCrc32 = SlokedCrc32::Calculate(
                     actualSignature.begin(), actualSignature.end());
                 if (actualSignatureCrc32 != signatureCrc32) {
@@ -164,13 +193,12 @@ namespace sloked {
         std::unique_ptr<SlokedCrypto::Cipher> cipher,
         std::unique_ptr<SlokedCrypto::Key> key,
         std::unique_ptr<SlokedCrypto::Random> random)
-        : socket(std::move(socket)),
-          cipher(std::move(cipher)), defaultKey{nullptr}, key(std::move(key)),
-          random(std::move(random)) {}
+        : socket(std::move(socket)), cipher(std::move(cipher)),
+          key(std::move(key)), random(std::move(random)) {}
 
     SlokedCryptoSocket::SlokedCryptoSocket(SlokedCryptoSocket &&socket)
         : socket(std::move(socket.socket)), cipher(std::move(socket.cipher)),
-          defaultKey(std::move(socket.defaultKey)), key(std::move(socket.key)),
+          key(std::move(socket.key)),
           encryptedBuffer(std::move(socket.encryptedBuffer)),
           buffer(std::move(socket.buffer)) {}
 
@@ -178,7 +206,6 @@ namespace sloked {
         SlokedCryptoSocket &&socket) {
         this->socket = std::move(socket.socket);
         this->cipher = std::move(socket.cipher);
-        this->defaultKey = std::move(socket.defaultKey);
         this->key = std::move(socket.key);
         this->encryptedBuffer = std::move(socket.encryptedBuffer);
         this->buffer = std::move(socket.buffer);
@@ -287,23 +314,16 @@ namespace sloked {
         return this;
     }
 
-    void SlokedCryptoSocket::SetEncryption(
+    std::unique_ptr<SlokedCrypto::Key> SlokedCryptoSocket::GetEncryptionKey() {
+        return CloneKey(this->key.get());
+    }
+
+    void SlokedCryptoSocket::SetEncryptionKey(
         std::unique_ptr<SlokedCrypto::Key> key,
         std::optional<std::string> keyId) {
 
         this->SendKeyChangeNofitication(keyId);
-        if (this->defaultKey == nullptr) {
-            this->defaultKey = std::move(this->key);
-        }
         this->key = std::move(key);
-    }
-
-    void SlokedCryptoSocket::RestoreDefaultEncryption(
-        std::optional<std::string> keyId) {
-        this->SendKeyChangeNofitication(keyId);
-        if (this->defaultKey) {
-            this->key = std::move(this->defaultKey);
-        }
     }
 
     std::function<void()> SlokedCryptoSocket::OnKeyChange(
@@ -322,7 +342,7 @@ namespace sloked {
                     reinterpret_cast<const uint8_t *>(encodedKeyId.c_str()),
                     keyId->size()));
             auto encrypted =
-                frame.Encrypt(*this->cipher, *this->key, *this->random);
+                frame.Encrypt(*this->cipher, this->key.get(), *this->random);
             this->socket->Write(SlokedSpan(encrypted.data(), encrypted.size()));
             this->Flush();
         }
@@ -331,7 +351,7 @@ namespace sloked {
     void SlokedCryptoSocket::Put(const uint8_t *bytes, std::size_t length) {
         Frame frame(Frame::Type::Data, SlokedSpan(bytes, length));
         auto encrypted =
-            frame.Encrypt(*this->cipher, *this->key, *this->random);
+            frame.Encrypt(*this->cipher, this->key.get(), *this->random);
         this->socket->Write(SlokedSpan(encrypted.data(), encrypted.size()));
     }
 
@@ -341,7 +361,7 @@ namespace sloked {
             this->encryptedBuffer.insert(this->encryptedBuffer.end(),
                                          chunk.begin(), chunk.end());
             auto frame = Frame::Decrypt(this->encryptedBuffer, *this->cipher,
-                                        *this->key);
+                                        this->key.get());
             if (frame.has_value()) {
                 this->InsertFrame(frame.value());
             }
@@ -409,7 +429,7 @@ namespace sloked {
             if (rawSocket) {
                 return std::make_unique<SlokedCryptoSocket>(
                     std::move(rawSocket), this->crypto.NewCipher(),
-                    this->defaultKey->Clone(), this->crypto.NewRandom());
+                    CloneKey(this->defaultKey.get()), this->crypto.NewRandom());
             } else {
                 return nullptr;
             }
@@ -441,7 +461,7 @@ namespace sloked {
         if (rawSocket) {
             return std::make_unique<SlokedCryptoSocket>(
                 std::move(rawSocket), this->crypto.NewCipher(),
-                this->defaultKey->Clone(), this->crypto.NewRandom());
+                CloneKey(this->defaultKey.get()), this->crypto.NewRandom());
         } else {
             return nullptr;
         }
@@ -452,7 +472,8 @@ namespace sloked {
         auto rawSocket = this->socketFactory.Bind(addr);
         if (rawSocket) {
             return std::make_unique<SlokedCryptoServerSocket>(
-                std::move(rawSocket), this->crypto, this->defaultKey->Clone());
+                std::move(rawSocket), this->crypto,
+                CloneKey(this->defaultKey.get()));
         } else {
             return nullptr;
         }

@@ -36,6 +36,7 @@ namespace sloked {
         virtual ~SlokedBaseAuthenticator();
         bool IsLoggedIn() const;
         std::string GetAccount() const;
+        void Logout();
 
      protected:
         std::unique_ptr<SlokedCrypto::Key> DeriveKey(std::size_t,
@@ -50,6 +51,7 @@ namespace sloked {
         SlokedSocketEncryption *encryption;
         std::optional<std::string> account;
         SlokedCredentialStorage::Account::Callback unwatchCredentials;
+        std::unique_ptr<SlokedCrypto::Key> initialKey;
     };
 
     class SlokedMasterAuthenticator : public SlokedBaseAuthenticator {

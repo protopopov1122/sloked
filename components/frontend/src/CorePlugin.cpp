@@ -267,8 +267,11 @@ namespace sloked {
         KgrDictionary mainEditorConfig{
             {"crypto",
              KgrDictionary{
-                 {"masterPassword", "password"},
                  {"salt", "salt"},
+                 {"defaultKey",
+                  KgrDictionary{
+                      {"password", "password"},
+                  }},
                  {"authentication",
                   KgrDictionary{
                       {"master",
@@ -292,11 +295,11 @@ namespace sloked {
                            {"defaultUser",
                             KgrDictionary{
                                 {"restrictAccess",
-                                 KgrDictionary{{"whitelist", false},
+                                 KgrDictionary{{"whitelist", true},
                                                {"content", KgrArray{}}}},
                                 {"restrictModification",
                                  KgrDictionary{
-                                     {"whitelist", false},
+                                     {"whitelist", true},
                                      {"content", KgrArray{}}}}}}}}}}}},
             {"network",
              KgrDictionary{{"buffering", 5},
@@ -348,8 +351,11 @@ namespace sloked {
             secondaryEditorConfig.Put(
                 "crypto",
                 KgrDictionary{
-                    {"masterPassword", "password"},
                     {"salt", "salt"},
+                    {"defaultKey",
+                     KgrDictionary{
+                         {"password", "password"},
+                     }},
                     {"authentication",
                      KgrDictionary{
                          {"slave",
