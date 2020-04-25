@@ -77,7 +77,6 @@ export class BinarySerializer implements Serializer {
             }
             return Buffer.concat([type, length, buf])
         } else {
-            console.log(value)
             throw new Error('Unsupported type')
         }
     }
@@ -142,7 +141,6 @@ export class BinarySerializer implements Serializer {
                 return [object, offset]
             }
         }
-        console.log(buffer)
         throw new Error("Unsupported type")
     }
 }

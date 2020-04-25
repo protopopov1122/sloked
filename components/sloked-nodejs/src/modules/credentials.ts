@@ -1,11 +1,18 @@
 import { Crypto } from '../types/crypto'
 import { CredentialAccount, CredentialStorage } from '../types/credentials'
+import { EventEmitter } from '../modules/eventEmitter'
 
 class DefaultCredentialAccount implements CredentialAccount {
     constructor(crypto: Crypto, id: string, password: string) {
         this._crypto = crypto
         this._id = id
         this._password = password
+        this._eventEmitter = new EventEmitter<void>()
+    }
+
+    close() {
+        this._password = ''
+        this._eventEmitter.emit()
     }
 
     getIdentifier(): string {
@@ -18,15 +25,21 @@ class DefaultCredentialAccount implements CredentialAccount {
 
     setPassword(password: string) {
         this._password = password
+        this._eventEmitter.emit()
     }
 
     deriveKey(salt: string): Promise<Buffer> {
         return this._crypto.deriveKey(this._password, salt)
     }
 
+    watch(callback: () => void): () => void {
+        return this._eventEmitter.subscribe(callback)
+    }
+
     private _crypto: Crypto;
     private _id: string
     private _password: string
+    private _eventEmitter: EventEmitter<void>
 }
 
 export class DefaultCredentialStorage implements CredentialStorage {
@@ -45,6 +58,15 @@ export class DefaultCredentialStorage implements CredentialStorage {
     getAccount(id: string): DefaultCredentialAccount {
         if (this.hasAccount(id)) {
             return this._accounts[id]
+        } else {
+            throw new Error(`No account '${id}'`)
+        }
+    }
+
+    deleteAccount(id: string) {
+        if (this._accounts[id]) {
+            this._accounts[id].close()
+            delete this._accounts[id]
         } else {
             throw new Error(`No account '${id}'`)
         }

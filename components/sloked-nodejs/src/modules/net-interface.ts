@@ -60,9 +60,9 @@ class Awaiting {
         this._callbacks = []
     }
 
-    private _callbacks: AwaitingCallback[] = [];
-    private _queue: AwaitingResult[] = [];
-    private _timeout: number | null = null;
+    private _callbacks: AwaitingCallback[] = []
+    private _queue: AwaitingResult[] = []
+    private _timeout?: number
 }
 
 export default class NetInterface {

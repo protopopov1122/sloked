@@ -21,7 +21,7 @@ class SimplexPipe {
         this._descriptor = descriptor
         this._queue = []
         this._awaiting = []
-        this._callback = null
+        this._callback = undefined
     }
 
     isOpen(): boolean {
@@ -41,7 +41,7 @@ class SimplexPipe {
     close() {
         this._descriptor.close()
         this._awaiting = []
-        this._callback = null
+        this._callback = undefined
     }
 
     push(msg: any) {
@@ -78,10 +78,10 @@ class SimplexPipe {
         return this._queue.length
     }
 
-    private _descriptor: PipeDescriptor;
-    private _queue: any[];
-    private _awaiting: ((result: any) => void)[];
-    private _callback: (() => void) | null;
+    private _descriptor: PipeDescriptor
+    private _queue: any[]
+    private _awaiting: ((result: any) => void)[]
+    private _callback?: () => void
 }
 
 export default class DefaultPipe implements Pipe {

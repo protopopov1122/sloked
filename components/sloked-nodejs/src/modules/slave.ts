@@ -1,16 +1,18 @@
 import NetInterface from '../modules/net-interface'
 import DefaultPipe from '../modules/pipe'
+import { Authenticator } from '../types/authenticator'
 import { Pipe } from '../types/pipe'
 import { Duplex } from 'stream'
 import { Serializer } from '../types/serialize'
 
 export default class SlaveServer {
-    constructor (socket: Duplex, serializer: Serializer) {
+    constructor (socket: Duplex, serializer: Serializer, authenticator?: Authenticator) {
         this._net = new NetInterface(socket, serializer)
         this._net.bindMethod('ping', this._ping.bind(this))
         this._net.bindMethod('send', this._send.bind(this))
         this._net.bindMethod('close', this._close.bind(this))
         this._pipes = {}
+        this._authenticator = authenticator
     }
 
     async connect (service: string) {
@@ -37,7 +39,25 @@ export default class SlaveServer {
         return this.connect.bind(this, service)
     }
 
+    async authorize (account: string) {
+        if (this._authenticator) {
+            const authRequest = await this._net.invoke('auth-request', null)()
+            const nonce: number = authRequest['nonce']
+            const token = await this._authenticator.authenticate(account, nonce)
+            const authResponse: boolean = await this._net.invoke('auth-response', {
+                'id': account,
+                'result': token
+            })()
+            return authResponse
+        } else {
+            throw new Error('Authenticator not defined')
+        }
+    }
+
     close () {
+        if (this._authenticator) {
+            this._authenticator.close()
+        }
         this._net.close()
         for (const pipe of Object.values(this._pipes)) {
             pipe.close()
@@ -70,6 +90,7 @@ export default class SlaveServer {
 
     private _net: NetInterface
     private _pipes: {[id: number]: Pipe}
+    private _authenticator?: Authenticator
 }
 
 module.exports = SlaveServer

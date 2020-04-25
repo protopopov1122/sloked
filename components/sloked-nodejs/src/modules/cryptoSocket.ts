@@ -1,5 +1,6 @@
 import { Transform, TransformOptions, TransformCallback, Duplex, DuplexOptions } from 'stream'
-import { Crypto } from '../types/crypto'
+import { Crypto, StreamEncryption, EncryptedDuplexStream } from '../types/crypto'
+import { EventEmitter } from '../modules/eventEmitter'
 import Crc32 from '../modules/crc32'
 
 enum FrameType {
@@ -37,7 +38,6 @@ class Frame {
             result.writeUInt32LE(signature, 5)
             iv.copy(result, 9)
             encrypted.copy(result, 9 + iv.length)
-            console.log(result)
             return result;
         } else {
             return Buffer.from([this._type, 0, 0, 0, 0])
@@ -92,14 +92,26 @@ export class EncryptionStream extends Transform {
         super(options)
         this._crypto = crypto
         this._key = key
+        this._pending = Buffer.alloc(0)
     }
 
-    _transform(chunk: Buffer, _: string, done: TransformCallback) {
-        if (this._key === null || chunk == null) {
-            done(null, chunk)
-        } else {
-            this._transformBlock(chunk, this._key).then(result => done(null, result), err => done(err, null))
+    async setKey (key: Buffer, id?: string) {
+        if (this._key && id) {
+            const frame: Frame = new Frame(FrameType.KeyChange, id !== null ? Buffer.from(id) : Buffer.alloc(0))
+            const encrypted = await frame.encrypt(this._crypto, this._key)
+            this._pending = Buffer.concat([this._pending, encrypted])
         }
+        this._key = key
+    }
+
+    async _transform(chunk: Buffer, _: string, done: TransformCallback) {
+        let result = Buffer.alloc(0)
+        if (this._key && chunk != null) {
+            result = await this._transformBlock(chunk, this._key)
+        }
+        result = Buffer.concat([this._pending, result])
+        this._pending = Buffer.alloc(0)
+        done(null, result)
     }
 
     private async _transformBlock(chunk: Buffer, key: Buffer) {
@@ -108,51 +120,69 @@ export class EncryptionStream extends Transform {
     }
 
     private _crypto: Crypto
-    private _key: Buffer | null
+    private _key?: Buffer
+    private _pending: Buffer
 }
 
 export class DecryptionStream extends Transform {
-    constructor(crypto: Crypto, key: Buffer, options?: TransformOptions) {
+    constructor(crypto: Crypto, key: Buffer, keyChangeEmitter: EventEmitter<string | null>, options?: TransformOptions) {
         super(options)
         this._crypto = crypto
         this._key = key
         this._encBuffer = Buffer.alloc(0)
+        this._keyChangeEmitter = keyChangeEmitter
+    }
+
+    setKey (key: Buffer) {
+        this._key = key
     }
 
     _transform(chunk: Buffer, _: string, done: TransformCallback) {
-        if (this._key === null || chunk == null) {
+        if (typeof this._key === 'undefined' || chunk == null) {
             done(null, chunk)
         } else {
-            this._transformData(chunk, this._key).then(result => done(null, result), err => done(err, null))
+            this._transformData(chunk, this._key).then(result => {
+                if (result) {
+                    done(null, result)
+                } else {
+                    done(null, Buffer.alloc(0))
+                }
+            }, err => done(err, null))
         }
     }
 
     async _transformData(chunk: Buffer, key: Buffer): Promise<Buffer | null> {
         const result = await Frame.decrypt(this._crypto, key, chunk)
         if (result !== null) {
-            this._encBuffer = this._encBuffer.slice(result[1])
-            if (result[0].getType() == FrameType.Data) {
-                return result[0].getPayload()
-            } else {
-                return null
+            const [frame, length] = result
+            this._encBuffer = this._encBuffer.slice(length)
+            switch (frame.getType()) {
+                case FrameType.Data:
+                    return result[0].getPayload()
+                
+                case FrameType.KeyChange:
+                    await this._keyChangeEmitter.emit(frame.getPayload().length > 0 ? frame.getPayload().toString() : null)
+                    break
             }
-        } else {
-            return null
         }
+        return null
     }
 
     private _crypto: Crypto
-    private _key: Buffer | null
+    private _key?: Buffer
     private _encBuffer: Buffer
+    private _keyChangeEmitter: EventEmitter<string | null>
 }
 
-export class CryptoStream extends Duplex {
+export class CryptoStream extends EncryptedDuplexStream implements StreamEncryption {
     constructor (rawStream: Duplex, crypto: Crypto, key: Buffer, options?: DuplexOptions) {
         super(options)
         this._raw = rawStream
         this._buffer = []
         this._autopush = false
-        this._in = new DecryptionStream(crypto, key)
+        this._keyChangeEmitter = new EventEmitter<string | null>()
+        this._defaultKey = key
+        this._in = new DecryptionStream(crypto, key, this._keyChangeEmitter)
         this._out = new EncryptionStream(crypto, key)
         this._raw.pipe(this._in)
         this._out.pipe(this._raw)
@@ -181,6 +211,30 @@ export class CryptoStream extends Duplex {
         })
     }
 
+    getEncryption(): StreamEncryption {
+        return this
+    }
+
+    setEncryption(key: Buffer, id?: string): void {
+        this._in.setKey(key)
+        this._out.setKey(key, id)
+    }
+
+    restoreDefaultEncryption(id?: string): void {
+        this._in.setKey(this._defaultKey)
+        this._out.setKey(this._defaultKey, id)
+    }
+
+    onKeyChange(listener: ((id?: string) => Promise<void>) | ((id?: string) => void)): () => void {
+        return this._keyChangeEmitter.asyncSubscribe(async val => {
+            if (val) {
+                await listener(val)
+            } else {
+                await listener()
+            }
+        })
+    }
+
     _write(chunk: Buffer, enc: string, callback: any) {
         this._out.write(chunk, enc, callback)
     }
@@ -199,8 +253,10 @@ export class CryptoStream extends Duplex {
     }
 
     private _raw: Duplex
-    private _in: Transform
-    private _out: Transform
+    private _in: DecryptionStream
+    private _out: EncryptionStream
     private _buffer: Buffer[]
     private _autopush: boolean
+    private _defaultKey: Buffer
+    private _keyChangeEmitter: EventEmitter<string | null>
 }
