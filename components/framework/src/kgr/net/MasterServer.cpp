@@ -324,11 +324,10 @@ namespace sloked {
                     const auto &result =
                         params.AsDictionary()["result"].AsString();
                     auto res = this->auth->ContinueLogin(keyId, result);
-                    rsp.Result(res);
                     if (res) {
-                        this->net.Flush();
                         this->auth->FinalizeLogin();
                     }
+                    rsp.Result(res);
                 } else {
                     rsp.Error("KgrMasterServer: Authentication not supported");
                 }

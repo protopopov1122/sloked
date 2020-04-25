@@ -66,15 +66,9 @@ namespace sloked {
                               "current cipher");
         }
         constexpr std::size_t NonceSize = sizeof(Challenge) / sizeof(uint8_t);
-        union {
-            uint8_t bytes[NonceSize];
-            Challenge value;
-        } nonce;
-        nonce.value = ch;
         std::vector<uint8_t> raw;
-        raw.insert(raw.end(), cipher.Parameters().BlockSize, 0);
         for (std::size_t i = 0; i < NonceSize; i++) {
-            raw[i] = nonce.bytes[i];
+            raw.push_back((ch >> (i << 3)) & 0xff);
         }
         SlokedCrypto::Data iv(cipher.Parameters().IVSize, 0);
         auto encrypted = cipher.Encrypt(raw, key, iv);

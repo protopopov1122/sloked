@@ -278,6 +278,7 @@ namespace sloked {
                            {"users",
                             KgrArray{KgrDictionary{
                                 {"id", "user1"},
+                                {"password", "password1"},
                                 {"restrictAccess",
                                  KgrDictionary{
                                      {"whitelist", true},
