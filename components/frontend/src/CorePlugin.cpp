@@ -287,11 +287,13 @@ namespace sloked {
                                      {"whitelist", true},
                                      {"content",
                                       KgrArray{"/document", "/namespace",
-                                               "/screen", "/editor"}}}},
+                                               "/screen", "/editor",
+                                               "/plugins"}}}},
                                 {"restrictModification",
                                  KgrDictionary{
                                      {"whitelist", true},
-                                     {"content", KgrArray{"/screen"}}}}}}},
+                                     {"content",
+                                      KgrArray{"/screen", "/plugins"}}}}}}},
                            {"defaultUser",
                             KgrDictionary{
                                 {"restrictAccess",
@@ -311,13 +313,15 @@ namespace sloked {
                       {"host", "localhost"},
                       {"port", mainConfig.Find("/network/port").AsInt()}}},
                  {"restrictAccess",
-                  KgrDictionary{{"whitelist", true},
-                                {"content", KgrArray{"/document", "/namespace",
-                                                     "/screen", "/editor"}}}},
+                  KgrDictionary{
+                      {"whitelist", true},
+                      {"content", KgrArray{"/document", "/namespace", "/screen",
+                                           "/editor", "/plugins"}}}},
                  {"restrictModification",
-                  KgrDictionary{{"whitelist", true},
-                                {"content", KgrArray{"/document", "/namespace",
-                                                     "/screen", "/editor"}}}},
+                  KgrDictionary{
+                      {"whitelist", true},
+                      {"content", KgrArray{"/document", "/namespace", "/screen",
+                                           "/editor", "/plugins"}}}},
                  {"services",
                   KgrDictionary{
                       {"root", "file:///"},

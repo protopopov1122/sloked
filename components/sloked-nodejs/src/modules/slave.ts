@@ -1,9 +1,11 @@
-import NetInterface from '../modules/net-interface'
-import DefaultPipe from '../modules/pipe'
+import { NetInterface } from '../modules/net-interface'
+import { DefaultPipe } from '../modules/pipe'
 import { Authenticator } from '../types/authenticator'
 import { Pipe } from '../types/pipe'
 import { Duplex } from 'stream'
 import { Serializer } from '../types/serialize'
+import { AuthServer, Service } from '../types/server'
+import { LocalServer } from '../modules/localServer'
 
 interface AuthRequestRsp {
     nonce: number
@@ -14,13 +16,15 @@ interface SendParams {
     data: any
 }
 
-export default class SlaveServer {
+export class SlaveServer implements AuthServer<string> {
     constructor(socket: Duplex, serializer: Serializer, authenticator?: Authenticator) {
         this._net = new NetInterface(socket, serializer)
         this._pipes = {}
+        this._localServer = new LocalServer()
         this._authenticator = authenticator
         this._net.bindMethod('ping', this._ping.bind(this))
         this._net.bindMethod('send', this._send.bind(this))
+        this._net.bindMethod('connect', this._connect.bind(this))
         this._net.bindMethod('close', this._close.bind(this))
     }
 
@@ -40,12 +44,45 @@ export default class SlaveServer {
             }
         })
         this._pipes[pipeId] = pipe1
-        this._net.invoke('activate', pipeId)
+        while (!pipe1.empty()) {
+            this._net.invoke('send', {
+                'pipe': pipeId,
+                'data': await pipe1.read()
+            })
+        }
+        if (!pipe1.isOpen()) {
+            this._net.invoke('close', pipeId)
+            delete this._pipes[pipeId]
+        } else {
+            this._net.invoke('activate', pipeId)
+        }
         return pipe2
     }
 
     connector(service: string): () => Promise<Pipe> {
         return this.connect.bind(this, service)
+    }
+
+    async register(serviceName: string, service: Service): Promise<void> {
+        await this._localServer.register(serviceName, service)
+        const success: boolean = await this._net.invoke('bind', serviceName).next().value
+        if (!success) {
+            await this._localServer.deregister(serviceName)
+            throw new Error(`Failing binding service ${serviceName}`)
+        }
+    }
+
+    async registered(service: string): Promise<boolean> {
+        const boundRsp: boolean = await this._net.invoke('bound', service).next().value
+        return boundRsp
+    }
+
+    async deregister(serviceName: string): Promise<void> {
+        await this._localServer.deregister(serviceName)
+        const success: boolean = await this._net.invoke('unbind', serviceName).next().value
+        if (!success) {
+            throw new Error(`Error while detaching ${serviceName}`)
+        }
     }
 
     async authorize(account: string): Promise<boolean> {
@@ -97,6 +134,40 @@ export default class SlaveServer {
         }
     }
 
+    async _connect(params: any): Promise<number | boolean> {
+        try {
+            const service: string = params['service']
+            const pipeId: number = params['pipe']
+            const pipe = await this._localServer.connect(service)
+            pipe.listen(async () => {
+                while (!pipe.empty()) {
+                    this._net.invoke('send', {
+                        'pipe': pipeId,
+                        'data': await pipe.read()
+                    })
+                }
+                if (!pipe.isOpen()) {
+                    this._net.invoke('close', pipeId)
+                    delete this._pipes[pipeId]
+                }
+            })
+            this._pipes[pipeId] = pipe
+            while (!pipe.empty()) {
+                this._net.invoke('send', {
+                    'pipe': pipeId,
+                    'data': await pipe.read()
+                })
+            }
+            if (!pipe.isOpen()) {
+                this._net.invoke('close', pipeId)
+                delete this._pipes[pipeId]
+            }
+            return pipeId
+        } catch (err) {
+            return false
+        }
+    }
+
     async _close(params: number) {
         const id: number = params
         if (this._pipes[id]) {
@@ -107,7 +178,6 @@ export default class SlaveServer {
 
     private _net: NetInterface
     private _pipes: { [id: number]: Pipe }
+    private _localServer: LocalServer
     private _authenticator?: Authenticator
 }
-
-module.exports = SlaveServer

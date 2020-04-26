@@ -84,7 +84,7 @@ class SimplexPipe {
     private _callback?: () => void
 }
 
-export default class DefaultPipe implements Pipe {
+export class DefaultPipe implements Pipe {
     constructor(input: SimplexPipe, output: SimplexPipe) {
         this._in = input
         this._out = output
@@ -102,7 +102,7 @@ export default class DefaultPipe implements Pipe {
         return this.available() === 0
     }
 
-    read(): any {
+    read(): Promise<any> {
         return this._in.pop()
     }
 

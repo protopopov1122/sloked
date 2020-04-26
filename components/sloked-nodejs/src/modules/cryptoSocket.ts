@@ -1,7 +1,7 @@
 import { Transform, TransformOptions, TransformCallback, Duplex, DuplexOptions } from 'stream'
 import { Crypto, StreamEncryption, EncryptedDuplexStream } from '../types/crypto'
 import { EventEmitter } from '../modules/eventEmitter'
-import Crc32 from '../modules/crc32'
+import { Crc32 } from './checksum'
 
 enum FrameType {
     Data = 0,

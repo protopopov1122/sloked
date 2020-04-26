@@ -1,10 +1,19 @@
-import SlaveServer from './modules/slave'
+import { SlaveServer } from './modules/slave'
 import { BinarySerializer } from './modules/serialize'
 import * as net from 'net'
 import { CryptoStream } from './modules/cryptoSocket'
 import { DefaultCrypto } from './modules/crypto'
 import { SlaveAuthenticator } from './modules/authenticator'
 import { DefaultCredentialStorage } from './modules/credentials'
+import { Service } from './types/server'
+import { Pipe } from './types/pipe'
+
+class EchoService implements Service {
+    async attach(pipe: Pipe): Promise<boolean> {
+        pipe.read().then(val => pipe.write({ 'echo': val }))
+        return true
+    }
+}
 
 const socket = new net.Socket()
 socket.connect(1234, '::1', async () => {
@@ -16,6 +25,12 @@ socket.connect(1234, '::1', async () => {
     const authenticator = new SlaveAuthenticator(crypto, credentials, 'salt', stream.getEncryption())
     const slave = new SlaveServer(stream, new BinarySerializer(), authenticator)
     await slave.authorize('user1')
+
+    await slave.register('/plugins/echo', new EchoService())
+    const echo = await slave.connect('/plugins/echo')
+    echo.write('Hello, world!')
+    console.log(await echo.read())
+
     const root = await slave.connect('/namespace/root')
     root.write({
         id: 1000,

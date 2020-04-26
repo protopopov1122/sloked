@@ -71,7 +71,7 @@ class Awaiting {
     private _timeout?: number
 }
 
-export default class NetInterface {
+export class NetInterface {
     static DefaultConfig = {
         ResponseTimeout: 400
     }
