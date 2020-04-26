@@ -13,6 +13,6 @@ export interface Server<T> {
 }
 
 export interface AuthServer<T> extends Server<T> {
-    authorize(account: string): Promise<boolean>
+    authorize(account: string): Promise<void>
     logout(): Promise<void>
 }

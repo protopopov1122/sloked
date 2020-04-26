@@ -1,4 +1,4 @@
-import { SlaveServer } from './modules/slave'
+import { NetSlaveServer } from './modules/netServer'
 import { BinarySerializer } from './modules/serialize'
 import * as net from 'net'
 import { CryptoStream } from './modules/cryptoSocket'
@@ -23,7 +23,7 @@ socket.connect(1234, '::1', async () => {
     const credentials = new DefaultCredentialStorage(crypto)
     credentials.newAccount('user1', 'password1')
     const authenticator = new SlaveAuthenticator(crypto, credentials, 'salt', stream.getEncryption())
-    const slave = new SlaveServer(stream, new BinarySerializer(), authenticator)
+    const slave = new NetSlaveServer(stream, new BinarySerializer(), authenticator)
     await slave.authorize('user1')
 
     await slave.register('/plugins/echo', new EchoService())

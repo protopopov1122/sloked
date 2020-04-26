@@ -1,11 +1,11 @@
-import { NetInterface } from '../modules/net-interface'
-import { DefaultPipe } from '../modules/pipe'
+import { NetInterface } from './net-interface'
+import { DefaultPipe } from './pipe'
 import { Authenticator } from '../types/authenticator'
 import { Pipe } from '../types/pipe'
 import { Duplex } from 'stream'
 import { Serializer } from '../types/serialize'
 import { AuthServer, Service } from '../types/server'
-import { LocalServer } from '../modules/localServer'
+import { LocalServer } from './localServer'
 
 interface AuthRequestRsp {
     nonce: number
@@ -16,7 +16,7 @@ interface SendParams {
     data: any
 }
 
-export class SlaveServer implements AuthServer<string> {
+export class NetSlaveServer implements AuthServer<string> {
     constructor(socket: Duplex, serializer: Serializer, authenticator?: Authenticator) {
         this._net = new NetInterface(socket, serializer)
         this._pipes = {}
@@ -85,7 +85,7 @@ export class SlaveServer implements AuthServer<string> {
         }
     }
 
-    async authorize(account: string): Promise<boolean> {
+    async authorize(account: string): Promise<void> {
         if (this._authenticator) {
             const authRequest: AuthRequestRsp = await this._net.invoke('auth-request', null).next().value
             const nonce: number = authRequest.nonce
@@ -94,7 +94,9 @@ export class SlaveServer implements AuthServer<string> {
                 'id': account,
                 'result': token
             }).next().value
-            return authResponse
+            if (!authResponse) {
+                throw new Error(`Authentication as ${account} failed`)
+            }
         } else {
             throw new Error('Authenticator not defined')
         }
