@@ -32,6 +32,8 @@ namespace sloked {
         SlokedBufferedSocket(std::unique_ptr<SlokedSocket>,
                              std::chrono::system_clock::duration,
                              SlokedScheduler &);
+        ~SlokedBufferedSocket();
+
         bool Valid() final;
         void Close() final;
         std::size_t Available() final;

@@ -29,8 +29,12 @@ namespace sloked {
         : socket(std::move(socket)), timeout(std::move(timeout)),
           sched(sched), task{nullptr} {
         if (this->socket == nullptr) {
-            throw SlokedError("ERROR");
+            throw SlokedError("BufferedSocket: Expected valid socket");
         }
+    }
+
+    SlokedBufferedSocket::~SlokedBufferedSocket() {
+        this->Close();
     }
 
     bool SlokedBufferedSocket::Valid() {
@@ -88,11 +92,11 @@ namespace sloked {
 
     void SlokedBufferedSocket::Flush() {
         std::unique_lock lock(this->mtx);
-        // if (!this->buffer.empty()) {
-        this->socket->Write(
-            SlokedSpan(this->buffer.data(), this->buffer.size()));
-        this->buffer.clear();
-        // }
+        if (!this->buffer.empty()) {
+            this->socket->Write(
+                SlokedSpan(this->buffer.data(), this->buffer.size()));
+            this->buffer.clear();
+        }
         if (this->task != nullptr && this->task->Pending()) {
             this->task->Cancel();
         }

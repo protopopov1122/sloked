@@ -192,7 +192,13 @@ namespace sloked {
                             SlokedTaskPipelineStages::ScanErrors(
                                 [](const std::shared_ptr<State> &state,
                                    const std::exception_ptr &err) {
-                                    state->responder.Result(false);
+                                    try {
+                                        std::rethrow_exception(err);
+                                    } catch (const SlokedError &err) {
+                                        state->responder.Error(err.what());
+                                    } catch (...) {
+                                        state->responder.Result(false);
+                                    }
                                 }),
                             SlokedTaskPipelineStages::ScanCancelled(
                                 [](const std::shared_ptr<State> &state,
