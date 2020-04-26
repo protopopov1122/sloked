@@ -27,7 +27,7 @@ class Frame {
         return this._payload
     }
 
-    async encrypt(crypto: Crypto, key?: Buffer) {
+    async encrypt(crypto: Crypto, key?: Buffer): Promise<Buffer> {
         if (this._payload.length > 0) {
             const iv = crypto.RandomBytes(crypto.IVSize())
             const encrypted = key
@@ -99,7 +99,7 @@ export class EncryptionStream extends Transform {
         this._pending = Buffer.alloc(0)
     }
 
-    async setKey (key?: Buffer, id?: string) {
+    async setKey (key?: Buffer, id?: string): Promise<void> {
         if (id) {
             const frame: Frame = new Frame(FrameType.KeyChange, id !== null ? Buffer.from(id) : Buffer.alloc(0))
             const encrypted = await frame.encrypt(this._crypto, this._key)
@@ -108,7 +108,7 @@ export class EncryptionStream extends Transform {
         this._key = key
     }
 
-    async _transform(chunk: Buffer, _: string, done: TransformCallback) {
+    async _transform(chunk: Buffer, _: string, done: TransformCallback): Promise<void> {
         let result = Buffer.alloc(0)
         if (chunk != null) {
             result = await this._transformBlock(chunk, this._key)
@@ -118,7 +118,7 @@ export class EncryptionStream extends Transform {
         done(null, result)
     }
 
-    private async _transformBlock(chunk: Buffer, key?: Buffer) {
+    private async _transformBlock(chunk: Buffer, key?: Buffer): Promise<Buffer> {
         const frame: Frame = new Frame(FrameType.Data, chunk)
         return frame.encrypt(this._crypto, key)
     }
@@ -137,11 +137,11 @@ export class DecryptionStream extends Transform {
         this._keyChangeEmitter = keyChangeEmitter
     }
 
-    setKey (key?: Buffer) {
+    setKey (key?: Buffer): void {
         this._key = key
     }
 
-    _transform(chunk: Buffer, _: string, done: TransformCallback) {
+    _transform(chunk: Buffer, _: string, done: TransformCallback): void {
         if (chunk == null) {
             done(null, chunk)
         } else {
@@ -238,17 +238,17 @@ export class CryptoStream extends EncryptedDuplexStream implements StreamEncrypt
         })
     }
 
-    _write(chunk: Buffer, enc: string, callback: any) {
+    _write(chunk: Buffer, enc: string, callback: any): void {
         this._out.write(chunk, enc, callback)
     }
 
-    async _read(_?: number) {
+    async _read(_?: number): Promise<void> {
         this._autopush = true
         this.pushBuffer()
     }
 
-    private pushBuffer() {
-        let pushed = 0
+    private pushBuffer(): void {
+        let pushed: number = 0
         while (pushed < this._buffer.length && this._autopush) {
             this._autopush = this.push(this._buffer[pushed++])
         }

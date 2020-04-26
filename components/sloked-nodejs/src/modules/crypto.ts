@@ -20,12 +20,12 @@ export class DefaultCrypto implements Crypto {
     }
 
     encrypt(data: Buffer, key: Buffer, iv: Buffer): Promise<Buffer> {
-        const Algorithm = 'aes-256-cbc'
+        const Algorithm: string = 'aes-256-cbc'
         return new Promise<Buffer>((resolve, reject) => {
-            const cipher = crypto.createCipheriv(Algorithm, key, iv)
-            let encrypted = Buffer.alloc(0)
+            const cipher: crypto.Cipher = crypto.createCipheriv(Algorithm, key, iv)
+            let encrypted: Buffer = Buffer.alloc(0)
             cipher.on('readable', () => {
-                let chunk;
+                let chunk: Buffer | null;
                 while (null !== (chunk = cipher.read())) {
                     encrypted = Buffer.concat([encrypted, chunk])
                 }
@@ -40,12 +40,12 @@ export class DefaultCrypto implements Crypto {
     }
 
     decrypt(data: Buffer, key: Buffer, iv: Buffer): Promise<Buffer> {
-        const Algorithm = 'aes-256-cbc'
+        const Algorithm: string = 'aes-256-cbc'
         return new Promise<Buffer>((resolve, reject) => {
-            const cipher = crypto.createDecipheriv(Algorithm, key, iv)
-            let encrypted = Buffer.alloc(0)
+            const cipher: crypto.Decipher = crypto.createDecipheriv(Algorithm, key, iv)
+            let encrypted: Buffer = Buffer.alloc(0)
             cipher.on('readable', () => {
-                let chunk;
+                let chunk: Buffer | null;
                 while (null !== (chunk = cipher.read())) {
                     encrypted = Buffer.concat([encrypted, chunk])
                 }

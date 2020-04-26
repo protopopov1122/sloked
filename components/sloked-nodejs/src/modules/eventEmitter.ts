@@ -19,7 +19,7 @@ export class EventEmitter<T> {
         }
     }
 
-    async emit(event: T) {
+    async emit(event: T): Promise<void> {
         Object.values(this._subscribers).forEach(listener => listener(event))
         for (let subs of Object.values(this._asyncSubscribers)) {
             await subs(event)

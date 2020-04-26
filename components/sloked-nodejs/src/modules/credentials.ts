@@ -23,7 +23,7 @@ class DefaultCredentialAccount implements CredentialAccount {
         return this._password
     }
 
-    setPassword(password: string) {
+    setPassword(password: string): void {
         this._password = password
         this._eventEmitter.emit()
     }
@@ -47,7 +47,7 @@ export class DefaultCredentialStorage implements CredentialStorage {
         this._crypto = crypto
     }
 
-    newAccount(id: string, password: string) {
+    newAccount(id: string, password: string): void {
         this._accounts[id] = new DefaultCredentialAccount(this._crypto, id, password)
     }
 
@@ -63,7 +63,7 @@ export class DefaultCredentialStorage implements CredentialStorage {
         }
     }
 
-    deleteAccount(id: string) {
+    deleteAccount(id: string): void {
         if (this._accounts[id]) {
             this._accounts[id].close()
             delete this._accounts[id]

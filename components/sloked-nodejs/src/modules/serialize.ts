@@ -5,7 +5,7 @@ export class JsonSerializer implements Serializer {
         return Buffer.from(JSON.stringify(msg))
     }
 
-    deserialize(buffer: Buffer) {
+    deserialize(buffer: Buffer): any {
         return JSON.parse(buffer.toString())
     }
 }

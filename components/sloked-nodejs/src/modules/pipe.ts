@@ -9,7 +9,7 @@ class PipeDescriptor {
         return this._open
     }
 
-    close() {
+    close(): void {
         this._open = false
     }
 
@@ -28,28 +28,28 @@ class SimplexPipe {
         return this._descriptor.isOpen()
     }
 
-    listen(callback: () => void) {
+    listen(callback: () => void): void {
         this._callback = callback
     }
 
-    notify() {
+    notify(): void {
         if (this._callback) {
             this._callback()
         }
     }
 
-    close() {
+    close(): void {
         this._descriptor.close()
         this._awaiting = []
         this._callback = undefined
     }
 
-    push(msg: any) {
+    push(msg: any): void {
         if (!this._descriptor.isOpen()) {
             throw new Error('Attempt to push inside closed pipe')
         }
         if (this._awaiting.length > 0) {
-            const callback = this._awaiting[0]
+            const callback: (msg: any) => void = this._awaiting[0]
             this._awaiting.splice(0, 1)
             callback(msg)
         } else {
@@ -61,7 +61,7 @@ class SimplexPipe {
     pop(): Promise<any> {
         return new Promise((resolve, reject) => {
             if (this._queue.length > 0) {
-                const msg = this._queue[0]
+                const msg: any = this._queue[0]
                 this._queue.splice(0, 1)
                 resolve(msg)
             } else {
@@ -106,15 +106,15 @@ export default class DefaultPipe implements Pipe {
         return this._in.pop()
     }
 
-    write(msg: any) {
+    write(msg: any): void {
         this._out.push(msg)
     }
 
-    listen(callback: () => void) {
+    listen(callback: () => void): void {
         this._in.listen(callback)
     }
 
-    close() {
+    close(): void {
         this._in.close()
         this._out.notify()
     }

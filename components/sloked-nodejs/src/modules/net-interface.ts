@@ -11,12 +11,18 @@ type AwaitingCallback = {
     reject: (error: any) => void
 }
 
+interface InvokeParams {
+    id: number,
+    method: string,
+    params: any
+}
+
 class Awaiting {
-    next() {
+    next(): Promise<any> {
         return new Promise<any>((resolve, reject) => {
             if (this._queue.length > 0) {
-                const value = this._queue[0];
-                this._queue.slice(0, 1)
+                const value: AwaitingResult = this._queue[0];
+                this._queue.splice(0, 1)
                 if (typeof value.result !== 'undefined') {
                     resolve(value.result)
                 } else {
@@ -31,9 +37,9 @@ class Awaiting {
         })
     }
 
-    push(value: AwaitingResult) {
+    push(value: AwaitingResult): void {
         if (this._callbacks.length > 0) {
-            const callback = this._callbacks[0]
+            const callback: AwaitingCallback = this._callbacks[0]
             this._callbacks.splice(0, 1)
             if (typeof value.result !== 'undefined') {
                 callback.resolve(value.result)
@@ -45,14 +51,14 @@ class Awaiting {
         }
     }
 
-    notify(fn: () => void, timeout: number) {
+    notify(fn: () => void, timeout: number): void {
         if (this._timeout !== null) {
             clearTimeout(this._timeout)
         }
         setTimeout(fn, timeout)
     }
 
-    reset() {
+    reset(): void {
         if (this._timeout !== null) {
             clearTimeout(this._timeout)
         }
@@ -87,12 +93,12 @@ export default class NetInterface {
         this._socket.on('end', this._receiveEnd.bind(this))
     }
 
-    bindMethod(method: string, callback: (params: any) => Promise<any>) {
+    bindMethod(method: string, callback: (params: any) => Promise<any>): void {
         this._methods[method] = callback
     }
 
-    invoke(method: string, params: any) {
-        const id = this._nextId++
+    invoke(method: string, params: any): Generator<Promise<any>> {
+        const id: number = this._nextId++
         this._awaiting[id] = new Awaiting()
         const cleanup = () => {
             if (this._awaiting[id]) {
@@ -106,16 +112,17 @@ export default class NetInterface {
             id,
             params
         })
-        return async () => {
-            if (this._awaiting[id]) {
-                return this._awaiting[id].next()
-            } else {
-                throw new Error('Not invoked')
+        const self: NetInterface = this
+        function *nextAwaitable(): Generator<Promise<any>> {
+            while (self._awaiting[id]) {
+                yield self._awaiting[id].next()
             }
+            throw new Error('Not invoked')
         }
+        return nextAwaitable()
     }
 
-    close() {
+    close(): void {
         this._write({
             "action": "close"
         })
@@ -126,38 +133,37 @@ export default class NetInterface {
         this._methods = {}
     }
 
-    _receiveData() {
-        let data = this._socket.read()
-        if (data === null) {
-            return // End of stream reached
+    _receiveData(): void {
+        let data: Buffer | string | null = this._socket.read()
+        if (data !== null) {
+            if (typeof data === 'string') {
+                data = Buffer.from(data, 'utf8')
+            }
+            this._buffer = Buffer.concat([this._buffer, data])
+            this._processBuffer()
         }
-        if (typeof data === 'string') {
-            data = Buffer.from(data, 'utf8')
-        }
-        this._buffer = Buffer.concat([this._buffer, data])
-        this._processBuffer()
     }
 
-    _receiveEnd() {
+    _receiveEnd(): void {
         console.log('END')
     }
 
-    _processBuffer() {
-        const queue = []
+    _processBuffer(): void {
+        const queue: any[] = []
         while (this._buffer.length >= 4) {
             const length = this._buffer.readInt32LE(0)
             if (this._buffer.length < length + 4) {
                 break
             }
-            const msg = this._buffer.slice(4, length + 4);
-            const content = this._serializer.deserialize(msg)
+            const msg: Buffer = this._buffer.slice(4, length + 4);
+            const content: any = this._serializer.deserialize(msg)
             queue.push(content)
             this._buffer = this._buffer.slice(length + 4)
         }
         this._processQueue(queue)
     }
 
-    _processQueue(queue: any[]) {
+    _processQueue(queue: any[]): void {
         for (const message of queue) {
             console.log('IN:', message)
             const action = message.action
@@ -167,10 +173,10 @@ export default class NetInterface {
         }
     }
 
-    _actionInvoke(msg: any) {
-        const id = msg['id']
-        const method = msg['method']
-        const params = msg['params']
+    _actionInvoke(msg: InvokeParams): void {
+        const id: number = msg['id']
+        const method: string = msg['method']
+        const params: any = msg['params']
         if (this._methods[method]) {
             this._handleInvokeResult(id, this._methods[method](params))
         } else {
@@ -178,11 +184,11 @@ export default class NetInterface {
         }
     }
 
-    async _defaultMethod(method: string, _: any) {
+    async _defaultMethod(method: string, _: any): Promise<void> {
         throw `Unknown method '${method}'`
     }
 
-    _handleInvokeResult(id: number, deferred: Promise<any>) {
+    _handleInvokeResult(id: number, deferred: Promise<any>): void {
         deferred.then(result => {
             this._write({
                 'action': 'response',
@@ -198,8 +204,8 @@ export default class NetInterface {
         })
     }
 
-    _actionResponse(msg: any) {
-        const id = msg['id']
+    _actionResponse(msg: any): void {
+        const id: number = msg['id']
         const cleanup = () => {
             if (this._awaiting[id]) {
                 delete this._awaiting[id]
@@ -211,7 +217,7 @@ export default class NetInterface {
         }
     }
 
-    _actionClose() {
+    _actionClose(): void {
         this._socket.destroy()
         Object.values(this._awaiting).forEach(el => el.reset());
         this._awaiting = []
@@ -219,10 +225,10 @@ export default class NetInterface {
         this._methods = {}
     }
 
-    _write(msg: any) {
+    _write(msg: any): void {
         console.log('OUT', msg)
-        const content = this._serializer.serialize(msg)
-        const length = Buffer.alloc(4)
+        const content: Buffer = this._serializer.serialize(msg)
+        const length: Buffer = Buffer.alloc(4)
         length.writeInt32LE(content.length)
         this._socket.write(Buffer.concat([length, content]))
     }

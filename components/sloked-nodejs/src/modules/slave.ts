@@ -5,19 +5,28 @@ import { Pipe } from '../types/pipe'
 import { Duplex } from 'stream'
 import { Serializer } from '../types/serialize'
 
+interface AuthRequestRsp {
+    nonce: number
+}
+
+interface SendParams {
+    pipe: number,
+    data: any
+}
+
 export default class SlaveServer {
-    constructor (socket: Duplex, serializer: Serializer, authenticator?: Authenticator) {
+    constructor(socket: Duplex, serializer: Serializer, authenticator?: Authenticator) {
         this._net = new NetInterface(socket, serializer)
+        this._pipes = {}
+        this._authenticator = authenticator
         this._net.bindMethod('ping', this._ping.bind(this))
         this._net.bindMethod('send', this._send.bind(this))
         this._net.bindMethod('close', this._close.bind(this))
-        this._pipes = {}
-        this._authenticator = authenticator
     }
 
-    async connect (service: string) {
-        const pipeId = await this._net.invoke('connect', service)()
-        const [pipe1, pipe2] = DefaultPipe.make()
+    async connect(service: string): Promise<Pipe> {
+        const pipeId: number = await this._net.invoke('connect', service).next().value
+        const [pipe1, pipe2]: [Pipe, Pipe] = DefaultPipe.make()
         pipe1.listen(async () => {
             while (!pipe1.empty()) {
                 this._net.invoke('send', {
@@ -35,19 +44,19 @@ export default class SlaveServer {
         return pipe2
     }
 
-    connector (service: string) {
+    connector(service: string): () => Promise<Pipe> {
         return this.connect.bind(this, service)
     }
 
-    async authorize (account: string): Promise<boolean> {
+    async authorize(account: string): Promise<boolean> {
         if (this._authenticator) {
-            const authRequest = await this._net.invoke('auth-request', null)()
-            const nonce: number = authRequest['nonce']
-            const token = await this._authenticator.authenticate(account, nonce)
+            const authRequest: AuthRequestRsp = await this._net.invoke('auth-request', null).next().value
+            const nonce: number = authRequest.nonce
+            const token: string = await this._authenticator.authenticate(account, nonce)
             const authResponse: boolean = await this._net.invoke('auth-response', {
                 'id': account,
                 'result': token
-            })()
+            }).next().value
             return authResponse
         } else {
             throw new Error('Authenticator not defined')
@@ -56,13 +65,13 @@ export default class SlaveServer {
 
     async logout(): Promise<void> {
         if (this._authenticator) {
-            await this._net.invoke('auth-logout', null)()
+            await this._net.invoke('auth-logout', null).next().value
         } else {
             throw new Error('Authenticator not defined')
         }
     }
 
-    close () {
+    close(): void {
         if (this._authenticator) {
             this._authenticator.close()
         }
@@ -73,13 +82,13 @@ export default class SlaveServer {
         this._pipes = {}
     }
 
-    async _ping () {
+    async _ping(): Promise<string> {
         return 'pong'
     }
 
-    async _send (params: any) {
-        const id = params.pipe
-        const data = params.data
+    async _send(params: SendParams): Promise<boolean> {
+        const id: number = params.pipe
+        const data: any = params.data
         if (this._pipes[id]) {
             this._pipes[id].write(data)
             return true
@@ -88,8 +97,8 @@ export default class SlaveServer {
         }
     }
 
-    async _close (params: any) {
-        const id = params
+    async _close(params: number) {
+        const id: number = params
         if (this._pipes[id]) {
             this._pipes[id].close()
             delete this._pipes[id]
@@ -97,7 +106,7 @@ export default class SlaveServer {
     }
 
     private _net: NetInterface
-    private _pipes: {[id: number]: Pipe}
+    private _pipes: { [id: number]: Pipe }
     private _authenticator?: Authenticator
 }
 
