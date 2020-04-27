@@ -24,6 +24,7 @@
 #include <cassert>
 
 #include "sloked/core/Error.h"
+#include "sloked/core/VLQ.h"
 
 namespace sloked {
 
@@ -164,50 +165,49 @@ namespace sloked {
 
     void SlokedCompressedSocket::Put(const uint8_t *bytes, std::size_t length) {
         auto compressed = this->compressor->Compress(SlokedSpan(bytes, length));
-        std::vector<uint8_t> header{ByteAt(length, 0),
-                                    ByteAt(length, 1),
-                                    ByteAt(length, 2),
-                                    ByteAt(length, 3),
-                                    ByteAt(compressed.size(), 0),
-                                    ByteAt(compressed.size(), 1),
-                                    ByteAt(compressed.size(), 2),
-                                    ByteAt(compressed.size(), 3)};
+        std::vector<uint8_t> header;
+        SlokedVLQ::Encode(length, std::back_inserter(header));
+        SlokedVLQ::Encode(compressed.size(), std::back_inserter(header));
         compressed.insert(compressed.begin(), header.begin(), header.end());
         this->socket->Write(SlokedSpan(compressed.data(), compressed.size()));
     }
 
     void SlokedCompressedSocket::Fetch(std::size_t sz) {
-        const std::size_t CompressedHeaderSize = 8;
         do {
             auto chunk = this->socket->Read(this->socket->Available());
             this->compressedBuffer.insert(this->compressedBuffer.end(),
                                           chunk.begin(), chunk.end());
-            if (this->compressedBuffer.size() < CompressedHeaderSize) {
-                continue;
-            }
 
-            std::size_t length = this->compressedBuffer.at(0) +
-                                 (this->compressedBuffer.at(1) << 8) +
-                                 (this->compressedBuffer.at(2) << 16) +
-                                 (this->compressedBuffer.at(3) << 24);
-            std::size_t compressedLength =
-                this->compressedBuffer.at(4) +
-                (this->compressedBuffer.at(5) << 8) +
-                (this->compressedBuffer.at(6) << 16) +
-                (this->compressedBuffer.at(7) << 24);
-            if (this->compressedBuffer.size() <
-                compressedLength + CompressedHeaderSize) {
+            auto lengthDecomp =
+                SlokedVLQ::Decode<std::size_t,
+                                  decltype(this->compressedBuffer.begin())>(
+                    this->compressedBuffer.begin(),
+                    this->compressedBuffer.end());
+            if (!lengthDecomp.has_value()) {
                 continue;
             }
+            std::size_t length = lengthDecomp->first;
+            auto compressedLengthDecomp =
+                SlokedVLQ::Decode<std::size_t, decltype(lengthDecomp->second)>(
+                    lengthDecomp->second, this->compressedBuffer.end());
+            if (!compressedLengthDecomp.has_value() ||
+                this->compressedBuffer.size() <
+                    compressedLengthDecomp->first +
+                        std::distance(this->compressedBuffer.begin(),
+                                      compressedLengthDecomp->second)) {
+                continue;
+            }
+            std::size_t compressedLength = compressedLengthDecomp->first;
+            const std::size_t headerSize = std::distance(
+                this->compressedBuffer.begin(), compressedLengthDecomp->second);
 
             auto raw = this->compressor->Decompress(
-                SlokedSpan(this->compressedBuffer.data() + CompressedHeaderSize,
+                SlokedSpan(this->compressedBuffer.data() + headerSize,
                            compressedLength),
                 length);
-            this->compressedBuffer.erase(this->compressedBuffer.begin(),
-                                         this->compressedBuffer.begin() +
-                                             CompressedHeaderSize +
-                                             compressedLength);
+            this->compressedBuffer.erase(
+                this->compressedBuffer.begin(),
+                this->compressedBuffer.begin() + headerSize + compressedLength);
             this->buffer.insert(this->buffer.end(), raw.begin(),
                                 raw.begin() + length);
         } while (this->buffer.size() < sz || this->socket->Available() > 0);

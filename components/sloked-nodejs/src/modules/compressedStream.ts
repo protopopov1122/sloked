@@ -1,5 +1,6 @@
 import { Transform, TransformOptions, TransformCallback, Duplex, DuplexOptions } from 'stream'
 import * as zlib from 'zlib'
+import * as VLQ from '../modules/vlq'
 
 function Deflate(chunk: Buffer): Promise<Buffer> {
     return new Promise<Buffer>((resolve, reject) => {
@@ -35,31 +36,35 @@ class Frame {
     }
 
     async encode(): Promise<Buffer> {
-        const HeaderLength: number = 8
-        const deflated = await Deflate(this._payload)
-        const encoded: Buffer = Buffer.alloc(HeaderLength + deflated.length)
-        encoded.writeUInt32LE(this._payload.length, 0)
-        encoded.writeUInt32LE(deflated.length, 4)
-        deflated.copy(encoded, 8)
-        return encoded
+        const deflated: Buffer = await Deflate(this._payload)
+        const lengthBuf: Buffer = VLQ.Encode(this._payload.length)
+        const deflatedLengthBuf: Buffer = VLQ.Encode(deflated.length)
+        return Buffer.concat([lengthBuf, deflatedLengthBuf, deflated])
     }
 
     static async decode(input: Buffer): Promise<[Frame | null, number]> {
-        const HeaderLength: number = 8
-        if (input.length < HeaderLength) {
+        const initialLength: number = input.length
+        const lengthDecoded = VLQ.Decode(input)
+        if (lengthDecoded === null) {
             return [null, 0]
         }
-        const length: number = input.readUInt32LE(0)
-        const deflatedLength: number = input.readUInt32LE(4)
-        if (input.length < HeaderLength + deflatedLength) {
+        const length: number = lengthDecoded[0]
+        input = lengthDecoded[1]
+        const deflatedLengthDecoded = VLQ.Decode(input)
+        if (deflatedLengthDecoded === null) {
             return [null, 0]
         }
-        const raw: Buffer = input.slice(HeaderLength, HeaderLength + deflatedLength)
-        const payload = await Inflate(raw)
+        const deflatedLength: number = deflatedLengthDecoded[0]
+        input = deflatedLengthDecoded[1]
+        if (input.length < deflatedLength) {
+            return [null, 0]
+        }
+        const headerLength: number = initialLength - input.length
+        const payload = await Inflate(input)
         if (length !== payload.length) {
-            throw new Error('CompressionStream: Expected CRC32 does not correspond to actual')
+            throw new Error('CompressionStream: Expected length does not correspond to actual')
         }
-        return [new Frame(payload), HeaderLength + deflatedLength]
+        return [new Frame(payload), headerLength + deflatedLength]
     }
 
     private _payload: Buffer
