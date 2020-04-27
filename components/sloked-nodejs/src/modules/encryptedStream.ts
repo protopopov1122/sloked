@@ -1,6 +1,6 @@
 import { Transform, TransformOptions, TransformCallback, Duplex, DuplexOptions } from 'stream'
 import { Crypto, StreamEncryption, EncryptedDuplexStream } from '../types/crypto'
-import { EventEmitter } from '../modules/eventEmitter'
+import { EventEmitter } from './eventEmitter'
 import { Crc32 } from './checksum'
 
 enum FrameType {
@@ -46,10 +46,10 @@ class Frame {
         }
     }
 
-    static async decrypt(crypto: Crypto, input: Buffer, key?: Buffer): Promise<[Frame, number] | null> {
+    static async decrypt(crypto: Crypto, input: Buffer, key?: Buffer): Promise<[Frame | null, number]> {
         const MinimalHeaderLength: number = 5;
         if (input.length < MinimalHeaderLength) {
-            return null
+            return [null, 0]
         }
         if (typeof FrameType[input[0]] === 'undefined') {
             throw new Error("CryptoSocket: Invalid frame type");
@@ -60,7 +60,7 @@ class Frame {
             const EncryptedHeaderSize: number = 9 + crypto.IVSize();
             const signature: number = input.readUInt32LE(5)
             if (input.length < totalLength + EncryptedHeaderSize) {
-                return null
+                return [null, 0]
             }
 
             const iv: Buffer = input.slice(EncryptedHeaderSize - crypto.IVSize(), EncryptedHeaderSize)
@@ -133,52 +133,61 @@ export class DecryptionStream extends Transform {
         super(options)
         this._crypto = crypto
         this._key = key
-        this._encBuffer = Buffer.alloc(0)
         this._keyChangeEmitter = keyChangeEmitter
+        this._buffer = Buffer.alloc(0)
     }
 
     setKey (key?: Buffer): void {
         this._key = key
     }
 
-    _transform(chunk: Buffer, _: string, done: TransformCallback): void {
+    async _transform(chunk: Buffer, _: string, done: TransformCallback): Promise<void> {
         if (chunk == null) {
             done(null, chunk)
         } else {
-            this._transformData(chunk, this._key).then(result => {
-                if (result) {
-                    done(null, result)
-                } else {
-                    done(null, Buffer.alloc(0))
+            try {
+                let result: Buffer = Buffer.alloc(0)
+                let currentChunk = Buffer.concat([this._buffer, chunk])
+                while (currentChunk.length > 0) {
+                    const [fragment, tail]: [Buffer | null, Buffer] = await this._transformData(currentChunk, this._key)
+                    currentChunk = tail
+                    if (fragment !== null) {
+                        result = Buffer.concat([result, fragment])
+                    } else {
+                        break
+                    }
                 }
-            }, err => done(err, null))
+                this._buffer = currentChunk
+                done(null, result)
+            } catch (err) {
+                done(err, null)
+            }
         }
     }
 
-    async _transformData(chunk: Buffer, key?: Buffer): Promise<Buffer | null> {
-        const result = await Frame.decrypt(this._crypto, chunk, key)
-        if (result !== null) {
-            const [frame, length] = result
-            this._encBuffer = this._encBuffer.slice(length)
+    async _transformData(chunk: Buffer, key?: Buffer): Promise<[Buffer | null, Buffer]> {
+        const [frame, length]: [Frame | null, number] = await Frame.decrypt(this._crypto, chunk, key)
+        if (frame !== null) {
             switch (frame.getType()) {
                 case FrameType.Data:
-                    return result[0].getPayload()
+                    return [frame.getPayload(), chunk.slice(length)]
                 
                 case FrameType.KeyChange:
                     await this._keyChangeEmitter.emit(frame.getPayload().length > 0 ? frame.getPayload().toString() : null)
-                    break
+                    return [Buffer.alloc(0), chunk.slice(length)]
             }
+        } else {
+            return [null, chunk]
         }
-        return null
     }
 
     private _crypto: Crypto
     private _key?: Buffer
-    private _encBuffer: Buffer
     private _keyChangeEmitter: EventEmitter<string | null>
+    private _buffer: Buffer
 }
 
-export class CryptoStream extends EncryptedDuplexStream implements StreamEncryption {
+export class EncryptedStream extends EncryptedDuplexStream implements StreamEncryption {
     constructor (rawStream: Duplex, crypto: Crypto, key?: Buffer, options?: DuplexOptions) {
         super(options)
         this._raw = rawStream
