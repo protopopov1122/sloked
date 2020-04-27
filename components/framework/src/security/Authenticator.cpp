@@ -205,12 +205,7 @@ namespace sloked {
     }
 
     SlokedSlaveAuthenticator::~SlokedSlaveAuthenticator() {
-        if (this->unbindEncryptionListener) {
-            this->unbindEncryptionListener();
-        }
-        if (this->unwatchCredentials) {
-            this->unwatchCredentials();
-        }
+        this->Close();
     }
 
     std::string SlokedSlaveAuthenticator::InitiateLogin(const std::string keyId,
@@ -219,6 +214,17 @@ namespace sloked {
         this->pending = keyId;
         auto key = this->DeriveKey(this->cipher->Parameters().KeySize, keyId);
         return this->GenerateToken(*this->cipher, *key, ch);
+    }
+
+    void SlokedSlaveAuthenticator::Close() {
+        if (this->unbindEncryptionListener) {
+            this->unbindEncryptionListener();
+            this->unbindEncryptionListener = nullptr;
+        }
+        if (this->unwatchCredentials) {
+            this->unwatchCredentials();
+            this->unwatchCredentials = nullptr;
+        }
     }
 
     SlokedAuthenticatorFactory::SlokedAuthenticatorFactory(

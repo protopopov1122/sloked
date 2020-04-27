@@ -167,6 +167,9 @@ namespace sloked {
             for (const auto &pipe : this->pipes) {
                 pipe.second->Close();
             }
+            if (this->auth) {
+                this->auth->Close();
+            }
             if (this->net.Valid()) {
                 this->net.Close();
             }

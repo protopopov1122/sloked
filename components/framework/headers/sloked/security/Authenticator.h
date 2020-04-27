@@ -77,7 +77,9 @@ namespace sloked {
                                  std::string,
                                  SlokedSocketEncryption * = nullptr);
         ~SlokedSlaveAuthenticator();
+
         std::string InitiateLogin(const std::string, Challenge);
+        void Close();
 
      private:
         std::unique_ptr<SlokedCrypto::Cipher> cipher;
