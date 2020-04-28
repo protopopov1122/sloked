@@ -27,6 +27,11 @@ export interface CredentialAccount {
 }
 
 export interface CredentialStorage {
-    hasAccount(id: string): boolean;
-    getAccount(id: string): CredentialAccount;
+  hasAccount(id: string): boolean;
+  getAccount(id: string): CredentialAccount;
+}
+
+export interface ModifyableCredentialStorage extends CredentialStorage {
+  newAccount(id: string, password: string): void
+  deleteAccount(id: string): void
 }

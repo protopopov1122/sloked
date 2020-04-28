@@ -19,8 +19,6 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-
 export class Crc32 {
     private static LookupTable: Uint32Array = (function(): Uint32Array {
         const table = new Uint32Array(256)

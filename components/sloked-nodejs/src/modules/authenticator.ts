@@ -23,6 +23,8 @@ import { Crypto, StreamEncryption } from '../types/crypto'
 import { CredentialStorage } from '../types/credentials'
 import { Authenticator } from '../types/authenticator'
 
+export  * from '../types/authenticator'
+
 export class SlaveAuthenticator implements Authenticator {
     constructor (crypto: Crypto, credentialProvider: CredentialStorage, salt: string, encryption: StreamEncryption) {
         this._crypto = crypto

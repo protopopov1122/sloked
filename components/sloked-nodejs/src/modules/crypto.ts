@@ -22,6 +22,8 @@
 import * as crypto from 'crypto'
 import { Crypto } from '../types/crypto'
 
+export * from '../types/crypto'
+
 export class DefaultCrypto implements Crypto {
     deriveKey(password: string, salt: string): Promise<Buffer> {
         return new Promise<Buffer>((resolve, reject) => {
@@ -44,16 +46,16 @@ export class DefaultCrypto implements Crypto {
         const Algorithm: string = 'aes-256-cbc'
         return new Promise<Buffer>((resolve, reject) => {
             const cipher: crypto.Cipher = crypto.createCipheriv(Algorithm, key, iv)
-            let encrypted: Buffer = Buffer.alloc(0)
+            let encrypted: Buffer[] = []
             cipher.on('readable', () => {
                 let chunk: Buffer | null;
-                while (null !== (chunk = cipher.read())) {
-                    encrypted = Buffer.concat([encrypted, chunk])
+                while ((chunk = cipher.read()) !== null) {
+                    encrypted.push(chunk)
                 }
             })
             cipher.on('error', reject)
             cipher.on('end', () => {
-                resolve(encrypted)
+                resolve(Buffer.concat(encrypted))
             })
             cipher.write(data)
             cipher.end()
@@ -64,16 +66,16 @@ export class DefaultCrypto implements Crypto {
         const Algorithm: string = 'aes-256-cbc'
         return new Promise<Buffer>((resolve, reject) => {
             const cipher: crypto.Decipher = crypto.createDecipheriv(Algorithm, key, iv)
-            let encrypted: Buffer = Buffer.alloc(0)
+            let encrypted: Buffer[] = []
             cipher.on('readable', () => {
                 let chunk: Buffer | null;
                 while (null !== (chunk = cipher.read())) {
-                    encrypted = Buffer.concat([encrypted, chunk])
+                    encrypted.push(chunk)
                 }
             })
             cipher.on('error', reject)
             cipher.on('end', () => {
-                resolve(encrypted)
+                resolve(Buffer.concat(encrypted))
             })
             cipher.write(data)
             cipher.end()

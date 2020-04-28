@@ -1,14 +1,15 @@
 ## Sloked - text editor framework
 
-This repo contains components for extensible programming-oriented text editor written from scratch. All implemented subsystems are integrated into a simple demo-editor in `components/main.cpp`. Currently project consists of:
+This repo contains components for extensible programming-oriented text editor written from scratch. All implemented subsystems are integrated into a simple demo-editor in `components/frontend`. Currently project consists of:
 * text management subsystem - stores text in the multiple layers of AVL trees. Bottom layer manages separate lines and larger text chunks (which are split into separate lines dynamically), top layer manages large text parts which are `mmap`-ed in memory and loaded on-demand. This enables relatively efficent navigation and editing of large text files. Multiple end-of-line (CRLF and LF) encodings are supported (currently UTF-8 and UTF-32LE), others may be added later. Find-replace capabilities.
 * transaction-based editing which allows simultaneous multiple RW-cursors over a single document with proper (per-cursor) undo-redo semantics.
 * text fragmentation mechanism provides the base for syntax highlighting and other high-level transformations (e.g. block folding) of source code.
 * VFS-like abstraction which includes nested namespaces, filesystem directory (currently only POSIX paths are supported) mounting and simplified file abstraction. This enabled complex workspace construction and simplifies internal resource management.
 * Terminal multiplexer (currently only POSIX terminals are supported) which provides abstractions for multi-window environment, screen splitting, tabs. These abstractions may be directly implemented in other environments (e.g. some graphical toolkit) which simplifies changes in editor UI.
 * Graphical terminal implementation on Cairo + SDL software rendering - needs optimization.
-* Message-based service system, which exposes editor functionality through indirect service calls and interconnects editor subsystems. Message system is trasparently available through the network, thus allowing editor components (user  interface, core library, plugins, remote users) to run on different hosts. The increases flexibility and extensibility, e.g. remote development, collaborative editing, remote plugin execution, plugins on different programming languages. Network channels can be encrypted and support per-user encryption and permission model.
-* Bindings to Lua which make use of messaging mechanism and provide base for asynchronous Lua plugins.
+* Message-based service system, which exposes editor functionality through indirect service calls and interconnects editor subsystems. Message system is trasparently available through the network, thus allowing editor components (user  interface, core library, plugins, remote users) to run on different hosts. The increases flexibility and extensibility, e.g. remote development, collaborative editing, remote plugin execution, plugins on different programming languages. Network channels can be compressed, encrypted and support per-user encryption and permission model.
+* Bindings to Lua which make use of messaging mechanism and provide a base for asynchronous Lua plugins.
+* Messaging stack implementation in TypeScript for NodeJS platform.
 * Utility code for CLI argument, configuration file and generic JSON parsing, logging, networking, multi-threaded helpers and infrastructure for asynchronous code execution.
 * Demo-editor `components/frontend` which incorporates above-mentioned features into a simplified program used for demonstration and testing purposes.
 

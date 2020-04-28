@@ -21,7 +21,7 @@
 
 import { Transform, TransformOptions, TransformCallback, Duplex, DuplexOptions } from 'stream'
 import * as zlib from 'zlib'
-import * as VLQ from '../modules/vlq'
+import * as VLQ from './vlq'
 
 function Deflate(chunk: Buffer): Promise<Buffer> {
     return new Promise<Buffer>((resolve, reject) => {
@@ -118,19 +118,19 @@ export class DecompressionStream extends Transform {
             done(null, chunk)
         } else {
             try {
-                let result: Buffer = Buffer.alloc(0)
+                let result: Buffer[] = []
                 let currentChunk = Buffer.concat([this._buffer, chunk])
                 while (currentChunk.length > 0) {
                     const [fragment, tail]: [Buffer | null, Buffer] = await this._transformData(currentChunk)
                     currentChunk = tail
                     if (fragment !== null) {
-                        result = Buffer.concat([result, fragment])
+                        result.push(fragment)
                     } else {
                         break
                     }
                 }
                 this._buffer = currentChunk
-                done(null, result)
+                done(null, Buffer.concat(result))
             } catch (err) {
                 done(err, null)
             }

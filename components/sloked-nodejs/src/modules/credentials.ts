@@ -20,8 +20,10 @@
 */
 
 import { Crypto } from '../types/crypto'
-import { CredentialAccount, CredentialStorage } from '../types/credentials'
-import { EventEmitter } from '../modules/eventEmitter'
+import { CredentialAccount, ModifyableCredentialStorage } from '../types/credentials'
+import { EventEmitter } from './eventEmitter'
+
+export * from '../types/credentials'
 
 class DefaultCredentialAccount implements CredentialAccount {
     constructor(crypto: Crypto, id: string, password: string) {
@@ -63,7 +65,7 @@ class DefaultCredentialAccount implements CredentialAccount {
     private _eventEmitter: EventEmitter<void>
 }
 
-export class DefaultCredentialStorage implements CredentialStorage {
+export class DefaultCredentialStorage implements ModifyableCredentialStorage {
     constructor(crypto: Crypto) {
         this._crypto = crypto
     }

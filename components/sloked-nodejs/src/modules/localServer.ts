@@ -21,7 +21,7 @@
 
 import { Server, Service } from '../types/server'
 import { Pipe } from '../types/pipe'
-import { DefaultPipe } from '../modules/pipe'
+import { DefaultPipe } from './pipe'
 
 export class LocalServer implements Server<string> {
     constructor() {

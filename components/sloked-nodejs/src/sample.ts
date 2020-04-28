@@ -23,12 +23,13 @@ import { NetSlaveServer } from './modules/netServer'
 import { BinarySerializer } from './modules/serialize'
 import * as net from 'net'
 import { EncryptedStream } from './modules/encryptedStream'
-import { DefaultCrypto } from './modules/crypto'
-import { SlaveAuthenticator } from './modules/authenticator'
-import { DefaultCredentialStorage } from './modules/credentials'
+import { Crypto, DefaultCrypto, EncryptedDuplexStream } from './modules/crypto'
+import { Authenticator, SlaveAuthenticator } from './modules/authenticator'
+import { ModifyableCredentialStorage, DefaultCredentialStorage } from './modules/credentials'
 import { Service } from './types/server'
 import { Pipe } from './types/pipe'
 import { CompressedStream } from './modules/compressedStream'
+import { Duplex } from 'stream'
 
 class EchoService implements Service {
     async attach(pipe: Pipe): Promise<boolean> {
@@ -39,18 +40,18 @@ class EchoService implements Service {
 
 const socket = new net.Socket()
 socket.connect(1234, '::1', async () => {
-    const crypto = new DefaultCrypto()
-    const key = await crypto.deriveKey('password', 'salt')
-    const cryptoStream = new EncryptedStream(socket, crypto, key)
-    const stream = new CompressedStream(cryptoStream)
-    const credentials = new DefaultCredentialStorage(crypto)
+    const crypto: Crypto = new DefaultCrypto()
+    const key: Buffer = await crypto.deriveKey('password', 'salt')
+    const cryptoStream: EncryptedDuplexStream = new EncryptedStream(socket, crypto, key)
+    const stream: Duplex = new CompressedStream(cryptoStream)
+    const credentials: ModifyableCredentialStorage = new DefaultCredentialStorage(crypto)
     credentials.newAccount('user1', 'password1')
-    const authenticator = new SlaveAuthenticator(crypto, credentials, 'salt', cryptoStream.getEncryption())
+    const authenticator: Authenticator  = new SlaveAuthenticator(crypto, credentials, 'salt', cryptoStream.getEncryption())
     const slave = new NetSlaveServer(stream, new BinarySerializer(), authenticator)
     await slave.authorize('user1')
 
     await slave.register('/plugins/echo', new EchoService())
-    const echo = await slave.connect('/plugins/echo')
+    const echo: Pipe = await slave.connect('/plugins/echo')
     echo.write('Hello, world!')
     console.log(await echo.read())
 

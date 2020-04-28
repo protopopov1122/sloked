@@ -250,7 +250,7 @@ export class NetInterface {
         console.log('OUT', msg)
         const content: Buffer = this._serializer.serialize(msg)
         const length: Buffer = Buffer.alloc(4)
-        length.writeInt32LE(content.length)
+        length.writeUInt32LE(content.length)
         this._socket.write(Buffer.concat([length, content]))
     }
 

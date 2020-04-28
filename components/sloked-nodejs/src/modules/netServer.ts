@@ -28,6 +28,8 @@ import { Serializer } from '../types/serialize'
 import { AuthServer, Service } from '../types/server'
 import { LocalServer } from './localServer'
 
+export * from '../types/server'
+
 interface AuthRequestRsp {
     nonce: number
 }
