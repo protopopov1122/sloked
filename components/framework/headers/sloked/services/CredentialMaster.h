@@ -19,28 +19,25 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_CORE_ERROR_H_
-#define SLOKED_CORE_ERROR_H_
+#ifndef SLOKED_SERVICES_CREDENTIALMASTER_H_
+#define SLOKED_SERVICES_CREDENTIALMASTER_H_
 
-#include <exception>
-#include <string>
-
-#include "sloked/Base.h"
+#include "sloked/kgr/NamedServer.h"
+#include "sloked/kgr/local/Context.h"
+#include "sloked/security/Master.h"
+#include "sloked/services/Service.h"
 
 namespace sloked {
 
-    class SlokedError : public std::exception {
+    class SlokedCredentialMasterService : public KgrService {
      public:
-        SlokedError(std::string_view);
-        const char *what() const noexcept override;
+        SlokedCredentialMasterService(SlokedCredentialMaster &,
+                                      KgrContextManager<KgrLocalContext> &);
+        TaskResult<void> Attach(std::unique_ptr<KgrPipe>) final;
 
      private:
-        std::string message;
-    };
-
-    class SlokedServiceError : public SlokedError {
-     public:
-        using SlokedError::SlokedError;
+        SlokedCredentialMaster &credentialMaster;
+        KgrContextManager<KgrLocalContext> &contextManager;
     };
 }  // namespace sloked
 

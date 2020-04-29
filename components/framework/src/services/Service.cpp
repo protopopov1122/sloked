@@ -27,90 +27,34 @@ namespace sloked {
 
     SlokedServiceContext::Response::Response(SlokedServiceContext &ctx,
                                              const KgrValue &id)
-        : ctx(ctx), id(std::cref(id)) {}
+        : ctx(ctx), id(id) {}
 
     SlokedServiceContext::Response::Response(const Response &rsp)
-        : ctx(rsp.ctx), id(KgrValue{}) {
-        switch (rsp.id.index()) {
-            case 0:
-                this->id = KgrValue{std::get<0>(rsp.id)};
-                break;
-
-            case 1:
-                this->id = std::get<1>(rsp.id);
-                break;
-        }
-    }
+        : ctx(rsp.ctx), id(rsp.id) {}
 
     SlokedServiceContext::Response::Response(Response &&rsp)
-        : ctx(std::move(rsp.ctx)), id(KgrValue{}) {
-        switch (rsp.id.index()) {
-            case 0:
-                this->id = KgrValue{std::get<0>(rsp.id)};
-                break;
-
-            case 1:
-                this->id = std::move(std::get<1>(rsp.id));
-                break;
-        }
-    }
+        : ctx(std::move(rsp.ctx)), id(std::move(rsp.id)) {}
 
     SlokedServiceContext::Response &SlokedServiceContext::Response::operator=(
         const Response &rsp) {
         this->ctx = rsp.ctx;
-        switch (rsp.id.index()) {
-            case 0:
-                this->id = KgrValue{std::get<0>(rsp.id)};
-                break;
-
-            case 1:
-                this->id = std::get<1>(rsp.id);
-                break;
-        }
+        this->id = rsp.id;
         return *this;
     }
 
     SlokedServiceContext::Response &SlokedServiceContext::Response::operator=(
         const Response &&rsp) {
         this->ctx = std::move(rsp.ctx);
-        switch (rsp.id.index()) {
-            case 0:
-                this->id = KgrValue{std::get<0>(rsp.id)};
-                break;
-
-            case 1:
-                this->id = std::move(std::get<1>(rsp.id));
-                break;
-        }
+        this->id = std::move(rsp.id);
         return *this;
     }
 
     void SlokedServiceContext::Response::Result(KgrValue &&result) {
-        switch (this->id.index()) {
-            case 0:
-                this->ctx.get().SendResponse(std::get<0>(this->id).get(),
-                                             std::forward<KgrValue>(result));
-                break;
-
-            case 1:
-                this->ctx.get().SendResponse(std::get<1>(this->id),
-                                             std::forward<KgrValue>(result));
-                break;
-        }
+        this->ctx.get().SendResponse(this->id, std::forward<KgrValue>(result));
     }
 
     void SlokedServiceContext::Response::Error(KgrValue &&error) {
-        switch (this->id.index()) {
-            case 0:
-                this->ctx.get().SendError(std::get<0>(this->id).get(),
-                                          std::forward<KgrValue>(error));
-                break;
-
-            case 1:
-                this->ctx.get().SendError(std::get<1>(this->id),
-                                          std::forward<KgrValue>(error));
-                break;
-        }
+        this->ctx.get().SendError(this->id, std::forward<KgrValue>(error));
     }
 
     void SlokedServiceContext::Run() {
@@ -135,8 +79,8 @@ namespace sloked {
             if (this->eventLoop.HasPending()) {
                 this->eventLoop.Run();
             }
-        } catch (const SlokedError &err) {
-            this->HandleError(err, response.get());
+        } catch (...) {
+            this->HandleError(std::current_exception(), response.get());
         }
     }
 
@@ -164,9 +108,27 @@ namespace sloked {
         throw SlokedError("Unimplemented method: " + method);
     }
 
-    void SlokedServiceContext::HandleError(const SlokedError &err,
+    void SlokedServiceContext::HandleError(std::exception_ptr ex,
                                            Response *response) {
-        throw err;
+        try {
+            std::rethrow_exception(ex);
+        } catch (const SlokedServiceError &err) {
+            if (response) {
+                response->Error(err.what());
+            }
+        } catch (const SlokedError &err) {
+            if (response) {
+                response->Error(
+                    std::string{"ServiceContext: Unhandled error \""} +
+                    err.what() + "\"");
+            }
+            throw;
+        } catch (...) {
+            if (response) {
+                response->Error("ServiceContext: Internal error");
+            }
+            throw;
+        }
     }
 
     void SlokedServiceContext::SendResponse(const KgrValue &id,

@@ -62,7 +62,7 @@ namespace sloked {
 
          private:
             std::reference_wrapper<SlokedServiceContext> ctx;
-            std::variant<std::reference_wrapper<const KgrValue>, KgrValue> id;
+            KgrValue id;
         };
 
         friend class Response;
@@ -90,7 +90,7 @@ namespace sloked {
 
         virtual void InvokeMethod(const std::string &, const KgrValue &,
                                   Response &);
-        virtual void HandleError(const SlokedError &, Response *);
+        virtual void HandleError(std::exception_ptr, Response *);
 
      private:
         void SendResponse(const KgrValue &, KgrValue &&);

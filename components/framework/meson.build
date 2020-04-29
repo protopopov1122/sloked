@@ -96,6 +96,7 @@ sloked_src = [
   'src/services/ScreenInput.cpp',
   'src/services/ScreenSize.cpp',
   'src/services/CharPreset.cpp',
+  'src/services/CredentialMaster.cpp',
   'src/services/Cursor.cpp',
   'src/services/DocumentNotify.cpp',
   'src/services/DocumentSet.cpp',

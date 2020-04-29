@@ -22,6 +22,7 @@
 #include "sloked/facade/Services.h"
 
 #include "sloked/services/CharPreset.h"
+#include "sloked/services/CredentialMaster.h"
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentNotify.h"
 #include "sloked/services/DocumentSet.h"
@@ -37,12 +38,14 @@ namespace sloked {
             std::unique_ptr<SlokedRootNamespace> rootNamespace,
             const SlokedCharPreset &charPreset, KgrNamedServer &server,
             KgrContextManager<KgrLocalContext> &contextManager,
+            SlokedCredentialMaster *credentialMaster,
             SlokedTextTaggerRegistry<SlokedEditorDocument::TagType>
                 *baseTaggers)
         : logger(logger), rootNamespace(std::move(rootNamespace)),
           charPreset(charPreset), server(server),
           documents(this->rootNamespace->GetRoot()),
-          contextManager(contextManager), taggers(baseTaggers) {}
+          contextManager(contextManager), credentialMaster(credentialMaster),
+          taggers(baseTaggers) {}
 
     KgrContextManager<KgrLocalContext>
         &SlokedServiceDependencyDefaultProvider::GetContextManager() {
@@ -75,6 +78,11 @@ namespace sloked {
     SlokedEditorDocumentSet &
         SlokedServiceDependencyDefaultProvider::GetDocuments() {
         return this->documents;
+    }
+
+    SlokedCredentialMaster *
+        SlokedServiceDependencyDefaultProvider::GetCredentialMaster() {
+        return this->credentialMaster;
     }
 
     void SlokedServiceDependencyDefaultProvider::Close() {}
@@ -131,6 +139,18 @@ namespace sloked {
             [](SlokedServiceDependencyProvider &provider) {
                 return std::make_unique<SlokedCharPresetService>(
                     provider.GetCharPreset(), provider.GetContextManager());
+            });
+        this->builders.emplace(
+            "/editor/authorization",
+            [](SlokedServiceDependencyProvider &provider)
+                -> std::unique_ptr<KgrService> {
+                if (provider.GetCredentialMaster()) {
+                    return std::make_unique<SlokedCredentialMasterService>(
+                        *provider.GetCredentialMaster(),
+                        provider.GetContextManager());
+                } else {
+                    return nullptr;
+                }
             });
     }
 

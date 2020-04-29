@@ -338,7 +338,12 @@ namespace sloked {
                 std::make_unique<SlokedServiceDependencyDefaultProvider>(
                     this->logger, this->namespaceFactory.Build(),
                     editor.GetCharPreset(), editor.GetServer().GetServer(),
-                    editor.GetContextManager(), &this->baseTaggers));
+                    editor.GetContextManager(),
+                    editor.HasCrypto() &&
+                            editor.GetCrypto().HasCredentialMaster()
+                        ? &editor.GetCrypto().GetCredentialMaster()
+                        : nullptr,
+                    &this->baseTaggers));
             if (serviceConfig.Has("root")) {
                 serviceProvider.GetNamespace().GetRoot().Mount(
                     SlokedPath{"/"},

@@ -67,7 +67,9 @@ socket.connect(1234, '::1', async () => {
     cursor.write({
         id: 0,
         method: 'connect',
-        params: 1
+        params: {
+            documentId: 1
+        }
     })
     cursor.write({
         id: 1,

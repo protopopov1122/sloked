@@ -186,7 +186,7 @@ export class NetInterface {
 
     _processQueue(queue: any[]): void {
         for (const message of queue) {
-            console.log('IN:', message)
+            console.dir(message, { depth: null });
             const action = message.action
             if (this._actions[action]) {
                 this._actions[action](message)
@@ -247,7 +247,7 @@ export class NetInterface {
     }
 
     _write(msg: any): void {
-        console.log('OUT', msg)
+        console.dir(msg, { depth: null });
         const content: Buffer = this._serializer.serialize(msg)
         const length: Buffer = Buffer.alloc(4)
         length.writeUInt32LE(content.length)

@@ -329,7 +329,8 @@ namespace sloked {
                        KgrArray{"/document/render", "/document/cursor",
                                 "/document/manager", "/document/notify",
                                 "/document/search", "/namespace/root",
-                                "/editor/parameters"}}}}}},
+                                "/editor/parameters",
+                                "/editor/authorization"}}}}}},
             {"parameters", KgrDictionary{{"tabWidth", 2}}}};
         auto &mainEditor = manager.Spawn("main", mainEditorConfig);
 

@@ -27,7 +27,9 @@ async(function(await)
     -- await_unwrap(root('mounted'))
     -- await_unwrap(root('uri', '/test/test2/bash'))
 
-    if await_unwrap(cursor('connect', 1)) then
+    if await_unwrap(cursor('connect', {
+        documentId=1
+    })) then
         local notifier = pipe:promisify(sloked.editors.main.server:connect('/document/notify'))
         await_unwrap(notifier:write({
             document=1,

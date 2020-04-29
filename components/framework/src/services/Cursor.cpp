@@ -37,7 +37,8 @@ namespace sloked {
                             KgrServer::Connector renderConnector,
                             SlokedEditorDocumentSet &documents)
             : SlokedServiceContext(std::move(pipe)), documents(documents),
-              handle(documents.Empty()), document(nullptr) {
+              handle(documents.Empty()),
+              document(nullptr), sendResponses{true} {
 
             this->BindMethod("connect", &SlokedCursorContext::Connect);
             this->BindMethod("insert", &SlokedCursorContext::Insert);
@@ -54,21 +55,29 @@ namespace sloked {
             this->BindMethod("undo", &SlokedCursorContext::Undo);
             this->BindMethod("redo", &SlokedCursorContext::Redo);
             this->BindMethod("getPosition", &SlokedCursorContext::GetPosition);
+            this->BindMethod("moveTo", &SlokedCursorContext::SetPosition);
+            this->BindMethod("clearRegion", &SlokedCursorContext::ClearRegion);
         }
 
      protected:
         void Connect(const std::string &method, const KgrValue &params,
                      Response &rsp) {
             auto docId = static_cast<SlokedEditorDocumentSet::DocumentId>(
-                params.AsInt());
+                params.AsDictionary()["documentId"].AsInt());
+            this->sendResponses = false;
             auto doc = this->documents.OpenDocument(docId);
             if (doc.has_value()) {
+                if (params.AsDictionary().Has("sendResponses")) {
+                    this->sendResponses =
+                        params.AsDictionary()["sendResponses"].AsBoolean();
+                }
                 this->handle = std::move(doc.value());
                 this->document = std::make_unique<DocumentContent>(
                     this->handle.GetObject(), docId);
                 rsp.Result(true);
             } else {
-                rsp.Result(false);
+                throw SlokedServiceError(
+                    "CursorContext: Error while opening document");
             }
         }
 
@@ -77,41 +86,103 @@ namespace sloked {
             if (this->document != nullptr) {
                 this->document->cursor.Insert(
                     this->document->conv.Convert(params.AsString()));
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
             }
         }
 
         void MoveUp(const std::string &method, const KgrValue &params,
                     Response &rsp) {
             if (this->document != nullptr) {
-                this->document->cursor.MoveUp(1);
+                TextPosition::Line count{1};
+                if (params.Is(KgrValueType::Object) &&
+                    params.AsDictionary().Has("count")) {
+                    count = params.AsDictionary()["count"].AsInt();
+                }
+                this->document->cursor.MoveUp(count);
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
             }
         }
 
         void MoveDown(const std::string &method, const KgrValue &params,
                       Response &rsp) {
             if (this->document != nullptr) {
-                this->document->cursor.MoveDown(1);
+                TextPosition::Line count{1};
+                if (params.Is(KgrValueType::Object) &&
+                    params.AsDictionary().Has("count")) {
+                    count = params.AsDictionary()["count"].AsInt();
+                }
+                this->document->cursor.MoveDown(count);
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
             }
         }
 
         void MoveBackward(const std::string &method, const KgrValue &params,
                           Response &rsp) {
             if (this->document != nullptr) {
-                this->document->cursor.MoveBackward(1);
+                TextPosition::Column count{1};
+                if (params.Is(KgrValueType::Object) &&
+                    params.AsDictionary().Has("count")) {
+                    count = params.AsDictionary()["count"].AsInt();
+                }
+                this->document->cursor.MoveBackward(count);
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
             }
         }
 
         void MoveForward(const std::string &method, const KgrValue &params,
                          Response &rsp) {
             if (this->document != nullptr) {
-                this->document->cursor.MoveForward(1);
+                TextPosition::Column count{1};
+                if (params.Is(KgrValueType::Object) &&
+                    params.AsDictionary().Has("count")) {
+                    count = params.AsDictionary()["count"].AsInt();
+                }
+                this->document->cursor.MoveForward(count);
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
             }
         }
 
         void NewLine(const std::string &method, const KgrValue &params,
                      Response &rsp) {
             if (this->document != nullptr) {
-                this->document->cursor.NewLine("");
+                std::string content{""};
+                if (params.Is(KgrValueType::Object) &&
+                    params.AsDictionary().Has("content")) {
+                    content = this->document->conv.Convert(
+                        params.AsDictionary()["content"].AsString());
+                }
+                this->document->cursor.NewLine(content);
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
             }
         }
 
@@ -119,6 +190,12 @@ namespace sloked {
                             Response &rsp) {
             if (this->document != nullptr) {
                 this->document->cursor.DeleteBackward();
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
             }
         }
 
@@ -126,6 +203,12 @@ namespace sloked {
                            Response &rsp) {
             if (this->document != nullptr) {
                 this->document->cursor.DeleteForward();
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
             }
         }
 
@@ -133,6 +216,12 @@ namespace sloked {
                   Response &rsp) {
             if (this->document != nullptr) {
                 this->document->cursor.Undo();
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
             }
         }
 
@@ -140,6 +229,12 @@ namespace sloked {
                   Response &rsp) {
             if (this->document != nullptr) {
                 this->document->cursor.Redo();
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
             }
         }
 
@@ -152,7 +247,55 @@ namespace sloked {
                     {"column", static_cast<int64_t>(
                                    this->document->cursor.GetColumn())}});
             } else {
-                rsp.Result({});
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
+            }
+        }
+
+        void SetPosition(const std::string &method, const KgrValue &params,
+                         Response &rsp) {
+            if (this->document != nullptr) {
+                const TextPosition position{
+                    static_cast<TextPosition::Line>(
+                        params.AsDictionary()["line"].AsInt()),
+                    static_cast<TextPosition::Column>(
+                        params.AsDictionary()["column"].AsInt())};
+                this->document->cursor.SetPosition(position.line,
+                                                   position.column);
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
+            }
+        }
+
+        void ClearRegion(const std::string &method, const KgrValue &params,
+                         Response &rsp) {
+            if (this->document != nullptr) {
+                const auto &dict = params.AsDictionary();
+                const TextPosition to{
+                    static_cast<TextPosition::Line>(
+                        dict["to"].AsDictionary()["line"].AsInt()),
+                    static_cast<TextPosition::Column>(
+                        dict["to"].AsDictionary()["column"].AsInt())};
+                if (dict.Has("from")) {
+                    const TextPosition from{
+                        static_cast<TextPosition::Line>(
+                            dict["from"].AsDictionary()["line"].AsInt()),
+                        static_cast<TextPosition::Column>(
+                            dict["from"].AsDictionary()["column"].AsInt())};
+                    this->document->cursor.ClearRegion(from, to);
+                } else {
+                    this->document->cursor.ClearRegion(to);
+                }
+                if (this->sendResponses) {
+                    rsp.Result(true);
+                }
+            } else if (this->sendResponses) {
+                throw SlokedServiceError(
+                    "CursorContext: Document is not opened");
             }
         }
 
@@ -175,6 +318,7 @@ namespace sloked {
         SlokedEditorDocumentSet &documents;
         SlokedEditorDocumentSet::Document handle;
         std::unique_ptr<DocumentContent> document;
+        bool sendResponses;
     };
 
     SlokedCursorService::SlokedCursorService(
@@ -240,7 +384,9 @@ namespace sloked {
         SlokedEditorDocumentSet::DocumentId docId,
         std::function<void(bool)> callback) {
         return std::make_unique<SlokedCursorConnectionTask>(
-            this->client.Invoke("connect", static_cast<int64_t>(docId)),
+            this->client.Invoke(
+                "connect",
+                KgrDictionary{{"documentId", static_cast<int64_t>(docId)}}),
             std::move(callback));
     }
 
