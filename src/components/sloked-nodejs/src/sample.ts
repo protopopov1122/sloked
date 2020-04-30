@@ -39,7 +39,7 @@ class EchoService implements Service {
 }
 
 const socket = new net.Socket()
-socket.connect(1234, '::1', async () => {
+socket.connect(1234, 'localhost', async () => {
     const crypto: Crypto = new DefaultCrypto()
     const key: Buffer = await crypto.deriveKey('password', 'salt')
     const cryptoStream: EncryptedDuplexStream = new EncryptedStream(socket, crypto, key)
