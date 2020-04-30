@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import { Pipe } from '../types/pipe'
+import { Pipe } from './pipe'
 
 export interface Service {
     attach(pipe: Pipe): Promise<boolean>

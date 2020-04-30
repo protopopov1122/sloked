@@ -98,8 +98,12 @@ namespace sloked {
             SlokedEditorInstanceContainer &container,
             SlokedSharedEditorState &sharedState,
             const KgrValue &params) const final {
-            return SlokedScriptCompat::GetEngine(container, sharedState,
-                                                 params);
+            if constexpr (SlokedScriptCompat::IsSupported()) {
+                return SlokedScriptCompat::GetEngine(container, sharedState,
+                                                     params);
+            } else {
+                return nullptr;
+            }
         }
     };
 

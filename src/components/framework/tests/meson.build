@@ -12,7 +12,7 @@ sloked_tests_src = [
 
 threads = dependency('threads')
 sloked_framework_tests = executable('sloked_framework_tests', sloked_tests_src,
-  include_directories : include_directories('../../../third-party'),
+  include_directories : include_directories('../../../../third-party'),
   dependencies : [threads, sloked_framework])
 
 test('Framework unit tests', sloked_framework_tests)
