@@ -35,7 +35,7 @@ namespace sloked {
     void SlokedLocale::Setup() {
         std::locale userLocale("");
         auto locale = userLocale.name();
-        if (locale.empty()) {
+        if (locale.empty() || locale == "C") {
             SlokedLocale::encoding = std::cref(Encoding::Get("UTF-8"));
         } else {
             auto separator = locale.find(".");
