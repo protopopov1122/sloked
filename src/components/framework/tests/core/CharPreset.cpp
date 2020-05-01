@@ -29,7 +29,7 @@ using namespace sloked;
 TEST_CASE("Char preset correctly stores tab width") {
     SlokedCharPreset charPreset;
     const Encoding &encoding = SlokedLocale::SystemEncoding();
-    for (std::size_t i = 0; i < 16; i++) {
+    for (std::size_t i = 1; i < 16; i++) {
         charPreset.SetTabWidth(i);
         REQUIRE(charPreset.GetCharWidth(U'\t', 0) == i);
         REQUIRE(charPreset.GetTab(encoding, 0) == std::string(i, ' '));
@@ -56,17 +56,17 @@ TEST_CASE("Char preset correctly calculates character positions") {
     REQUIRE(charPreset.GetRealPosition(sample, 1, encoding) ==
             std::pair<std::size_t, std::size_t>{4, 5});
     REQUIRE(charPreset.GetRealPosition(sample, 2, encoding) ==
-            std::pair<std::size_t, std::size_t>{5, 9});
+            std::pair<std::size_t, std::size_t>{5, 8});
     REQUIRE(charPreset.GetRealPosition(sample, 3, encoding) ==
-            std::pair<std::size_t, std::size_t>{9, 10});
+            std::pair<std::size_t, std::size_t>{8, 9});
     REQUIRE(charPreset.GetRealPosition(sample, 4, encoding) ==
-            std::pair<std::size_t, std::size_t>{10, 14});
+            std::pair<std::size_t, std::size_t>{9, 12});
     REQUIRE(charPreset.GetRealPosition(sample, 5, encoding) ==
-            std::pair<std::size_t, std::size_t>{14, 15});
+            std::pair<std::size_t, std::size_t>{12, 13});
     REQUIRE(charPreset.GetRealPosition(sample, 6, encoding) ==
-            std::pair<std::size_t, std::size_t>{15, 19});
+            std::pair<std::size_t, std::size_t>{13, 16});
     REQUIRE(charPreset.GetRealPosition(sample, 7, encoding) ==
-            std::pair<std::size_t, std::size_t>{19, 20});
+            std::pair<std::size_t, std::size_t>{16, 17});
 }
 
 TEST_CASE("Char preset notifies listeners about preset changes") {

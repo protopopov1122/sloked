@@ -22,8 +22,9 @@
 #ifndef SLOKED_CORE_LRU_H_
 #define SLOKED_CORE_LRU_H_
 
+#include <list>
 #include <map>
-#include <queue>
+#include <memory>
 
 #include "sloked/core/Error.h"
 
@@ -31,25 +32,31 @@ namespace sloked {
 
     template <typename Key, typename Value, typename Less = std::less<Key>>
     class SlokedLRUCache {
+        struct Entry {
+            Key key;
+            Value value;
+            typename std::list<Entry *>::iterator iter;
+        };
+
      public:
         SlokedLRUCache(std::size_t capacity) : capacity{capacity} {}
 
         void Insert(const Key &key, const Value &value) {
-            while (this->cache.size() > this->capacity) {
-                cache.erase(this->lru.front());
-                this->lru.pop();
-            }
-            this->cache.insert_or_assign(key, value);
-            this->lru.push(key);
+            this->DropOldest();
+            auto entry = std::make_unique<Entry>();
+            entry->key = key;
+            entry->value = value;
+            entry->iter = this->lru.insert(this->lru.end(), entry.get());
+            this->cache.insert_or_assign(key, std::move(entry));
         }
 
         void Emplace(const Key &key, Value &&value) {
-            while (this->cache.size() > this->capacity) {
-                cache.erase(this->lru.front());
-                this->lru.pop();
-            }
-            this->cache.emplace(key, std::forward<Value>(value));
-            this->lru.push(key);
+            this->DropOldest();
+            auto entry = std::make_unique<Entry>();
+            entry->key = key;
+            entry->value = std::forward<Value>(value);
+            entry->iter = this->lru.insert(this->lru.end(), entry.get());
+            this->cache.insert_or_assign(key, std::move(entry));
         }
 
         bool Has(const Key &key) const {
@@ -58,7 +65,10 @@ namespace sloked {
 
         const Value &At(const Key &key) const {
             if (this->Has(key)) {
-                return this->cache.at(key);
+                auto entry = this->cache.at(key).get();
+                this->lru.erase(entry->iter);
+                entry->iter = this->lru.insert(this->lru.end(), entry);
+                return entry->value;
             } else {
                 throw SlokedError("LRUCache: Entry not found");
             }
@@ -66,16 +76,27 @@ namespace sloked {
 
         Value &At(const Key &key) {
             if (this->Has(key)) {
-                return this->cache.at(key);
+                auto entry = this->cache.at(key).get();
+                this->lru.erase(entry->iter);
+                entry->iter = this->lru.insert(this->lru.end(), entry);
+                return entry->value;
             } else {
                 throw SlokedError("LRUCache: Entry not found");
             }
         }
 
      private:
+        void DropOldest() {
+            while (this->cache.size() > this->capacity) {
+                Entry *oldest = this->lru.front();
+                this->lru.erase(oldest->iter);
+                this->cache.erase(oldest->key);
+            }
+        }
+
         std::size_t capacity;
-        std::map<Key, Value, Less> cache;
-        std::queue<Key> lru;
+        std::map<Key, std::unique_ptr<Entry>, Less> cache;
+        std::list<Entry *> lru;
     };
 }  // namespace sloked
 

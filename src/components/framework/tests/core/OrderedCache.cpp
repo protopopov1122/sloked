@@ -19,8 +19,9 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "catch2/catch.hpp"
 #include "sloked/core/OrderedCache.h"
+
+#include "catch2/catch.hpp"
 
 using namespace sloked;
 

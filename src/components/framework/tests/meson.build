@@ -1,13 +1,17 @@
 sloked_tests_src = [
     'main.cpp',
+    'core/AVL.cpp',
     'core/Base64.cpp',
-    'core/Cache.cpp',
     'core/CharPreset.cpp',
     'core/Counter.cpp',
     'core/DataHandle.cpp',
     'core/DynamicBitset.cpp',
     'core/Error.cpp',
-    'core/Event.cpp'
+    'core/Event.cpp',
+    'core/OrderedCache.cpp',
+    'core/Hash.cpp',
+    'core/LRU.cpp',
+    'core/Position.cpp'
 ]
 
 threads = dependency('threads')
