@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+function format_file {
+	file="$1"
+	if [[ -f "$file" ]]; then
+		clang-format -i "$file"
+		git add "$file"
+	fi
+}
+
+function format_changes {
+  for file in `git diff-index --cached --name-only HEAD | grep '.cpp\|.h'` ; do
+    format_file "$file"
+  done
+}
+
+function unit_tests {
+  GIT_ROOT=$(git rev-parse --show-toplevel)
+  BUILDFILE=$(find $GIT_ROOT -name "build.ninja" | grep "gcc\|clang" | head -n1)
+  if [[ "x$BUILDFILE" != "x" ]]; then
+    cd $(dirname $BUILDFILE)
+    ninja test
+    result=$?
+    return $result
+  else
+    return 0
+  fi
+}
+
+case "${1}" in
+  --about)
+    echo "Runs unit tests and clang-format on source files"
+    ;;
+
+  *)
+    unit_tests
+    test_result=$?
+    if [[ "x$test_result" == "x0" ]]; then
+      format_changes
+    else
+      exit 1
+    fi
+    ;;
+esac
