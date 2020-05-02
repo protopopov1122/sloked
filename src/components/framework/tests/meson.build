@@ -11,7 +11,10 @@ sloked_tests_src = [
     'core/OrderedCache.cpp',
     'core/Hash.cpp',
     'core/LRU.cpp',
-    'core/Position.cpp'
+    'core/Position.cpp',
+    'core/RangeMap.cpp',
+    'core/RingBuffer.cpp',
+    'core/Scope.cpp'
 ]
 
 threads = dependency('threads')

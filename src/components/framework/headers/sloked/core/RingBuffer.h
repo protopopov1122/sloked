@@ -337,11 +337,13 @@ namespace sloked {
 
         void reset() {
             this->pop_front(this->size());
-            this->deallocate(this->buffer);
-            this->total_capacity = Padding;
-            this->buffer = nullptr;
-            this->head = 0;
-            this->tail = 0;
+            if constexpr (BufferType == SlokedRingBufferType::Dynamic) {
+                this->deallocate(this->buffer);
+                this->total_capacity = Padding;
+                this->buffer = nullptr;
+                this->head = 0;
+                this->tail = 0;
+            }
         }
 
         template <typename I>

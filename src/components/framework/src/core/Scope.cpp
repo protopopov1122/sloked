@@ -37,11 +37,14 @@ namespace sloked {
     }
 
     AtScopeExit &AtScopeExit::operator=(AtScopeExit &&scope) {
-        if (this->callback) {
-            this->callback();
+        if (std::addressof(scope) != this) {
+            if (this->callback) {
+                this->callback();
+                this->callback = nullptr;
+            }
+            this->callback = scope.callback;
+            scope.callback = nullptr;
         }
-        this->callback = scope.callback;
-        scope.callback = nullptr;
         return *this;
     }
 
