@@ -3,6 +3,7 @@ sloked_tests_src = [
     'core/AVL.cpp',
     'core/Base64.cpp',
     'core/CharPreset.cpp',
+    'core/CLI.cpp',
     'core/Counter.cpp',
     'core/DataHandle.cpp',
     'core/DynamicBitset.cpp',
@@ -10,11 +11,15 @@ sloked_tests_src = [
     'core/Event.cpp',
     'core/OrderedCache.cpp',
     'core/Hash.cpp',
+    'core/Listener.cpp',
     'core/LRU.cpp',
     'core/Position.cpp',
     'core/RangeMap.cpp',
     'core/RingBuffer.cpp',
-    'core/Scope.cpp'
+    'core/Scope.cpp',
+    'core/Span.cpp',
+    'core/String.cpp',
+    'core/VLQ.cpp'
 ]
 
 threads = dependency('threads')

@@ -253,7 +253,7 @@ namespace sloked {
                                 KgrDictionary{{"options", "--core-plugin"},
                                               {"type", "string"},
                                               {"map", "/corePlugin"}}});
-        cli.Parse(argc, argv);
+        cli.Parse(argc - 1, argv + 1);
         SlokedConfiguration mainConfig{
             cli.Export(), baseInterface.GetConfigurationLoader().Load("main"),
             DefaultConfiguration};

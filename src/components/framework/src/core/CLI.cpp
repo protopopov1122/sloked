@@ -173,7 +173,7 @@ namespace sloked {
     }
 
     void SlokedCLI::Parse(int argc, const char **argv, bool ignoreUnknowns) {
-        SlokedCLIArgumentIterator args(argc - 1, argv + 1);
+        SlokedCLIArgumentIterator args(argc, argv);
         bool rawMode = false;
         while (args.HasNext()) {
             auto arg = args.Next();

@@ -1,4 +1,3 @@
-
 /*
   SPDX-License-Identifier: LGPL-3.0
 
@@ -34,10 +33,15 @@ namespace sloked {
      public:
         SlokedSpan() : data_ptr(nullptr), sz(0) {}
 
-        SlokedSpan(T *data, std::size_t size) : data_ptr(data), sz(size) {}
+        SlokedSpan(T *data, std::size_t size) : data_ptr(data), sz(size) {
+            if (this->data_ptr == nullptr && this->sz > 0) {
+                throw SlokedError("Span: Non-empty span over null pointer");
+            }
+        }
 
         SlokedSpan(const SlokedSpan<T> &) = default;
-        SlokedSpan(SlokedSpan<T> &&span) : data_ptr(span), sz(span.sz) {
+        SlokedSpan(SlokedSpan<T> &&span)
+            : data_ptr(span.data_ptr), sz(span.sz) {
             span.data_ptr = nullptr;
             span.sz = 0;
         }
@@ -90,7 +94,7 @@ namespace sloked {
             if (count == 0) {
                 return SlokedSpan<T>(nullptr, 0);
             }
-            if (this->data_ptr == nullptr || start + count >= this->sz) {
+            if (this->data_ptr == nullptr || start + count > this->sz) {
                 throw SlokedError("SlokedSpan: Subspan out of bounds");
             } else {
                 return SlokedSpan<T>(this->data_ptr + start, count);

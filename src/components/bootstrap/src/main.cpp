@@ -91,7 +91,7 @@ std::pair<std::unique_ptr<SlokedCorePlugin>,
                    const SlokedBaseInterface &baseInterface) {
     SlokedCLI cli;
     cli.Define("--core-plugin", cli.Option<std::string>());
-    cli.Parse(argc, argv, true);
+    cli.Parse(argc - 1, argv + 1, true);
     if (cli.Has("core-plugin")) {
         auto libraryPath = cli["core-plugin"].As<std::string>();
         auto library = baseInterface.GetDynamicLibraryLoader().Load(

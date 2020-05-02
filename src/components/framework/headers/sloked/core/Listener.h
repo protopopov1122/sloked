@@ -30,16 +30,25 @@
 
 namespace sloked {
 
+    template <typename T>
+    class SlokedOptionalInheritance : public virtual T {
+     public:
+        using T::T;
+    };
+
+    template <>
+    class SlokedOptionalInheritance<void> {};
+
     template <typename T, typename E, typename P>
-    class SlokedListenerManager : public virtual P {
+    class SlokedListenerManager : public SlokedOptionalInheritance<P> {
      public:
         virtual ~SlokedListenerManager() = default;
 
-        void AddListener(std::shared_ptr<T> listener) override {
+        virtual void AddListener(std::shared_ptr<T> listener) {
             this->listeners.push_back(listener);
         }
 
-        void RemoveListener(const T &listener) override {
+        virtual void RemoveListener(const T &listener) {
             this->listeners.erase(
                 std::remove_if(
                     this->listeners.begin(), this->listeners.end(),
@@ -47,7 +56,7 @@ namespace sloked {
                 this->listeners.end());
         }
 
-        void ClearListeners() override {
+        virtual void ClearListeners() {
             this->listeners.clear();
         }
 
