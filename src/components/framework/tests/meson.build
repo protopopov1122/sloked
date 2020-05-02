@@ -19,7 +19,8 @@ sloked_tests_src = [
     'core/Scope.cpp',
     'core/Span.cpp',
     'core/String.cpp',
-    'core/VLQ.cpp'
+    'core/VLQ.cpp',
+    'kgr/Pipe.cpp'
 ]
 
 threads = dependency('threads')
