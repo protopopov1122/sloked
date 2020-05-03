@@ -77,6 +77,9 @@ socket.connect(1234, '::1', async () => {
         params: resp.result
     })
 
+    // const shutdown = await slave.connect('/editor/shutdown')
+    // await shutdown.write(null)
+
     await cursor.close()
     await slave.close()
 })

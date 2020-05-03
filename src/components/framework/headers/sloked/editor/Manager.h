@@ -66,6 +66,7 @@ namespace sloked {
         bool HasCrypto() const;
         bool HasCompression() const;
         bool HasScreen() const;
+        SlokedEditorShutdown &GetTotalShutdown();
 
         bool Has(const std::string &) const final;
         SlokedEditorInstance &Get(const std::string &) const final;
@@ -92,6 +93,7 @@ namespace sloked {
         SlokedCrypto *cryptoEngine;
         SlokedCompression *compression;
         SlokedScreenProviderFactory *screenProviders;
+        SlokedDefaultEditorShutdown shutdown;
     };
 }  // namespace sloked
 

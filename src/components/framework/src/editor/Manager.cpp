@@ -132,6 +132,10 @@ namespace sloked {
         return this->screenProviders != nullptr;
     }
 
+    SlokedEditorShutdown &SlokedEditorManager::GetTotalShutdown() {
+        return this->shutdown;
+    }
+
     bool SlokedEditorManager::Has(const std::string &key) const {
         return this->editors.count(key) != 0;
     }
@@ -343,6 +347,7 @@ namespace sloked {
                             editor.GetCrypto().HasCredentialMaster()
                         ? &editor.GetCrypto().GetCredentialMaster()
                         : nullptr,
+                        this->shutdown,
                     &this->baseTaggers));
             if (serviceConfig.Has("root")) {
                 serviceProvider.GetNamespace().GetRoot().Mount(

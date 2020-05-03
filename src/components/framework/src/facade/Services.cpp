@@ -29,6 +29,7 @@
 #include "sloked/services/Namespace.h"
 #include "sloked/services/Search.h"
 #include "sloked/services/TextRender.h"
+#include "sloked/services/Shutdown.h"
 
 namespace sloked {
 
@@ -38,13 +39,14 @@ namespace sloked {
             std::unique_ptr<SlokedRootNamespace> rootNamespace,
             const SlokedCharPreset &charPreset, KgrNamedServer &server,
             KgrContextManager<KgrLocalContext> &contextManager,
-            SlokedCredentialMaster *credentialMaster,
+            SlokedCredentialMaster *credentialMaster, SlokedEditorShutdown &shutdown,
             SlokedTextTaggerRegistry<SlokedEditorDocument::TagType>
                 *baseTaggers)
         : logger(logger), rootNamespace(std::move(rootNamespace)),
           charPreset(charPreset), server(server),
           documents(this->rootNamespace->GetRoot()),
           contextManager(contextManager), credentialMaster(credentialMaster),
+          shutdown(shutdown),
           taggers(baseTaggers) {}
 
     KgrContextManager<KgrLocalContext>
@@ -83,6 +85,11 @@ namespace sloked {
     SlokedCredentialMaster *
         SlokedServiceDependencyDefaultProvider::GetCredentialMaster() {
         return this->credentialMaster;
+    }
+
+    SlokedEditorShutdown &
+        SlokedServiceDependencyDefaultProvider::GetShutdown() {
+        return this->shutdown;
     }
 
     void SlokedServiceDependencyDefaultProvider::Close() {}
@@ -151,6 +158,12 @@ namespace sloked {
                 } else {
                     return nullptr;
                 }
+            });
+        this->builders.emplace(
+            "/editor/shutdown",
+            [](SlokedServiceDependencyProvider &provider) {
+                return std::make_unique<SlokedShutdownService>(
+                    provider.GetShutdown(), provider.GetContextManager());
             });
     }
 

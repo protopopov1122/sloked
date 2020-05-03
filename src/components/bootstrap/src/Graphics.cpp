@@ -28,6 +28,7 @@
 #include "sloked/editor/terminal/ScreenProvider.h"
 #include "sloked/screen/terminal/TerminalSize.h"
 #include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
+#include "sloked/screen/terminal/NullTerminal.h"
 
 namespace sloked {
 
@@ -132,10 +133,54 @@ namespace sloked {
         SlokedTerminalScreenProvider provider;
     };
 
+    class SlokedNullBootstrapScreen : public SlokedScreenProvider {
+     public:
+        SlokedNullBootstrapScreen(const SlokedCharPreset &charPreset)
+            : terminal(25, 80),
+              size(terminal,
+                   [](auto callback) {
+                       return []{};
+                   }),
+              console(terminal, Encoding::Get("system"), charPreset),
+              provider(console, Encoding::Get("system"), charPreset, terminal,
+                       size) {}
+
+        void Render(std::function<void(SlokedScreenComponent &)> fn) final {
+            this->provider.Render(std::move(fn));
+        }
+
+        std::vector<SlokedKeyboardInput> ReceiveInput(
+            std::chrono::system_clock::duration timeout) final {
+            return this->provider.ReceiveInput(timeout);
+        }
+
+        SlokedMonitor<SlokedScreenComponent &> &GetScreen() final {
+            return this->provider.GetScreen();
+        }
+
+        SlokedScreenSize &GetSize() final {
+            return this->provider.GetSize();
+        }
+
+        const Encoding &GetEncoding() final {
+            return this->provider.GetEncoding();
+        }
+
+     private:
+        SlokedNullTerminal terminal;
+        SlokedTerminalSize<
+            std::function<std::function<void()>(std::function<void()>)>>
+            size;
+        BufferedTerminal console;
+        SlokedTerminalScreenProvider provider;
+    };
+
     std::unique_ptr<SlokedScreenProvider> SlokedBootstrapScreenFactory::Make(
         const SlokedUri &uri, const SlokedCharPreset &charPreset) {
         if (uri.GetScheme() == "terminal") {
             return std::make_unique<SlokedTerminalBootstrapScreen>(charPreset);
+        } else if (uri.GetScheme() == "null") {
+            return std::make_unique<SlokedNullBootstrapScreen>(charPreset);
         } else if (uri.GetScheme() == "graphics") {
             const auto &query = uri.GetQuery();
             if constexpr (SlokedGraphicsCompat::HasGraphics()) {

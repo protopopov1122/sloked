@@ -23,7 +23,6 @@
 
 #include <iostream>
 
-#include "sloked/core/Semaphore.h"
 #include "sloked/services/DocumentSet.h"
 #include "sloked/services/Screen.h"
 #include "sloked/services/ScreenInput.h"
@@ -329,7 +328,7 @@ namespace sloked {
                        KgrArray{"/document/render", "/document/cursor",
                                 "/document/manager", "/document/notify",
                                 "/document/search", "/namespace/root",
-                                "/editor/parameters",
+                                "/editor/parameters", "/editor/shutdown",
                                 "/editor/authorization"}}}}}},
             {"parameters", KgrDictionary{{"tabWidth", 2}}}};
         auto &mainEditor = manager.Spawn("main", mainEditorConfig);
@@ -454,7 +453,6 @@ namespace sloked {
         auto &render = paneClient.GetRender();
 
         // Startup
-        SlokedSemaphore terminate;
         int i = 0;
         auto renderStatus = [&] {
             render.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
@@ -483,8 +481,8 @@ namespace sloked {
                             mainEditor.GetThreadedExecutor().Enqueue([&] {
                                 logger.Debug() << "Saving document";
                                 documentClient.Save(outputPath.ToString())
-                                    .Notify([&terminate](const auto &) {
-                                        terminate.Notify();
+                                    .Notify([&](const auto &) {
+                                        manager.GetTotalShutdown().RequestShutdown();
                                     });
                             });
                         }
@@ -505,7 +503,7 @@ namespace sloked {
                     .UnwrapWait();
             }
         }
-        terminate.WaitAll();
+        manager.GetTotalShutdown().WaitForShutdown();
         closeables.Close();
         return EXIT_SUCCESS;
     }

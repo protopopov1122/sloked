@@ -32,6 +32,7 @@
 #include "sloked/namespace/Root.h"
 #include "sloked/security/Master.h"
 #include "sloked/text/fragment/TaggedText.h"
+#include "sloked/editor/Shutdown.h"
 
 namespace sloked {
 
@@ -47,6 +48,7 @@ namespace sloked {
         virtual KgrNamedServer &GetServer() = 0;
         virtual SlokedEditorDocumentSet &GetDocuments() = 0;
         virtual SlokedCredentialMaster *GetCredentialMaster() = 0;
+        virtual SlokedEditorShutdown &GetShutdown() = 0;
     };
 
     class SlokedServiceDependencyDefaultProvider
@@ -56,6 +58,7 @@ namespace sloked {
             SlokedLogger &, std::unique_ptr<SlokedRootNamespace>,
             const SlokedCharPreset &, KgrNamedServer &,
             KgrContextManager<KgrLocalContext> &, SlokedCredentialMaster *,
+            SlokedEditorShutdown &,
             SlokedTextTaggerRegistry<SlokedEditorDocument::TagType> * =
                 nullptr);
         KgrContextManager<KgrLocalContext> &GetContextManager() override;
@@ -67,6 +70,7 @@ namespace sloked {
         KgrNamedServer &GetServer() override;
         SlokedEditorDocumentSet &GetDocuments() override;
         SlokedCredentialMaster *GetCredentialMaster() override;
+        SlokedEditorShutdown &GetShutdown() override;
         void Close() override;
 
      protected:
@@ -77,6 +81,7 @@ namespace sloked {
         SlokedEditorDocumentSet documents;
         KgrContextManager<KgrLocalContext> &contextManager;
         SlokedCredentialMaster *credentialMaster;
+        SlokedEditorShutdown &shutdown;
         SlokedDefaultTextTaggerRegistry<SlokedEditorDocument::TagType> taggers;
     };
 
