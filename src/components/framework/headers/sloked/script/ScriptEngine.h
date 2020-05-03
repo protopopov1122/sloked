@@ -23,7 +23,7 @@
 #define SLOKED_SCRIPT_SCRIPTENGINE_H_
 
 #include "sloked/core/Closeable.h"
-#include "sloked/editor/EditorInstance.h"
+#include "sloked/editor/EditorContainer.h"
 #include "sloked/kgr/NamedServer.h"
 #include "sloked/sched/Scheduler.h"
 #include "sloked/sched/Task.h"

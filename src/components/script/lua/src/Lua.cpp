@@ -33,7 +33,7 @@
 
 namespace sloked {
 
-    SlokedLuaEngine::SlokedLuaEngine(SlokedEditorInstanceContainer &apps,
+    SlokedLuaEngine::SlokedLuaEngine(SlokedEditorContainers &apps,
                                      SlokedScheduler &sched,
                                      SlokedExecutor &executor,
                                      const KgrValue &params)
@@ -157,8 +157,8 @@ namespace sloked {
         }
         try {
             std::string key(lua_tostring(state, 2));
-            SlokedEditorInstanceContainer &apps =
-                *reinterpret_cast<SlokedEditorInstanceContainer *>(
+            SlokedEditorContainers &apps =
+                *reinterpret_cast<SlokedEditorContainers *>(
                     lua_touserdata(state, lua_upvalueindex(1)));
             SlokedEventLoop &eventLoop = *reinterpret_cast<SlokedEventLoop *>(
                 lua_touserdata(state, lua_upvalueindex(2)));

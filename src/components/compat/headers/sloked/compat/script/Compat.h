@@ -22,7 +22,7 @@
 #ifndef SLOKED_COMPAT_SCRIPT_COMPAT_H_
 #define SLOKED_COMPAT_SCRIPT_COMPAT_H_
 
-#include "sloked/editor/EditorInstance.h"
+#include "sloked/editor/EditorContainer.h"
 #include "sloked/sched/Scheduler.h"
 #include "sloked/script/ScriptEngine.h"
 
@@ -39,7 +39,7 @@ namespace sloked {
         }
 
         static std::unique_ptr<SlokedScriptEngine> GetEngine(
-            SlokedEditorInstanceContainer &, SlokedSharedEditorState &,
+            SlokedEditorContainers &, SlokedSharedContainerEnvironment &,
             const KgrValue &);
     };
 }  // namespace sloked

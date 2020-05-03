@@ -31,8 +31,8 @@
 namespace sloked {
 
     std::unique_ptr<SlokedScriptEngine> SlokedScriptCompat::GetEngine(
-        SlokedEditorInstanceContainer &apps,
-        SlokedSharedEditorState &sharedState, const KgrValue &params) {
+        SlokedEditorContainers &apps,
+        SlokedSharedContainerEnvironment &sharedState, const KgrValue &params) {
         return std::make_unique<SlokedLuaEngine>(
             apps, sharedState.GetScheduler(), sharedState.GetExecutor(),
             params);

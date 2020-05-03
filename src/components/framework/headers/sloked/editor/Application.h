@@ -19,8 +19,8 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_EDITOR_PLUGIN_H_
-#define SLOKED_EDITOR_PLUGIN_H_
+#ifndef SLOKED_EDITOR_APPLICATIONs_H_
+#define SLOKED_EDITOR_APPLICATION_H_
 
 #include "sloked/core/CLI.h"
 #include "sloked/core/Closeable.h"
@@ -33,16 +33,16 @@
 
 namespace sloked {
 
-    class SlokedCorePlugin {
+    class SlokedApplication {
      public:
-        virtual ~SlokedCorePlugin() = default;
+        virtual ~SlokedApplication() = default;
         virtual int Start(int, const char **, const SlokedBaseInterface &,
-                          SlokedSharedEditorState &, SlokedEditorManager &) = 0;
+                          SlokedSharedContainerEnvironment &, SlokedEditorManager &) = 0;
     };
 
-    using SlokedCorePluginFactory = SlokedCorePlugin *(*) ();
+    using SlokedApplicationFactory = SlokedApplication *(*) ();
 
-    extern "C" SlokedCorePlugin *SlokedGetCorePlugin();
+    extern "C" SlokedApplication *SlokedMakeApplication();
 }  // namespace sloked
 
 #endif

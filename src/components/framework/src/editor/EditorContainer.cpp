@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/editor/EditorInstance.h"
+#include "sloked/editor/EditorContainer.h"
 
 #include "sloked/core/Error.h"
 #include "sloked/kgr/net/Config.h"
@@ -27,48 +27,48 @@
 
 namespace sloked {
 
-    SlokedSharedEditorState::SlokedSharedEditorState(
+    SlokedSharedContainerEnvironment::SlokedSharedContainerEnvironment(
         std::unique_ptr<SlokedIOPoll> ioPoll)
         : ioPoll(std::move(ioPoll)), ioPoller(*this->ioPoll, executor),
           scheduler(executor) {}
 
-    void SlokedSharedEditorState::Start() {
+    void SlokedSharedContainerEnvironment::Start() {
         this->scheduler.Start();
         this->ioPoller.Start(KgrNetConfig::RequestTimeout);
         this->executor.Start();
     }
 
-    void SlokedSharedEditorState::Close() {
+    void SlokedSharedContainerEnvironment::Close() {
         this->executor.Close();
         this->ioPoller.Close();
         this->threadManager.Close();
         this->scheduler.Close();
     }
 
-    SlokedIOPoller &SlokedSharedEditorState::GetIO() {
+    SlokedIOPoller &SlokedSharedContainerEnvironment::GetIO() {
         return this->ioPoller;
     }
 
-    SlokedScheduler &SlokedSharedEditorState::GetScheduler() {
+    SlokedScheduler &SlokedSharedContainerEnvironment::GetScheduler() {
         return this->scheduler;
     }
 
-    SlokedExecutor &SlokedSharedEditorState::GetExecutor() {
+    SlokedExecutor &SlokedSharedContainerEnvironment::GetExecutor() {
         return this->executor;
     }
 
-    SlokedExecutor &SlokedSharedEditorState::GetThreadedExecutor() {
+    SlokedExecutor &SlokedSharedContainerEnvironment::GetThreadedExecutor() {
         return this->threadManager;
     }
 
-    SlokedEditorInstance::SlokedEditorInstance(
-        SlokedSharedEditorState &sharedState, SlokedSocketFactory &network)
+    SlokedEditorContainer::SlokedEditorContainer(
+        SlokedSharedContainerEnvironment &sharedState, SlokedSocketFactory &network)
         : sharedState(sharedState), running{false}, network(network),
           contextManager(sharedState.GetExecutor()) {
         this->closeables.Attach(this->contextManager);
     }
 
-    SlokedCryptoFacade &SlokedEditorInstance::InitializeCrypto(
+    SlokedCryptoFacade &SlokedEditorContainer::InitializeCrypto(
         SlokedCrypto &crypto) {
         if (this->running.load()) {
             throw SlokedError("EditorInstance: Already running");
@@ -80,7 +80,7 @@ namespace sloked {
         }
     }
 
-    SlokedServerFacade &SlokedEditorInstance::InitializeServer() {
+    SlokedServerFacade &SlokedEditorContainer::InitializeServer() {
         if (this->running.load()) {
             throw SlokedError("EditorInstance: Already running");
         } else if (this->server != nullptr) {
@@ -93,7 +93,7 @@ namespace sloked {
         }
     }
 
-    SlokedServerFacade &SlokedEditorInstance::InitializeServer(
+    SlokedServerFacade &SlokedEditorContainer::InitializeServer(
         std::unique_ptr<SlokedSocket> socket) {
         if (this->running.load()) {
             throw SlokedError("EditorInstance: Already running");
@@ -114,7 +114,7 @@ namespace sloked {
     }
 
     SlokedServiceDependencyProvider &
-        SlokedEditorInstance::InitializeServiceProvider(
+        SlokedEditorContainer::InitializeServiceProvider(
             std::unique_ptr<SlokedServiceDependencyProvider> provider) {
         if (this->running.load()) {
             throw SlokedError("EditorInstance: Already running");
@@ -128,7 +128,7 @@ namespace sloked {
         }
     }
 
-    SlokedScreenServer &SlokedEditorInstance::InitializeScreen(
+    SlokedScreenServer &SlokedEditorContainer::InitializeScreen(
         SlokedScreenProviderFactory &providers, const SlokedUri &uri) {
         if (this->running.load()) {
             throw SlokedError("EditorInstance: Already running");
@@ -144,20 +144,20 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorInstance::Attach(SlokedCloseable &closeable) {
+    void SlokedEditorContainer::Attach(SlokedCloseable &closeable) {
         this->closeables.Attach(closeable);
     }
 
-    void SlokedEditorInstance::Attach(
+    void SlokedEditorContainer::Attach(
         std::unique_ptr<SlokedDataHandle> handle) {
         this->handles.emplace_back(std::move(handle));
     }
 
-    bool SlokedEditorInstance::IsRunning() const {
+    bool SlokedEditorContainer::IsRunning() const {
         return this->running.load();
     }
 
-    void SlokedEditorInstance::Start() {
+    void SlokedEditorContainer::Start() {
         if (!this->running.exchange(true)) {
             this->contextManager.Start();
             if (this->server) {
@@ -179,7 +179,7 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorInstance::Stop() {
+    void SlokedEditorContainer::Stop() {
         if (this->running.load()) {
             std::thread([this] {
                 std::unique_lock lock(this->termination_mtx);
@@ -199,47 +199,47 @@ namespace sloked {
         }
     }
 
-    void SlokedEditorInstance::Wait() {
+    void SlokedEditorContainer::Wait() {
         std::unique_lock lock(this->termination_mtx);
         while (this->running.load()) {
             this->termination_cv.wait(lock);
         }
     }
 
-    void SlokedEditorInstance::Close() {
+    void SlokedEditorContainer::Close() {
         this->Stop();
         this->Wait();
     }
 
-    SlokedCharPreset &SlokedEditorInstance::GetCharPreset() {
+    SlokedCharPreset &SlokedEditorContainer::GetCharPreset() {
         return this->charPreset;
     }
 
-    SlokedScheduler &SlokedEditorInstance::GetScheduler() {
+    SlokedScheduler &SlokedEditorContainer::GetScheduler() {
         return this->sharedState.GetScheduler();
     }
 
-    SlokedExecutor &SlokedEditorInstance::GetExecutor() {
+    SlokedExecutor &SlokedEditorContainer::GetExecutor() {
         return this->sharedState.GetExecutor();
     }
 
-    SlokedExecutor &SlokedEditorInstance::GetThreadedExecutor() {
+    SlokedExecutor &SlokedEditorContainer::GetThreadedExecutor() {
         return this->sharedState.GetThreadedExecutor();
     }
 
-    SlokedIOPoller &SlokedEditorInstance::GetIO() {
+    SlokedIOPoller &SlokedEditorContainer::GetIO() {
         return this->sharedState.GetIO();
     }
 
-    SlokedNetworkFacade &SlokedEditorInstance::GetNetwork() {
+    SlokedNetworkFacade &SlokedEditorContainer::GetNetwork() {
         return this->network;
     }
 
-    bool SlokedEditorInstance::HasCrypto() const {
+    bool SlokedEditorContainer::HasCrypto() const {
         return this->crypto != nullptr;
     }
 
-    SlokedCryptoFacade &SlokedEditorInstance::GetCrypto() {
+    SlokedCryptoFacade &SlokedEditorContainer::GetCrypto() {
         if (this->crypto) {
             return *this->crypto;
         } else {
@@ -247,7 +247,7 @@ namespace sloked {
         }
     }
 
-    SlokedServerFacade &SlokedEditorInstance::GetServer() {
+    SlokedServerFacade &SlokedEditorContainer::GetServer() {
         if (this->server) {
             return *this->server;
         } else {
@@ -256,7 +256,7 @@ namespace sloked {
     }
 
     SlokedServiceDependencyProvider &
-        SlokedEditorInstance::GetServiceProvider() {
+        SlokedEditorContainer::GetServiceProvider() {
         if (this->serviceProvider) {
             return *this->serviceProvider;
         } else {
@@ -264,11 +264,11 @@ namespace sloked {
         }
     }
 
-    bool SlokedEditorInstance::HasScreen() const {
+    bool SlokedEditorContainer::HasScreen() const {
         return this->screen != nullptr;
     }
 
-    SlokedScreenServer &SlokedEditorInstance::GetScreen() const {
+    SlokedScreenServer &SlokedEditorContainer::GetScreen() const {
         if (this->screen) {
             return *this->screen;
         } else {
@@ -277,7 +277,7 @@ namespace sloked {
     }
 
     KgrContextManager<KgrLocalContext>
-        &SlokedEditorInstance::GetContextManager() {
+        &SlokedEditorContainer::GetContextManager() {
         return this->contextManager.GetManager();
     }
 }  // namespace sloked

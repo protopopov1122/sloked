@@ -24,13 +24,13 @@
 
 #include <lua.hpp>
 
-#include "sloked/editor/EditorInstance.h"
+#include "sloked/editor/EditorContainer.h"
 #include "sloked/sched/EventLoop.h"
 
 namespace sloked {
 
     int SlokedEditorToLua(SlokedEventLoop &, lua_State *,
-                          SlokedEditorInstance &);
+                          SlokedEditorContainer &);
 }
 
 #endif

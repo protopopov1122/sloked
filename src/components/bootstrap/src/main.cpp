@@ -29,83 +29,39 @@
 #include "sloked/compat/compression/Compat.h"
 #include "sloked/compat/core/awaitable/Compat.h"
 #include "sloked/compat/crypto/Compat.h"
-#include "sloked/compat/editor/configuration/Compat.h"
-#include "sloked/compat/namespace/Compat.h"
 #include "sloked/compat/net/Compat.h"
-#include "sloked/compat/screen/graphics/Compat.h"
-#include "sloked/compat/screen/terminal/Compat.h"
-#include "sloked/compat/screen/terminal/TerminalResize.h"
-#include "sloked/compat/script/Compat.h"
 #include "sloked/core/CLI.h"
 #include "sloked/core/Closeable.h"
 #include "sloked/core/Failure.h"
 #include "sloked/core/Locale.h"
 #include "sloked/core/Logger.h"
-#include "sloked/core/Monitor.h"
-#include "sloked/core/Semaphore.h"
-#include "sloked/core/awaitable/Poll.h"
-#include "sloked/editor/Configuration.h"
-#include "sloked/editor/CorePlugin.h"
-#include "sloked/editor/EditorInstance.h"
+#include "sloked/editor/Application.h"
+#include "sloked/editor/EditorContainer.h"
 #include "sloked/editor/Manager.h"
-#include "sloked/editor/doc-mgr/DocumentSet.h"
-#include "sloked/editor/terminal/ScreenProvider.h"
-#include "sloked/facade/Services.h"
-#include "sloked/kgr/Path.h"
-#include "sloked/kgr/ctx-manager/RunnableContextManager.h"
-#include "sloked/kgr/local/NamedServer.h"
-#include "sloked/kgr/local/Pipe.h"
-#include "sloked/kgr/local/Server.h"
-#include "sloked/kgr/net/Config.h"
-#include "sloked/kgr/net/MasterServer.h"
-#include "sloked/kgr/net/SlaveServer.h"
-#include "sloked/namespace/Empty.h"
-#include "sloked/namespace/Mount.h"
-#include "sloked/namespace/Resolve.h"
-#include "sloked/namespace/Root.h"
-#include "sloked/namespace/Virtual.h"
-#include "sloked/net/CryptoSocket.h"
-#include "sloked/sched/Scheduler.h"
-#include "sloked/screen/terminal/TerminalSize.h"
-#include "sloked/screen/terminal/multiplexer/TerminalBuffer.h"
-#include "sloked/security/Master.h"
-#include "sloked/security/Slave.h"
-#include "sloked/services/Cursor.h"
-#include "sloked/services/DocumentNotify.h"
-#include "sloked/services/DocumentSet.h"
-#include "sloked/services/Namespace.h"
-#include "sloked/services/Screen.h"
-#include "sloked/services/ScreenInput.h"
-#include "sloked/services/ScreenSize.h"
-#include "sloked/services/Search.h"
-#include "sloked/services/TextPane.h"
-#include "sloked/services/TextRender.h"
-#include "sloked/text/fragment/TaggedText.h"
-#include "sloked/text/fragment/Updater.h"
 
 using namespace sloked;
 
-std::pair<std::unique_ptr<SlokedCorePlugin>,
+std::pair<std::unique_ptr<SlokedApplication>,
           std::unique_ptr<SlokedDynamicLibrary>>
-    LoadCorePlugin(int argc, const char **argv,
+    LoadApplication(int argc, const char **argv,
                    const SlokedBaseInterface &baseInterface) {
     SlokedCLI cli;
-    cli.Define("--core-plugin", cli.Option<std::string>());
+    cli.Define("--load-application", cli.Option<std::string>());
     cli.Parse(argc - 1, argv + 1, true);
-    if (cli.Has("core-plugin")) {
-        auto libraryPath = cli["core-plugin"].As<std::string>();
+    if (cli.Has("load-application")) {
+        auto libraryPath = cli["load-application"].As<std::string>();
         auto library = baseInterface.GetDynamicLibraryLoader().Load(
             libraryPath, SlokedDynamicLibrary::Binding::Lazy,
             SlokedDynamicLibrary::Scope::Local);
-        void *pluginGetterRaw = library->Resolve("SlokedGetCorePlugin");
-        SlokedCorePluginFactory pluginGetter =
-            reinterpret_cast<SlokedCorePluginFactory>(pluginGetterRaw);
-        return std::make_pair(std::unique_ptr<SlokedCorePlugin>(pluginGetter()),
+        void *pluginGetterRaw = library->Resolve("SlokedMakeApplication");
+        SlokedApplicationFactory pluginGetter =
+            reinterpret_cast<SlokedApplicationFactory>(pluginGetterRaw);
+        return std::make_pair(std::unique_ptr<SlokedApplication>(pluginGetter()),
                               std::move(library));
     } else {
-#ifdef SLOKED_BOOTSTRAP_HAS_DEFAULT_CORE_PLUGIN
+#ifdef SLOKED_BOOTSTRAP_HAS_DEFAULT_APPLICATION
         return std::make_pair(
-            std::unique_ptr<SlokedCorePlugin>(SlokedGetCorePlugin()), nullptr);
+            std::unique_ptr<SlokedApplication>(SlokedMakeApplication()), nullptr);
 #else
         throw SlokedError("Bootstrap: No default core plugin defined");
 #endif
@@ -125,12 +81,12 @@ int main(int argc, const char **argv) {
     if constexpr (SlokedCryptoCompat::IsSupported()) {
         startupPrms.SetCrypto(SlokedCryptoCompat::GetCrypto());
     }
-    SlokedSharedEditorState sharedEditorState(SlokedIOPollCompat::NewPoll());
+    SlokedSharedContainerEnvironment sharedEditorState(SlokedIOPollCompat::NewPoll());
     closeables.Attach(sharedEditorState);
     sharedEditorState.Start();
 
     startupPrms.SetEditors([&sharedEditorState] {
-        return std::make_unique<SlokedEditorInstance>(
+        return std::make_unique<SlokedEditorContainer>(
             sharedEditorState, SlokedNetCompat::GetNetwork());
     });
     if constexpr (SlokedCompressionCompat::IsSupported()) {
@@ -142,13 +98,13 @@ int main(int argc, const char **argv) {
         std::make_unique<SlokedEditorManager>(std::move(startupPrms));
     closeables.Attach(*startup);
 
-    auto [corePlugin, corePluginLibrary] =
-        LoadCorePlugin(argc, argv, BaseInterface);
-    auto rc = corePlugin->Start(argc, argv, BaseInterface, sharedEditorState,
+    auto [application, applicationLibrary] =
+        LoadApplication(argc, argv, BaseInterface);
+    auto rc = application->Start(argc, argv, BaseInterface, sharedEditorState,
                                 *startup);
 
     closeables.Close();
-    corePlugin.reset();
+    application.reset();
     startup.reset();
     return rc;
 }

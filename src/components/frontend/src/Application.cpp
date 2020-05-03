@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/editor/CorePlugin.h"
+#include "sloked/editor/Application.h"
 
 #include <iostream>
 
@@ -34,10 +34,10 @@
 
 namespace sloked {
 
-    class SlokedFrontendDefaultCorePlugin : public SlokedCorePlugin {
+    class SlokedFrontendDefaultApplication : public SlokedApplication {
      public:
         int Start(int, const char **, const SlokedBaseInterface &,
-                  SlokedSharedEditorState &, SlokedEditorManager &) final;
+                  SlokedSharedContainerEnvironment &, SlokedEditorManager &) final;
     };
 
     class TestFragment
@@ -215,9 +215,9 @@ namespace sloked {
                                       {"port", 1234},
                                   }}};
 
-    int SlokedFrontendDefaultCorePlugin::Start(
+    int SlokedFrontendDefaultApplication::Start(
         int argc, const char **argv, const SlokedBaseInterface &baseInterface,
-        SlokedSharedEditorState &sharedState, SlokedEditorManager &manager) {
+        SlokedSharedContainerEnvironment &sharedState, SlokedEditorManager &manager) {
         SlokedCloseablePool closeables;
         SlokedLoggingManager::Global.SetSink(
             SlokedLogLevel::Debug,
@@ -249,9 +249,9 @@ namespace sloked {
                                 KgrDictionary{{"options", "--script-path"},
                                               {"type", "string"},
                                               {"map", "/script{}/path"}},
-                                KgrDictionary{{"options", "--core-plugin"},
+                                KgrDictionary{{"options", "--load-application"},
                                               {"type", "string"},
-                                              {"map", "/corePlugin"}}});
+                                              {"map", "/application"}}});
         cli.Parse(argc - 1, argv + 1);
         SlokedConfiguration mainConfig{
             cli.Export(), baseInterface.GetConfigurationLoader().Load("main"),
@@ -508,7 +508,7 @@ namespace sloked {
         return EXIT_SUCCESS;
     }
 
-    extern "C" SlokedCorePlugin *SlokedGetCorePlugin() {
-        return new SlokedFrontendDefaultCorePlugin();
+    extern "C" SlokedApplication *SlokedMakeApplication() {
+        return new SlokedFrontendDefaultApplication();
     }
 }  // namespace sloked

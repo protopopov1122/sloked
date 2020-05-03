@@ -30,7 +30,7 @@
 
 #include "sloked/core/Logger.h"
 #include "sloked/core/Semaphore.h"
-#include "sloked/editor/EditorInstance.h"
+#include "sloked/editor/EditorContainer.h"
 #include "sloked/sched/EventLoop.h"
 #include "sloked/sched/ScopedExecutor.h"
 #include "sloked/sched/ScopedScheduler.h"
@@ -41,7 +41,7 @@ namespace sloked {
 
     class SlokedLuaEngine : public SlokedScriptEngine {
      public:
-        SlokedLuaEngine(SlokedEditorInstanceContainer &, SlokedScheduler &,
+        SlokedLuaEngine(SlokedEditorContainers &, SlokedScheduler &,
                         SlokedExecutor &, const KgrValue & = {});
         ~SlokedLuaEngine();
         void Start() final;
@@ -60,7 +60,7 @@ namespace sloked {
         lua_State *state;
         std::atomic<bool> work;
         std::thread workerThread;
-        SlokedEditorInstanceContainer &apps;
+        SlokedEditorContainers &apps;
         SlokedSemaphore activity;
         SlokedDefaultEventLoop eventLoop;
         SlokedScopedScheduler sched;

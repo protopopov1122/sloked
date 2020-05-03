@@ -27,7 +27,7 @@
 #include "sloked/core/Library.h"
 #include "sloked/core/awaitable/Awaitable.h"
 #include "sloked/editor/Configuration.h"
-#include "sloked/editor/EditorInstance.h"
+#include "sloked/editor/EditorContainer.h"
 #include "sloked/net/Socket.h"
 #include "sloked/sched/Scheduler.h"
 #include "sloked/screen/Manager.h"
@@ -63,7 +63,7 @@ namespace sloked {
             OnTerminalResize) const = 0;
         virtual bool HasScripting() const = 0;
         virtual std::unique_ptr<SlokedScriptEngine> NewScriptEngine(
-            SlokedEditorInstanceContainer &, SlokedSharedEditorState &,
+            SlokedEditorContainers &, SlokedSharedContainerEnvironment &,
             const KgrValue &) const = 0;
     };
 }  // namespace sloked

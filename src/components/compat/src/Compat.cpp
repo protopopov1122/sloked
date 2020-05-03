@@ -95,8 +95,8 @@ namespace sloked {
         }
 
         std::unique_ptr<SlokedScriptEngine> NewScriptEngine(
-            SlokedEditorInstanceContainer &container,
-            SlokedSharedEditorState &sharedState,
+            SlokedEditorContainers &container,
+            SlokedSharedContainerEnvironment &sharedState,
             const KgrValue &params) const final {
             if constexpr (SlokedScriptCompat::IsSupported()) {
                 return SlokedScriptCompat::GetEngine(container, sharedState,

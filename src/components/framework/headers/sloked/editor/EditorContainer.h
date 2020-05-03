@@ -19,8 +19,8 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_EDITOR_EDITORINSTANCE_H_
-#define SLOKED_EDITOR_EDITORINSTANCE_H_
+#ifndef SLOKED_EDITOR_EDITORCONTAINER_H_
+#define SLOKED_EDITOR_EDITORCONTAINER_H_
 
 #include <atomic>
 #include <condition_variable>
@@ -43,9 +43,9 @@
 
 namespace sloked {
 
-    class SlokedSharedEditorState : public SlokedCloseable {
+    class SlokedSharedContainerEnvironment : public SlokedCloseable {
      public:
-        SlokedSharedEditorState(std::unique_ptr<SlokedIOPoll>);
+        SlokedSharedContainerEnvironment(std::unique_ptr<SlokedIOPoll>);
 
         void Start();
         void Close() final;
@@ -63,9 +63,9 @@ namespace sloked {
         SlokedMultitheadExecutor threadManager;
     };
 
-    class SlokedEditorInstance : public SlokedCloseable {
+    class SlokedEditorContainer : public SlokedCloseable {
      public:
-        SlokedEditorInstance(SlokedSharedEditorState &, SlokedSocketFactory &);
+        SlokedEditorContainer(SlokedSharedContainerEnvironment &, SlokedSocketFactory &);
         SlokedCryptoFacade &InitializeCrypto(SlokedCrypto &);
         SlokedServerFacade &InitializeServer();
         SlokedServerFacade &InitializeServer(std::unique_ptr<SlokedSocket>);
@@ -97,7 +97,7 @@ namespace sloked {
         KgrContextManager<KgrLocalContext> &GetContextManager();
 
      private:
-        SlokedSharedEditorState &sharedState;
+        SlokedSharedContainerEnvironment &sharedState;
         std::atomic<bool> running;
         std::mutex termination_mtx;
         std::condition_variable termination_cv;
@@ -114,15 +114,15 @@ namespace sloked {
         KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
     };
 
-    class SlokedEditorInstanceContainer {
+    class SlokedEditorContainers {
      public:
-        virtual ~SlokedEditorInstanceContainer() = default;
+        virtual ~SlokedEditorContainers() = default;
         virtual bool Has(const std::string &) const = 0;
-        virtual SlokedEditorInstance &Get(const std::string &) const = 0;
+        virtual SlokedEditorContainer &Get(const std::string &) const = 0;
         virtual void Enumerate(
-            std::function<void(const std::string, SlokedEditorInstance &)>)
+            std::function<void(const std::string, SlokedEditorContainer &)>)
             const = 0;
-        virtual SlokedEditorInstance &Spawn(const std::string &,
+        virtual SlokedEditorContainer &Spawn(const std::string &,
                                             const KgrValue &) = 0;
         virtual void Shutdown(const std::string &) = 0;
     };

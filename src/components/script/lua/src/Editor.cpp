@@ -26,9 +26,9 @@
 namespace sloked {
 
     struct SlokedAppHandle {
-        SlokedAppHandle(SlokedEditorInstance &app) : app(app) {}
+        SlokedAppHandle(SlokedEditorContainer &app) : app(app) {}
 
-        SlokedEditorInstance &app;
+        SlokedEditorContainer &app;
     };
 
     static int SlokedApp_GC(lua_State *state) {
@@ -41,7 +41,7 @@ namespace sloked {
     }
 
     int SlokedEditorToLua(SlokedEventLoop &eventLoop, lua_State *state,
-                          SlokedEditorInstance &app) {
+                          SlokedEditorContainer &app) {
         SlokedAppHandle *appHandle = reinterpret_cast<SlokedAppHandle *>(
             lua_newuserdata(state, sizeof(SlokedAppHandle)));
         new (appHandle) SlokedAppHandle(app);

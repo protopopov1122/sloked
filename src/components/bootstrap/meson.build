@@ -9,8 +9,8 @@ bootstrap_flags = []
 bootstrap_flags += sloked_compat_flags
 bootstrap_dependencies = [sloked_framework, sloked_compat]
 
-if get_option('default_core_plugin')
-  bootstrap_flags += '-DSLOKED_BOOTSTRAP_HAS_DEFAULT_CORE_PLUGIN'
+if get_option('default_application')
+  bootstrap_flags += '-DSLOKED_BOOTSTRAP_HAS_DEFAULT_APPLICATION'
   bootstrap_dependencies += sloked_frontend
 endif
 

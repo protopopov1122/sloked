@@ -1,6 +1,6 @@
 
 frontend_src = [
-  'src/CorePlugin.cpp'
+  'src/Application.cpp'
 ]
 
 sloked_frontend_lib = shared_library('sloked_frontend_core', frontend_src,
