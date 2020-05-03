@@ -234,7 +234,7 @@ namespace sloked {
 
     KgrDictionary &KgrDictionary::Put(const std::string &key,
                                       KgrValue &&value) {
-        this->content.emplace(key, std::forward<KgrValue>(value));
+        this->content.insert_or_assign(key, std::forward<KgrValue>(value));
         return *this;
     }
 

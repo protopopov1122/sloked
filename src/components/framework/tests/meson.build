@@ -20,7 +20,8 @@ sloked_tests_src = [
     'core/Span.cpp',
     'core/String.cpp',
     'core/VLQ.cpp',
-    'kgr/Pipe.cpp'
+    'kgr/Pipe.cpp',
+    'kgr/Value.cpp'
 ]
 
 threads = dependency('threads')
