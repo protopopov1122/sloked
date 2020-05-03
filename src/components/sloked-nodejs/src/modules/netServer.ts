@@ -54,29 +54,22 @@ export class NetSlaveServer implements AuthServer<string> {
     async connect(service: string): Promise<Pipe> {
         const pipeId: number = await this._net.invoke('connect', service).next().value
         const [pipe1, pipe2]: [Pipe, Pipe] = DefaultPipe.make()
-        pipe1.listen(async () => {
+        const process: () => Promise<void> = async () => {
             while (!pipe1.empty()) {
-                this._net.invoke('send', {
+                await this._net.invoke('send', {
                     'pipe': pipeId,
                     'data': await pipe1.read()
-                })
+                }).next().value
             }
             if (!pipe1.isOpen()) {
                 this._net.invoke('close', pipeId)
                 delete this._pipes[pipeId]
             }
-        })
-        this._pipes[pipeId] = pipe1
-        while (!pipe1.empty()) {
-            this._net.invoke('send', {
-                'pipe': pipeId,
-                'data': await pipe1.read()
-            })
         }
-        if (!pipe1.isOpen()) {
-            this._net.invoke('close', pipeId)
-            delete this._pipes[pipeId]
-        } else {
+        pipe1.listen(process)
+        this._pipes[pipeId] = pipe1
+        await process()
+        if (pipe1.isOpen()) {
             this._net.invoke('activate', pipeId)
         }
         return pipe2
@@ -133,15 +126,15 @@ export class NetSlaveServer implements AuthServer<string> {
         }
     }
 
-    close(): void {
+    async close(): Promise<void> {
         if (this._authenticator) {
             this._authenticator.close()
         }
-        this._net.close()
         for (const pipe of Object.values(this._pipes)) {
-            pipe.close()
+            await pipe.close()
         }
         this._pipes = {}
+        this._net.close()
     }
 
     async _ping(): Promise<string> {

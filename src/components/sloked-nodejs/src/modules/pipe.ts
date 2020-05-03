@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import { Pipe } from '../types/pipe'
+import { Pipe, PipeCallback } from '../types/pipe'
 
 class PipeDescriptor {
     constructor() {
@@ -49,13 +49,13 @@ class SimplexPipe {
         return this._descriptor.isOpen()
     }
 
-    listen(callback: () => void): void {
+    listen(callback: PipeCallback): void {
         this._callback = callback
     }
 
-    notify(): void {
+    async notify(): Promise<void> {
         if (this._callback) {
-            this._callback()
+            await this._callback()
         }
     }
 
@@ -65,7 +65,7 @@ class SimplexPipe {
         this._callback = undefined
     }
 
-    push(msg: any): void {
+    async push(msg: any): Promise<void> {
         if (!this._descriptor.isOpen()) {
             throw new Error('Attempt to push inside closed pipe')
         }
@@ -75,7 +75,7 @@ class SimplexPipe {
             callback(msg)
         } else {
             this._queue.push(msg)
-            this.notify()
+            await this.notify()
         }
     }
 
@@ -102,7 +102,7 @@ class SimplexPipe {
     private _descriptor: PipeDescriptor
     private _queue: any[]
     private _awaiting: ((result: any) => void)[]
-    private _callback?: () => void
+    private _callback?: PipeCallback
 }
 
 export class DefaultPipe implements Pipe {
@@ -127,17 +127,17 @@ export class DefaultPipe implements Pipe {
         return this._in.pop()
     }
 
-    write(msg: any): void {
-        this._out.push(msg)
+    async write(msg: any): Promise<void> {
+        await this._out.push(msg)
     }
 
-    listen(callback: () => void): void {
+    listen(callback: PipeCallback): void {
         this._in.listen(callback)
     }
 
-    close(): void {
+    async close(): Promise<void> {
         this._in.close()
-        this._out.notify()
+        await this._out.notify()
     }
 
     static make(): [Pipe, Pipe] {

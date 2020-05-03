@@ -39,7 +39,7 @@ class EchoService implements Service {
 }
 
 const socket = new net.Socket()
-socket.connect(1234, 'localhost', async () => {
+socket.connect(1234, '::1', async () => {
     const crypto: Crypto = new DefaultCrypto()
     const key: Buffer = await crypto.deriveKey('password', 'salt')
     const cryptoStream: EncryptedDuplexStream = new EncryptedStream(socket, crypto, key)
@@ -71,12 +71,12 @@ socket.connect(1234, 'localhost', async () => {
             documentId: 1
         }
     })
-    cursor.write({
+    await cursor.write({
         id: 1,
         method: 'insert',
         params: resp.result
     })
-    
-    setTimeout(() => cursor.close(), 1000)
-    setTimeout(() => slave.close(), 1500)
+
+    await cursor.close()
+    await slave.close()
 })

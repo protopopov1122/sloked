@@ -182,6 +182,9 @@ export class CompressedStream extends Duplex {
         this._raw.on('close', () => {
             this.emit('close')
         })
+        this.on('close', () => {
+            this._raw.destroy()
+        })
     }
 
     _write(chunk: Buffer, enc: string, callback: any): void {

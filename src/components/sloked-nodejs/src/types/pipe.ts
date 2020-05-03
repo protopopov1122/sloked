@@ -19,12 +19,14 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+export type PipeCallback = (() => void) | (() => Promise<void>)
+
 export interface Pipe {
     isOpen(): boolean;
     available(): number;
     empty(): boolean;
     read(): Promise<any>;
-    write(msg: any): void;
-    listen(callback: () => void): void;
-    close(): void;
+    write(msg: any): Promise<void>;
+    listen(callback: PipeCallback): void;
+    close(): Promise<void>;
 }

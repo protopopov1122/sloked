@@ -243,6 +243,9 @@ export class EncryptedStream extends EncryptedDuplexStream implements StreamEncr
         this._raw.on('close', () => {
             this.emit('close')
         })
+        this.on('close', () => {
+            this._raw.destroy()
+        })
     }
 
     getEncryption(): StreamEncryption {
