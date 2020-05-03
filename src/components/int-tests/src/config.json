@@ -1,0 +1,49 @@
+{
+    "containers": {
+        "main": {
+            "parameters": {
+                "tabWidth": 2
+            },
+            "server": {
+                "netServer": {
+                    "host": "localhost",
+                    "port": 1234
+                },
+                "restrictAccess": {
+                    "content": [
+                        "/document",
+                        "/namespace",
+                        "/screen",
+                        "/editor",
+                        "/plugins"
+                    ],
+                    "whitelist": true
+                },
+                "restrictModification": {
+                    "content": [
+                        "/document",
+                        "/namespace",
+                        "/screen",
+                        "/editor",
+                        "/plugins"
+                    ],
+                    "whitelist": true
+                },
+                "services": {
+                    "endpoints": [
+                        "/document/render",
+                        "/document/cursor",
+                        "/document/manager",
+                        "/document/notify",
+                        "/document/search",
+                        "/namespace/root",
+                        "/editor/parameters",
+                        "/editor/shutdown",
+                        "/editor/authorization"
+                    ],
+                    "root": "file:///"
+                }
+            }
+        }
+    }
+}

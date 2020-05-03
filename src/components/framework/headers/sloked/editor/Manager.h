@@ -67,6 +67,7 @@ namespace sloked {
         bool HasCompression() const;
         bool HasScreen() const;
         SlokedEditorShutdown &GetTotalShutdown();
+        SlokedRootNamespaceFactory &GetNamespaceFactory();
 
         bool Has(const std::string &) const final;
         SlokedEditorContainer &Get(const std::string &) const final;

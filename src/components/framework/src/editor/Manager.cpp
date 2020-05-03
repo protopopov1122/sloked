@@ -136,6 +136,10 @@ namespace sloked {
         return this->shutdown;
     }
 
+    SlokedRootNamespaceFactory &SlokedEditorManager::GetNamespaceFactory() {
+        return this->namespaceFactory;
+    }
+
     bool SlokedEditorManager::Has(const std::string &key) const {
         return this->editors.count(key) != 0;
     }

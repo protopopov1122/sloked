@@ -47,6 +47,9 @@ if get_option('graphics') == 'cairo_sdl'
   sloked_graphics_flags = sloked_graphics_cairo_sdl_flags
   sloked_disable_graphics = false
 endif
+if get_option('build_headless')
+  subdir('components/int-tests/headless')
+endif
 
 sloked_platform = sloked_posix_platform
 sloked_platform_flags = sloked_posix_platform_flags
