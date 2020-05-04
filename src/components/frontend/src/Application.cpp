@@ -26,6 +26,7 @@
 #include "sloked/services/DocumentSet.h"
 #include "sloked/services/Screen.h"
 #include "sloked/services/ScreenInput.h"
+#include "sloked/services/Shutdown.h"
 #include "sloked/services/ScreenSize.h"
 #include "sloked/services/TextPane.h"
 #include "sloked/text/fragment/Iterator.h"
@@ -37,7 +38,8 @@ namespace sloked {
     class SlokedFrontendDefaultApplication : public SlokedApplication {
      public:
         int Start(int, const char **, const SlokedBaseInterface &,
-                  SlokedSharedContainerEnvironment &, SlokedEditorManager &) final;
+                  SlokedSharedContainerEnvironment &,
+                  SlokedEditorManager &) final;
     };
 
     class TestFragment
@@ -217,7 +219,8 @@ namespace sloked {
 
     int SlokedFrontendDefaultApplication::Start(
         int argc, const char **argv, const SlokedBaseInterface &baseInterface,
-        SlokedSharedContainerEnvironment &sharedState, SlokedEditorManager &manager) {
+        SlokedSharedContainerEnvironment &sharedState,
+        SlokedEditorManager &manager) {
         SlokedCloseablePool closeables;
         SlokedLoggingManager::Global.SetSink(
             SlokedLogLevel::Debug,
@@ -262,77 +265,6 @@ namespace sloked {
             return EXIT_FAILURE;
         }
 
-        // Main editor
-        KgrDictionary mainEditorConfig{
-            {"crypto",
-             KgrDictionary{
-                 {"salt", "salt"},
-                 {"defaultKey",
-                  KgrDictionary{
-                      {"password", "password"},
-                  }},
-                 {"authentication",
-                  KgrDictionary{
-                      {"master",
-                       KgrDictionary{
-                           {"masterPassword", "password"},
-                           {"salt", "salt"},
-                           {"users",
-                            KgrArray{KgrDictionary{
-                                {"id", "user1"},
-                                {"password", "password1"},
-                                {"restrictAccess",
-                                 KgrDictionary{
-                                     {"whitelist", true},
-                                     {"content",
-                                      KgrArray{"/document", "/namespace",
-                                               "/screen", "/editor",
-                                               "/plugins"}}}},
-                                {"restrictModification",
-                                 KgrDictionary{
-                                     {"whitelist", true},
-                                     {"content",
-                                      KgrArray{"/screen", "/plugins"}}}}}}},
-                           {"defaultUser",
-                            KgrDictionary{
-                                {"restrictAccess",
-                                 KgrDictionary{{"whitelist", true},
-                                               {"content", KgrArray{}}}},
-                                {"restrictModification",
-                                 KgrDictionary{
-                                     {"whitelist", true},
-                                     {"content", KgrArray{}}}}}}}}}}}},
-            {"network",
-             KgrDictionary{{"buffering", 5},
-                           {"compression", manager.HasCompression()}}},
-            {"server",
-             KgrDictionary{
-                 {"netServer",
-                  KgrDictionary{
-                      {"host", "localhost"},
-                      {"port", mainConfig.Find("/network/port").AsInt()}}},
-                 {"restrictAccess",
-                  KgrDictionary{
-                      {"whitelist", true},
-                      {"content", KgrArray{"/document", "/namespace", "/screen",
-                                           "/editor", "/plugins"}}}},
-                 {"restrictModification",
-                  KgrDictionary{
-                      {"whitelist", true},
-                      {"content", KgrArray{"/document", "/namespace", "/screen",
-                                           "/editor", "/plugins"}}}},
-                 {"services",
-                  KgrDictionary{
-                      {"root", "file:///"},
-                      {"endpoints",
-                       KgrArray{"/document/render", "/document/cursor",
-                                "/document/manager", "/document/notify",
-                                "/document/search", "/namespace/root",
-                                "/editor/parameters", "/editor/shutdown",
-                                "/editor/authorization"}}}}}},
-            {"parameters", KgrDictionary{{"tabWidth", 2}}}};
-        auto &mainEditor = manager.Spawn("main", mainEditorConfig);
-
         KgrDictionary secondaryEditorConfig{
             {"network",
              KgrDictionary{{"buffering", 5},
@@ -344,8 +276,7 @@ namespace sloked {
                       {"address",
                        KgrDictionary{{"host", "localhost"},
                                      {"port", mainConfig.Find("/network/port")
-                                                  .AsInt()}}}}},
-                 {"screen", "graphics:///?fallback=terminal"}}}};
+                                                  .AsInt()}}}}}}}};
 
         if (manager.HasCrypto()) {
             secondaryEditorConfig["server"]
@@ -364,29 +295,21 @@ namespace sloked {
                      KgrDictionary{
                          {"slave",
                           KgrDictionary{
-                              {"users",
-                               KgrArray{KgrDictionary{
-                                   {"id", "user1"},
-                                   {"password", mainEditor.GetCrypto()
-                                                    .GetCredentialMaster()
-                                                    .GetAccountByName("user1")
-                                                    ->GetPassword()}}}}}}}}});
+                              {"users", KgrArray{KgrDictionary{
+                                            {"id", "user1"},
+                                            {"password", "password1"}}}}}}}}});
         }
 
         auto &secondaryEditor =
             manager.Spawn("secondary", secondaryEditorConfig);
         auto &secondaryServer = secondaryEditor.GetServer();
 
-        auto &serviceProvider = mainEditor.GetServiceProvider();
+        auto &nsFactory = manager.GetNamespaceFactory();
+        auto nspace = nsFactory.Build();
         SlokedPath inputPath =
-            serviceProvider.GetNamespace().GetResolver().Resolve(
-                SlokedPath{cli.Argument(0)});
-        SlokedPath outputPath =
-            serviceProvider.GetNamespace().GetResolver().Resolve(
-                SlokedPath{mainConfig.Find("/output").AsString()});
-
-        // Screen
-        auto &screenServer = secondaryEditor.GetScreen();
+            nspace->GetResolver().Resolve(SlokedPath{cli.Argument(0)});
+        SlokedPath outputPath = nspace->GetResolver().Resolve(
+            SlokedPath{mainConfig.Find("/output").AsString()});
 
         // Editor initialization
         SlokedScreenClient screenClient(
@@ -414,16 +337,11 @@ namespace sloked {
             screenClient.Multiplexer
                 .NewWindow(
                     "/", TextPosition{0, 0},
-                    TextPosition{
-                        screenServer.GetScreen().GetSize().GetScreenSize().line,
-                        screenServer.GetScreen()
-                            .GetSize()
-                            .GetScreenSize()
-                            .column})
+                    screenSizeClient.GetSize())
                 .UnwrapWait();
         screenSizeClient.Listen([&](const auto &size) {
-            mainEditor.GetThreadedExecutor().Enqueue([&, size] {
-                if (screenServer.IsRunning() && mainWindow.has_value()) {
+            sharedState.GetThreadedExecutor().Enqueue([&, size] {
+                if (mainWindow.has_value()) {
                     screenClient.Multiplexer
                         .ResizeWindow(mainWindow.value(), size)
                         .UnwrapWait();
@@ -473,16 +391,22 @@ namespace sloked {
             .Listen(
                 "/",
                 [&](auto &evt) {
-                    mainEditor.GetExecutor().Enqueue([&, evt] {
+                    sharedState.GetExecutor().Enqueue([&, evt] {
                         renderStatus();
                         if (evt.value.index() != 0 &&
                             std::get<1>(evt.value) ==
                                 SlokedControlKey::Escape) {
-                            mainEditor.GetThreadedExecutor().Enqueue([&] {
+                            sharedState.GetThreadedExecutor().Enqueue([&] {
                                 logger.Debug() << "Saving document";
                                 documentClient.Save(outputPath.ToString())
                                     .Notify([&](const auto &) {
-                                        manager.GetTotalShutdown().RequestShutdown();
+                                        secondaryServer.GetServer().Connect({"/editor/shutdown"}).Notify([&](const auto &pipe) {
+                                            SlokedShutdownClient shutdown(std::move(pipe.Unwrap()));
+                                            shutdown.RequestShutdown();
+                                            sharedState.GetScheduler().Sleep(std::chrono::milliseconds(100), [&] {
+                                                manager.GetTotalShutdown().RequestShutdown();
+                                            });
+                                        });
                                     });
                             });
                         }

@@ -93,6 +93,38 @@
                     "root": "file:///"
                 }
             }
+        },
+        "secondary": {
+            "crypto": {
+                "authentication": {
+                    "slave": {
+                        "users": [
+                            {
+                                "id": "user1",
+                                "password": "password1"
+                            }
+                        ]
+                    }
+                },
+                "defaultKey": {
+                    "password": "password"
+                },
+                "salt": "salt"
+            },
+            "network": {
+                "buffering": 5,
+                "compression": true
+            },
+            "server": {
+                "screen": "graphics:///?fallback=terminal",
+                "slave": {
+                    "address": {
+                        "host": "localhost",
+                        "port": 1234
+                    },
+                    "authorize": "user1"
+                }
+            }
         }
     }
 }

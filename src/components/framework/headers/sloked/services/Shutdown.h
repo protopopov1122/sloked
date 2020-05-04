@@ -38,6 +38,15 @@ namespace sloked {
         SlokedEditorShutdown &shutdown;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
+
+    class SlokedShutdownClient {
+     public:
+        SlokedShutdownClient(std::unique_ptr<KgrPipe>);
+        void RequestShutdown();
+
+     private:
+        KgrAsyncPipe pipe;
+    };
 }
 
 #endif

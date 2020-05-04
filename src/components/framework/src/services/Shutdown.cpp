@@ -55,4 +55,11 @@ namespace sloked {
         });
         return supplier.Result();
     }
+
+    SlokedShutdownClient::SlokedShutdownClient(std::unique_ptr<KgrPipe> pipe)
+        : pipe(std::move(pipe)) {}
+
+    void SlokedShutdownClient::RequestShutdown() {
+        pipe.Write({});
+    }
 }  // namespace sloked
