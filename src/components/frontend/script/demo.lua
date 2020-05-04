@@ -7,9 +7,9 @@ local rpc = require 'slokedlib/rpc'
 sloked.logger:debug('Lua started')
 async(function(await)
     local await_unwrap = async.unwrap(await)
-    local cursor = rpc:new(sloked.editors.secondary.server:connect('/document/cursor'))
-    -- local search = rpc:new(sloked.editors.secondary.server:connect('/document/search'))
-    -- local root = rpc:new(sloked.editors.secondary.server:connect('/namespace/root'))
+    local cursor = rpc:new(sloked.editors.primary.server:connect('/document/cursor'))
+    -- local search = rpc:new(sloked.editors.primary.server:connect('/document/search'))
+    -- local root = rpc:new(sloked.editors.primary.server:connect('/namespace/root'))
     -- await_unwrap(search:send('connect', 1))
     -- await_unwrap(search:send('matcher', 'plain'))
     -- await_unwrap(search:send('match', {
@@ -30,7 +30,7 @@ async(function(await)
     if await_unwrap(cursor('connect', {
         documentId=1
     })) then
-        local notifier = pipe:promisify(sloked.editors.secondary.server:connect('/document/notify'))
+        local notifier = pipe:promisify(sloked.editors.primary.server:connect('/document/notify'))
         await_unwrap(notifier:write({
             document=1,
             tagger=false

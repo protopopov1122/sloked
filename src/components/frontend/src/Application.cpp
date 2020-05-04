@@ -265,7 +265,7 @@ namespace sloked {
             return EXIT_FAILURE;
         }
 
-        KgrDictionary secondaryEditorConfig{
+        KgrDictionary primaryEditorConfig{
             {"network",
              KgrDictionary{{"buffering", 5},
                            {"compression", manager.HasCompression()}}},
@@ -279,11 +279,11 @@ namespace sloked {
                                                   .AsInt()}}}}}}}};
 
         if (manager.HasCrypto()) {
-            secondaryEditorConfig["server"]
+            primaryEditorConfig["server"]
                 .AsDictionary()["slave"]
                 .AsDictionary()
                 .Put("authorize", "user1");
-            secondaryEditorConfig.Put(
+            primaryEditorConfig.Put(
                 "crypto",
                 KgrDictionary{
                     {"salt", "salt"},
@@ -300,9 +300,9 @@ namespace sloked {
                                             {"password", "password1"}}}}}}}}});
         }
 
-        auto &secondaryEditor =
-            manager.Spawn("secondary", secondaryEditorConfig);
-        auto &secondaryServer = secondaryEditor.GetServer();
+        auto &primaryEditor =
+            manager.Spawn("primary", primaryEditorConfig);
+        auto &primaryServer = primaryEditor.GetServer();
 
         auto &nsFactory = manager.GetNamespaceFactory();
         auto nspace = nsFactory.Build();
@@ -313,17 +313,17 @@ namespace sloked {
 
         // Editor initialization
         SlokedScreenClient screenClient(
-            std::move(secondaryServer.GetServer()
+            std::move(primaryServer.GetServer()
                           .Connect({"/screen/manager"})
                           .UnwrapWait()));
         SlokedScreenSizeNotificationClient screenSizeClient;
         screenSizeClient
-            .Connect(std::move(secondaryServer.GetServer()
+            .Connect(std::move(primaryServer.GetServer()
                                    .Connect({"/screen/size/notify"})
                                    .UnwrapWait()))
             .UnwrapWait();
         SlokedDocumentSetClient documentClient(
-            std::move(secondaryServer.GetServer()
+            std::move(primaryServer.GetServer()
                           .Connect({"/document/manager"})
                           .UnwrapWait()));
         documentClient
@@ -364,7 +364,7 @@ namespace sloked {
             "default");
 
         SlokedTextPaneClient paneClient(
-            std::move(secondaryServer.GetServer()
+            std::move(primaryServer.GetServer()
                           .Connect({"/screen/component/text/pane"})
                           .UnwrapWait()));
         paneClient.Connect("/0/1", false, {}).UnwrapWait();
@@ -383,7 +383,7 @@ namespace sloked {
         };
         renderStatus();
         SlokedScreenInputNotificationClient screenInput(
-            std::move(secondaryServer.GetServer()
+            std::move(primaryServer.GetServer()
                           .Connect({"/screen/component/input/notify"})
                           .UnwrapWait()),
             Encoding::Get("system"));
@@ -400,7 +400,7 @@ namespace sloked {
                                 logger.Debug() << "Saving document";
                                 documentClient.Save(outputPath.ToString())
                                     .Notify([&](const auto &) {
-                                        secondaryServer.GetServer().Connect({"/editor/shutdown"}).Notify([&](const auto &pipe) {
+                                        primaryServer.GetServer().Connect({"/editor/shutdown"}).Notify([&](const auto &pipe) {
                                             SlokedShutdownClient shutdown(std::move(pipe.Unwrap()));
                                             shutdown.RequestShutdown();
                                             sharedState.GetScheduler().Sleep(std::chrono::milliseconds(100), [&] {
