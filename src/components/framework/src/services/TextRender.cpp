@@ -204,6 +204,43 @@ namespace sloked {
         }
 
         struct DocumentContent {
+            class TransactionListener : public SlokedTransactionStreamListener {
+             public:
+                TransactionListener(DocumentContent &content)
+                    : content(content) {}
+
+                void OnCommit(const SlokedCursorTransaction &trans) final {
+                    this->Process(trans);
+                }
+
+                void OnRollback(const SlokedCursorTransaction &trans) final {
+                    this->Process(trans);
+                }
+
+                void OnRevert(const SlokedCursorTransaction &trans) final {
+                    this->Process(trans);
+                }
+
+             private:
+                void Process(const SlokedCursorTransaction &trans) {
+                    const auto &pos = trans.GetPosition();
+                    auto patch = trans.CommitPatch(this->content.encoding);
+                    if (patch.At(pos).line != 0) {
+                        std::unique_lock lock(this->content.mtx);
+                        this->content.invalidated.emplace_back(
+                            TextPositionRange{pos, TextPosition::Max});
+                    } else {
+                        std::unique_lock lock(this->content.mtx);
+                        this->content.invalidated.emplace_back(
+                            TextPositionRange{
+                                {pos.line, 0},
+                                {pos.line, TextPosition::Max.column}});
+                    }
+                }
+
+                DocumentContent &content;
+            };
+
             DocumentContent(SlokedEditorDocument &document,
                             const SlokedCharPreset &charPreset)
                 : text(document.GetText()), encoding(document.GetEncoding()),
@@ -216,9 +253,13 @@ namespace sloked {
                         std::unique_lock lock(this->mtx);
                         this->invalidated.push_back(range);
                     });
+
+                this->transListener = std::make_shared<TransactionListener>(*this);
+                this->transactionListeners.AddListener(this->transListener);
             }
 
             ~DocumentContent() {
+                this->transactionListeners.RemoveListener(*this->transListener);
                 if (this->unsubscribeTaggers) {
                     this->unsubscribeTaggers();
                 }
@@ -231,6 +272,7 @@ namespace sloked {
             SlokedTextTagger<SlokedEditorDocument::TagType> &tags;
             SlokedTextTagger<SlokedEditorDocument::TagType>::Unbind
                 unsubscribeTaggers;
+            std::shared_ptr<TransactionListener> transListener;
             std::mutex mtx;
             std::vector<TextPositionRange> invalidated;
         };

@@ -1,6 +1,55 @@
 {
     "containers": {
         "main": {
+            "crypto": {
+                "authentication": {
+                    "master": {
+                        "defaultUser": {
+                            "restrictAccess": {
+                                "content": [],
+                                "whitelist": true
+                            },
+                            "restrictModification": {
+                                "content": [],
+                                "whitelist": true
+                            }
+                        },
+                        "masterPassword": "password",
+                        "salt": "salt",
+                        "users": [
+                            {
+                                "id": "user1",
+                                "password": "password1",
+                                "restrictAccess": {
+                                    "content": [
+                                        "/document",
+                                        "/namespace",
+                                        "/screen",
+                                        "/editor",
+                                        "/plugins"
+                                    ],
+                                    "whitelist": true
+                                },
+                                "restrictModification": {
+                                    "content": [
+                                        "/screen",
+                                        "/plugins"
+                                    ],
+                                    "whitelist": true
+                                }
+                            }
+                        ]
+                    }
+                },
+                "defaultKey": {
+                    "password": "password"
+                },
+                "salt": "salt"
+            },
+            "network": {
+                "buffering": 5,
+                "compression": true
+            },
             "parameters": {
                 "tabWidth": 2
             },
