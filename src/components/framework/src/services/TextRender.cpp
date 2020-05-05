@@ -147,7 +147,7 @@ namespace sloked {
                         back;
                     KgrArray fragments;
                     TextPosition::Column columnIdx{0};
-                    std::size_t width{0};
+                    TextPosition::Column width{0};
                     auto lineTags = this->document->tags.Get(lineIdx);
                     std::string buffer{};
                     buffer.reserve(line.size());
@@ -185,7 +185,7 @@ namespace sloked {
                         std::string fragment =
                             it.value != U'\t'
                                 ? std::string{line.substr(it.start, it.length)}
-                                : this->charPreset.GetTab(
+                                : SlokedCharPreset::EncodeTab(this->charPreset,
                                       this->document->encoding, width);
                         buffer += fragment;
                         width += this->charPreset.GetCharWidth(it.value, width);

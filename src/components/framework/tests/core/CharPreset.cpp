@@ -27,17 +27,17 @@
 using namespace sloked;
 
 TEST_CASE("Char preset correctly stores tab width") {
-    SlokedCharPreset charPreset;
+    SlokedFixedWidthCharPreset charPreset(4);
     const Encoding &encoding = SlokedLocale::SystemEncoding();
     for (std::size_t i = 1; i < 16; i++) {
         charPreset.SetTabWidth(i);
         REQUIRE(charPreset.GetCharWidth(U'\t', 0) == i);
-        REQUIRE(charPreset.GetTab(encoding, 0) == std::string(i, ' '));
+        REQUIRE(SlokedCharPreset::EncodeTab(charPreset, encoding, 0) == std::string(i, ' '));
     }
 }
 
 TEST_CASE("Char preset leaves other char width unchanged") {
-    SlokedCharPreset charPreset;
+    SlokedFixedWidthCharPreset charPreset(4);
     charPreset.SetTabWidth(4);
     for (char32_t chr = 0; chr < 255; chr++) {
         if (chr != U'\t') {
@@ -47,7 +47,7 @@ TEST_CASE("Char preset leaves other char width unchanged") {
 }
 
 TEST_CASE("Char preset correctly calculates character positions") {
-    SlokedCharPreset charPreset;
+    SlokedFixedWidthCharPreset charPreset(4);
     const Encoding &encoding = SlokedLocale::SystemEncoding();
     const std::string sample{"\tA\tB\tC\tD"};
     charPreset.SetTabWidth(4);
@@ -70,10 +70,10 @@ TEST_CASE("Char preset correctly calculates character positions") {
 }
 
 TEST_CASE("Char preset notifies listeners about preset changes") {
-    SlokedCharPreset charPreset;
+    SlokedFixedWidthCharPreset charPreset(4);
     charPreset.SetTabWidth(4);
     std::size_t widthSum = 0;
-    auto unbind = charPreset.Listen([&widthSum](const auto &charPreset) {
+    auto unbind = charPreset.OnChange([&widthSum](const auto &charPreset) {
         widthSum += charPreset.GetCharWidth(U'\t', 0);
     });
     charPreset.SetTabWidth(1);

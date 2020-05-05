@@ -86,7 +86,6 @@
                         "/document/notify",
                         "/document/search",
                         "/namespace/root",
-                        "/editor/parameters",
                         "/editor/shutdown",
                         "/editor/authorization"
                     ],

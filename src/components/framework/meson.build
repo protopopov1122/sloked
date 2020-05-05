@@ -97,7 +97,6 @@ sloked_src = [
   'src/security/Slave.cpp',
   'src/services/ScreenInput.cpp',
   'src/services/ScreenSize.cpp',
-  'src/services/CharPreset.cpp',
   'src/services/CredentialMaster.cpp',
   'src/services/Cursor.cpp',
   'src/services/DocumentNotify.cpp',

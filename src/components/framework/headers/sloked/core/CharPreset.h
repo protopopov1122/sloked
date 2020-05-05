@@ -26,6 +26,7 @@
 
 #include "sloked/core/Encoding.h"
 #include "sloked/core/Event.h"
+#include "sloked/core/Position.h"
 
 namespace sloked {
 
@@ -34,18 +35,50 @@ namespace sloked {
         using Listener = SlokedEventEmitter<const SlokedCharPreset &>::Listener;
         using Unbind = SlokedEventEmitter<const SlokedCharPreset &>::Unbind;
 
-        SlokedCharPreset();
-        std::size_t GetCharWidth(char32_t, std::size_t) const;
-        std::pair<std::size_t, std::size_t> GetRealPosition(
-            std::string_view, std::size_t, const Encoding &) const;
-        std::string GetTab(const Encoding &, std::size_t) const;
-        Unbind Listen(Listener) const;
+        virtual ~SlokedCharPreset() = default;
+        virtual TextPosition::Column GetCharWidth(char32_t, TextPosition::Column) const = 0;
+        virtual std::pair<std::size_t, std::size_t> GetRealPosition(
+            std::string_view, TextPosition::Column, const Encoding &) const = 0;
+        virtual Unbind OnChange(Listener) const = 0;
 
-        void SetTabWidth(std::size_t);
+        static std::string EncodeTab(const SlokedCharPreset &, const Encoding &, TextPosition::Column);
+    };
+
+    class SlokedChangeableCharPreset : public SlokedCharPreset {
+     public:
+        virtual void SetTabWidth(TextPosition::Column) = 0;
+    };
+
+    class SlokedFixedWidthCharPreset : public SlokedChangeableCharPreset {
+     public:
+        SlokedFixedWidthCharPreset(TextPosition::Column);
+        TextPosition::Column GetCharWidth(char32_t, TextPosition::Column) const final;
+        std::pair<std::size_t, std::size_t> GetRealPosition(
+            std::string_view, TextPosition::Column, const Encoding &) const final;
+        Unbind OnChange(Listener) const final;
+
+        void SetTabWidth(TextPosition::Column) final;
 
      private:
-        std::size_t tab_width;
-        std::u32string tab;
+        TextPosition::Column tab_width;
+        mutable SlokedEventEmitter<const SlokedCharPreset &> events;
+    };
+
+    class SlokedFixedWidthCharPresetProxy : public SlokedChangeableCharPreset {
+        SlokedFixedWidthCharPresetProxy(const SlokedCharPreset &);
+        ~SlokedFixedWidthCharPresetProxy();
+        TextPosition::Column GetCharWidth(char32_t, TextPosition::Column) const final;
+        std::pair<std::size_t, std::size_t> GetRealPosition(
+            std::string_view, TextPosition::Column, const Encoding &) const final;
+        Unbind OnChange(Listener) const final;
+
+        void SetTabWidth(TextPosition::Column) final;
+        void ResetTabWidth();
+
+     private:
+        const SlokedCharPreset &charPreset;
+        std::optional<TextPosition::Column> tabWidth;
+        Unbind unbindListener;
         mutable SlokedEventEmitter<const SlokedCharPreset &> events;
     };
 }  // namespace sloked

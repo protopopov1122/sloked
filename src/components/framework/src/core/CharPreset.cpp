@@ -23,10 +23,20 @@
 
 namespace sloked {
 
-    SlokedCharPreset::SlokedCharPreset() : tab_width(4), tab(tab_width, U' ') {}
+    std::string SlokedCharPreset::EncodeTab(const SlokedCharPreset &preset,
+                                            const Encoding &encoding,
+                                            TextPosition::Column column) {
+        auto tab_width = preset.GetCharWidth(U'\t', column);
+        std::u32string tab(tab_width, U' ');
+        return encoding.Encode(tab);
+    }
 
-    std::size_t SlokedCharPreset::GetCharWidth(char32_t chr,
-                                               std::size_t position) const {
+    SlokedFixedWidthCharPreset::SlokedFixedWidthCharPreset(
+        TextPosition::Column tab_width)
+        : tab_width(tab_width) {}
+
+    TextPosition::Column SlokedFixedWidthCharPreset::GetCharWidth(
+        char32_t chr, TextPosition::Column position) const {
         if (chr != '\t') {
             return 1;
         } else {
@@ -34,8 +44,10 @@ namespace sloked {
         }
     }
 
-    std::pair<std::size_t, std::size_t> SlokedCharPreset::GetRealPosition(
-        std::string_view str, std::size_t idx, const Encoding &encoding) const {
+    std::pair<std::size_t, std::size_t>
+        SlokedFixedWidthCharPreset::GetRealPosition(
+            std::string_view str, TextPosition::Column idx,
+            const Encoding &encoding) const {
         std::pair<std::size_t, std::size_t> res{0, 0};
         encoding.IterateCodepoints(
             str, [&](auto start, auto length, auto value) {
@@ -46,18 +58,63 @@ namespace sloked {
         return res;
     }
 
-    std::string SlokedCharPreset::GetTab(const Encoding &encoding,
-                                         std::size_t column) const {
-        return encoding.Encode(this->tab.substr(column % this->tab_width));
-    }
-
-    SlokedCharPreset::Unbind SlokedCharPreset::Listen(Listener listener) const {
+    SlokedCharPreset::Unbind SlokedFixedWidthCharPreset::OnChange(
+        Listener listener) const {
         return this->events.Listen(std::move(listener));
     }
 
-    void SlokedCharPreset::SetTabWidth(std::size_t width) {
+    void SlokedFixedWidthCharPreset::SetTabWidth(TextPosition::Column width) {
         this->tab_width = width;
-        this->tab = std::u32string(this->tab_width, U' ');
+        this->events.Emit(*this);
+    }
+
+    SlokedFixedWidthCharPresetProxy::SlokedFixedWidthCharPresetProxy(
+        const SlokedCharPreset &charPreset)
+        : charPreset(charPreset), tabWidth{}, unbindListener{nullptr} {
+        this->unbindListener = this->charPreset.OnChange([this](const auto &) {
+            this->events.Emit(*this);
+        });
+    }
+
+    SlokedFixedWidthCharPresetProxy::~SlokedFixedWidthCharPresetProxy() {
+        if (this->unbindListener) {
+            this->unbindListener();
+        }
+    }
+
+    TextPosition::Column SlokedFixedWidthCharPresetProxy::GetCharWidth(
+        char32_t chr, TextPosition::Column column) const {
+        if (chr != '\t' || !this->tabWidth.has_value()) {
+            return 1;
+        } else {
+            return this->tabWidth.value() - column % this->tabWidth.value();
+        }
+    }
+    std::pair<std::size_t, std::size_t>
+        SlokedFixedWidthCharPresetProxy::GetRealPosition(
+            std::string_view str, TextPosition::Column idx,
+            const Encoding &encoding) const {
+        std::pair<std::size_t, std::size_t> res{0, 0};
+        encoding.IterateCodepoints(
+            str, [&](auto start, auto length, auto value) {
+                res.first = res.second;
+                res.second += GetCharWidth(value, res.first);
+                return idx--;
+            });
+        return res;
+    }
+
+    SlokedFixedWidthCharPresetProxy::Unbind SlokedFixedWidthCharPresetProxy::OnChange(Listener listener) const {
+        return this->events.Listen(std::move(listener));
+    }
+
+    void SlokedFixedWidthCharPresetProxy::SetTabWidth(TextPosition::Column width) {
+        this->tabWidth = width;
+        this->events.Emit(*this);   
+    }
+
+    void SlokedFixedWidthCharPresetProxy::ResetTabWidth() {
+        this->tabWidth.reset();
         this->events.Emit(*this);
     }
 }  // namespace sloked

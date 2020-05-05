@@ -96,7 +96,6 @@ namespace sloked {
                     editor.GetScheduler());
             }
         }
-        this->SetupServer(editor, config["server"].AsDictionary());
         if (config.Has("parameters")) {
             const auto &parameters = config["parameters"].AsDictionary();
             if (parameters.Has("tabWidth")) {
@@ -104,6 +103,7 @@ namespace sloked {
                 editor.GetCharPreset().SetTabWidth(width);
             }
         }
+        this->SetupServer(editor, config["server"].AsDictionary());
     }
 
     SlokedDefaultTextTaggerRegistry<SlokedEditorDocument::TagType>

@@ -21,7 +21,6 @@
 
 #include "sloked/facade/Services.h"
 
-#include "sloked/services/CharPreset.h"
 #include "sloked/services/CredentialMaster.h"
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentNotify.h"
@@ -140,12 +139,6 @@ namespace sloked {
             "/namespace/root", [](SlokedServiceDependencyProvider &provider) {
                 return std::make_unique<SlokedNamespaceService>(
                     provider.GetNamespace(), provider.GetContextManager());
-            });
-        this->builders.emplace(
-            "/editor/parameters",
-            [](SlokedServiceDependencyProvider &provider) {
-                return std::make_unique<SlokedCharPresetService>(
-                    provider.GetCharPreset(), provider.GetContextManager());
             });
         this->builders.emplace(
             "/editor/authorization",

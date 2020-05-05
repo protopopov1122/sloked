@@ -39,7 +39,6 @@
 #include "sloked/sched/DefaultScheduler.h"
 #include "sloked/sched/MultithreadExecutor.h"
 #include "sloked/sched/SequentialExecutor.h"
-#include "sloked/services/CharPreset.h"
 
 namespace sloked {
 
@@ -73,6 +72,7 @@ namespace sloked {
             std::unique_ptr<SlokedServiceDependencyProvider>);
         SlokedScreenServer &InitializeScreen(SlokedScreenProviderFactory &,
                                              const SlokedUri &);
+        SlokedChangeableCharPreset &InitializeCharPreset(std::unique_ptr<SlokedChangeableCharPreset>);
         void Attach(SlokedCloseable &);
         void Attach(std::unique_ptr<SlokedDataHandle>);
 
@@ -82,7 +82,7 @@ namespace sloked {
         void Wait();
         void Close() final;
 
-        SlokedCharPreset &GetCharPreset();
+        SlokedChangeableCharPreset &GetCharPreset();
         SlokedScheduler &GetScheduler();
         SlokedExecutor &GetExecutor();
         SlokedExecutor &GetThreadedExecutor();
@@ -105,11 +105,10 @@ namespace sloked {
         SlokedNetworkFacade network;
         std::unique_ptr<SlokedCryptoFacade> crypto;
         std::unique_ptr<SlokedServerFacade> server;
-        std::unique_ptr<SlokedCharPresetClient> charPresetUpdater;
         std::unique_ptr<SlokedServiceDependencyProvider> serviceProvider;
         std::unique_ptr<SlokedScreenProvider> screenProvider;
         std::unique_ptr<SlokedScreenServer> screen;
-        SlokedCharPreset charPreset;
+        std::unique_ptr<SlokedChangeableCharPreset> charPreset;
         std::vector<std::unique_ptr<SlokedDataHandle>> handles;
         KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
     };

@@ -66,6 +66,7 @@ namespace sloked {
         : sharedState(sharedState), running{false}, network(network),
           contextManager(sharedState.GetExecutor()) {
         this->closeables.Attach(this->contextManager);
+        this->charPreset = std::make_unique<SlokedFixedWidthCharPreset>(4);
     }
 
     SlokedCryptoFacade &SlokedEditorContainer::InitializeCrypto(
@@ -144,6 +145,15 @@ namespace sloked {
         }
     }
 
+    SlokedChangeableCharPreset &SlokedEditorContainer::InitializeCharPreset(std::unique_ptr<SlokedChangeableCharPreset> charPreset) {
+        if (this->running.load()) {
+            throw SlokedError("EditorInstance: Already running");
+        } else {
+            this->charPreset = std::move(charPreset);
+            return *this->charPreset;
+        }
+    }
+
     void SlokedEditorContainer::Attach(SlokedCloseable &closeable) {
         this->closeables.Attach(closeable);
     }
@@ -162,14 +172,6 @@ namespace sloked {
             this->contextManager.Start();
             if (this->server) {
                 this->server->Start();
-                if (this->server->IsRemote()) {
-                    this->charPresetUpdater =
-                        std::make_unique<SlokedCharPresetClient>(
-                            std::move(this->server->GetServer()
-                                          .Connect({"/editor/parameters"})
-                                          .UnwrapWait()),
-                            this->charPreset);
-                }
             }
             if (this->screen) {
                 this->screen->Start(KgrNetConfig::ResponseTimeout);
@@ -186,7 +188,6 @@ namespace sloked {
                 this->closeables.Close();
                 this->screen = nullptr;
                 this->screenProvider = nullptr;
-                this->charPresetUpdater = nullptr;
                 this->server = nullptr;
                 this->serviceProvider = nullptr;
                 this->crypto = nullptr;
@@ -211,8 +212,8 @@ namespace sloked {
         this->Wait();
     }
 
-    SlokedCharPreset &SlokedEditorContainer::GetCharPreset() {
-        return this->charPreset;
+    SlokedChangeableCharPreset &SlokedEditorContainer::GetCharPreset() {
+        return *this->charPreset;
     }
 
     SlokedScheduler &SlokedEditorContainer::GetScheduler() {
