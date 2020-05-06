@@ -27,8 +27,8 @@
 #include "sloked/services/DocumentSet.h"
 #include "sloked/services/Namespace.h"
 #include "sloked/services/Search.h"
-#include "sloked/services/TextRender.h"
 #include "sloked/services/Shutdown.h"
+#include "sloked/services/TextRender.h"
 
 namespace sloked {
 
@@ -36,17 +36,16 @@ namespace sloked {
         SlokedServiceDependencyDefaultProvider(
             SlokedLogger &logger,
             std::unique_ptr<SlokedRootNamespace> rootNamespace,
-            const SlokedCharPreset &charPreset, KgrNamedServer &server,
+            KgrNamedServer &server,
             KgrContextManager<KgrLocalContext> &contextManager,
-            SlokedCredentialMaster *credentialMaster, SlokedEditorShutdown &shutdown,
+            SlokedCredentialMaster *credentialMaster,
+            SlokedEditorShutdown &shutdown,
             SlokedTextTaggerRegistry<SlokedEditorDocument::TagType>
                 *baseTaggers)
         : logger(logger), rootNamespace(std::move(rootNamespace)),
-          charPreset(charPreset), server(server),
-          documents(this->rootNamespace->GetRoot()),
+          server(server), documents(this->rootNamespace->GetRoot()),
           contextManager(contextManager), credentialMaster(credentialMaster),
-          shutdown(shutdown),
-          taggers(baseTaggers) {}
+          shutdown(shutdown), taggers(baseTaggers) {}
 
     KgrContextManager<KgrLocalContext>
         &SlokedServiceDependencyDefaultProvider::GetContextManager() {
@@ -65,11 +64,6 @@ namespace sloked {
     SlokedRootNamespace &
         SlokedServiceDependencyDefaultProvider::GetNamespace() {
         return *this->rootNamespace;
-    }
-
-    const SlokedCharPreset &
-        SlokedServiceDependencyDefaultProvider::GetCharPreset() {
-        return this->charPreset;
     }
 
     KgrNamedServer &SlokedServiceDependencyDefaultProvider::GetServer() {
@@ -109,8 +103,7 @@ namespace sloked {
         this->builders.emplace(
             "/document/render", [](SlokedServiceDependencyProvider &provider) {
                 return std::make_unique<SlokedTextRenderService>(
-                    provider.GetDocuments(), provider.GetCharPreset(),
-                    provider.GetContextManager());
+                    provider.GetDocuments(), provider.GetContextManager());
             });
         this->builders.emplace(
             "/document/cursor", [](SlokedServiceDependencyProvider &provider) {
@@ -153,8 +146,7 @@ namespace sloked {
                 }
             });
         this->builders.emplace(
-            "/editor/shutdown",
-            [](SlokedServiceDependencyProvider &provider) {
+            "/editor/shutdown", [](SlokedServiceDependencyProvider &provider) {
                 return std::make_unique<SlokedShutdownService>(
                     provider.GetShutdown(), provider.GetContextManager());
             });

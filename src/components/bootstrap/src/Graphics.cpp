@@ -56,12 +56,13 @@ namespace sloked {
             std::unique_ptr<SlokedGraphicalTerminalWindow> terminal;
         };
 
-        SlokedGraphicalBootstrapScreen(const SlokedCharPreset &charPreset)
+        SlokedGraphicalBootstrapScreen(std::unique_ptr<SlokedCharPreset> charPreset)
             : gui(1024, 960),
               console(gui.GetTerminal(), gui.GetTerminal().GetEncoding(),
-                      charPreset),
-              provider(console, gui.GetTerminal().GetEncoding(), charPreset,
-                       gui.GetTerminal(), gui.GetTerminal().GetTerminalSize()) {
+                      *charPreset),
+              provider(console, gui.GetTerminal().GetEncoding(), *charPreset,
+                       gui.GetTerminal(), gui.GetTerminal().GetTerminalSize()),
+              charPreset(std::move(charPreset)) {
         }
 
         void Render(std::function<void(SlokedScreenComponent &)> fn) final {
@@ -83,25 +84,31 @@ namespace sloked {
 
         const Encoding &GetEncoding() final {
             return this->provider.GetEncoding();
+        }
+
+        const SlokedCharPreset &GetCharPreset() final {
+            return this->provider.GetCharPreset();
         }
 
      private:
         GUI gui;
         BufferedTerminal console;
         SlokedTerminalScreenProvider provider;
+        std::unique_ptr<SlokedCharPreset> charPreset;
     };
 
     class SlokedTerminalBootstrapScreen : public SlokedScreenProvider {
      public:
-        SlokedTerminalBootstrapScreen(const SlokedCharPreset &charPreset)
+        SlokedTerminalBootstrapScreen(std::unique_ptr<SlokedCharPreset> charPreset)
             : terminal(SlokedTerminalCompat::GetSystemTerminal()),
               size(terminal,
                    [](auto callback) {
                        return SlokedTerminalResizeListener::Bind(callback);
                    }),
-              console(terminal, Encoding::Get("system"), charPreset),
-              provider(console, Encoding::Get("system"), charPreset, terminal,
-                       size) {}
+              console(terminal, Encoding::Get("system"), *charPreset),
+              provider(console, Encoding::Get("system"), *charPreset, terminal,
+                       size),
+              charPreset(std::move(charPreset)) {}
 
         void Render(std::function<void(SlokedScreenComponent &)> fn) final {
             this->provider.Render(std::move(fn));
@@ -122,6 +129,10 @@ namespace sloked {
 
         const Encoding &GetEncoding() final {
             return this->provider.GetEncoding();
+        }
+
+        const SlokedCharPreset &GetCharPreset() final {
+            return this->provider.GetCharPreset();
         }
 
      private:
@@ -131,19 +142,21 @@ namespace sloked {
             size;
         BufferedTerminal console;
         SlokedTerminalScreenProvider provider;
+        std::unique_ptr<SlokedCharPreset> charPreset;
     };
 
     class SlokedNullBootstrapScreen : public SlokedScreenProvider {
      public:
-        SlokedNullBootstrapScreen(const SlokedCharPreset &charPreset)
+        SlokedNullBootstrapScreen(std::unique_ptr<SlokedCharPreset> charPreset)
             : terminal(25, 80),
               size(terminal,
                    [](auto callback) {
                        return []{};
                    }),
-              console(terminal, Encoding::Get("system"), charPreset),
-              provider(console, Encoding::Get("system"), charPreset, terminal,
-                       size) {}
+              console(terminal, Encoding::Get("system"), *charPreset),
+              provider(console, Encoding::Get("system"), *charPreset, terminal,
+                       size),
+              charPreset(std::move(charPreset)) {}
 
         void Render(std::function<void(SlokedScreenComponent &)> fn) final {
             this->provider.Render(std::move(fn));
@@ -166,6 +179,10 @@ namespace sloked {
             return this->provider.GetEncoding();
         }
 
+        const SlokedCharPreset &GetCharPreset() final {
+            return this->provider.GetCharPreset();
+        }
+
      private:
         SlokedNullTerminal terminal;
         SlokedTerminalSize<
@@ -173,23 +190,24 @@ namespace sloked {
             size;
         BufferedTerminal console;
         SlokedTerminalScreenProvider provider;
+        std::unique_ptr<SlokedCharPreset> charPreset;
     };
 
     std::unique_ptr<SlokedScreenProvider> SlokedBootstrapScreenFactory::Make(
-        const SlokedUri &uri, const SlokedCharPreset &charPreset) {
+        const SlokedUri &uri, std::unique_ptr<SlokedCharPreset> charPreset) {
         if (uri.GetScheme() == "terminal") {
-            return std::make_unique<SlokedTerminalBootstrapScreen>(charPreset);
+            return std::make_unique<SlokedTerminalBootstrapScreen>(std::move(charPreset));
         } else if (uri.GetScheme() == "null") {
-            return std::make_unique<SlokedNullBootstrapScreen>(charPreset);
+            return std::make_unique<SlokedNullBootstrapScreen>(std::move(charPreset));
         } else if (uri.GetScheme() == "graphics") {
             const auto &query = uri.GetQuery();
             if constexpr (SlokedGraphicsCompat::HasGraphics()) {
                 return std::make_unique<SlokedGraphicalBootstrapScreen>(
-                    charPreset);
+                    std::move(charPreset));
             } else if (query.has_value() && query.value().Has("fallback") &&
                        query.value().Get("fallback") == "terminal") {
                 return std::make_unique<SlokedTerminalBootstrapScreen>(
-                    charPreset);
+                    std::move(charPreset));
             } else {
                 throw SlokedError(
                     "Screen: Graphical screen unavailable without fallback");

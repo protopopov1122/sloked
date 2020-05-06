@@ -24,6 +24,7 @@
 
 #include "sloked/core/CharPreset.h"
 #include "sloked/core/Logger.h"
+#include "sloked/editor/Shutdown.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
 #include "sloked/kgr/NamedServer.h"
 #include "sloked/kgr/ctx-manager/RunnableContextManager.h"
@@ -32,7 +33,6 @@
 #include "sloked/namespace/Root.h"
 #include "sloked/security/Master.h"
 #include "sloked/text/fragment/TaggedText.h"
-#include "sloked/editor/Shutdown.h"
 
 namespace sloked {
 
@@ -44,7 +44,6 @@ namespace sloked {
             &GetTaggers() = 0;
         virtual SlokedLogger &GetLogger() = 0;
         virtual SlokedRootNamespace &GetNamespace() = 0;
-        virtual const SlokedCharPreset &GetCharPreset() = 0;
         virtual KgrNamedServer &GetServer() = 0;
         virtual SlokedEditorDocumentSet &GetDocuments() = 0;
         virtual SlokedCredentialMaster *GetCredentialMaster() = 0;
@@ -56,9 +55,8 @@ namespace sloked {
      public:
         SlokedServiceDependencyDefaultProvider(
             SlokedLogger &, std::unique_ptr<SlokedRootNamespace>,
-            const SlokedCharPreset &, KgrNamedServer &,
-            KgrContextManager<KgrLocalContext> &, SlokedCredentialMaster *,
-            SlokedEditorShutdown &,
+            KgrNamedServer &, KgrContextManager<KgrLocalContext> &,
+            SlokedCredentialMaster *, SlokedEditorShutdown &,
             SlokedTextTaggerRegistry<SlokedEditorDocument::TagType> * =
                 nullptr);
         KgrContextManager<KgrLocalContext> &GetContextManager() override;
@@ -66,7 +64,6 @@ namespace sloked {
             override;
         SlokedLogger &GetLogger() override;
         SlokedRootNamespace &GetNamespace() override;
-        const SlokedCharPreset &GetCharPreset() override;
         KgrNamedServer &GetServer() override;
         SlokedEditorDocumentSet &GetDocuments() override;
         SlokedCredentialMaster *GetCredentialMaster() override;
@@ -76,7 +73,6 @@ namespace sloked {
      protected:
         SlokedLogger &logger;
         std::unique_ptr<SlokedRootNamespace> rootNamespace;
-        const SlokedCharPreset &charPreset;
         KgrNamedServer &server;
         SlokedEditorDocumentSet documents;
         KgrContextManager<KgrLocalContext> &contextManager;

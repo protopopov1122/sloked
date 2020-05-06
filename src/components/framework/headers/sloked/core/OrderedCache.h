@@ -212,6 +212,20 @@ namespace sloked {
             }
         }
 
+        const Value &Get(const Key &key) {
+            if (this->cache.count(key)) {
+                return this->cache.at(key);
+            } else {
+                auto values = this->supplier(key, key);
+                if (values.size() != 1) {
+                    throw SlokedError("OrderedCache: Supplied value range does "
+                                      "not correspond to requested keys");
+                }
+                this->cache.emplace(key, std::move(values.at(0)));
+                return this->cache.at(key);
+            }
+        }
+
      private:
         Supplier supplier;
         KeyTraits traits;

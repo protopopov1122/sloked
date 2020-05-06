@@ -27,7 +27,7 @@ namespace sloked {
         SlokedTerminal &terminal, const Encoding &encoding,
         const SlokedCharPreset &charPreset,
         SlokedTerminalInputSource &inputSource, SlokedScreenSize &screenSize)
-        : terminal(terminal), encoding(encoding),
+        : terminal(terminal), encoding(encoding), charPreset(charPreset),
           rootComponent(terminal, encoding, charPreset), screen(rootComponent),
           inputSource(inputSource), screenSize(screenSize) {}
 
@@ -61,5 +61,9 @@ namespace sloked {
 
     const Encoding &SlokedTerminalScreenProvider::GetEncoding() {
         return this->encoding;
+    }
+
+    const SlokedCharPreset &SlokedTerminalScreenProvider::GetCharPreset() {
+        return this->charPreset;
     }
 }  // namespace sloked

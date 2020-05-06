@@ -29,7 +29,7 @@ namespace sloked {
     class SlokedBootstrapScreenFactory : public SlokedScreenProviderFactory {
      public:
         std::unique_ptr<SlokedScreenProvider> Make(
-            const SlokedUri &, const SlokedCharPreset &) final;
+            const SlokedUri &, std::unique_ptr<SlokedCharPreset>) final;
     };
 }  // namespace sloked
 

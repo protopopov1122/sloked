@@ -71,8 +71,7 @@ namespace sloked {
         SlokedServiceDependencyProvider &InitializeServiceProvider(
             std::unique_ptr<SlokedServiceDependencyProvider>);
         SlokedScreenServer &InitializeScreen(SlokedScreenProviderFactory &,
-                                             const SlokedUri &);
-        SlokedChangeableCharPreset &InitializeCharPreset(std::unique_ptr<SlokedChangeableCharPreset>);
+                                             const SlokedUri &, std::unique_ptr<SlokedCharPreset>);
         void Attach(SlokedCloseable &);
         void Attach(std::unique_ptr<SlokedDataHandle>);
 
@@ -82,7 +81,6 @@ namespace sloked {
         void Wait();
         void Close() final;
 
-        SlokedChangeableCharPreset &GetCharPreset();
         SlokedScheduler &GetScheduler();
         SlokedExecutor &GetExecutor();
         SlokedExecutor &GetThreadedExecutor();
@@ -108,7 +106,6 @@ namespace sloked {
         std::unique_ptr<SlokedServiceDependencyProvider> serviceProvider;
         std::unique_ptr<SlokedScreenProvider> screenProvider;
         std::unique_ptr<SlokedScreenServer> screen;
-        std::unique_ptr<SlokedChangeableCharPreset> charPreset;
         std::vector<std::unique_ptr<SlokedDataHandle>> handles;
         KgrRunnableContextManagerHandle<KgrLocalContext> contextManager;
     };

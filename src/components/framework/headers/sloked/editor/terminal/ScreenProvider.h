@@ -41,10 +41,12 @@ namespace sloked {
         SlokedMonitor<SlokedScreenComponent &> &GetScreen() final;
         SlokedScreenSize &GetSize() final;
         const Encoding &GetEncoding() final;
+        const SlokedCharPreset &GetCharPreset() final;
 
      private:
         SlokedTerminal &terminal;
         const Encoding &encoding;
+        const SlokedCharPreset &charPreset;
         TerminalComponentHandle rootComponent;
         SlokedMonitor<SlokedScreenComponent &> screen;
         SlokedTerminalInputSource &inputSource;

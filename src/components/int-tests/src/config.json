@@ -50,9 +50,6 @@
                 "buffering": 5,
                 "compression": true
             },
-            "parameters": {
-                "tabWidth": 2
-            },
             "server": {
                 "netServer": {
                     "host": "localhost",
@@ -115,7 +112,10 @@
                 "compression": true
             },
             "server": {
-                "screen": "graphics:///?fallback=terminal",
+                "screen": {
+                    "uri": "graphics:///?fallback=terminal",
+                    "tabWidth": 2
+                },
                 "slave": {
                     "address": {
                         "host": "localhost",

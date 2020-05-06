@@ -33,18 +33,14 @@ namespace sloked {
     class SlokedTextRenderContext : public SlokedServiceContext {
      public:
         SlokedTextRenderContext(std::unique_ptr<KgrPipe> pipe,
-                                SlokedEditorDocumentSet &documents,
-                                const SlokedCharPreset &charPreset)
+                                SlokedEditorDocumentSet &documents)
             : SlokedServiceContext(std::move(pipe)), documents(documents),
-              charPreset(charPreset), handle(documents.Empty()),
-              document(nullptr),
+              handle(documents.Empty()), document(nullptr),
               cache([this](const auto &begin, const auto &end) {
                   return this->RenderLines(begin, end);
               }) {
 
             this->BindMethod("attach", &SlokedTextRenderContext::Attach);
-            this->BindMethod("realPosition",
-                             &SlokedTextRenderContext::RealPosition);
             this->BindMethod("render", &SlokedTextRenderContext::Render);
         }
 
@@ -61,26 +57,9 @@ namespace sloked {
                     externalUri = doc.value().GetObject().GetUpstreamURI();
                 }
                 this->handle = std::move(doc.value());
-                this->document = std::make_unique<DocumentContent>(
-                    this->handle.GetObject(), this->charPreset);
+                this->document =
+                    std::make_unique<DocumentContent>(this->handle.GetObject());
             }
-        }
-
-        void RealPosition(const std::string &method, const KgrValue &params,
-                          Response &rsp) {
-            TextPosition::Line line = params.AsDictionary()["line"].AsInt();
-            TextPosition::Column column =
-                params.AsDictionary()["column"].AsInt();
-            auto realLine = this->document->text.GetLine(line);
-            auto realColumnPos = this->charPreset.GetRealPosition(
-                realLine, column, this->document->encoding);
-            auto realColumn =
-                column < this->document->encoding.CodepointCount(realLine)
-                    ? realColumnPos.first
-                    : realColumnPos.second;
-            rsp.Result(
-                KgrDictionary{{"line", static_cast<int64_t>(line)},
-                              {"column", static_cast<int64_t>(realColumn)}});
         }
 
         void Render(const std::string &method, const KgrValue &params,
@@ -147,55 +126,58 @@ namespace sloked {
                         back;
                     KgrArray fragments;
                     TextPosition::Column columnIdx{0};
-                    TextPosition::Column width{0};
                     auto lineTags = this->document->tags.Get(lineIdx);
-                    std::string buffer{};
-                    buffer.reserve(line.size());
+                    std::string_view::const_iterator buffer_begin =
+                        line.begin();
                     const TaggedTextFragment<SlokedEditorDocument::TagType>
                         *current{nullptr};
                     auto iter = lineTags.begin();
                     const auto length = line.size();
                     for (Encoding::Iterator it{};
                          this->document->encoding.Iterate(it, line, length);) {
+                        const auto current_iter =
+                            std::next(line.begin(), it.start);
                         if (current != nullptr &&
                             current->GetEnd().column <= columnIdx) {
-                            if (!buffer.empty()) {
+                            const std::size_t buffer_size =
+                                std::distance(buffer_begin, current_iter);
+                            if (buffer_size > 0) {
                                 fragments.Append(KgrDictionary{
                                     {"tag", current != nullptr},
                                     {"content",
                                      this->document->conv.ReverseConvert(
-                                         buffer)}});
-                                buffer.clear();
+                                         std::string_view{buffer_begin,
+                                                          buffer_size})}});
+                                buffer_begin = current_iter;
                             }
                             current = nullptr;
                         }
                         if (iter != lineTags.end() &&
                             iter->GetStart().column == columnIdx) {
-                            if (!buffer.empty()) {
+                            const std::size_t buffer_size =
+                                std::distance(buffer_begin, current_iter);
+                            if (std::distance(buffer_begin, current_iter) > 0) {
                                 fragments.Append(KgrDictionary{
                                     {"tag", current != nullptr},
                                     {"content",
                                      this->document->conv.ReverseConvert(
-                                         buffer)}});
-                                buffer.clear();
+                                         std::string_view{buffer_begin,
+                                                          buffer_size})}});
+                                buffer_begin = current_iter;
                             }
                             current = std::addressof(*iter);
                             ++iter;
                         }
-                        std::string fragment =
-                            it.value != U'\t'
-                                ? std::string{line.substr(it.start, it.length)}
-                                : SlokedCharPreset::EncodeTab(this->charPreset,
-                                      this->document->encoding, width);
-                        buffer += fragment;
-                        width += this->charPreset.GetCharWidth(it.value, width);
                         columnIdx++;
                     }
-                    if (!buffer.empty()) {
+                    const std::size_t buffer_size =
+                        std::distance(buffer_begin, line.end());
+                    if (buffer_size > 0) {
                         fragments.Append(KgrDictionary{
                             {"tag", current != nullptr},
-                            {"content",
-                             this->document->conv.ReverseConvert(buffer)}});
+                            {"content", this->document->conv.ReverseConvert(
+                                            std::string_view{buffer_begin,
+                                                             buffer_size})}});
                     }
                     lineIdx++;
                     result.emplace_back(std::move(fragments));
@@ -241,8 +223,7 @@ namespace sloked {
                 DocumentContent &content;
             };
 
-            DocumentContent(SlokedEditorDocument &document,
-                            const SlokedCharPreset &charPreset)
+            DocumentContent(SlokedEditorDocument &document)
                 : text(document.GetText()), encoding(document.GetEncoding()),
                   conv(SlokedLocale::SystemEncoding(), document.GetEncoding()),
                   transactionListeners(document.GetTransactionListeners()),
@@ -254,7 +235,8 @@ namespace sloked {
                         this->invalidated.push_back(range);
                     });
 
-                this->transListener = std::make_shared<TransactionListener>(*this);
+                this->transListener =
+                    std::make_shared<TransactionListener>(*this);
                 this->transactionListeners.AddListener(this->transListener);
             }
 
@@ -278,24 +260,22 @@ namespace sloked {
         };
 
         SlokedEditorDocumentSet &documents;
-        const SlokedCharPreset &charPreset;
         SlokedEditorDocumentSet::Document handle;
         std::unique_ptr<DocumentContent> document;
         SlokedOrderedCache<TextPosition::Line, KgrValue> cache;
     };
 
     SlokedTextRenderService::SlokedTextRenderService(
-        SlokedEditorDocumentSet &documents, const SlokedCharPreset &charPreset,
+        SlokedEditorDocumentSet &documents,
         KgrContextManager<KgrLocalContext> &contextManager)
-        : documents(documents), charPreset(charPreset),
-          contextManager(contextManager) {}
+        : documents(documents), contextManager(contextManager) {}
 
     TaskResult<void> SlokedTextRenderService::Attach(
         std::unique_ptr<KgrPipe> pipe) {
         TaskResultSupplier<void> supplier;
         supplier.Wrap([&] {
             auto ctx = std::make_unique<SlokedTextRenderContext>(
-                std::move(pipe), documents, this->charPreset);
+                std::move(pipe), documents);
             this->contextManager.Attach(std::move(ctx));
         });
         return supplier.Result();
@@ -307,31 +287,6 @@ namespace sloked {
         : client(std::move(pipe)) {
         this->client.Invoke(
             "attach", KgrDictionary{{"document", static_cast<int64_t>(docId)}});
-    }
-
-    TaskResult<std::optional<TextPosition>>
-        SlokedTextRenderClient::RealPosition(TextPosition src) {
-        return SlokedTaskTransformations::Transform(
-            this->client
-                .Invoke(
-                    "realPosition",
-                    KgrDictionary{{"line", static_cast<int64_t>(src.line)},
-                                  {"column", static_cast<int64_t>(src.column)}})
-                ->Next(),
-            [](const SlokedNetResponseBroker::Response &renderRes) {
-                std::optional<TextPosition> result{};
-                if (renderRes.HasResult()) {
-                    result = TextPosition{static_cast<TextPosition::Line>(
-                                              renderRes.GetResult()
-                                                  .AsDictionary()["line"]
-                                                  .AsInt()),
-                                          static_cast<TextPosition::Column>(
-                                              renderRes.GetResult()
-                                                  .AsDictionary()["column"]
-                                                  .AsInt())};
-                }
-                return result;
-            });
     }
 
     TaskResult<std::tuple<TextPosition::Line, TextPosition::Line, KgrValue>>

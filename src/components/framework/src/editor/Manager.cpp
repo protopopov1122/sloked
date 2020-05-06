@@ -96,13 +96,6 @@ namespace sloked {
                     editor.GetScheduler());
             }
         }
-        if (config.Has("parameters")) {
-            const auto &parameters = config["parameters"].AsDictionary();
-            if (parameters.Has("tabWidth")) {
-                auto width = parameters["tabWidth"].AsInt();
-                editor.GetCharPreset().SetTabWidth(width);
-            }
-        }
         this->SetupServer(editor, config["server"].AsDictionary());
     }
 
@@ -345,7 +338,7 @@ namespace sloked {
             auto &serviceProvider = editor.InitializeServiceProvider(
                 std::make_unique<SlokedServiceDependencyDefaultProvider>(
                     this->logger, this->namespaceFactory.Build(),
-                    editor.GetCharPreset(), editor.GetServer().GetServer(),
+                    editor.GetServer().GetServer(),
                     editor.GetContextManager(),
                     editor.HasCrypto() &&
                             editor.GetCrypto().HasCredentialMaster()
@@ -370,8 +363,13 @@ namespace sloked {
         }
         if (serverConfig.Has("screen")) {
             if (this->screenProviders != nullptr) {
-                auto uri = SlokedUri::Parse(serverConfig["screen"].AsString());
-                editor.InitializeScreen(*this->screenProviders, uri);
+                const auto &screenConfig = serverConfig["screen"].AsDictionary();
+                auto uri = SlokedUri::Parse(screenConfig["uri"].AsString());
+                auto charPreset = std::make_unique<SlokedFixedWidthCharPreset>(4);
+                if (screenConfig.Has("tabWidth")) {
+                    charPreset->SetTabWidth(screenConfig["tabWidth"].AsInt());
+                }
+                editor.InitializeScreen(*this->screenProviders, uri, std::move(charPreset));
             } else {
                 throw SlokedError("Startup: Screen providers are not defined");
             }

@@ -39,7 +39,7 @@ namespace sloked {
      public:
         struct TaggedFragment {
             Tag tag;
-            std::string_view content;
+            std::string content;
         };
 
         struct TaggedLine {
@@ -69,7 +69,7 @@ namespace sloked {
                         width - currentWidth);
                 if (processedWidth > 0) {
                     currentWidth += processedWidth;
-                    result.fragments.push_back({fragment.tag, processed});
+                    result.fragments.push_back({fragment.tag, std::string{processed}});
                 }
                 currentOffset += fragmentLength;
             }

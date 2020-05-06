@@ -66,7 +66,6 @@ namespace sloked {
         : sharedState(sharedState), running{false}, network(network),
           contextManager(sharedState.GetExecutor()) {
         this->closeables.Attach(this->contextManager);
-        this->charPreset = std::make_unique<SlokedFixedWidthCharPreset>(4);
     }
 
     SlokedCryptoFacade &SlokedEditorContainer::InitializeCrypto(
@@ -130,27 +129,18 @@ namespace sloked {
     }
 
     SlokedScreenServer &SlokedEditorContainer::InitializeScreen(
-        SlokedScreenProviderFactory &providers, const SlokedUri &uri) {
+        SlokedScreenProviderFactory &providers, const SlokedUri &uri, std::unique_ptr<SlokedCharPreset> charPreset) {
         if (this->running.load()) {
             throw SlokedError("EditorInstance: Already running");
         } else if (this->screen != nullptr) {
             throw SlokedError("EditorInstance: Screen already initialized");
         } else {
-            this->screenProvider = providers.Make(uri, this->GetCharPreset());
+            this->screenProvider = providers.Make(uri, std::move(charPreset));
             this->screen = std::make_unique<SlokedScreenServer>(
                 this->GetServer().GetServer(), *this->screenProvider,
                 this->GetContextManager());
             this->closeables.Attach(*this->screen);
             return *this->screen;
-        }
-    }
-
-    SlokedChangeableCharPreset &SlokedEditorContainer::InitializeCharPreset(std::unique_ptr<SlokedChangeableCharPreset> charPreset) {
-        if (this->running.load()) {
-            throw SlokedError("EditorInstance: Already running");
-        } else {
-            this->charPreset = std::move(charPreset);
-            return *this->charPreset;
         }
     }
 
@@ -210,10 +200,6 @@ namespace sloked {
     void SlokedEditorContainer::Close() {
         this->Stop();
         this->Wait();
-    }
-
-    SlokedChangeableCharPreset &SlokedEditorContainer::GetCharPreset() {
-        return *this->charPreset;
     }
 
     SlokedScheduler &SlokedEditorContainer::GetScheduler() {

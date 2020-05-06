@@ -37,7 +37,7 @@ namespace sloked {
     class SlokedTextEditor : public SlokedTextPaneWidget {
      public:
         SlokedTextEditor(
-            const Encoding &, std::unique_ptr<KgrPipe>,
+            const Encoding &, const SlokedCharPreset &, std::unique_ptr<KgrPipe>,
             std::function<void(SlokedCursorClient &)>, std::unique_ptr<KgrPipe>,
             std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId,
             const std::string &,
@@ -54,6 +54,7 @@ namespace sloked {
 
      private:
         EncodingConverter conv;
+        const SlokedCharPreset &charPreset;
         SlokedCursorClient cursorClient;
         SlokedTextRenderClient renderClient;
         SlokedDocumentNotifyClient notifyClient;

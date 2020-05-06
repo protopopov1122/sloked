@@ -35,11 +35,12 @@ namespace sloked {
         SlokedScreenContext(std::unique_ptr<KgrPipe> pipe,
                             SlokedMonitor<SlokedScreenComponent &> &root,
                             const Encoding &encoding,
+                            const SlokedCharPreset &charPreset,
                             KgrServer::Connector cursorService,
                             KgrServer::Connector renderService,
                             KgrServer::Connector notifyService)
             : SlokedServiceContext(std::move(pipe)), root(root),
-              encoding(encoding), cursorService(std::move(cursorService)),
+              encoding(encoding), charPreset(charPreset), cursorService(std::move(cursorService)),
               renderService(std::move(renderService)),
               notifyService(std::move(notifyService)),
               lifetime(std::make_shared<SlokedStandardLifetime>()) {
@@ -196,6 +197,7 @@ namespace sloked {
                                 handle.NewTextPane(std::make_unique<
                                                    SlokedTextEditor>(
                                     this->encoding,
+                                    this->charPreset,
                                     std::move(std::get<0>(result.GetResult())),
                                     std::move(initCursor),
                                     std::move(std::get<1>(result.GetResult())),
@@ -790,6 +792,7 @@ namespace sloked {
 
         SlokedMonitor<SlokedScreenComponent &> &root;
         const Encoding &encoding;
+        const SlokedCharPreset &charPreset;
         KgrServer::Connector cursorService;
         KgrServer::Connector renderService;
         KgrServer::Connector notifyService;
@@ -797,11 +800,11 @@ namespace sloked {
     };
 
     SlokedScreenService::SlokedScreenService(
-        SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding,
+        SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, const SlokedCharPreset &charPreset,
         KgrServer::Connector cursorService, KgrServer::Connector renderService,
         KgrServer::Connector notifyService,
         KgrContextManager<KgrLocalContext> &contextManager)
-        : root(root), encoding(encoding),
+        : root(root), encoding(encoding), charPreset(charPreset),
           cursorService(std::move(cursorService)),
           renderService(std::move(renderService)),
           notifyService(std::move(notifyService)),
@@ -812,7 +815,7 @@ namespace sloked {
         TaskResultSupplier<void> supplier;
         supplier.Wrap([&] {
             auto ctx = std::make_unique<SlokedScreenContext>(
-                std::move(pipe), this->root, this->encoding,
+                std::move(pipe), this->root, this->encoding, this->charPreset,
                 this->cursorService, this->renderService, this->notifyService);
             this->contextManager.Attach(std::move(ctx));
         });

@@ -22,6 +22,7 @@
 #ifndef SLOKED_SERVICES_SCREEN_H_
 #define SLOKED_SERVICES_SCREEN_H_
 
+#include "sloked/core/CharPreset.h"
 #include "sloked/core/Encoding.h"
 #include "sloked/core/Monitor.h"
 #include "sloked/editor/doc-mgr/DocumentSet.h"
@@ -37,14 +38,16 @@ namespace sloked {
     class SlokedScreenService : public KgrService {
      public:
         SlokedScreenService(SlokedMonitor<SlokedScreenComponent &> &,
-                            const Encoding &, KgrServer::Connector,
+                            const Encoding &, const SlokedCharPreset &,
                             KgrServer::Connector, KgrServer::Connector,
+                            KgrServer::Connector,
                             KgrContextManager<KgrLocalContext> &);
         TaskResult<void> Attach(std::unique_ptr<KgrPipe>) override;
 
      private:
         SlokedMonitor<SlokedScreenComponent &> &root;
         const Encoding &encoding;
+        const SlokedCharPreset &charPreset;
         KgrServer::Connector cursorService;
         KgrServer::Connector renderService;
         KgrServer::Connector notifyService;

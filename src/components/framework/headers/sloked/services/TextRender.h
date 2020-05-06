@@ -37,13 +37,11 @@ namespace sloked {
     class SlokedTextRenderService : public KgrService {
      public:
         SlokedTextRenderService(SlokedEditorDocumentSet &,
-                                const SlokedCharPreset &,
                                 KgrContextManager<KgrLocalContext> &);
         TaskResult<void> Attach(std::unique_ptr<KgrPipe>) override;
 
      private:
         SlokedEditorDocumentSet &documents;
-        const SlokedCharPreset &charPreset;
         KgrContextManager<KgrLocalContext> &contextManager;
     };
 
@@ -51,7 +49,6 @@ namespace sloked {
      public:
         SlokedTextRenderClient(std::unique_ptr<KgrPipe>,
                                SlokedEditorDocumentSet::DocumentId);
-        TaskResult<std::optional<TextPosition>> RealPosition(TextPosition);
         TaskResult<std::tuple<TextPosition::Line, TextPosition::Line, KgrValue>>
             Render(TextPosition::Line, TextPosition::Line);
         TaskResult<

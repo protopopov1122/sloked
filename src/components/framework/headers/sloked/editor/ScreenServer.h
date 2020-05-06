@@ -49,6 +49,7 @@ namespace sloked {
         virtual SlokedMonitor<SlokedScreenComponent &> &GetScreen() = 0;
         virtual SlokedScreenSize &GetSize() = 0;
         virtual const Encoding &GetEncoding() = 0;
+        virtual const SlokedCharPreset &GetCharPreset() = 0;
     };
 
     class SlokedScreenServer : public SlokedCloseable {
@@ -79,7 +80,7 @@ namespace sloked {
      public:
         virtual ~SlokedScreenProviderFactory() = default;
         virtual std::unique_ptr<SlokedScreenProvider> Make(
-            const SlokedUri &, const SlokedCharPreset &) = 0;
+            const SlokedUri &, std::unique_ptr<SlokedCharPreset>) = 0;
     };
 }  // namespace sloked
 

@@ -29,13 +29,13 @@
 namespace sloked {
 
     SlokedTextEditor::SlokedTextEditor(
-        const Encoding &encoding, std::unique_ptr<KgrPipe> cursorService,
+        const Encoding &encoding, const SlokedCharPreset &charPreset, std::unique_ptr<KgrPipe> cursorService,
         std::function<void(SlokedCursorClient &)> initClient,
         std::unique_ptr<KgrPipe> renderService,
         std::unique_ptr<KgrPipe> notifyService,
         SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger,
         SlokedBackgroundGraphics bg, SlokedForegroundGraphics fg)
-        : conv(encoding, SlokedLocale::SystemEncoding()),
+        : conv(encoding, SlokedLocale::SystemEncoding()), charPreset(charPreset),
           cursorClient(std::move(cursorService)),
           renderClient(std::move(renderService), docId),
           notifyClient(std::move(notifyService), docId), tagger(tagger),
@@ -178,25 +178,56 @@ namespace sloked {
                     for (auto it = render.first; it != render.second; ++it) {
                         SlokedTaggedTextFrame<bool>::TaggedLine taggedLine;
                         const auto &fragments = it->second.AsArray();
+                        TextPosition::Column column{0};
                         for (const auto &fragment : fragments) {
                             auto tag =
                                 fragment.AsDictionary()["tag"].AsBoolean();
                             const auto &text =
                                 fragment.AsDictionary()["content"].AsString();
-                            taggedLine.fragments.push_back({tag, text});
+                            
+                            auto buffer_begin = text.begin();
+                            for (Encoding::Iterator it{};
+                                SlokedLocale::SystemEncoding().Iterate(it, text, text.size());) {
+                                auto current_position = std::next(text.begin(), it.start);
+                                if (it.value == U'\t') {
+                                    if (std::distance(buffer_begin, current_position) > 0) {
+                                        taggedLine.fragments.push_back({
+                                            tag,
+                                            std::string{buffer_begin, current_position}
+                                        });
+                                    }
+                                    buffer_begin = std::next(current_position, it.length);
+                                    taggedLine.fragments.push_back({
+                                        tag,
+                                        SlokedCharPreset::EncodeTab(state->self->charPreset, SlokedLocale::SystemEncoding(), column)
+                                    });
+                                    column += state->self->charPreset.GetCharWidth(U'\t', column);
+                                } else {
+                                    column++;
+                                }
+                            }
+                            if (std::distance(buffer_begin, text.end()) > 0) {
+                                taggedLine.fragments.push_back({
+                                    tag,
+                                    std::string{buffer_begin, text.end()}
+                                });
+                            }
                         }
                         state->rendered.emplace_back(std::move(taggedLine));
                     }
-                    return state->self->renderClient.RealPosition(
-                        state->cursor);
-                }),
-            SlokedTaskPipelineStages::Map(
-                [](const std::shared_ptr<State> &state,
-                   std::optional<TextPosition> realPosition) {
-                    if (!realPosition.has_value()) {
-                        throw SlokedTaskPipelineStages::Cancel{};
+                    
+                    const auto &currentLineTagged = state->self->renderCache.Get(state->cursor.line);
+                    std::string currentLine;
+                    for (auto &fragment : currentLineTagged.AsArray()) {
+                        currentLine.append(fragment.AsDictionary()["content"].AsString());
                     }
-                    state->realPosition = realPosition.value();
+                    auto realColumnPos = state->self->charPreset.GetRealPosition(
+                        currentLine, state->cursor.column, SlokedLocale::SystemEncoding());
+                    auto realColumn =
+                        state->cursor.column < SlokedLocale::SystemEncoding().CodepointCount(currentLine)
+                            ? realColumnPos.first
+                            : realColumnPos.second;
+                    state->realPosition = {state->cursor.line, static_cast<TextPosition::Column>(realColumn)};
                     SlokedTaggedTextFrame<bool> visualFrame(
                         state->self->conv.GetDestination(),
                         state->fontProperties);
@@ -209,13 +240,13 @@ namespace sloked {
                                    visualFrame.GetMaxLength(
                                        currentLine, state->cursorOffset.column,
                                        state->maxWidth) <
-                               realPosition.value().column) {
+                               state->realPosition.column) {
                             state->cursorOffset.column++;
                         }
-                        if (realPosition.value().column <
+                        if (state->realPosition.column <
                             state->cursorOffset.column) {
                             state->cursorOffset.column =
-                                realPosition.value().column;
+                                state->realPosition.column;
                         }
 
                         state->self->cursorOffset =

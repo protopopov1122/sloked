@@ -55,6 +55,7 @@ namespace sloked {
                           std::make_unique<SlokedScreenService>(
                               this->provider.GetScreen(),
                               this->provider.GetEncoding(),
+                              this->provider.GetCharPreset(),
                               this->server.GetConnector({"/document/cursor"}),
                               this->server.GetConnector({"/document/render"}),
                               this->server.GetConnector({"/document/notify"}),
