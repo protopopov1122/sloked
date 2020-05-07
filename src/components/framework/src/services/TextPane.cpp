@@ -326,12 +326,15 @@ namespace sloked {
                           rsp = std::move(rsp)](auto &component) mutable {
                     auto &cmp = SlokedComponentTree::Traverse(
                         component, this->path.value());
-                    char32_t value = params.AsInt();
+                    std::vector<char32_t> graphemes;
+                    for (auto codepoint : params.AsArray()) {
+                        graphemes.push_back(codepoint.AsInt());
+                    }
                     rsp.Result(static_cast<int64_t>(cmp.AsHandle()
                                                         .GetComponent()
                                                         .AsTextPane()
                                                         .GetFontProperties()
-                                                        .GetWidth(value)));
+                                                        .GetWidth(SlokedSpan(graphemes.data(), graphemes.size()))));
                 });
             }
         }
@@ -422,10 +425,14 @@ namespace sloked {
             VisualPreset(SlokedServiceClient &client) : client(client) {}
 
             SlokedGraphicsPoint::Coordinate GetWidth(
-                char32_t value) const final {
+                SlokedSpan<const char32_t> graphemes) const final {
+                KgrArray graphemeArray;
+                for (std::size_t i = 0; i < graphemes.Size(); i++) {
+                    graphemeArray.Append(static_cast<int64_t>(graphemes[i]));
+                }
                 auto res =
                     this->client
-                        .Invoke("getCharWidth", static_cast<int64_t>(value))
+                        .Invoke("getCharWidth", std::move(graphemeArray))
                         ->Next()
                         .UnwrapWait();
                 if (res.HasResult() &&

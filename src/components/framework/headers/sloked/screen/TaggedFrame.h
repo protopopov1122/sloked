@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "sloked/core/Encoding.h"
+#include "sloked/core/Grapheme.h"
 #include "sloked/core/Position.h"
 #include "sloked/screen/Character.h"
 #include "sloked/screen/Point.h"
@@ -46,9 +47,9 @@ namespace sloked {
             std::list<TaggedFragment> fragments;
         };
 
-        SlokedTaggedTextFrame(const Encoding &encoding,
+        SlokedTaggedTextFrame(const Encoding &encoding, const SlokedGraphemeIterator &graphemeIter,
                               const SlokedFontProperties &fontProperties)
-            : encoding(encoding), fontProperties(fontProperties) {}
+            : encoding(encoding), graphemeIter(graphemeIter), fontProperties(fontProperties) {}
 
         TaggedLine Slice(const TaggedLine &input, TextPosition::Column offset,
                          SlokedGraphicsPoint::Coordinate width) {
@@ -111,16 +112,16 @@ namespace sloked {
             TextPosition::Column totalLength{0};
             std::size_t totalLengthBytes{0};
 
-            this->encoding.IterateCodepoints(src, [&](auto start, auto length,
-                                                      auto codepoint) {
+            this->graphemeIter.Iterate(this->encoding, src, [&](auto start, auto length,
+                                                      auto grapheme) {
                 if (skip > 0) {
                     result.remove_prefix(length);
                     skip--;
                     return true;
                 }
-                auto codepointWidth = this->fontProperties.GetWidth(codepoint);
-                if (width + codepointWidth <= maxWidth) {
-                    width += codepointWidth;
+                auto graphemeWidth = this->fontProperties.GetWidth(grapheme);
+                if (width + graphemeWidth <= maxWidth) {
+                    width += graphemeWidth;
                     totalLength++;
                     totalLengthBytes += length;
                     return true;
@@ -133,6 +134,7 @@ namespace sloked {
         }
 
         const Encoding &encoding;
+        const SlokedGraphemeIterator &graphemeIter;
         const SlokedFontProperties &fontProperties;
     };
 }  // namespace sloked

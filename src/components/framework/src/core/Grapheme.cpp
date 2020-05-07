@@ -19,20 +19,13 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_SCREEN_GRAPHEME_H_
-#define SLOKED_SCREEN_GRAPHEME_H_
-
-#include "sloked/core/Span.h"
-#include "sloked/screen/Point.h"
+#include "sloked/core/Grapheme.h"
 
 namespace sloked {
 
-    class SlokedFontProperties {
-     public:
-        virtual ~SlokedFontProperties() = default;
-        virtual SlokedGraphicsPoint::Coordinate GetHeight() const = 0;
-        virtual SlokedGraphicsPoint::Coordinate GetWidth(SlokedSpan<const char32_t>) const = 0;
-    };
-}  // namespace sloked
-
-#endif
+    void SlokedGraphemeNullIterator::Iterate(const Encoding &encoding, std::string_view input, std::function<bool(std::size_t, std::size_t, SlokedSpan<const char32_t>)> callback) const {
+        encoding.IterateCodepoints(input, [&](auto start, auto length, auto value) {
+            return callback(start, length, SlokedSpan<const char32_t>(&value, 1));
+        });
+    }
+}

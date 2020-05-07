@@ -29,14 +29,15 @@
 namespace sloked {
 
     SlokedTextEditor::SlokedTextEditor(
-        const Encoding &encoding, const SlokedCharPreset &charPreset, std::unique_ptr<KgrPipe> cursorService,
+        const Encoding &encoding, const SlokedCharPreset &charPreset,
+        std::unique_ptr<KgrPipe> cursorService,
         std::function<void(SlokedCursorClient &)> initClient,
         std::unique_ptr<KgrPipe> renderService,
         std::unique_ptr<KgrPipe> notifyService,
         SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger,
         SlokedBackgroundGraphics bg, SlokedForegroundGraphics fg)
-        : conv(encoding, SlokedLocale::SystemEncoding()), charPreset(charPreset),
-          cursorClient(std::move(cursorService)),
+        : conv(encoding, SlokedLocale::SystemEncoding()),
+          charPreset(charPreset), cursorClient(std::move(cursorService)),
           renderClient(std::move(renderService), docId),
           notifyClient(std::move(notifyService), docId), tagger(tagger),
           background(bg), foreground(fg), cursorOffset{0, 0},
@@ -184,52 +185,68 @@ namespace sloked {
                                 fragment.AsDictionary()["tag"].AsBoolean();
                             const auto &text =
                                 fragment.AsDictionary()["content"].AsString();
-                            
+
                             auto buffer_begin = text.begin();
                             for (Encoding::Iterator it{};
-                                SlokedLocale::SystemEncoding().Iterate(it, text, text.size());) {
-                                auto current_position = std::next(text.begin(), it.start);
+                                 SlokedLocale::SystemEncoding().Iterate(
+                                     it, text, text.size());) {
+                                auto current_position =
+                                    std::next(text.begin(), it.start);
                                 if (it.value == U'\t') {
-                                    if (std::distance(buffer_begin, current_position) > 0) {
-                                        taggedLine.fragments.push_back({
-                                            tag,
-                                            std::string{buffer_begin, current_position}
-                                        });
+                                    if (std::distance(buffer_begin,
+                                                      current_position) > 0) {
+                                        taggedLine.fragments.push_back(
+                                            {tag,
+                                             std::string{buffer_begin,
+                                                         current_position}});
                                     }
-                                    buffer_begin = std::next(current_position, it.length);
-                                    taggedLine.fragments.push_back({
-                                        tag,
-                                        SlokedCharPreset::EncodeTab(state->self->charPreset, SlokedLocale::SystemEncoding(), column)
-                                    });
-                                    column += state->self->charPreset.GetCharWidth(U'\t', column);
+                                    buffer_begin =
+                                        std::next(current_position, it.length);
+                                    taggedLine.fragments.push_back(
+                                        {tag,
+                                         SlokedCharPreset::EncodeTab(
+                                             state->self->charPreset,
+                                             SlokedLocale::SystemEncoding(),
+                                             column)});
+                                    column +=
+                                        state->self->charPreset.GetCharWidth(
+                                            U'\t', column);
                                 } else {
                                     column++;
                                 }
                             }
                             if (std::distance(buffer_begin, text.end()) > 0) {
-                                taggedLine.fragments.push_back({
-                                    tag,
-                                    std::string{buffer_begin, text.end()}
-                                });
+                                taggedLine.fragments.push_back(
+                                    {tag,
+                                     std::string{buffer_begin, text.end()}});
                             }
                         }
                         state->rendered.emplace_back(std::move(taggedLine));
                     }
-                    
-                    const auto &currentLineTagged = state->self->renderCache.Get(state->cursor.line);
+
+                    const auto &currentLineTagged =
+                        state->self->renderCache.Get(state->cursor.line);
                     std::string currentLine;
                     for (auto &fragment : currentLineTagged.AsArray()) {
-                        currentLine.append(fragment.AsDictionary()["content"].AsString());
+                        currentLine.append(
+                            fragment.AsDictionary()["content"].AsString());
                     }
-                    auto realColumnPos = state->self->charPreset.GetRealPosition(
-                        currentLine, state->cursor.column, SlokedLocale::SystemEncoding());
+                    auto realColumnPos =
+                        state->self->charPreset.GetRealPosition(
+                            currentLine, state->cursor.column,
+                            SlokedLocale::SystemEncoding());
                     auto realColumn =
-                        state->cursor.column < SlokedLocale::SystemEncoding().CodepointCount(currentLine)
+                        state->cursor.column <
+                                SlokedLocale::SystemEncoding().CodepointCount(
+                                    currentLine)
                             ? realColumnPos.first
                             : realColumnPos.second;
-                    state->realPosition = {state->cursor.line, static_cast<TextPosition::Column>(realColumn)};
+                    state->realPosition = {
+                        state->cursor.line,
+                        static_cast<TextPosition::Column>(realColumn)};
+                    SlokedGraphemeNullIterator graphemeIter;
                     SlokedTaggedTextFrame<bool> visualFrame(
-                        state->self->conv.GetDestination(),
+                        state->self->conv.GetDestination(), graphemeIter,
                         state->fontProperties);
                     auto currentLineOffset =
                         state->cursor.line - state->cursorOffset.line;
@@ -277,7 +294,9 @@ namespace sloked {
         pane.SetPosition(0, 0);
 
         TextPosition::Line lineIdx{0};
+        SlokedGraphemeNullIterator graphemeIter;
         SlokedTaggedTextFrame<bool> visualFrame(this->conv.GetDestination(),
+                                                graphemeIter,
                                                 pane.GetFontProperties());
         for (const auto &line : this->rendered) {
             pane.SetPosition(lineIdx++, 0);
