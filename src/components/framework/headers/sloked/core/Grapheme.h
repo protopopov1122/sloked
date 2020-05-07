@@ -24,18 +24,30 @@
 
 #include "sloked/core/Encoding.h"
 #include "sloked/core/Span.h"
+#include <optional>
 
 namespace sloked {
 
-    class SlokedGraphemeIterator {
+    class SlokedGraphemeEnumerator {
      public:
-        virtual ~SlokedGraphemeIterator() = default;
-        virtual void Iterate(const Encoding &, std::string_view, std::function<bool(std::size_t, std::size_t, SlokedSpan<const char32_t>)>) const = 0;
+        using IteratorCallback = std::function<bool(std::size_t, std::size_t, SlokedSpan<const char32_t>)>;
+        struct Grapheme {
+            std::size_t offset;
+            std::size_t length;
+            std::vector<char32_t> codepoints;
+        };
+
+        virtual ~SlokedGraphemeEnumerator() = default;
+        virtual std::size_t Count(const Encoding &, std::string_view) const = 0;
+        virtual std::optional<Grapheme> Get(const Encoding &, std::string_view, std::size_t) const = 0;
+        virtual bool Iterate(const Encoding &, std::string_view, IteratorCallback) const = 0;
     };
 
-    class SlokedGraphemeNullIterator : public SlokedGraphemeIterator {
+    class SlokedGraphemeNullEnumerator : public SlokedGraphemeEnumerator {
      public:
-        void Iterate(const Encoding &, std::string_view, std::function<bool(std::size_t, std::size_t, SlokedSpan<const char32_t>)>) const final;
+        std::size_t Count(const Encoding &, std::string_view) const final;
+        std::optional<Grapheme> Get(const Encoding &, std::string_view, std::size_t) const final;
+        bool Iterate(const Encoding &, std::string_view, IteratorCallback) const final;
     };
 }
 

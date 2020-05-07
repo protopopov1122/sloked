@@ -47,7 +47,7 @@ namespace sloked {
             std::list<TaggedFragment> fragments;
         };
 
-        SlokedTaggedTextFrame(const Encoding &encoding, const SlokedGraphemeIterator &graphemeIter,
+        SlokedTaggedTextFrame(const Encoding &encoding, const SlokedGraphemeEnumerator &graphemeIter,
                               const SlokedFontProperties &fontProperties)
             : encoding(encoding), graphemeIter(graphemeIter), fontProperties(fontProperties) {}
 
@@ -134,7 +134,7 @@ namespace sloked {
         }
 
         const Encoding &encoding;
-        const SlokedGraphemeIterator &graphemeIter;
+        const SlokedGraphemeEnumerator &graphemeIter;
         const SlokedFontProperties &fontProperties;
     };
 }  // namespace sloked

@@ -38,13 +38,18 @@ namespace sloked {
             }
         }
 
-        std::pair<std::size_t, std::size_t> GetCodepoint(
+        std::optional<Codepoint> GetCodepoint(
             std::string_view view, std::size_t idx) const override {
             bool validView = view.size() % 4 == 0;
             if (validView && idx * 4 < view.size()) {
-                return std::make_pair(idx * 4, 4);
+                return Codepoint {
+                    idx * 4, 4,
+                    static_cast<char32_t>(view[4 * idx] | (view[4 * idx + 1] << 8) |
+                               (view[4 * idx + 2] << 16) |
+                               (view[4 * idx + 3] << 24))
+                };
             } else if (validView) {
-                return std::make_pair(0, 0);
+                return {};
             } else {
                 throw SlokedError("UTF-32LE: Invalid length");
             }

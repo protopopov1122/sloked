@@ -95,8 +95,7 @@ namespace sloked {
             std::string currentLine{this->text.GetLine(this->current.line)};
             currentLine.erase(
                 0,
-                this->encoding.GetCodepoint(currentLine, this->current.column)
-                    .first);
+                this->encoding.GetCodepoint(currentLine, this->current.column)->start);
             this->encoding.IterateCodepoints(
                 currentLine, [&](auto start, auto length, auto chr) {
                     if (chr == U'\t') {

@@ -30,9 +30,9 @@ namespace sloked {
                                                  const TextPosition &position,
                                                  std::string_view content) {
         std::string current{text.GetLine(position.line)};
-        if (position.column < encoding.CodepointCount(current)) {
-            auto pos = encoding.GetCodepoint(current, position.column);
-            current.insert(pos.first, content);
+        auto pos = encoding.GetCodepoint(current, position.column);
+        if (pos.has_value()) {
+            current.insert(pos->start, content);
         } else {
             current.append(content);
             ;
@@ -50,10 +50,10 @@ namespace sloked {
                                                   const TextPosition &position,
                                                   std::string_view content) {
         std::string current{text.GetLine(position.line)};
-        if (position.column < encoding.CodepointCount(current)) {
-            auto pos = encoding.GetCodepoint(current, position.column);
-            auto sub1 = current.substr(0, pos.first);
-            auto sub2 = current.substr(pos.first);
+        auto pos = encoding.GetCodepoint(current, position.column);
+        if (pos.has_value()) {
+            auto sub1 = current.substr(0, pos->start);
+            auto sub2 = current.substr(pos->start);
 
             text.SetLine(position.line, sub1);
             if (content.empty()) {
@@ -73,19 +73,17 @@ namespace sloked {
         TextBlock &text, const Encoding &encoding,
         const TextPosition &position) {
         if (position.column > 0) {
-            if (position.column <
-                encoding.CodepointCount(text.GetLine(position.line))) {
-                std::string current{text.GetLine(position.line)};
-                auto pos1 = encoding.GetCodepoint(current, position.column - 1);
-                auto pos2 = encoding.GetCodepoint(current, position.column);
-                auto sub1 = current.substr(0, pos1.first);
-                auto sub2 = current.substr(pos2.first);
+            std::string current{text.GetLine(position.line)};
+            auto pos1 = encoding.GetCodepoint(current, position.column - 1);
+            auto pos2 = encoding.GetCodepoint(current, position.column);
+            if (pos2.has_value()) {
+                auto sub1 = current.substr(0, pos1->start);
+                auto sub2 = current.substr(pos2->start);
 
                 text.SetLine(position.line, sub1 + sub2);
             } else {
-                auto current = text.GetLine(position.line);
                 auto pos = encoding.GetCodepoint(current, position.column - 1);
-                text.SetLine(position.line, current.substr(0, pos.first));
+                text.SetLine(position.line, current.substr(0, pos->start));
             }
             return TextPosition{position.line, position.column - 1};
         } else if (position.line > 0) {
@@ -105,17 +103,17 @@ namespace sloked {
         TextBlock &text, const Encoding &encoding,
         const TextPosition &position) {
         auto width = encoding.CodepointCount(text.GetLine(position.line));
+        std::string current{text.GetLine(position.line)};
+        auto pos1 = encoding.GetCodepoint(current, position.column);
+        auto pos2 = encoding.GetCodepoint(current, position.column + 1);
         if (position.column + 1 < width) {
-            std::string current{text.GetLine(position.line)};
-            auto pos1 = encoding.GetCodepoint(current, position.column);
-            auto pos2 = encoding.GetCodepoint(current, position.column + 1);
-            auto sub1 = current.substr(0, pos1.first);
-            auto sub2 = current.substr(pos2.first);
+            auto sub1 = current.substr(0, pos1->start);
+            auto sub2 = current.substr(pos2->start);
             text.SetLine(position.line, sub1 + sub2);
         } else if (position.column + 1 == width) {
             std::string current{text.GetLine(position.line)};
             auto pos = encoding.GetCodepoint(current, position.column);
-            auto sub = current.substr(0, pos.first);
+            auto sub = current.substr(0, pos->start);
             text.SetLine(position.line, sub);
         } else if (position.column == width &&
                    position.line < text.GetLastLine()) {
@@ -177,9 +175,9 @@ namespace sloked {
     std::size_t SlokedEditingPrimitives::GetOffset(
         std::string_view str, TextPosition::Column position,
         const Encoding &encoding) {
-        std::size_t total_length = encoding.CodepointCount(str);
-        if (position < total_length) {
-            return encoding.GetCodepoint(str, position).first;
+        auto codepoint = encoding.GetCodepoint(str, position);
+        if (codepoint.has_value()) {
+            return codepoint->start;
         } else {
             return str.size();
         }

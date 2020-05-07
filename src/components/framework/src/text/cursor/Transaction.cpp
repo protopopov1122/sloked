@@ -291,7 +291,7 @@ namespace sloked {
                     std::string_view view = text.GetLine(arg.position.line);
                     auto pos =
                         encoding.GetCodepoint(view, arg.position.column - 1);
-                    arg.content = view.substr(pos.first, pos.second);
+                    arg.content = view.substr(pos->start, pos->length);
                 } else {
                     arg.width = encoding.CodepointCount(
                         text.GetLine(arg.position.line - 1));
@@ -306,7 +306,7 @@ namespace sloked {
                 if (arg.position.column < arg.width) {
                     std::string_view view = text.GetLine(arg.position.line);
                     auto pos = encoding.GetCodepoint(view, arg.position.column);
-                    arg.content = view.substr(pos.first, pos.second);
+                    arg.content = view.substr(pos->start, pos->length);
                 }
             } break;
 

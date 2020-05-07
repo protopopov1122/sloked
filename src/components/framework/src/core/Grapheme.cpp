@@ -23,8 +23,25 @@
 
 namespace sloked {
 
-    void SlokedGraphemeNullIterator::Iterate(const Encoding &encoding, std::string_view input, std::function<bool(std::size_t, std::size_t, SlokedSpan<const char32_t>)> callback) const {
-        encoding.IterateCodepoints(input, [&](auto start, auto length, auto value) {
+    std::size_t SlokedGraphemeNullEnumerator::Count(const Encoding &encoding, std::string_view input) const {
+        return encoding.CodepointCount(input);
+    }
+
+    std::optional<SlokedGraphemeEnumerator::Grapheme> SlokedGraphemeNullEnumerator::Get(const Encoding &encoding, std::string_view input, std::size_t position) const {
+        auto result = encoding.GetCodepoint(input, position);
+        if (result.has_value()) {
+            return Grapheme {
+                result->start,
+                result->length,
+                {result->value}
+            };
+        } else {
+            return {};
+        }
+    }
+
+    bool SlokedGraphemeNullEnumerator::Iterate(const Encoding &encoding, std::string_view input, std::function<bool(std::size_t, std::size_t, SlokedSpan<const char32_t>)> callback) const {
+        return encoding.IterateCodepoints(input, [&](auto start, auto length, auto value) {
             return callback(start, length, SlokedSpan<const char32_t>(&value, 1));
         });
     }

@@ -71,38 +71,48 @@ namespace sloked {
             return count;
         }
 
-        std::pair<std::size_t, std::size_t> GetCodepoint(
+        std::optional<Codepoint> GetCodepoint(
             std::string_view str, std::size_t idx) const override {
 #define ASSERT_WIDTH(x)                  \
     do {                                 \
         if (i + (x) -1 >= str.size()) {  \
-            return std::make_pair(0, 0); \
+            return {}; \
         }                                \
     } while (false)
+            char32_t result;
             for (std::size_t i = 0; i < str.size();) {
                 char current = str[i];
                 std::size_t width = 0;
                 if ((current & 0xc0) != 0xc0) {
                     width = 1;
                     ASSERT_WIDTH(width);
+                    result = current;
                 } else if ((current & 0xe0) != 0xe0) {
                     width = 2;
                     ASSERT_WIDTH(width);
+                    result = ((current & 0x1f) << 6) | (str[i + 1] & 0x3f);
                 } else if ((current & 0xf0) != 0xf0) {
                     width = 3;
                     ASSERT_WIDTH(width);
+                    result = ((current & 0xf) << 12) |
+                             ((str[i + 1] & 0x3f) << 6) | (str[i + 2] & 0x3f);
                 } else {
                     width = 4;
                     ASSERT_WIDTH(width);
+                    result = ((current & 0x7) << 18) |
+                             ((str[i + 1] & 0x3f) << 12) |
+                             ((str[i + 2] & 0x3f) << 6) | (str[i + 3] & 0x3f);
                 }
                 if (!idx--) {
-                    return std::make_pair(i, width);
+                    return Codepoint {
+                        i, width, result
+                    };
                 } else {
                     i += width;
                 }
             }
 #undef ASSERT_WIDTH
-            return std::make_pair(0, 0);
+            return {};
         }
 
         std::optional<std::size_t> GetCodepointByOffset(

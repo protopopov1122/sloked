@@ -244,7 +244,7 @@ namespace sloked {
                     state->realPosition = {
                         state->cursor.line,
                         static_cast<TextPosition::Column>(realColumn)};
-                    SlokedGraphemeNullIterator graphemeIter;
+                    SlokedGraphemeNullEnumerator graphemeIter;
                     SlokedTaggedTextFrame<bool> visualFrame(
                         state->self->conv.GetDestination(), graphemeIter,
                         state->fontProperties);
@@ -294,7 +294,7 @@ namespace sloked {
         pane.SetPosition(0, 0);
 
         TextPosition::Line lineIdx{0};
-        SlokedGraphemeNullIterator graphemeIter;
+        SlokedGraphemeNullEnumerator graphemeIter;
         SlokedTaggedTextFrame<bool> visualFrame(this->conv.GetDestination(),
                                                 graphemeIter,
                                                 pane.GetFontProperties());

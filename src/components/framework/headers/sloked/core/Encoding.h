@@ -40,6 +40,12 @@ namespace sloked {
             char32_t value;
         };
 
+        struct Codepoint {
+            std::size_t start;
+            std::size_t length;
+            char32_t value;
+        };
+
         Encoding(const Encoding &) = delete;
         Encoding(Encoding &&) = delete;
         virtual ~Encoding() = default;
@@ -51,7 +57,7 @@ namespace sloked {
 
         virtual const std::string &GetIdentifier() const = 0;
         virtual std::size_t CodepointCount(std::string_view) const = 0;
-        virtual std::pair<std::size_t, std::size_t> GetCodepoint(
+        virtual std::optional<Codepoint> GetCodepoint(
             std::string_view, std::size_t) const = 0;
         virtual std::optional<std::size_t> GetCodepointByOffset(
             std::string_view, std::size_t) const = 0;
