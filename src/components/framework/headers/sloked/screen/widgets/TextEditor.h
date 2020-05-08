@@ -53,6 +53,10 @@ namespace sloked {
         void OnUpdate(std::function<void()>) final;
 
      private:
+        class RenderingState;
+        class Helpers;
+        friend struct RenderingState;
+
         EncodingConverter conv;
         const SlokedCharPreset &charPreset;
         SlokedCursorClient cursorClient;

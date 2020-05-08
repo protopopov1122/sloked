@@ -26,7 +26,7 @@ namespace sloked {
     class TerminalTextPane::TerminalVisualPreset : public SlokedFontProperties {
      public:
         SlokedGraphicsPoint::Coordinate GetWidth(SlokedSpan<const char32_t> grapheme) const final {
-            return grapheme.Size() > 1 ? grapheme.Size() * 4 : 1;
+            return 1;
         }
 
         SlokedGraphicsPoint::Coordinate GetHeight() const final {
