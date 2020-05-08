@@ -62,9 +62,9 @@ namespace sloked {
         SlokedBackgroundGraphics background;
         SlokedForegroundGraphics foreground;
         std::function<void()> updateListener;
-        TextPosition cursorOffset;
-        TextPosition realPosition;
-        SlokedOrderedCache<TextPosition::Line, KgrValue> renderCache;
+        TextPosition virtualCursorOffset;
+        TextPosition virtualCursor;
+        SlokedOrderedCache<TextPosition::Line, SlokedTaggedTextFrame<bool>::TaggedLine> renderCache;
         std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> rendered;
         std::shared_ptr<SlokedStandardLifetime> lifetime;
     };

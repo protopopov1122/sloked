@@ -40,10 +40,13 @@ namespace sloked {
           charPreset(charPreset), cursorClient(std::move(cursorService)),
           renderClient(std::move(renderService), docId),
           notifyClient(std::move(notifyService), docId), tagger(tagger),
-          background(bg), foreground(fg), cursorOffset{0, 0},
-          renderCache([](const auto &, const auto &) -> std::vector<KgrValue> {
-              throw SlokedError("TextEditor: Unexpected cache miss");
-          }),
+          background(bg),
+          foreground(fg), virtualCursorOffset{0, 0}, virtualCursor{0, 0},
+          renderCache(
+              [](const auto &, const auto &)
+                  -> std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> {
+                  throw SlokedError("TextEditor: Unexpected cache miss");
+              }),
           lifetime(std::make_shared<SlokedStandardLifetime>()) {
         if (initClient) {
             initClient(this->cursorClient);
@@ -122,6 +125,180 @@ namespace sloked {
         return true;
     }
 
+    static SlokedTaggedTextFrame<bool>::TaggedLine ExtractTaggedLine(
+        const KgrValue &raw) {
+        SlokedTaggedTextFrame<bool>::TaggedLine taggedLine;
+        const auto &fragments = raw.AsArray();
+        for (const auto &fragment : fragments) {
+            auto tag = fragment.AsDictionary()["tag"].AsBoolean();
+            const auto &text = fragment.AsDictionary()["content"].AsString();
+            const auto fragmentBegin = taggedLine.content.size();
+            taggedLine.content.append(text);
+            taggedLine.fragments.push_back({tag, fragmentBegin, text.size()});
+        }
+        return taggedLine;
+    }
+
+    template <typename Iter>
+    static auto ExtractTaggedLines(const Iter &begin, const Iter &end) {
+        std::vector<std::pair<TextPosition::Line,
+                              SlokedTaggedTextFrame<bool>::TaggedLine>>
+            result;
+        for (auto it = begin; it != end; ++it) {
+            result.emplace_back(
+                std::make_pair(it->first, ExtractTaggedLine(it->second)));
+        }
+        return result;
+    }
+
+    static void UnwrapFragment(std::string_view in, const Encoding &encoding,
+                               const SlokedCharPreset &charPreset,
+                               const SlokedGraphemeEnumerator &graphemes,
+                               TextPosition::Column &column, std::string &out) {
+        graphemes.Iterate(
+            encoding, in, [&](auto start, auto length, auto codepoints) {
+                if (codepoints.Size() == 1 && codepoints[0] == U'\t') {
+                    out.append(SlokedCharPreset::EncodeTab(charPreset, encoding,
+                                                           column));
+                    column += charPreset.GetCharWidth(U'\t', column);
+                } else {
+                    out.append(in.substr(start, length));
+                    column++;
+                }
+                return true;
+            });
+    }
+
+    static auto UnwrapTaggedLine(
+        const SlokedTaggedTextFrame<bool>::TaggedLine &line,
+        const Encoding &encoding, const SlokedCharPreset &charPreset,
+        const SlokedGraphemeEnumerator &graphemes) {
+        std::string_view view{line.content};
+        SlokedTaggedTextFrame<bool>::TaggedLine taggedLine;
+        TextPosition::Column column{0};
+        for (const auto &fragment : line.fragments) {
+            const auto fragmentBegin = taggedLine.content.size();
+            UnwrapFragment(view.substr(fragment.offset, fragment.length),
+                           encoding, charPreset, graphemes, column,
+                           taggedLine.content);
+            taggedLine.fragments.push_back(
+                {fragment.tag, fragmentBegin,
+                 taggedLine.content.size() - fragmentBegin});
+        }
+        return taggedLine;
+    }
+
+    static auto UpdateCursorLineOffset(TextPosition::Line offset,
+                                       TextPosition::Line height,
+                                       TextPosition::Line line) {
+        if (offset + height - 1 < line) {
+            offset = line - height + 1;
+        }
+        if (line < offset) {
+            offset = line;
+        }
+        return offset;
+    }
+
+    struct GraphemePosition {
+        TextPosition::Column virtualOffset;
+        TextPosition::Column virtualLength;
+        TextPosition::Column codepointOffset;
+        TextPosition::Column codepointCount;
+        SlokedGraphicsPoint::Coordinate graphicalWidth;
+    };
+
+    template <typename Iter>
+    static std::optional<GraphemePosition> FindGraphemeByCodepointOffset(
+        const Iter &begin, const Iter &end,
+        TextPosition::Column codepointOffset) {
+        for (auto it = begin; it != end; ++it) {
+            if (codepointOffset >= it->codepointOffset &&
+                codepointOffset < it->codepointOffset + it->codepointCount) {
+                return *it;
+            }
+        }
+        return {};
+    }
+
+    static std::vector<GraphemePosition> SplitIntoGraphemes(
+        std::string_view in, const Encoding &encoding,
+        const SlokedCharPreset &charPreset,
+        const SlokedGraphemeEnumerator &graphemes,
+        const SlokedFontProperties &fontProperties) {
+
+        std::vector<GraphemePosition> result;
+        TextPosition::Column column{0};
+        TextPosition::Column codepointOffset{0};
+        graphemes.Iterate(
+            encoding, in, [&](auto start, auto length, auto codepoints) {
+                if (codepoints.Size() == 1 && codepoints[0] == U'\t') {
+                    auto tabWidth = charPreset.GetCharWidth(U'\t', column);
+                    const char32_t Space{U' '};
+                    while (tabWidth-- > 0) {
+                        result.push_back(GraphemePosition{
+                            column, 1, codepointOffset, static_cast<TextPosition::Column>(codepoints.Size()),
+                            fontProperties.GetWidth(SlokedSpan(&Space, 1))});
+                        column++;
+                    }
+                } else {
+                    result.push_back(GraphemePosition{
+                        column,
+                        1,
+                        codepointOffset,
+                        static_cast<TextPosition::Column>(codepoints.Size()),
+                        fontProperties.GetWidth(codepoints)});
+                    column++;
+                }
+                codepointOffset += codepoints.Size();
+                return true;
+            });
+        return result;
+    }
+
+    template <typename Iter>
+    static auto SumGraphemeWidth(const Iter &begin, const Iter &end,
+                                 TextPosition::Column from,
+                                 TextPosition::Column to) {
+        SlokedGraphicsPoint::Coordinate total{0};
+        for (auto it = begin; it != end; ++it) {
+            if (from <= it->virtualOffset + it->virtualLength &&
+                to >= it->virtualOffset) {
+                total += it->graphicalWidth;
+            }
+        }
+        return total;
+    }
+
+    static auto CalculateCursorColumnOffset(
+        TextPosition::Column virtualOffset,
+        SlokedGraphicsPoint::Coordinate maxWidth,
+        TextPosition::Column codepointColumn, std::string_view line,
+        const Encoding &encoding, const SlokedCharPreset &charPreset,
+        const SlokedGraphemeEnumerator &graphemes,
+        const SlokedFontProperties &fontProperties) {
+
+        const auto graphemeList = SplitIntoGraphemes(line, encoding, charPreset,
+                                                     graphemes, fontProperties);
+        const auto currentGrapheme = FindGraphemeByCodepointOffset(
+            graphemeList.begin(), graphemeList.end(), codepointColumn);
+        const auto virtualColumn =
+            currentGrapheme.has_value()
+                ? currentGrapheme->virtualOffset
+                : (graphemeList.empty()
+                       ? 0
+                       : graphemeList.back().virtualOffset +
+                             graphemeList.back().virtualLength);
+        if (virtualOffset > virtualColumn) {
+            virtualOffset = virtualColumn;
+        }
+        while (SumGraphemeWidth(graphemeList.begin(), graphemeList.end(),
+                                virtualOffset, virtualColumn) > maxWidth) {
+            virtualOffset++;
+        }
+        return std::make_pair(virtualOffset, virtualColumn);
+    }
+
     TaskResult<void> SlokedTextEditor::RenderSurface(
         SlokedGraphicsPoint::Coordinate maxWidth, TextPosition::Line height,
         const SlokedFontProperties &fontProperties) {
@@ -131,17 +308,18 @@ namespace sloked {
                   TextPosition::Line height,
                   const SlokedFontProperties &fontProperties)
                 : self(self), maxWidth(maxWidth), height(height),
-                  fontProperties(fontProperties), cursor{0, 0},
-                  cursorOffset(self->cursorOffset), realPosition{0, 0} {}
+                  fontProperties(fontProperties), codepointCursor{0, 0},
+                  virtualCursor{0, 0},
+                  virtualCursorOffset(self->virtualCursorOffset) {}
 
             SlokedTextEditor *self;
             const SlokedGraphicsPoint::Coordinate maxWidth;
             const TextPosition::Line height;
             const SlokedFontProperties &fontProperties;
 
-            TextPosition cursor;
-            TextPosition cursorOffset;
-            TextPosition realPosition;
+            TextPosition codepointCursor;
+            TextPosition virtualCursor;
+            TextPosition virtualCursorOffset;
             std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> rendered;
         };
 
@@ -152,17 +330,12 @@ namespace sloked {
                     if (!cursor.has_value()) {
                         throw SlokedTaskPipelineStages::Cancel{};
                     }
-                    state->cursor = cursor.value();
-                    if (state->cursorOffset.line + state->height - 1 <
-                        state->cursor.line) {
-                        state->cursorOffset.line =
-                            state->cursor.line - state->height + 1;
-                    }
-                    if (state->cursor.line < state->cursorOffset.line) {
-                        state->cursorOffset.line = state->cursor.line;
-                    }
+                    state->codepointCursor = cursor.value();
+                    state->virtualCursorOffset.line = UpdateCursorLineOffset(
+                        state->virtualCursorOffset.line, state->height,
+                        state->codepointCursor.line);
                     return state->self->renderClient.PartialRender(
-                        state->cursorOffset.line, state->height - 1);
+                        state->virtualCursorOffset.line, state->height - 1);
                 }),
             SlokedTaskPipelineStages::Map(
                 [](const std::shared_ptr<State> &state,
@@ -170,108 +343,37 @@ namespace sloked {
                        TextPosition::Line, TextPosition::Line,
                        std::vector<std::pair<TextPosition::Line, KgrValue>>>
                        result) {
-                    state->self->renderCache.Insert(std::get<2>(result).begin(),
-                                                    std::get<2>(result).end());
+                    auto updatedTaggedLines = ExtractTaggedLines(
+                        std::get<2>(result).begin(), std::get<2>(result).end());
+                    state->self->renderCache.Insert(updatedTaggedLines.begin(),
+                                                    updatedTaggedLines.end());
                     const auto &render = state->self->renderCache.Fetch(
                         std::get<0>(result), std::get<1>(result));
                     state->rendered.clear();
                     state->rendered.reserve(state->height);
                     for (auto it = render.first; it != render.second; ++it) {
-                        SlokedTaggedTextFrame<bool>::TaggedLine taggedLine;
-                        const auto &fragments = it->second.AsArray();
-                        TextPosition::Column column{0};
-                        for (const auto &fragment : fragments) {
-                            auto tag =
-                                fragment.AsDictionary()["tag"].AsBoolean();
-                            const auto &text =
-                                fragment.AsDictionary()["content"].AsString();
-
-                            auto buffer_begin = text.begin();
-                            for (Encoding::Iterator it{};
-                                 SlokedLocale::SystemEncoding().Iterate(
-                                     it, text, text.size());) {
-                                auto current_position =
-                                    std::next(text.begin(), it.start);
-                                if (it.value == U'\t') {
-                                    if (std::distance(buffer_begin,
-                                                      current_position) > 0) {
-                                        taggedLine.fragments.push_back(
-                                            {tag,
-                                             std::string{buffer_begin,
-                                                         current_position}});
-                                    }
-                                    buffer_begin =
-                                        std::next(current_position, it.length);
-                                    taggedLine.fragments.push_back(
-                                        {tag,
-                                         SlokedCharPreset::EncodeTab(
-                                             state->self->charPreset,
-                                             SlokedLocale::SystemEncoding(),
-                                             column)});
-                                    column +=
-                                        state->self->charPreset.GetCharWidth(
-                                            U'\t', column);
-                                } else {
-                                    column++;
-                                }
-                            }
-                            if (std::distance(buffer_begin, text.end()) > 0) {
-                                taggedLine.fragments.push_back(
-                                    {tag,
-                                     std::string{buffer_begin, text.end()}});
-                            }
-                        }
-                        state->rendered.emplace_back(std::move(taggedLine));
+                        state->rendered.push_back(it->second);
                     }
 
-                    const auto &currentLineTagged =
-                        state->self->renderCache.Get(state->cursor.line);
-                    std::string currentLine;
-                    for (auto &fragment : currentLineTagged.AsArray()) {
-                        currentLine.append(
-                            fragment.AsDictionary()["content"].AsString());
-                    }
-                    auto realColumnPos =
-                        state->self->charPreset.GetRealPosition(
-                            currentLine, state->cursor.column,
-                            SlokedLocale::SystemEncoding());
-                    auto realColumn =
-                        state->cursor.column <
-                                SlokedLocale::SystemEncoding().CodepointCount(
-                                    currentLine)
-                            ? realColumnPos.first
-                            : realColumnPos.second;
-                    state->realPosition = {
-                        state->cursor.line,
-                        static_cast<TextPosition::Column>(realColumn)};
+                    state->virtualCursor.line = state->codepointCursor.line;
+                    const auto &currentTaggedLine =
+                        state->self->renderCache.Get(state->virtualCursor.line);
                     SlokedGraphemeNullEnumerator graphemeIter;
-                    SlokedTaggedTextFrame<bool> visualFrame(
-                        state->self->conv.GetDestination(), graphemeIter,
-                        state->fontProperties);
-                    auto currentLineOffset =
-                        state->cursor.line - state->cursorOffset.line;
-                    if (currentLineOffset < state->rendered.size()) {
-                        const auto &currentLine =
-                            state->rendered.at(currentLineOffset);
-                        while (state->cursorOffset.column +
-                                   visualFrame.GetMaxLength(
-                                       currentLine, state->cursorOffset.column,
-                                       state->maxWidth) <
-                               state->realPosition.column) {
-                            state->cursorOffset.column++;
-                        }
-                        if (state->realPosition.column <
-                            state->cursorOffset.column) {
-                            state->cursorOffset.column =
-                                state->realPosition.column;
-                        }
+                    std::tie(state->virtualCursorOffset.column,
+                             state->virtualCursor.column) =
+                        CalculateCursorColumnOffset(
+                            state->virtualCursorOffset.column, state->maxWidth,
+                            state->codepointCursor.column,
+                            currentTaggedLine.content,
+                            state->self->conv.GetDestination(),
+                            state->self->charPreset, graphemeIter,
+                            state->fontProperties);
 
-                        state->self->cursorOffset =
-                            std::move(state->cursorOffset);
-                        state->self->realPosition =
-                            std::move(state->realPosition);
-                        state->self->rendered = std::move(state->rendered);
-                    }
+                    state->self->virtualCursorOffset =
+                        std::move(state->virtualCursorOffset);
+                    state->self->virtualCursor =
+                        std::move(state->virtualCursor);
+                    state->self->rendered = std::move(state->rendered);
                 }),
             SlokedTaskPipelineStages::Catch(
                 [](const std::shared_ptr<State> &, const std::exception_ptr &) {
@@ -300,7 +402,11 @@ namespace sloked {
                                                 pane.GetFontProperties());
         for (const auto &line : this->rendered) {
             pane.SetPosition(lineIdx++, 0);
-            auto result = visualFrame.Slice(line, this->cursorOffset.column,
+            auto unwrappedLine =
+                UnwrapTaggedLine(line, this->conv.GetDestination(),
+                                 this->charPreset, graphemeIter);
+            auto result = visualFrame.Slice(unwrappedLine,
+                                            this->virtualCursorOffset.column,
                                             pane.GetMaxWidth());
             for (const auto &fragment : result.fragments) {
                 if (fragment.tag) {
@@ -310,12 +416,16 @@ namespace sloked {
                     pane.SetGraphicsMode(this->background);
                     pane.SetGraphicsMode(this->foreground);
                 }
-                pane.Write(this->conv.ReverseConvert(fragment.content));
+
+                auto view = std::string_view{result.content}.substr(
+                    fragment.offset, fragment.length);
+                pane.Write(this->conv.ReverseConvert(view));
             }
         }
 
-        pane.SetPosition(this->realPosition.line - this->cursorOffset.line,
-                         this->realPosition.column - this->cursorOffset.column);
+        pane.SetPosition(
+            this->virtualCursor.line - this->virtualCursorOffset.line,
+            this->virtualCursor.column - this->virtualCursorOffset.column);
     }
 
     void SlokedTextEditor::OnUpdate(std::function<void()> listener) {

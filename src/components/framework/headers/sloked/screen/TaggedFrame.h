@@ -40,10 +40,12 @@ namespace sloked {
      public:
         struct TaggedFragment {
             Tag tag;
-            std::string content;
+            std::size_t offset;
+            std::size_t length;
         };
 
         struct TaggedLine {
+            std::string content;
             std::list<TaggedFragment> fragments;
         };
 
@@ -51,88 +53,39 @@ namespace sloked {
                               const SlokedFontProperties &fontProperties)
             : encoding(encoding), graphemeIter(graphemeIter), fontProperties(fontProperties) {}
 
-        TaggedLine Slice(const TaggedLine &input, TextPosition::Column offset,
-                         SlokedGraphicsPoint::Coordinate width) {
+        TaggedLine Slice(const TaggedLine &input, TextPosition::Column virtualOffset,
+                         SlokedGraphicsPoint::Coordinate maxWidth) {
             TaggedLine result;
-            TextPosition::Column currentOffset{0};
-            SlokedGraphicsPoint::Coordinate currentWidth{0};
+            SlokedGraphicsPoint::Coordinate graphicalWidth{0};
             for (const auto &fragment : input.fragments) {
-                if (currentWidth >= width) {
+                if (graphicalWidth >= maxWidth) {
                     break;
                 }
 
-                auto fragmentLength =
-                    this->encoding.CodepointCount(fragment.content);
-                auto [processed, processedWidth, processedLength] =
-                    this->Process(
-                        fragment.content,
-                        currentOffset < offset ? offset - currentOffset : 0,
-                        width - currentWidth);
-                if (processedWidth > 0) {
-                    currentWidth += processedWidth;
-                    result.fragments.push_back({fragment.tag, std::string{processed}});
+                auto view = std::string_view{input.content}.substr(fragment.offset, fragment.length);
+                const auto fragmentBegin = result.content.size();
+                this->graphemeIter.Iterate(this->encoding, view, [&](auto start, auto length, auto value) {
+                    if (virtualOffset > 0) {
+                        virtualOffset--;
+                        return true;
+                    }
+                    result.content.append(view.substr(start, length));
+                    graphicalWidth += this->fontProperties.GetWidth(value);
+                    return graphicalWidth < maxWidth;
+                });
+                const auto fragmentLength = result.content.size() - fragmentBegin;
+                if (fragmentLength > 0) {
+                    result.fragments.push_back(TaggedFragment {
+                        fragment.tag,
+                        fragmentBegin,
+                        fragmentLength
+                    });
                 }
-                currentOffset += fragmentLength;
             }
             return result;
         }
 
-        TextPosition::Column GetMaxLength(
-            const TaggedLine &input, TextPosition::Column offset,
-            SlokedGraphicsPoint::Coordinate width) {
-            TextPosition::Column length{0}, currentOffset{0};
-            SlokedGraphicsPoint::Coordinate currentWidth{0};
-            for (const auto &fragment : input.fragments) {
-                if (currentWidth >= width) {
-                    break;
-                }
-                auto fragmentLength =
-                    this->encoding.CodepointCount(fragment.content);
-                auto [processed, processedWidth, processedLength] =
-                    this->Process(
-                        fragment.content,
-                        currentOffset < offset ? offset - currentOffset : 0,
-                        width - currentWidth);
-                if (processedWidth > 0) {
-                    currentWidth += processedWidth;
-                    length += processedLength;
-                }
-                currentOffset += fragmentLength;
-            }
-            return length;
-        }
-
      private:
-        std::tuple<std::string_view, SlokedGraphicsPoint::Coordinate,
-                   TextPosition::Column>
-            Process(std::string_view src, std::size_t skip,
-                    SlokedGraphicsPoint::Coordinate maxWidth) {
-            std::string_view result = src;
-            SlokedGraphicsPoint::Coordinate width{0};
-            TextPosition::Column totalLength{0};
-            std::size_t totalLengthBytes{0};
-
-            this->graphemeIter.Iterate(this->encoding, src, [&](auto start, auto length,
-                                                      auto grapheme) {
-                if (skip > 0) {
-                    result.remove_prefix(length);
-                    skip--;
-                    return true;
-                }
-                auto graphemeWidth = this->fontProperties.GetWidth(grapheme);
-                if (width + graphemeWidth <= maxWidth) {
-                    width += graphemeWidth;
-                    totalLength++;
-                    totalLengthBytes += length;
-                    return true;
-                } else {
-                    return false;
-                }
-            });
-            result.remove_suffix(result.size() - totalLengthBytes);
-            return {result, width, totalLength};
-        }
-
         const Encoding &encoding;
         const SlokedGraphemeEnumerator &graphemeIter;
         const SlokedFontProperties &fontProperties;
