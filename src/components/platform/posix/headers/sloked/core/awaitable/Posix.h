@@ -46,6 +46,7 @@ namespace sloked {
      public:
         SlokedPosixAwaitablePoll();
         SlokedIOAwaitable::SystemId GetSystemId() const final;
+        bool Empty() const final;
         std::function<void()> Attach(std::unique_ptr<SlokedIOAwaitable>,
                                      std::function<void()>) final;
         void Await(std::chrono::system_clock::duration =

@@ -42,6 +42,7 @@ namespace sloked {
      public:
         virtual ~SlokedIOPoll() = default;
         virtual SlokedIOAwaitable::SystemId GetSystemId() const = 0;
+        virtual bool Empty() const = 0;
         virtual std::function<void()> Attach(std::unique_ptr<SlokedIOAwaitable>,
                                              std::function<void()>) = 0;
         virtual void Await(std::chrono::system_clock::duration =

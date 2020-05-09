@@ -38,7 +38,7 @@ namespace sloked {
         return this->socket;
     }
 
-    SlokedPosixAwaitablePoll::SlokedPosixAwaitablePoll() : max_socket{0} {
+    SlokedPosixAwaitablePoll::SlokedPosixAwaitablePoll() : max_socket{std::numeric_limits<int>::min()} {
         fd_set rfds;
         FD_ZERO(&rfds);
         this->descriptors.store(rfds);
@@ -50,6 +50,10 @@ namespace sloked {
 
     SlokedIOAwaitable::SystemId SlokedPosixAwaitablePoll::GetSystemId() const {
         return SlokedPosixAwaitable::PosixIOSystemId;
+    }
+
+    bool SlokedPosixAwaitablePoll::Empty() const {
+        return this->max_socket.load() == std::numeric_limits<int>::min();
     }
 
     std::function<void()> SlokedPosixAwaitablePoll::Attach(

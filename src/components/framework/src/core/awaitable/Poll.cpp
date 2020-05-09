@@ -40,7 +40,11 @@ namespace sloked {
         this->work = true;
         this->worker = std::thread([this, timeout] {
             while (this->work.load()) {
-                this->poll.Await(timeout);
+                if (this->poll.Empty()) {
+                    std::this_thread::sleep_for(timeout);
+                } else {
+                    this->poll.Await(timeout);
+                }
                 std::unique_lock lock(this->mtx);
                 std::vector<std::shared_ptr<SlokedExecutor::Task>> tasks;
                 tasks.reserve(this->awaitables.size());
