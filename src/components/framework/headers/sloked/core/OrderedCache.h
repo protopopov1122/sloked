@@ -226,6 +226,10 @@ namespace sloked {
             }
         }
 
+        bool Has(const Key &key) const {
+            return this->cache.count(key) != 0;
+        }
+
      private:
         Supplier supplier;
         KeyTraits traits;

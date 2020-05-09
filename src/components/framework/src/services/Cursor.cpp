@@ -394,20 +394,26 @@ namespace sloked {
         this->client.Invoke("insert", content);
     }
 
-    void SlokedCursorClient::MoveUp() {
-        this->client.Invoke("moveUp", {});
+    void SlokedCursorClient::MoveUp(TextPosition::Line count) {
+        this->client.Invoke(
+            "moveUp", KgrDictionary{{"count", static_cast<int64_t>(count)}});
     }
 
-    void SlokedCursorClient::MoveDown() {
-        this->client.Invoke("moveDown", {});
+    void SlokedCursorClient::MoveDown(TextPosition::Line count) {
+        this->client.Invoke(
+            "moveDown", KgrDictionary{{"count", static_cast<int64_t>(count)}});
     }
 
-    void SlokedCursorClient::MoveBackward() {
-        this->client.Invoke("moveBackward", {});
+    void SlokedCursorClient::MoveBackward(TextPosition::Column count) {
+        this->client.Invoke(
+            "moveBackward",
+            KgrDictionary{{"count", static_cast<int64_t>(count)}});
     }
 
-    void SlokedCursorClient::MoveForward() {
-        this->client.Invoke("moveForward", {});
+    void SlokedCursorClient::MoveForward(TextPosition::Column count) {
+        this->client.Invoke(
+            "moveForward",
+            KgrDictionary{{"count", static_cast<int64_t>(count)}});
     }
 
     void SlokedCursorClient::NewLine() {
@@ -428,6 +434,13 @@ namespace sloked {
 
     void SlokedCursorClient::Redo() {
         this->client.Invoke("redo", {});
+    }
+
+    void SlokedCursorClient::SetPosition(const TextPosition &target) {
+        this->client.Invoke(
+            "moveTo",
+            KgrDictionary{{"line", static_cast<int64_t>(target.line)},
+                          {"column", static_cast<int64_t>(target.column)}});
     }
 
     TaskResult<std::optional<TextPosition>> SlokedCursorClient::GetPosition() {

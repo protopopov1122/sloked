@@ -53,15 +53,16 @@ namespace sloked {
         std::unique_ptr<SlokedDeferredTask> Connect(
             SlokedEditorDocumentSet::DocumentId, std::function<void(bool)>);
         void Insert(const std::string &);
-        void MoveUp();
-        void MoveDown();
-        void MoveBackward();
-        void MoveForward();
+        void MoveUp(TextPosition::Line = 1);
+        void MoveDown(TextPosition::Line = 1);
+        void MoveBackward(TextPosition::Column = 1);
+        void MoveForward(TextPosition::Column = 1);
         void NewLine();
         void DeleteBackward();
         void DeleteForward();
         void Undo();
         void Redo();
+        void SetPosition(const TextPosition &);
         TaskResult<std::optional<TextPosition>> GetPosition();
 
      private:
