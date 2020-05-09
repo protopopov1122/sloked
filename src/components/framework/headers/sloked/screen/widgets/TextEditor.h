@@ -31,6 +31,7 @@
 #include "sloked/services/Cursor.h"
 #include "sloked/services/DocumentNotify.h"
 #include "sloked/services/TextRender.h"
+#include "sloked/screen/GraphemeString.h"
 
 namespace sloked {
 
@@ -53,9 +54,22 @@ namespace sloked {
         void OnUpdate(std::function<void()>) final;
 
      private:
-        class RenderingState;
         class Helpers;
-        friend struct RenderingState;
+        class RendererFrame;
+        class RendererState;
+        friend struct RendererState;
+
+        struct DocumentState {
+            DocumentState();
+            RendererFrame DeriveRendererFrame(TextPosition::Line, SlokedGraphicsPoint::Coordinate);
+
+            TextPosition directCursor;
+            TextPosition virtualCursorOffset;
+            TextPosition virtualCursor;
+            std::unique_ptr<SlokedGraphemeStringLayout> currentLineLayout;
+            SlokedOrderedCache<TextPosition::Line, SlokedTaggedTextFrame<bool>::TaggedLine> renderCache;
+            std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> rendered;
+        };
 
         EncodingConverter conv;
         const SlokedCharPreset &charPreset;
@@ -66,10 +80,7 @@ namespace sloked {
         SlokedBackgroundGraphics background;
         SlokedForegroundGraphics foreground;
         std::function<void()> updateListener;
-        TextPosition virtualCursorOffset;
-        TextPosition virtualCursor;
-        SlokedOrderedCache<TextPosition::Line, SlokedTaggedTextFrame<bool>::TaggedLine> renderCache;
-        std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> rendered;
+        DocumentState documentState;
         std::shared_ptr<SlokedStandardLifetime> lifetime;
     };
 }  // namespace sloked

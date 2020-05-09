@@ -20,14 +20,31 @@
 */
 
 #include "sloked/screen/widgets/TextEditor.h"
-#include "sloked/screen/widgets/TextEditorHelpers.h"
 
 #include "sloked/core/Locale.h"
 #include "sloked/sched/Pipeline.h"
 #include "sloked/screen/TaggedFrame.h"
+#include "sloked/screen/widgets/TextEditorHelpers.h"
 #include "sloked/services/Cursor.h"
 
 namespace sloked {
+
+    SlokedTextEditor::DocumentState::DocumentState()
+        : directCursor{0, 0}, virtualCursorOffset{0, 0}, virtualCursor{0, 0},
+          currentLineLayout{nullptr},
+          renderCache(
+              [](const auto &, const auto &)
+                  -> std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> {
+                  throw SlokedError("TextEditor: Unexpected cache miss");
+              }) {}
+
+    SlokedTextEditor::RendererFrame
+        SlokedTextEditor::DocumentState::DeriveRendererFrame(
+            TextPosition::Line height,
+            SlokedGraphicsPoint::Coordinate maxWidth) {
+        return RendererFrame(height, maxWidth, this->directCursor,
+                             this->virtualCursorOffset, this->virtualCursor);
+    }
 
     SlokedTextEditor::SlokedTextEditor(
         const Encoding &encoding, const SlokedCharPreset &charPreset,
@@ -41,13 +58,7 @@ namespace sloked {
           charPreset(charPreset), cursorClient(std::move(cursorService)),
           renderClient(std::move(renderService), docId),
           notifyClient(std::move(notifyService), docId), tagger(tagger),
-          background(bg),
-          foreground(fg), virtualCursorOffset{0, 0}, virtualCursor{0, 0},
-          renderCache(
-              [](const auto &, const auto &)
-                  -> std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> {
-                  throw SlokedError("TextEditor: Unexpected cache miss");
-              }),
+          background(bg), foreground(fg),
           lifetime(std::make_shared<SlokedStandardLifetime>()) {
         if (initClient) {
             initClient(this->cursorClient);
@@ -132,7 +143,8 @@ namespace sloked {
 
         static const SlokedAsyncTaskPipeline Pipeline(
             SlokedTaskPipelineStages::Map(
-                [](const std::shared_ptr<SlokedTextEditor::RenderingState> &state,
+                [](const std::shared_ptr<SlokedTextEditor::RendererState>
+                       &state,
                    std::optional<TextPosition> cursor) {
                     if (!cursor.has_value()) {
                         throw SlokedTaskPipelineStages::Cancel{};
@@ -140,7 +152,8 @@ namespace sloked {
                     return state->RequestRender(cursor.value());
                 }),
             SlokedTaskPipelineStages::Map(
-                [](const std::shared_ptr<SlokedTextEditor::RenderingState> &state,
+                [](const std::shared_ptr<SlokedTextEditor::RendererState>
+                       &state,
                    std::tuple<
                        TextPosition::Line, TextPosition::Line,
                        std::vector<std::pair<TextPosition::Line, KgrValue>>>
@@ -151,21 +164,17 @@ namespace sloked {
                     state->Render(updatedTaggedLines.begin(),
                                   updatedTaggedLines.end(), std::get<0>(result),
                                   std::get<1>(result), graphemeIter);
-
-                    state->UpdateVirtualCursor(graphemeIter);
-                    state->AdjustVirtualOffsetColumn(graphemeIter);
-                    state->SaveResult();
                 }),
             SlokedTaskPipelineStages::Catch(
-                [](const std::shared_ptr<SlokedTextEditor::RenderingState> &,
+                [](const std::shared_ptr<SlokedTextEditor::RendererState> &,
                    const std::exception_ptr &) {
                     // Skip
                 }),
             SlokedTaskPipelineStages::MapCancelled(
-                [](const std::shared_ptr<SlokedTextEditor::RenderingState> &) {
+                [](const std::shared_ptr<SlokedTextEditor::RendererState> &) {
                     // Skip
                 }));
-        return Pipeline(std::make_shared<SlokedTextEditor::RenderingState>(
+        return Pipeline(std::make_shared<SlokedTextEditor::RendererState>(
                             this, maxWidth, height, fontProperties),
                         this->cursorClient.GetPosition(), this->lifetime);
     }
@@ -182,10 +191,11 @@ namespace sloked {
         SlokedTaggedTextFrame<bool> visualFrame(this->conv.GetDestination(),
                                                 graphemeIter,
                                                 pane.GetFontProperties());
-        for (const auto &line : this->rendered) {
+        for (const auto &line : this->documentState.rendered) {
             pane.SetPosition(lineIdx++, 0);
             auto result = visualFrame.Slice(
-                line, this->virtualCursorOffset.column, pane.GetMaxWidth());
+                line, this->documentState.virtualCursorOffset.column,
+                pane.GetMaxWidth());
             for (const auto &fragment : result.fragments) {
                 if (fragment.tag) {
                     pane.SetGraphicsMode(SlokedBackgroundGraphics::Blue);
@@ -201,9 +211,10 @@ namespace sloked {
             }
         }
 
-        pane.SetPosition(
-            this->virtualCursor.line - this->virtualCursorOffset.line,
-            this->virtualCursor.column - this->virtualCursorOffset.column);
+        pane.SetPosition(this->documentState.virtualCursor.line -
+                             this->documentState.virtualCursorOffset.line,
+                         this->documentState.virtualCursor.column -
+                             this->documentState.virtualCursorOffset.column);
     }
 
     void SlokedTextEditor::OnUpdate(std::function<void()> listener) {

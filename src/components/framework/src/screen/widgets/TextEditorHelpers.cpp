@@ -21,6 +21,8 @@
 
 #include "sloked/screen/widgets/TextEditorHelpers.h"
 
+#include <iostream>
+
 namespace sloked {
 
     SlokedTaggedTextFrame<bool>::TaggedLine
@@ -76,79 +78,83 @@ namespace sloked {
         return taggedLine;
     }
 
-    SlokedTextEditor::RenderingState::RenderingState(
+    SlokedTextEditor::RendererState::RendererState(
         SlokedTextEditor *self, SlokedGraphicsPoint::Coordinate maxWidth,
         TextPosition::Line height, const SlokedFontProperties &fontProperties)
-        : self(self), maxWidth(maxWidth), height(height),
-          fontProperties(fontProperties), directCursor{0, 0}, virtualCursor{0,
-                                                                            0},
-          virtualCursorOffset(self->virtualCursorOffset) {}
+        : self(self),
+          model(self->documentState.DeriveRendererFrame(height, maxWidth)),
+          directCursor{self->documentState.virtualCursor},
+          fontProperties(fontProperties) {}
 
-    SlokedTextEditor::RenderingState::RenderResult
-        SlokedTextEditor::RenderingState::RequestRender(
+    SlokedTextEditor::RendererState::RenderResult
+        SlokedTextEditor::RendererState::RequestRender(
             const TextPosition &cursor) {
         this->directCursor = cursor;
         return this->self->renderClient.PartialRender(
-            this->UpdateVirtualOffsetLine(), this->height - 1);
+            this->model.CalculateVerticalOffset(this->directCursor.line),
+            this->model.GetHeight() - 1);
     }
 
-    void SlokedTextEditor::RenderingState::AdjustVirtualOffsetColumn(
+    void SlokedTextEditor::RendererState::UpdateCursor(
         const SlokedGraphemeEnumerator &graphemes) {
         const auto &currentTaggedLine =
-            this->self->renderCache.Get(this->virtualCursor.line);
-        std::vector<GraphemeBounds> graphemeList;
-        GraphemeBounds::Split(
+            this->self->documentState.renderCache.Get(this->directCursor.line);
+        SlokedGraphemeStringLayout lineLayout(
             currentTaggedLine.content, this->self->conv.GetDestination(),
-            this->self->charPreset, graphemes, this->fontProperties,
-            std::back_inserter(graphemeList));
-        if (this->virtualCursorOffset.column > this->virtualCursor.column) {
-            this->virtualCursorOffset.column = this->virtualCursor.column;
-        }
-        while (GraphemeBounds::TotalGraphicalWidth(
-                   graphemeList.begin(), graphemeList.end(),
-                   this->virtualCursorOffset.column,
-                   this->virtualCursor.column) > this->maxWidth) {
-            this->virtualCursorOffset.column++;
-        }
+            this->self->charPreset, graphemes, this->fontProperties);
+        this->model.SetDirectCursor(this->directCursor, lineLayout);
     }
 
-    void SlokedTextEditor::RenderingState::UpdateVirtualCursor(
-        const SlokedGraphemeEnumerator &graphemes) {
-        this->virtualCursor.line = this->directCursor.line;
-        const auto &currentTaggedLine =
-            this->self->renderCache.Get(this->virtualCursor.line);
-        std::vector<GraphemeBounds> graphemeList;
-        GraphemeBounds::Split(
-            currentTaggedLine.content, this->self->conv.GetDestination(),
-            this->self->charPreset, graphemes, this->fontProperties,
-            std::back_inserter(graphemeList));
-        const auto currentGrapheme = GraphemeBounds::FindByDirectOffset(
-            graphemeList.begin(), graphemeList.end(),
-            this->directCursor.column);
-        this->virtualCursor.column =
-            currentGrapheme != graphemeList.end()
-                ? currentGrapheme->virtualOffset
-                : (graphemeList.empty()
-                       ? 0
-                       : graphemeList.back().virtualOffset + 1);
+    void SlokedTextEditor::RendererState::SaveResult() {
+        this->self->documentState.virtualCursorOffset =
+            std::move(this->model.GetVirtualCursorOffset());
+        this->self->documentState.virtualCursor =
+            std::move(this->model.GetVirtualCursor());
+        this->self->documentState.rendered = std::move(this->rendered);
     }
 
-    void SlokedTextEditor::RenderingState::SaveResult() {
-        this->self->virtualCursorOffset = std::move(this->virtualCursorOffset);
-        this->self->virtualCursor = std::move(this->virtualCursor);
-        this->self->rendered = std::move(this->rendered);
+    SlokedTextEditor::RendererFrame::RendererFrame(
+        TextPosition::Line height, SlokedGraphicsPoint::Coordinate maxWidth,
+        const TextPosition &directCursor,
+        const TextPosition &virtualCursorOffset,
+        const TextPosition &virtualCursor)
+        : height{height}, maxWidth{maxWidth}, directCursor{directCursor},
+          virtualCursorOffset{virtualCursorOffset}, virtualCursor{
+                                                        virtualCursor} {}
+
+    TextPosition::Line SlokedTextEditor::RendererFrame::GetHeight() const {
+        return this->height;
     }
 
-    TextPosition::Line
-        SlokedTextEditor::RenderingState::UpdateVirtualOffsetLine() {
-        if (this->virtualCursorOffset.line + this->height - 1 <
-            this->directCursor.line) {
-            this->virtualCursorOffset.line =
-                this->directCursor.line - this->height + 1;
+    SlokedGraphicsPoint::Coordinate
+        SlokedTextEditor::RendererFrame::GetMaxWidth() const {
+        return this->maxWidth;
+    }
+
+    TextPosition::Line SlokedTextEditor::RendererFrame::CalculateVerticalOffset(
+        TextPosition::Line line) const {
+        TextPosition::Line offset = this->virtualCursorOffset.line;
+        if (offset + this->height - 1 < line) {
+            offset = line - this->height + 1;
         }
-        if (this->directCursor.line < this->virtualCursorOffset.line) {
-            this->virtualCursorOffset.line = this->directCursor.line;
+        if (line < offset) {
+            offset = line;
         }
-        return this->virtualCursorOffset.line;
+        return offset;
+    }
+
+    const TextPosition &SlokedTextEditor::RendererFrame::GetDirectCursor()
+        const {
+        return this->directCursor;
+    }
+
+    const TextPosition &SlokedTextEditor::RendererFrame::GetVirtualCursor()
+        const {
+        return this->virtualCursor;
+    }
+
+    const TextPosition &
+        SlokedTextEditor::RendererFrame::GetVirtualCursorOffset() const {
+        return this->virtualCursorOffset;
     }
 }  // namespace sloked

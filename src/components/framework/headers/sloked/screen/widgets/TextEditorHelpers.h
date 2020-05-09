@@ -29,79 +29,10 @@
 #include "sloked/core/Grapheme.h"
 #include "sloked/core/Position.h"
 #include "sloked/screen/Character.h"
+#include "sloked/screen/GraphemeString.h"
 #include "sloked/screen/widgets/TextEditor.h"
 
 namespace sloked {
-
-    struct GraphemeBounds {
-        struct Position {
-            TextPosition::Column offset;
-            TextPosition::Column length;
-        };
-
-        template <typename Iter>
-        static Iter FindByDirectOffset(const Iter &begin, const Iter &end,
-                                       TextPosition::Column directOffset) {
-            return std::find_if(
-                begin, end, [directOffset](const auto &grapheme) {
-                    return directOffset >= grapheme.directPosition.offset &&
-                           directOffset < grapheme.directPosition.offset +
-                                              grapheme.directPosition.length;
-                });
-        }
-
-        template <typename OutIter>
-        static void Split(std::string_view in, const Encoding &encoding,
-                          const SlokedCharPreset &charPreset,
-                          const SlokedGraphemeEnumerator &graphemes,
-                          const SlokedFontProperties &fontProperties,
-                          OutIter out) {
-            TextPosition::Column column{0};
-            TextPosition::Column codepointOffset{0};
-            graphemes.Iterate(
-                encoding, in, [&](auto start, auto length, auto codepoints) {
-                    if (codepoints.Size() == 1 && codepoints[0] == U'\t') {
-                        auto tabWidth = charPreset.GetCharWidth(U'\t', column);
-                        const char32_t Space{U' '};
-                        while (tabWidth-- > 0) {
-                            *out++ = GraphemeBounds{
-                                column, codepointOffset,
-                                static_cast<TextPosition::Column>(
-                                    codepoints.Size()),
-                                fontProperties.GetWidth(SlokedSpan(&Space, 1))};
-                            column++;
-                        }
-                    } else {
-                        *out++ =
-                            GraphemeBounds{column, codepointOffset,
-                                           static_cast<TextPosition::Column>(
-                                               codepoints.Size()),
-                                           fontProperties.GetWidth(codepoints)};
-                        column++;
-                    }
-                    codepointOffset += codepoints.Size();
-                    return true;
-                });
-        }
-
-        template <typename Iter>
-        static auto TotalGraphicalWidth(const Iter &begin, const Iter &end,
-                                        TextPosition::Column from,
-                                        TextPosition::Column to) {
-            SlokedGraphicsPoint::Coordinate total{0};
-            std::for_each(begin, end, [from, to, &total](const auto &grapheme) {
-                if (from <= grapheme.virtualOffset &&
-                    grapheme.virtualOffset <= to) {
-                    total += grapheme.graphicalWidth;
-                }
-            });
-            return total;
-        }
-
-        TextPosition::Column virtualOffset;
-        Position directPosition;
-        SlokedGraphicsPoint::Coordinate graphicalWidth;
-    };
 
     class SlokedTextEditor::Helpers {
      public:
@@ -130,45 +61,98 @@ namespace sloked {
         }
     };
 
-    class SlokedTextEditor::RenderingState {
+    class SlokedTextEditor::RendererFrame {
+     public:
+        using Tag = bool;
+        RendererFrame(TextPosition::Line, SlokedGraphicsPoint::Coordinate,
+                      const TextPosition &, const TextPosition &,
+                      const TextPosition &);
+        TextPosition::Line GetHeight() const;
+        SlokedGraphicsPoint::Coordinate GetMaxWidth() const;
+        TextPosition::Line CalculateVerticalOffset(TextPosition::Line) const;
+        const TextPosition &GetDirectCursor() const;
+        const TextPosition &GetVirtualCursor() const;
+        const TextPosition &GetVirtualCursorOffset() const;
+
+        void SetDirectCursor(const TextPosition &directCursor,
+                             const SlokedGraphemeStringLayout &lineLayout) {
+            this->directCursor = directCursor;
+            this->UpdateVirtualCursor(lineLayout);
+            this->UpdateVirtualCursorOffset(lineLayout);
+        }
+
+     private:
+        void UpdateVirtualCursor(const SlokedGraphemeStringLayout &lineLayout) {
+            this->virtualCursor.line = this->directCursor.line;
+            const auto currentGrapheme =
+                lineLayout.FindByDirectOffset(this->directCursor.column);
+            this->virtualCursor.column =
+                currentGrapheme != lineLayout.end()
+                    ? currentGrapheme->virtualOffset
+                    : (lineLayout.Count() == 0
+                           ? 0
+                           : std::prev(lineLayout.end())->virtualOffset + 1);
+        }
+
+        void UpdateVirtualCursorOffset(
+            const SlokedGraphemeStringLayout &lineLayout) {
+            this->virtualCursorOffset.line =
+                this->CalculateVerticalOffset(this->virtualCursor.line);
+            if (this->virtualCursorOffset.column > this->virtualCursor.column) {
+                this->virtualCursorOffset.column = this->virtualCursor.column;
+            }
+            while (lineLayout.TotalGraphicalWidth(
+                       lineLayout.begin() + this->virtualCursorOffset.column,
+                       std::min(lineLayout.begin() + this->virtualCursor.column + 1,
+                                lineLayout.end())) > this->maxWidth) {
+                this->virtualCursorOffset.column++;
+            }
+        }
+
+        TextPosition::Line height;
+        SlokedGraphicsPoint::Coordinate maxWidth;
+        TextPosition directCursor;
+        TextPosition virtualCursorOffset;
+        TextPosition virtualCursor;
+    };
+
+    class SlokedTextEditor::RendererState {
      public:
         using RenderResult = TaskResult<
             std::tuple<TextPosition::Line, TextPosition::Line,
                        std::vector<std::pair<TextPosition::Line, KgrValue>>>>;
 
-        RenderingState(SlokedTextEditor *, SlokedGraphicsPoint::Coordinate,
-                       TextPosition::Line, const SlokedFontProperties &);
+        RendererState(SlokedTextEditor *, SlokedGraphicsPoint::Coordinate,
+                      TextPosition::Line, const SlokedFontProperties &);
         RenderResult RequestRender(const TextPosition &);
-        void AdjustVirtualOffsetColumn(const SlokedGraphemeEnumerator &);
-        void UpdateVirtualCursor(const SlokedGraphemeEnumerator &);
-        void SaveResult();
 
         template <typename Iter>
         void Render(const Iter &begin, const Iter &end, TextPosition::Line from,
                     TextPosition::Line to,
                     const SlokedGraphemeEnumerator &graphemes) {
-            this->self->renderCache.Insert(begin, end);
-            const auto &render = this->self->renderCache.Fetch(from, to);
+            this->self->documentState.renderCache.Insert(begin, end);
+            const auto &render =
+                this->self->documentState.renderCache.Fetch(from, to);
             this->rendered.clear();
-            this->rendered.reserve(this->height);
+            this->rendered.reserve(this->model.GetHeight());
             for (auto it = render.first; it != render.second; ++it) {
                 this->rendered.emplace_back(Helpers::UnwrapTaggedLine(
                     it->second, this->self->conv.GetDestination(),
                     this->self->charPreset, graphemes));
             }
+            this->UpdateCursor(graphemes);
+            this->SaveResult();
         }
 
      private:
-        TextPosition::Line UpdateVirtualOffsetLine();
+        void UpdateCursor(const SlokedGraphemeEnumerator &);
+        void SaveResult();
 
         SlokedTextEditor *self;
-        const SlokedGraphicsPoint::Coordinate maxWidth;
-        const TextPosition::Line height;
-        const SlokedFontProperties &fontProperties;
 
+        RendererFrame model;
         TextPosition directCursor;
-        TextPosition virtualCursor;
-        TextPosition virtualCursorOffset;
+        const SlokedFontProperties &fontProperties;
         std::vector<SlokedTaggedTextFrame<bool>::TaggedLine> rendered;
     };
 }  // namespace sloked

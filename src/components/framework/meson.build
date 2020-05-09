@@ -76,6 +76,7 @@ sloked_src = [
   'src/sched/SequentialExecutor.cpp',
   'src/screen/Component.cpp',
   'src/screen/ComponentTree.cpp',
+  'src/screen/GraphemeString.cpp',
   'src/screen/Manager.cpp',
   'src/screen/Point.cpp',
   'src/screen/Splitter.cpp',
