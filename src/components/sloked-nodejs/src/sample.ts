@@ -30,6 +30,7 @@ import { Service } from './types/server'
 import { Pipe } from './types/pipe'
 import { CompressedStream } from './modules/compressedStream'
 import { Duplex } from 'stream'
+import { DefaultServiceClient } from './modules/client'
 
 class EchoService implements Service {
     async attach(pipe: Pipe): Promise<boolean> {
@@ -46,7 +47,7 @@ socket.connect(1234, '::1', async () => {
     const stream: Duplex = new CompressedStream(cryptoStream)
     const credentials: ModifyableCredentialStorage = new DefaultCredentialStorage(crypto)
     credentials.newAccount('user1', 'password1')
-    const authenticator: Authenticator  = new SlaveAuthenticator(crypto, credentials, 'salt', cryptoStream.getEncryption())
+    const authenticator: Authenticator = new SlaveAuthenticator(crypto, credentials, 'salt', cryptoStream.getEncryption())
     const slave = new NetSlaveServer(stream, new BinarySerializer(), authenticator)
     await slave.authorize('user1')
 
@@ -55,27 +56,14 @@ socket.connect(1234, '::1', async () => {
     echo.write('Hello, world!')
     console.log(await echo.read())
 
-    const root = await slave.connect('/namespace/root')
-    root.write({
-        id: 1000,
-        method: 'uri',
-        params: '/usr/bin/bash'
-    })
-    const resp = await root.read()
+    const root = new DefaultServiceClient(await slave.connect('/namespace/root'))
+    const resp = await root.call('uri', '/usr/bin/bash')
     root.close()
-    const cursor = await slave.connect('/document/cursor')
-    cursor.write({
-        id: 0,
-        method: 'connect',
-        params: {
-            documentId: 1
-        }
+    const cursor = new DefaultServiceClient(await slave.connect('/document/cursor'))
+    await cursor.send('connect', {
+        documentId: 1
     })
-    await cursor.write({
-        id: 1,
-        method: 'insert',
-        params: resp.result
-    })
+    await cursor.send('insert', resp)
 
     // const shutdown = await slave.connect('/editor/shutdown')
     // await shutdown.write(null)
