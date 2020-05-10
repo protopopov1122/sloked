@@ -232,7 +232,11 @@ namespace sloked {
             auto storage = std::make_shared<
                 DynamicCompoundStorage<DynamicTaskResultType<Iter>>>(
                 std::distance(begin, end));
-            IterateTaskResults(begin, end, storage, std::move(lifetime));
+            if (std::distance(begin, end) > 0) {
+                IterateTaskResults(begin, end, storage, std::move(lifetime));
+            } else {
+                storage->supplier.SetResult({});
+            }
             return storage->supplier.Result();
         }
     };

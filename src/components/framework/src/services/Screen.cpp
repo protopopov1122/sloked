@@ -112,16 +112,6 @@ namespace sloked {
             }
         }
 
-        // void GetScreenSize(const std::string &method, const KgrValue &params,
-        //                    Response &rsp) {
-        //     RootLock([rsp = std::move(rsp)](auto &screen) mutable {
-        //         try {
-        //             auto size = screen.GetScreenSize().GetSize();
-        //             rsp.Result(true);
-        //         } catch (const SlokedError &err) { rsp.Error(err.what()); }
-        //     });
-        // }
-
         void HandleNewMultiplexer(const std::string &method,
                                   const KgrValue &params, Response &rsp) {
             const auto &path = params.AsString();
