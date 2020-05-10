@@ -1,6 +1,7 @@
 #include "sloked/editor/Application.h"
 
 #include <iostream>
+#include <fstream>
 
 #include "sloked/kgr/Serialize.h"
 #include "sloked/text/fragment/Iterator.h"
@@ -95,7 +96,8 @@ namespace sloked {
             std::string currentLine{this->text.GetLine(this->current.line)};
             currentLine.erase(
                 0,
-                this->encoding.GetCodepoint(currentLine, this->current.column)->start);
+                this->encoding.GetCodepoint(currentLine, this->current.column)
+                    ->start);
             this->encoding.IterateCodepoints(
                 currentLine, [&](auto start, auto length, auto chr) {
                     if (chr == U'\t') {
@@ -177,13 +179,27 @@ namespace sloked {
 
     class SlokedHeadlessEditorApplication : public SlokedApplication {
      public:
-        int Start(int, const char **, const SlokedBaseInterface &baseInterface,
+        int Start(int argc, const char **argv, const SlokedBaseInterface &baseInterface,
                   SlokedSharedContainerEnvironment &sharedEnv,
                   SlokedEditorManager &manager) final {
+            SlokedCLI cli;
+            cli.Initialize(
+                KgrArray{KgrDictionary{{"options", "--load-application"},
+                                       {"type", "string"},
+                                       {"mandatory", true},
+                                       {"map", "/application"}},
+                         KgrDictionary{{"options", "--load-configuration"},
+                                       {"type", "string"},
+                                       {"mandatory", true},
+                                       {"map", "/configuration"}}});
+            cli.Parse(argc - 1, argv + 1);
+            std::ifstream config(cli["load-configuration"].As<std::string>());
+            
             KgrJsonSerializer serializer;
-            auto configuration = serializer.Deserialize(std::cin);
-            manager.GetBaseTaggers().Bind("default",
-                                        std::make_unique<TestFragmentFactory>());
+            auto configuration = serializer.Deserialize(config);
+            config.close();
+            manager.GetBaseTaggers().Bind(
+                "default", std::make_unique<TestFragmentFactory>());
             manager.Spawn(configuration.AsDictionary()["containers"]);
             manager.GetTotalShutdown().WaitForShutdown();
             return EXIT_SUCCESS;

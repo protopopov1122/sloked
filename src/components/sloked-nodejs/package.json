@@ -2,7 +2,8 @@
   "name": "sloked-nodejs",
   "version": "0.0.1",
   "description": "",
-  "main": "dist/sample.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "start": "tsc && node dist/sample.js"
   },
@@ -12,5 +13,6 @@
     "@types/node": "^13.13.0",
     "tslint": "^6.1.1",
     "typescript": "^3.8.3"
-  }
+  },
+  "dependencies": {}
 }

@@ -34,39 +34,16 @@ export class SlokedApplication extends EventEmitter {
         this._process = null
     }
 
-    start(config: any): void {
+    start(configPath: string): void {
         if (this._process !== null) {
             throw new Error('Application already started')
         }
-        this._process = child_process.spawn(this._options.bootstrap, ["--load-application", this._options.applicationLibrary])
+        this._process = child_process.spawn(this._options.bootstrap, ["--load-application", this._options.applicationLibrary, "--load-configuration", configPath], {
+            stdio: 'inherit'
+        })
         this._process.on('exit', this._onExit.bind(this))
         this._process.on('error', this._onError.bind(this))
-        if (this._process.stdout && this._process.stderr) {
-            this._process.stdout.on('readable', () => {
-                let chunk;
-                while (this._process && this._process.stdout && null !== (chunk = this._process.stdout.read())) {
-                    this.emit('stdout', chunk)
-                }
-            })
-            
-            this._process.stderr.on('readable', () => {
-                let chunk;
-                while (this._process && this._process.stderr && null !== (chunk = this._process.stderr.read())) {
-                    this.emit('stderr', chunk)
-                }
-            })
-        } else {
-            this.terminate()
-            throw new Error('Error opening stdout/stderr')
-        }
-        if (this._process.stdin) {
-            this._process.stdin.write(JSON.stringify(config))
-            this._process.stdin.end()
-            this.emit('ready')
-        } else {
-            this.terminate()
-            throw new Error('Error writing to stdin')
-        }
+        setTimeout(() => this.emit('ready'), 500) // TODO
     }
 
     terminate(): void {
