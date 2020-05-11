@@ -331,31 +331,32 @@ namespace sloked {
             .UnwrapWait();
 
         // Screen layout
-        screenClient.Handle.NewMultiplexer("/");
-        auto mainWindow =
-            screenClient.Multiplexer
-                .NewWindow(
-                    "/", TextPosition{0, 0},
-                    screenSizeClient.GetSize())
-                .UnwrapWait();
-        screenSizeClient.Listen([&](const auto &size) {
-            sharedState.GetThreadedExecutor().Enqueue([&, size] {
-                if (mainWindow.has_value()) {
-                    screenClient.Multiplexer
-                        .ResizeWindow(mainWindow.value(), size)
-                        .UnwrapWait();
-                }
-            });
-        });
-        screenClient.Handle.NewSplitter(mainWindow.value(),
-                                        Splitter::Direction::Vertical);
-        screenClient.Splitter
-            .NewWindow(mainWindow.value(), Splitter::Constraints(1.0f))
-            .UnwrapWait();
-        auto tabber =
-            screenClient.Splitter
-                .NewWindow(mainWindow.value(), Splitter::Constraints(0.0f, 1))
-                .UnwrapWait();
+        // screenClient.Handle.NewMultiplexer("/");
+        // auto mainWindow =
+        //     screenClient.Multiplexer
+        //         .NewWindow(
+        //             "/", TextPosition{0, 0},
+        //             screenSizeClient.GetSize())
+        //         .UnwrapWait();
+        std::optional<std::string> mainWindow{"/0"};
+        // screenSizeClient.Listen([&](const auto &size) {
+        //     sharedState.GetThreadedExecutor().Enqueue([&, size] {
+        //         if (mainWindow.has_value()) {
+        //             screenClient.Multiplexer
+        //                 .ResizeWindow(mainWindow.value(), size)
+        //                 .UnwrapWait();
+        //         }
+        //     });
+        // });
+        // screenClient.Handle.NewSplitter(mainWindow.value(),
+        //                                 Splitter::Direction::Vertical);
+        // screenClient.Splitter
+        //     .NewWindow(mainWindow.value(), Splitter::Constraints(1.0f))
+        //     .UnwrapWait();
+        // auto tabber =
+        //     screenClient.Splitter
+        //         .NewWindow(mainWindow.value(), Splitter::Constraints(0.0f, 1))
+        //         .UnwrapWait();
         screenClient.Handle.NewTabber("/0/0");
         auto tab1 = screenClient.Tabber.NewWindow("/0/0").UnwrapWait();
         screenClient.Handle.NewTextEditor(

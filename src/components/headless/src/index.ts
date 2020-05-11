@@ -20,15 +20,12 @@
 */
 
 import { SlokedApplication } from './lib/application'
+import { ScreenClient, ScreenSizeClient, ScreenSplitterDirection } from './lib/clients/screen'
 import * as net from 'net'
-import { NetSlaveServer, AuthServer } from 'sloked-nodejs'
-import { BinarySerializer } from 'sloked-nodejs'
-import { EncryptedStream } from 'sloked-nodejs'
-import { Crypto, DefaultCrypto, EncryptedDuplexStream } from 'sloked-nodejs'
-import { Authenticator, SlaveAuthenticator } from 'sloked-nodejs'
-import { ModifyableCredentialStorage, DefaultCredentialStorage } from 'sloked-nodejs'
-import { CompressedStream } from 'sloked-nodejs'
-import { DefaultServiceClient } from 'sloked-nodejs'
+import { NetSlaveServer, AuthServer, BinarySerializer, EncryptedStream, Crypto,
+    DefaultCrypto, EncryptedDuplexStream, ModifyableCredentialStorage,
+    DefaultCredentialStorage, CompressedStream,
+    Authenticator, SlaveAuthenticator } from 'sloked-nodejs'
 import { Duplex } from 'stream'
 
 const bootstrap = process.argv[2]
@@ -47,7 +44,7 @@ function bootstrapEditor(): SlokedApplication {
         process.exit(0)
     })
 
-    process.on('SIGINT', function() {
+    process.on('SIGINT', function () {
         editor.terminate()
     })
     return editor
@@ -65,34 +62,30 @@ async function initializeEditor(host: string, port: number): Promise<NetSlaveSer
     const stream: Duplex = new CompressedStream(cryptoStream)
     const credentials: ModifyableCredentialStorage = new DefaultCredentialStorage(crypto)
     credentials.newAccount('user1', 'password1')
-    const authenticator: Authenticator  = new SlaveAuthenticator(crypto, credentials, 'salt', cryptoStream.getEncryption())
+    const authenticator: Authenticator = new SlaveAuthenticator(crypto, credentials, 'salt', cryptoStream.getEncryption())
     const slave = new NetSlaveServer(stream, new BinarySerializer(), authenticator)
     await slave.authorize('user1')
     return slave
 }
 
 async function initializeEditorScreen(editor: AuthServer<string>): Promise<void> {
-    const screenClient = new DefaultServiceClient(await editor.connect('/screen/manager'))
-    // await screenClient.call('handle.newMultiplexer', '/')
-    await screenClient.close()
-    // screenClient.Handle.NewMultiplexer("/");
-    //     auto mainWindow =
-    //         screenClient.Multiplexer
-    //             .NewWindow(
-    //                 "/", TextPosition{0, 0},
-    //                 screenSizeClient.GetSize())
-    //             .UnwrapWait();
-    //     screenSizeClient.Listen([&](const auto &size) {
-    //         sharedState.GetThreadedExecutor().Enqueue([&, size] {
-    //             if (mainWindow.has_value()) {
-    //                 screenClient.Multiplexer
-    //                     .ResizeWindow(mainWindow.value(), size)
-    //                     .UnwrapWait();
-    //             }
-    //         });
-    //     });
-    //     screenClient.Handle.NewSplitter(mainWindow.value(),
-    //                                     Splitter::Direction::Vertical);
+    const screenSizeClient = new ScreenSizeClient()
+    await screenSizeClient.connect(await editor.connect('/screen/size/notify'))
+    const screenClient = new ScreenClient(await editor.connect('/screen/manager'))
+    await screenClient.Handle.newMultiplexer('/')
+    const mainWindow = await screenClient.Multiplexer.newWindow('/', {x: 0, y: 0}, screenSizeClient.size())
+    screenSizeClient.on('resize', (size: {width: number, height: number}) => {
+        screenClient.Multiplexer.resizeWidth(mainWindow, size)
+    })
+    await screenClient.Handle.newSplitter(mainWindow, ScreenSplitterDirection.Vertical)
+    await screenClient.Splitter.newWindow(mainWindow, {
+        dim: 0.98 // TODO
+    })
+    await screenClient.Splitter.newWindow(mainWindow, {
+        dim: 0.02, // TODO
+        min: 1
+    })
+    console.log(mainWindow)
     //     screenClient.Splitter
     //         .NewWindow(mainWindow.value(), Splitter::Constraints(1.0f))
     //         .UnwrapWait();

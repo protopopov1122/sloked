@@ -21,6 +21,8 @@
 
 import { Pipe, PipeCallback } from '../types/pipe'
 
+export * from '../types/pipe'
+
 class PipeDescriptor {
     constructor() {
         this._open = true

@@ -66,7 +66,7 @@ export class BinarySerializer implements Serializer {
         } else if (typeof value === 'number') {
             const type = Buffer.from([BinarySerializerType.Float])
             const buf = Buffer.alloc(8)
-            buf.writeFloatLE(value)
+            buf.writeDoubleLE(value)
             return Buffer.concat([type, buf])
         } else if (typeof value === 'boolean') {
             return Buffer.from([value ? BinarySerializerType.BooleanTrue : BinarySerializerType.BooleanFalse])
