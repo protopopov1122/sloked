@@ -16,6 +16,7 @@ sloked_disable_graphics = true
 
 subdir('components/framework')
 subdir('components/frontend')
+subdir('components/frontend-old')
 
 if get_option('crypto') == 'botan'
   subdir('components/crypto/botan')
