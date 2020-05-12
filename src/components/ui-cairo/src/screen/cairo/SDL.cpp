@@ -188,8 +188,8 @@ namespace sloked {
 
         static std::map<SDL_Keycode, SlokedControlKey> ControlKeyMappings = {
             {SDL_SCANCODE_SPACE, SlokedControlKey::CtrlSpace},
-            {SDL_SCANCODE_SPACE, SlokedControlKey::CtrlA},
-            {SDL_SCANCODE_SPACE, SlokedControlKey::CtrlB},
+            {SDL_SCANCODE_A, SlokedControlKey::CtrlA},
+            {SDL_SCANCODE_B, SlokedControlKey::CtrlB},
             {SDL_SCANCODE_D, SlokedControlKey::CtrlD},
             {SDL_SCANCODE_E, SlokedControlKey::CtrlE},
             {SDL_SCANCODE_F, SlokedControlKey::CtrlF},
