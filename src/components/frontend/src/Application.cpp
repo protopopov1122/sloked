@@ -303,66 +303,7 @@ namespace sloked {
             manager.Spawn("primary", primaryEditorConfig);
         auto &primaryServer = primaryEditor.GetServer();
 
-        auto &nsFactory = manager.GetNamespaceFactory();
-        auto nspace = nsFactory.Build();
-        SlokedPath inputPath =
-            nspace->GetResolver().Resolve(SlokedPath{cli.Argument(0)});
-        SlokedPath outputPath = nspace->GetResolver().Resolve(
-            SlokedPath{mainConfig.Find("/output").AsString()});
-
         // Editor initialization
-        SlokedScreenClient screenClient(
-            std::move(primaryServer.GetServer()
-                          .Connect({"/screen/manager"})
-                          .UnwrapWait()));
-        SlokedScreenSizeNotificationClient screenSizeClient;
-        screenSizeClient
-            .Connect(std::move(primaryServer.GetServer()
-                                   .Connect({"/screen/size/notify"})
-                                   .UnwrapWait()))
-            .UnwrapWait();
-        SlokedDocumentSetClient documentClient(
-            std::move(primaryServer.GetServer()
-                          .Connect({"/document/manager"})
-                          .UnwrapWait()));
-        documentClient
-            .Open(inputPath.ToString(), mainConfig.Find("/encoding").AsString(),
-                  mainConfig.Find("/newline").AsString(), "default")
-            .UnwrapWait();
-
-        // Screen layout
-        // screenClient.Handle.NewMultiplexer("/");
-        // auto mainWindow =
-        //     screenClient.Multiplexer
-        //         .NewWindow(
-        //             "/", TextPosition{0, 0},
-        //             screenSizeClient.GetSize())
-        //         .UnwrapWait();
-        std::optional<std::string> mainWindow{"/0"};
-        // screenSizeClient.Listen([&](const auto &size) {
-        //     sharedState.GetThreadedExecutor().Enqueue([&, size] {
-        //         if (mainWindow.has_value()) {
-        //             screenClient.Multiplexer
-        //                 .ResizeWindow(mainWindow.value(), size)
-        //                 .UnwrapWait();
-        //         }
-        //     });
-        // });
-        // screenClient.Handle.NewSplitter(mainWindow.value(),
-        //                                 Splitter::Direction::Vertical);
-        // screenClient.Splitter
-        //     .NewWindow(mainWindow.value(), Splitter::Constraints(1.0f))
-        //     .UnwrapWait();
-        // auto tabber =
-        //     screenClient.Splitter
-        //         .NewWindow(mainWindow.value(), Splitter::Constraints(0.0f, 1))
-        //         .UnwrapWait();
-        screenClient.Handle.NewTabber("/0/0");
-        auto tab1 = screenClient.Tabber.NewWindow("/0/0").UnwrapWait();
-        screenClient.Handle.NewTextEditor(
-            tab1.value(), documentClient.GetId().UnwrapWait().value(),
-            "default");
-
         SlokedTextPaneClient paneClient(
             std::move(primaryServer.GetServer()
                           .Connect({"/screen/component/text/pane"})
@@ -382,38 +323,6 @@ namespace sloked {
             render.Flush();
         };
         renderStatus();
-        SlokedScreenInputNotificationClient screenInput(
-            std::move(primaryServer.GetServer()
-                          .Connect({"/screen/component/input/notify"})
-                          .UnwrapWait()),
-            Encoding::Get("system"));
-        screenInput
-            .Listen(
-                "/",
-                [&](auto &evt) {
-                    sharedState.GetExecutor().Enqueue([&, evt] {
-                        renderStatus();
-                        if (evt.value.index() != 0 &&
-                            std::get<1>(evt.value) ==
-                                SlokedControlKey::Escape) {
-                            sharedState.GetThreadedExecutor().Enqueue([&] {
-                                logger.Debug() << "Saving document";
-                                documentClient.Save(outputPath.ToString())
-                                    .Notify([&](const auto &) {
-                                        primaryServer.GetServer().Connect({"/editor/shutdown"}).Notify([&](const auto &pipe) {
-                                            SlokedShutdownClient shutdown(std::move(pipe.Unwrap()));
-                                            shutdown.RequestShutdown();
-                                            sharedState.GetScheduler().Sleep(std::chrono::milliseconds(100), [&] {
-                                                manager.GetTotalShutdown().RequestShutdown();
-                                            });
-                                        });
-                                    });
-                            });
-                        }
-                    });
-                },
-                true)
-            .Wait();
 
         // Scripting engine startup
         std::unique_ptr<SlokedScriptEngine> scriptEngine;

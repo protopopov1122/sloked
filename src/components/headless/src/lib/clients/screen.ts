@@ -43,6 +43,18 @@ export class ScreenHandleClient {
         })
     }
 
+    newTabber(path: string): Promise<string> {
+        return this._client.call('handle.newTabber', path)
+    }
+
+    newTextEditor(path: string, document: number, tagger: string): Promise<boolean> {
+        return this._client.call('handle.newTextEditor', {
+            path,
+            document,
+            tagger
+        })
+    }
+
     private _client: ServiceClient
 }
 
@@ -95,6 +107,19 @@ export class ScreenSplitterClient {
 
     private _client: ServiceClient
 }
+export class ScreenTabberClient {
+    constructor(client: ServiceClient) {
+        this._client = client
+    }
+
+    newWindow(path: string): Promise<string> {
+        return this._client.call('tabber.newWindow', {
+            path
+        })
+    }
+
+    private _client: ServiceClient
+}
 
 export class ScreenClient {
     constructor(pipe: Pipe) {
@@ -102,6 +127,7 @@ export class ScreenClient {
         this.Handle = new ScreenHandleClient(this._client)
         this.Multiplexer = new ScreenMultiplexerClient(this._client)
         this.Splitter = new ScreenSplitterClient(this._client)
+        this.Tabber = new ScreenTabberClient(this._client)
     }
 
     close(): Promise<void> {
@@ -111,6 +137,7 @@ export class ScreenClient {
     public readonly Handle: ScreenHandleClient
     public readonly Multiplexer: ScreenMultiplexerClient
     public readonly Splitter: ScreenSplitterClient
+    public readonly Tabber: ScreenTabberClient
     private _client: DefaultServiceClient
 }
 
@@ -135,6 +162,12 @@ export class ScreenSizeClient extends EventEmitter {
             return {...this._size}
         } else {
             throw new Error('Unknown size')
+        }
+    }
+
+    async close(): Promise<void> {
+        if (this._pipe) {
+            return this._pipe.close()
         }
     }
 

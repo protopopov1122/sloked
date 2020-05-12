@@ -21,12 +21,16 @@
 
 import { SlokedApplication } from './lib/application'
 import { ScreenClient, ScreenSizeClient, ScreenSplitterDirection } from './lib/clients/screen'
+import { ScreenInputClient, KeyInputEvent, ControlKeyCode } from './lib/clients/screenInput'
+import { DocumentSetClient } from './lib/clients/documents'
 import * as net from 'net'
 import { NetSlaveServer, AuthServer, BinarySerializer, EncryptedStream, Crypto,
     DefaultCrypto, EncryptedDuplexStream, ModifyableCredentialStorage,
     DefaultCredentialStorage, CompressedStream,
     Authenticator, SlaveAuthenticator } from 'sloked-nodejs'
 import { Duplex } from 'stream'
+import * as path from 'path'
+import { ShutdownClient } from './lib/clients/shutdown'
 
 const bootstrap = process.argv[2]
 const applicationLibrary = process.argv[3]
@@ -69,6 +73,10 @@ async function initializeEditor(host: string, port: number): Promise<NetSlaveSer
 }
 
 async function initializeEditorScreen(editor: AuthServer<string>): Promise<void> {
+    const documentSetClient = new DocumentSetClient(await editor.connect('/document/manager'))
+    const docId = await documentSetClient.open(path.resolve(process.argv[4]), 'system', 'system', 'default')
+    console.log(docId)
+
     const screenSizeClient = new ScreenSizeClient()
     await screenSizeClient.connect(await editor.connect('/screen/size/notify'))
     const screenClient = new ScreenClient(await editor.connect('/screen/manager'))
@@ -79,25 +87,24 @@ async function initializeEditorScreen(editor: AuthServer<string>): Promise<void>
     })
     await screenClient.Handle.newSplitter(mainWindow, ScreenSplitterDirection.Vertical)
     await screenClient.Splitter.newWindow(mainWindow, {
-        dim: 0.98 // TODO
+        dim: 1
     })
     await screenClient.Splitter.newWindow(mainWindow, {
-        dim: 0.02, // TODO
+        dim: 0,
         min: 1
     })
-    console.log(mainWindow)
-    //     screenClient.Splitter
-    //         .NewWindow(mainWindow.value(), Splitter::Constraints(1.0f))
-    //         .UnwrapWait();
-    //     auto tabber =
-    //         screenClient.Splitter
-    //             .NewWindow(mainWindow.value(), Splitter::Constraints(0.0f, 1))
-    //             .UnwrapWait();
-    //     screenClient.Handle.NewTabber("/0/0");
-    //     auto tab1 = screenClient.Tabber.NewWindow("/0/0").UnwrapWait();
-    //     screenClient.Handle.NewTextEditor(
-    //         tab1.value(), documentClient.GetId().UnwrapWait().value(),
-    //         "default");
+    await screenClient.Handle.newTabber('/0/0')
+    await screenClient.Tabber.newWindow('/0/0')
+    await screenClient.Handle.newTextEditor('/0/0/0', docId, 'default')
+
+    const screenInput = new ScreenInputClient(await editor.connect('/screen/component/input/notify'))
+    await screenInput.on('input', async (evt: KeyInputEvent) => {
+        if (evt.key === ControlKeyCode.Escape && !evt.alt) {
+            await documentSetClient.saveAs(path.resolve(process.argv[5]))
+            const shutdown = new ShutdownClient(await editor.connect('/editor/shutdown'))
+            await shutdown.requestShutdown()
+        }
+    }).listenAll('/', true)
 }
 
 bootstrapEditor().once('ready', async () => {
