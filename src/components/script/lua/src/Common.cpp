@@ -72,8 +72,8 @@ namespace sloked {
                 lua_pushinteger(state, value.AsInt());
                 break;
 
-            case KgrValueType::Number:
-                lua_pushnumber(state, value.AsNumber());
+            case KgrValueType::Float:
+                lua_pushnumber(state, value.AsFloat());
                 break;
 
             case KgrValueType::Boolean:

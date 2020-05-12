@@ -70,7 +70,7 @@ namespace sloked {
         template <typename T>
         struct Conversion<T, std::enable_if_t<std::is_floating_point_v<T>>> {
             static T Apply(const KgrValue &value) {
-                if (value.Is(KgrValueType::Number)) {
+                if (value.IsNumber()) {
                     return static_cast<T>(value.AsNumber());
                 } else {
                     throw SlokedError(

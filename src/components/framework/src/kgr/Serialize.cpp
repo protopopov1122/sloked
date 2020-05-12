@@ -216,8 +216,8 @@ namespace sloked {
                 return std::make_unique<JsonConstantNode>(value.AsInt(),
                                                           DefaultPosition);
 
-            case KgrValueType::Number:
-                return std::make_unique<JsonConstantNode>(value.AsNumber(),
+            case KgrValueType::Float:
+                return std::make_unique<JsonConstantNode>(value.AsFloat(),
                                                           DefaultPosition);
 
             case KgrValueType::Boolean:
@@ -361,9 +361,9 @@ namespace sloked {
                 SerializeInt(value.AsInt(), std::back_inserter(output));
                 break;
 
-            case KgrValueType::Number:
+            case KgrValueType::Float:
                 output.push_back(static_cast<int8_t>(Tag::Float));
-                SerializeScalar(value.AsNumber(), std::back_inserter(output));
+                SerializeScalar(value.AsFloat(), std::back_inserter(output));
                 break;
 
             case KgrValueType::Boolean:

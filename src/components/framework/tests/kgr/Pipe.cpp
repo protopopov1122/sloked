@@ -82,8 +82,8 @@ static void TestPipeTransport(std::unique_ptr<KgrPipe> pipe1, std::unique_ptr<Kg
         REQUIRE(value.Is(KgrValueType::Integer));
         REQUIRE(value.AsInt() == 100);
         value = pipe2->ReadWait();
-        REQUIRE(value.Is(KgrValueType::Number));
-        REQUIRE(value.AsNumber() == Approx(3.14));
+        REQUIRE(value.Is(KgrValueType::Float));
+        REQUIRE(value.AsFloat() == Approx(3.14));
         value = pipe2->ReadOptional().value();
         REQUIRE(value.Is(KgrValueType::Boolean));
         REQUIRE(value.AsBoolean());

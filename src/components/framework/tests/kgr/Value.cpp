@@ -33,9 +33,9 @@ static void TestWrongType(const KgrValue &value) {
         REQUIRE_FALSE(value.Is(KgrValueType::Integer));
         REQUIRE_THROWS(value.AsInt());
     }
-    if (value.GetType() != KgrValueType::Number) {
-        REQUIRE_FALSE(value.Is(KgrValueType::Number));
-        REQUIRE_THROWS(value.AsNumber());
+    if (value.GetType() != KgrValueType::Float) {
+        REQUIRE_FALSE(value.Is(KgrValueType::Float));
+        REQUIRE_THROWS(value.AsFloat());
     }
     if (value.GetType() != KgrValueType::Boolean) {
         REQUIRE_FALSE(value.Is(KgrValueType::Boolean));
@@ -65,8 +65,8 @@ static void RequireEqual(const KgrValue &value1, const KgrValue &value2) {
             REQUIRE(value1.AsInt() == value2.AsInt());
             break;
 
-        case KgrValueType::Number:
-            REQUIRE(value1.AsNumber() == Approx(value2.AsNumber()));
+        case KgrValueType::Float:
+            REQUIRE(value1.AsFloat() == Approx(value2.AsFloat()));
             break;
 
         case KgrValueType::Boolean:
@@ -115,8 +115,8 @@ TEST_CASE("Value correctly stores integers") {
 TEST_CASE("Value correctly stores numbers") {
     double dvalue = GENERATE(-31.23, -5.43, -0.06, 0, 0.0051, 0.76, 2.71, 3.14, 100.456);
     KgrValue value{dvalue};
-    REQUIRE(value.GetType() == KgrValueType::Number);
-    REQUIRE(value.AsNumber() == Approx(dvalue));
+    REQUIRE(value.GetType() == KgrValueType::Float);
+    REQUIRE(value.AsFloat() == Approx(dvalue));
     TestWrongType(value);
 }
 
@@ -192,7 +192,7 @@ TEST_CASE("Array correctly stores values") {
         REQUIRE_NOTHROW(array.Remove(1));
         REQUIRE_NOTHROW(array.Append(3.14));
         REQUIRE(array.Size() == 3);
-        REQUIRE(std::next(array.begin(), 2)->AsNumber() == Approx(3.14));
+        REQUIRE(std::next(array.begin(), 2)->AsFloat() == Approx(3.14));
     }
 }
 

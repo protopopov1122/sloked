@@ -34,7 +34,7 @@ namespace sloked {
 
     enum class KgrValueType {
         Integer,
-        Number,
+        Float,
         Boolean,
         String,
         Null,
@@ -146,8 +146,10 @@ namespace sloked {
 
         KgrValueType GetType() const;
         bool Is(KgrValueType) const;
+        bool IsNumber() const;
 
         int64_t AsInt() const;
+        double AsFloat() const;
         double AsNumber() const;
         bool AsBoolean() const;
         const std::string &AsString() const;

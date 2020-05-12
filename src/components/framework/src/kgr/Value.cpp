@@ -256,7 +256,7 @@ namespace sloked {
         : type(KgrValueType::Integer), value(int64_t{value}) {}
 
     KgrValue::KgrValue(double value)
-        : type(KgrValueType::Number), value(value) {}
+        : type(KgrValueType::Float), value(value) {}
 
     KgrValue::KgrValue(bool value)
         : type(KgrValueType::Boolean), value(value) {}
@@ -291,6 +291,11 @@ namespace sloked {
         return this->type == type;
     }
 
+    bool KgrValue::IsNumber() const {
+        return this->Is(KgrValueType::Integer) ||
+            this->Is(KgrValueType::Float);
+    }
+
     int64_t KgrValue::AsInt() const {
         if (this->type == KgrValueType::Integer) {
             return std::get<0>(this->value);
@@ -299,8 +304,18 @@ namespace sloked {
         }
     }
 
+    double KgrValue::AsFloat() const {
+        if (this->type == KgrValueType::Float) {
+            return std::get<1>(this->value);
+        } else {
+            throw SlokedError("KgrValue: Invalid conversion");
+        }
+    }
+
     double KgrValue::AsNumber() const {
-        if (this->type == KgrValueType::Number) {
+        if (this->type == KgrValueType::Integer) {
+            return static_cast<double>(std::get<0>(this->value));
+        } else if (this->type == KgrValueType::Float) {
             return std::get<1>(this->value);
         } else {
             throw SlokedError("KgrValue: Invalid conversion");

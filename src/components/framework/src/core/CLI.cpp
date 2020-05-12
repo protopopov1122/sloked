@@ -63,7 +63,7 @@ namespace sloked {
             case KgrValueType::Integer:
                 return Type::Integer;
 
-            case KgrValueType::Number:
+            case KgrValueType::Float:
                 return Type::Float;
 
             case KgrValueType::Boolean:
@@ -235,9 +235,9 @@ namespace sloked {
                             return SlokedCLIOption{
                                 this->Option<int64_t>(val.AsInt())};
 
-                        case KgrValueType::Number:
+                        case KgrValueType::Float:
                             return SlokedCLIOption{
-                                this->Option<double>(val.AsNumber())};
+                                this->Option<double>(val.AsFloat())};
 
                         case KgrValueType::Boolean:
                             return SlokedCLIOption{
