@@ -31,6 +31,7 @@ import { NetSlaveServer, AuthServer, BinarySerializer, EncryptedStream, Crypto,
 import { Duplex } from 'stream'
 import * as path from 'path'
 import { ShutdownClient } from './lib/clients/shutdown'
+import { TextPaneClient, TextGraphics, BackgroundGraphics } from './lib/clients/textPane'
 
 const bootstrap = process.argv[2]
 const applicationLibrary = process.argv[3]
@@ -97,12 +98,29 @@ async function initializeEditorScreen(editor: AuthServer<string>): Promise<void>
     await screenClient.Tabber.newWindow('/0/0')
     await screenClient.Handle.newTextEditor('/0/0/0', docId, 'default')
 
+    const textPane = new TextPaneClient(await editor.connect('/screen/component/text/pane'))
+    await textPane.connect('/0/1', [], false)
+    const render = textPane.getRenderer()
+    let counter = 0
+    async function renderStatus() {
+        render.setBackgroundMode(BackgroundGraphics.Blue);
+        render.setTextMode(TextGraphics.Bold);
+        render.setTextMode(TextGraphics.Underscore);
+        render.setPosition(0, 0);
+        render.clearArea(10, 1);
+        render.write(`${counter++}`);
+        await render.flush();
+    }
+    await renderStatus()
+
     const screenInput = new ScreenInputClient(await editor.connect('/screen/component/input/notify'))
     await screenInput.on('input', async (evt: KeyInputEvent) => {
         if (evt.key === ControlKeyCode.Escape && !evt.alt) {
             await documentSetClient.saveAs(path.resolve(process.argv[5]))
             const shutdown = new ShutdownClient(await editor.connect('/editor/shutdown'))
             await shutdown.requestShutdown()
+        } else {
+            await renderStatus()
         }
     }).listenAll('/', true)
 }
