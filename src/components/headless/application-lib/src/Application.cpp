@@ -1,7 +1,27 @@
+/*
+  SPDX-License-Identifier: LGPL-3.0
+
+  Copyright (c) 2019-2020 Jevgenijs Protopopovs
+
+  This file is part of Sloked project.
+
+  Sloked is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License version 3 as
+  published by the Free Software Foundation.
+
+
+  Sloked is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+  along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "sloked/editor/Application.h"
 
 #include <iostream>
-#include <fstream>
 
 #include "sloked/kgr/Serialize.h"
 #include "sloked/text/fragment/Iterator.h"
@@ -177,9 +197,42 @@ namespace sloked {
         }
     };
 
+    static auto LoadConfiguration(SlokedSocketFactory &net,
+                                  const std::string &host, uint16_t port,
+                                  const std::string &key) {
+        auto configSocket =
+            net.Connect(SlokedSocketAddress::Network{host, port});
+        std::string fullKey = key + ":load\n";
+        configSocket->Write(SlokedSpan(
+            reinterpret_cast<const uint8_t *>(fullKey.data()), fullKey.size()));
+        std::stringstream config;
+        while (!configSocket->Closed() || configSocket->Available() > 0) {
+            configSocket->Wait();
+            auto data = configSocket->Read(configSocket->Available());
+            config << std::string_view(
+                reinterpret_cast<const char *>(data.data()), data.size());
+        }
+        configSocket->Close();
+        configSocket = nullptr;
+        KgrJsonSerializer serializer;
+        return serializer.Deserialize(config);
+    }
+
+    static void NotifyReady(SlokedSocketFactory &net, const std::string &host,
+                            uint16_t port, const std::string &key) {
+        auto configSocket =
+            net.Connect(SlokedSocketAddress::Network{host, port});
+        std::string fullKey = key + ":ready\n";
+        configSocket->Write(SlokedSpan(
+            reinterpret_cast<const uint8_t *>(fullKey.data()), fullKey.size()));
+        configSocket->Close();
+        configSocket = nullptr;
+    }
+
     class SlokedHeadlessEditorApplication : public SlokedApplication {
      public:
-        int Start(int argc, const char **argv, const SlokedBaseInterface &baseInterface,
+        int Start(int argc, const char **argv,
+                  const SlokedBaseInterface &baseInterface,
                   SlokedSharedContainerEnvironment &sharedEnv,
                   SlokedEditorManager &manager) final {
             SlokedCLI cli;
@@ -188,20 +241,34 @@ namespace sloked {
                                        {"type", "string"},
                                        {"mandatory", true},
                                        {"map", "/application"}},
-                         KgrDictionary{{"options", "--load-configuration"},
+                         KgrDictionary{{"options", "--configuration-key"},
                                        {"type", "string"},
                                        {"mandatory", true},
-                                       {"map", "/configuration"}}});
+                                       {"map", "/configuration/key"}},
+                         KgrDictionary{{"options", "--configuration-host"},
+                                       {"type", "string"},
+                                       {"mandatory", true},
+                                       {"map", "/configuration/host"}},
+                         KgrDictionary{{"options", "--configuration-port"},
+                                       {"type", "int"},
+                                       {"mandatory", true},
+                                       {"map", "/configuration/port"}}});
             cli.Parse(argc - 1, argv + 1);
-            std::ifstream config(cli["load-configuration"].As<std::string>());
-            
-            KgrJsonSerializer serializer;
-            auto configuration = serializer.Deserialize(config);
-            config.close();
+
+            auto configuration =
+                LoadConfiguration(baseInterface.GetNetwork(),
+                                  cli["configuration-host"].As<std::string>(),
+                                  cli["configuration-port"].As<uint16_t>(),
+                                  cli["configuration-key"].As<std::string>());
             manager.GetBaseTaggers().Bind(
                 "default", std::make_unique<TestFragmentFactory>());
             manager.Spawn(configuration.AsDictionary()["containers"]);
-            manager.GetTotalShutdown().WaitForShutdown();
+            NotifyReady(baseInterface.GetNetwork(),
+                        cli["configuration-host"].As<std::string>(),
+                        cli["configuration-port"].As<uint16_t>(),
+                        cli["configuration-key"].As<std::string>());
+                manager.GetTotalShutdown()
+                    .WaitForShutdown();
             return EXIT_SUCCESS;
         }
     };

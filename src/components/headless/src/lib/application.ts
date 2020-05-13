@@ -21,6 +21,8 @@
 
 import * as child_process from 'child_process'
 import { EventEmitter } from 'events'
+import { ConfigurationServer } from './configServer'
+import * as crypto from 'crypto'
 
 interface ApplicationOptions {
     bootstrap: string,
@@ -32,18 +34,30 @@ export class SlokedApplication extends EventEmitter {
         super()
         this._options = options
         this._process = null
+        this._configServer = new ConfigurationServer()
     }
 
-    start(configPath: string): void {
+    async start(config: any): Promise<void> {
+        const ConfigurationHost = config.configurationServer.host
+        const ConfigurationPort = config.configurationServer.port
+        const ConfigurationKey = crypto.randomBytes(32).toString('base64')
+        this._configServer.attach(`${ConfigurationKey}:load`, () => JSON.stringify(config))
+        this._configServer.attach(`${ConfigurationKey}:ready`, () => {
+            this.emit('ready')
+            this._configServer.close()
+            return ''
+        })
+        await this._configServer.start(ConfigurationHost, ConfigurationPort)
+
         if (this._process !== null) {
             throw new Error('Application already started')
         }
-        this._process = child_process.spawn(this._options.bootstrap, ["--load-application", this._options.applicationLibrary, "--load-configuration", configPath], {
+        this._process = child_process.spawn(this._options.bootstrap, ["--load-application", this._options.applicationLibrary,
+            "--configuration-host", ConfigurationHost, '--configuration-port', `${ConfigurationPort}`, '--configuration-key', ConfigurationKey], {
             stdio: 'inherit'
         })
         this._process.on('exit', this._onExit.bind(this))
         this._process.on('error', this._onError.bind(this))
-        setTimeout(() => this.emit('ready'), 500) // TODO
     }
 
     terminate(): void {
@@ -65,4 +79,5 @@ export class SlokedApplication extends EventEmitter {
 
     private _options: ApplicationOptions
     private _process: child_process.ChildProcess | null
+    private _configServer: ConfigurationServer
 }

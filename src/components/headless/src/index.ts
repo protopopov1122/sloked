@@ -32,6 +32,7 @@ import { Duplex } from 'stream'
 import * as path from 'path'
 import { ShutdownClient } from './lib/clients/shutdown'
 import { TextPaneClient, TextGraphics, BackgroundGraphics } from './lib/clients/textPane'
+import Configuration from './config.json'
 
 const bootstrap = process.argv[2]
 const applicationLibrary = process.argv[3]
@@ -128,4 +129,4 @@ async function initializeEditorScreen(editor: AuthServer<string>): Promise<void>
 bootstrapEditor().once('ready', async () => {
     const editor = await initializeEditor('::1', 1234)
     initializeEditorScreen(editor)
-}).start("./src/config.json")
+}).start(Configuration)
