@@ -96,7 +96,7 @@ async function initializeEditorScreen(editor: AuthServer<string>): Promise<void>
     })
     await screenClient.Handle.newTabber('/0/0')
     await screenClient.Tabber.newWindow('/0/0')
-    await screenClient.Handle.newTextEditor('/0/0/0', docId, 'default')
+    await screenClient.Handle.newTextEditor('/0/0/0', docId)
 
     const textPane = new TextPaneClient(await editor.connect('/screen/component/text/pane'))
     await textPane.connect('/0/1', [], false)

@@ -47,11 +47,10 @@ export class ScreenHandleClient {
         return this._client.call('handle.newTabber', path)
     }
 
-    newTextEditor(path: string, document: number, tagger: string): Promise<boolean> {
+    newTextEditor(path: string, document: number): Promise<boolean> {
         return this._client.call('handle.newTextEditor', {
             path,
-            document,
-            tagger
+            document
         })
     }
 

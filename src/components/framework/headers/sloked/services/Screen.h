@@ -64,8 +64,7 @@ namespace sloked {
                                          Splitter::Direction) const;
             TaskResult<bool> NewTabber(const std::string &) const;
             TaskResult<bool> NewTextEditor(const std::string &,
-                                           SlokedEditorDocumentSet::DocumentId,
-                                           const std::string & = "") const;
+                                           SlokedEditorDocumentSet::DocumentId) const;
 
          private:
             SlokedServiceClient &client;

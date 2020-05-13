@@ -41,7 +41,6 @@ namespace sloked {
             const Encoding &, const SlokedCharPreset &, std::unique_ptr<KgrPipe>,
             std::function<void(SlokedCursorClient &)>, std::unique_ptr<KgrPipe>,
             std::unique_ptr<KgrPipe>, SlokedEditorDocumentSet::DocumentId,
-            const std::string &,
             SlokedBackgroundGraphics = SlokedBackgroundGraphics::Black,
             SlokedForegroundGraphics = SlokedForegroundGraphics::White);
         ~SlokedTextEditor();
@@ -76,7 +75,6 @@ namespace sloked {
         SlokedCursorClient cursorClient;
         SlokedTextRenderClient renderClient;
         SlokedDocumentNotifyClient notifyClient;
-        std::string tagger;
         SlokedBackgroundGraphics background;
         SlokedForegroundGraphics foreground;
         std::function<void()> updateListener;

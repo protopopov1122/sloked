@@ -446,8 +446,7 @@ namespace sloked {
         screenClient.Handle.NewTabber("/0/0");
         auto tab1 = screenClient.Tabber.NewWindow("/0/0").UnwrapWait();
         screenClient.Handle.NewTextEditor(
-            tab1.value(), documentClient.GetId().UnwrapWait().value(),
-            "default");
+            tab1.value(), documentClient.GetId().UnwrapWait().value());
 
         SlokedTextPaneClient paneClient(
             std::move(secondaryServer.GetServer()

@@ -52,12 +52,12 @@ namespace sloked {
         std::function<void(SlokedCursorClient &)> initClient,
         std::unique_ptr<KgrPipe> renderService,
         std::unique_ptr<KgrPipe> notifyService,
-        SlokedEditorDocumentSet::DocumentId docId, const std::string &tagger,
+        SlokedEditorDocumentSet::DocumentId docId,
         SlokedBackgroundGraphics bg, SlokedForegroundGraphics fg)
         : conv(encoding, SlokedLocale::SystemEncoding()),
           charPreset(charPreset), cursorClient(std::move(cursorService)),
           renderClient(std::move(renderService), docId),
-          notifyClient(std::move(notifyService), docId), tagger(tagger),
+          notifyClient(std::move(notifyService), docId),
           background(bg), foreground(fg),
           lifetime(std::make_shared<SlokedStandardLifetime>()) {
         if (initClient) {

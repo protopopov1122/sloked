@@ -40,7 +40,8 @@ namespace sloked {
                             KgrServer::Connector renderService,
                             KgrServer::Connector notifyService)
             : SlokedServiceContext(std::move(pipe)), root(root),
-              encoding(encoding), charPreset(charPreset), cursorService(std::move(cursorService)),
+              encoding(encoding), charPreset(charPreset),
+              cursorService(std::move(cursorService)),
               renderService(std::move(renderService)),
               notifyService(std::move(notifyService)),
               lifetime(std::make_shared<SlokedStandardLifetime>()) {
@@ -162,15 +163,13 @@ namespace sloked {
             const auto &path = params.AsDictionary()["path"].AsString();
             auto documentId = static_cast<SlokedEditorDocumentSet::DocumentId>(
                 params.AsDictionary()["document"].AsInt());
-            const std::string &tagger =
-                params.AsDictionary()["tagger"].AsString();
             SlokedCompoundTask::All(this->lifetime, this->cursorService(),
                                     this->renderService(),
                                     this->notifyService())
                 .Notify(
-                    [this, path, documentId, tagger,
+                    [this, path, documentId,
                      rsp = std::move(rsp)](const auto &result) mutable {
-                        RootLock([this, path, documentId, tagger,
+                        RootLock([this, path, documentId,
                                   result = std::move(result),
                                   rsp = std::move(rsp)](auto &screen) mutable {
                             try {
@@ -186,13 +185,12 @@ namespace sloked {
                                 };
                                 handle.NewTextPane(std::make_unique<
                                                    SlokedTextEditor>(
-                                    this->encoding,
-                                    this->charPreset,
+                                    this->encoding, this->charPreset,
                                     std::move(std::get<0>(result.GetResult())),
                                     std::move(initCursor),
                                     std::move(std::get<1>(result.GetResult())),
                                     std::move(std::get<2>(result.GetResult())),
-                                    documentId, tagger));
+                                    documentId));
                                 rsp.Result(true);
                             } catch (const SlokedError &err) {
                                 rsp.Result(false);
@@ -790,9 +788,9 @@ namespace sloked {
     };
 
     SlokedScreenService::SlokedScreenService(
-        SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding, const SlokedCharPreset &charPreset,
-        KgrServer::Connector cursorService, KgrServer::Connector renderService,
-        KgrServer::Connector notifyService,
+        SlokedMonitor<SlokedScreenComponent &> &root, const Encoding &encoding,
+        const SlokedCharPreset &charPreset, KgrServer::Connector cursorService,
+        KgrServer::Connector renderService, KgrServer::Connector notifyService,
         KgrContextManager<KgrLocalContext> &contextManager)
         : root(root), encoding(encoding), charPreset(charPreset),
           cursorService(std::move(cursorService)),
@@ -852,15 +850,13 @@ namespace sloked {
     }
 
     TaskResult<bool> SlokedScreenClient::HandleClient::NewTextEditor(
-        const std::string &path, SlokedEditorDocumentSet::DocumentId document,
-        const std::string &tagger) const {
+        const std::string &path, SlokedEditorDocumentSet::DocumentId document) const {
         return SlokedTaskTransformations::Transform(
             client
                 .Invoke(
                     "handle.newTextEditor",
                     KgrDictionary{{"path", path},
-                                  {"document", static_cast<int64_t>(document)},
-                                  {"tagger", tagger}})
+                                  {"document", static_cast<int64_t>(document)}})
                 ->Next(),
             [](const SlokedNetResponseBroker::Response &res) {
                 return res.HasResult() && res.GetResult().AsBoolean();
