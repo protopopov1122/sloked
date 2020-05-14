@@ -61,10 +61,6 @@ namespace sloked {
         virtual SlokedDuplexTerminal &GetSystemTerminal() const = 0;
         virtual UnbindResizeListener OnSystemTerminalResize(
             OnTerminalResize) const = 0;
-        virtual bool HasScripting() const = 0;
-        virtual std::unique_ptr<SlokedScriptEngine> NewScriptEngine(
-            SlokedEditorContainers &, SlokedSharedContainerEnvironment &,
-            const KgrValue &) const = 0;
     };
 }  // namespace sloked
 

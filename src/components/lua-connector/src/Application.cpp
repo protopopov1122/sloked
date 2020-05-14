@@ -29,9 +29,11 @@
 #include "sloked/services/ScreenSize.h"
 #include "sloked/services/Shutdown.h"
 #include "sloked/services/TextPane.h"
+#include "sloked/script/lua/Lua.h"
+
 namespace sloked {
 
-    class SlokedFrontendDefaultApplication : public SlokedApplication {
+    class SlokedLuaConnectorApplication : public SlokedApplication {
      public:
         int Start(int, const char **, const SlokedBaseInterface &,
                   SlokedSharedContainerEnvironment &,
@@ -40,10 +42,11 @@ namespace sloked {
 
     static const KgrValue DefaultConfiguration =
         KgrDictionary{{"network", KgrDictionary{
+                                      {"host", "localhost"},
                                       {"port", 1234},
                                   }}};
 
-    int SlokedFrontendDefaultApplication::Start(
+    int SlokedLuaConnectorApplication::Start(
         int argc, const char **argv, const SlokedBaseInterface &baseInterface,
         SlokedSharedContainerEnvironment &sharedState,
         SlokedEditorManager &manager) {
@@ -51,12 +54,16 @@ namespace sloked {
         SlokedLoggingManager::Global.SetSink(
             SlokedLogLevel::Debug,
             SlokedLoggingSink::TextFile(
-                "./sloked.log", SlokedLoggingSink::TabularFormat(10, 30, 30)));
+                "./sloked-lua.log",
+                SlokedLoggingSink::TabularFormat(10, 30, 30)));
 
         SlokedLogger logger(SlokedLoggerTag);
         // Configuration
         SlokedCLI cli;
-        cli.Initialize(KgrArray{KgrDictionary{{"options", "--net-port"},
+        cli.Initialize(KgrArray{KgrDictionary{{"options", "--net-host"},
+                                              {"type", "string"},
+                                              {"map", "/network{}/host"}},
+                                KgrDictionary{{"options", "--net-port"},
                                               {"type", "int"},
                                               {"map", "/network{}/port"}},
                                 KgrDictionary{{"options", "--script"},
@@ -82,9 +89,11 @@ namespace sloked {
                  {"slave",
                   KgrDictionary{
                       {"address",
-                       KgrDictionary{{"host", "localhost"},
-                                     {"port", mainConfig.Find("/network/port")
-                                                  .AsInt()}}}}}}}};
+                       KgrDictionary{
+                           {"host",
+                            mainConfig.Find("/network/host").AsString()},
+                           {"port",
+                            mainConfig.Find("/network/port").AsInt()}}}}}}}};
 
         if (manager.HasCrypto()) {
             primaryEditorConfig["server"]
@@ -110,10 +119,11 @@ namespace sloked {
         manager.Spawn("primary", primaryEditorConfig);
 
         // Scripting engine startup
-        std::unique_ptr<SlokedScriptEngine> scriptEngine;
-        if (baseInterface.HasScripting() && mainConfig.Has("/script/init")) {
-            scriptEngine = baseInterface.NewScriptEngine(
-                manager, sharedState, mainConfig.Find("/script"));
+        std::unique_ptr<SlokedScriptEngine> scriptEngine =
+            std::make_unique<SlokedLuaEngine>(manager, sharedState.GetScheduler(),
+                                              sharedState.GetExecutor(),
+                                              mainConfig.Find("/script"));
+        if (mainConfig.Has("/script/init")) {
             if (scriptEngine) {
                 closeables.Attach(*scriptEngine);
                 scriptEngine->Start();
@@ -127,6 +137,6 @@ namespace sloked {
     }
 
     extern "C" SlokedApplication *SlokedMakeApplication() {
-        return new SlokedFrontendDefaultApplication();
+        return new SlokedLuaConnectorApplication();
     }
 }  // namespace sloked

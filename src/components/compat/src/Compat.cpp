@@ -30,7 +30,6 @@
 #include "sloked/compat/screen/graphics/Compat.h"
 #include "sloked/compat/screen/terminal/Compat.h"
 #include "sloked/compat/screen/terminal/TerminalResize.h"
-#include "sloked/compat/script/Compat.h"
 
 namespace sloked {
 
@@ -88,22 +87,6 @@ namespace sloked {
         UnbindResizeListener OnSystemTerminalResize(
             OnTerminalResize listener) const final {
             return SlokedTerminalResizeListener::Bind(std::move(listener));
-        }
-
-        bool HasScripting() const final {
-            return SlokedScriptCompat::IsSupported();
-        }
-
-        std::unique_ptr<SlokedScriptEngine> NewScriptEngine(
-            SlokedEditorContainers &container,
-            SlokedSharedContainerEnvironment &sharedState,
-            const KgrValue &params) const final {
-            if constexpr (SlokedScriptCompat::IsSupported()) {
-                return SlokedScriptCompat::GetEngine(container, sharedState,
-                                                     params);
-            } else {
-                return nullptr;
-            }
         }
     };
 

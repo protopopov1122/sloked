@@ -15,8 +15,6 @@ sloked_disable_scripting = true
 sloked_disable_graphics = true
 
 subdir('components/framework')
-subdir('components/frontend')
-subdir('components/frontend-old')
 
 if get_option('crypto') == 'botan'
   subdir('components/crypto/botan')
@@ -41,6 +39,7 @@ if get_option('scripting_lua')
   sloked_scripting = sloked_lua_bindings
   sloked_scripting_flags = sloked_lua_bindings_flags
   sloked_disable_scripting = false
+  subdir('components/lua-connector')
 endif
 if get_option('graphics') == 'cairo_sdl'
   subdir('components/ui-cairo')
@@ -52,8 +51,10 @@ if get_option('build_headless')
   subdir('components/headless/application-lib')
 endif
 
+
 sloked_platform = sloked_posix_platform
 sloked_platform_flags = sloked_posix_platform_flags
 subdir('components/compat')
 
+subdir('components/frontend-cpp')
 subdir('components/bootstrap')

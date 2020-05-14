@@ -9,8 +9,7 @@ compat_src = [
   'src/net/Compat.cpp',
   'src/screen/graphics/Compat.cpp',
   'src/screen/terminal/Compat.cpp',
-  'src/screen/terminal/TerminalResize.cpp',
-  'src/script/Compat.cpp'
+  'src/screen/terminal/TerminalResize.cpp'
 ]
 
 sloked_compat_flags = []
@@ -26,11 +25,6 @@ endif
 if not sloked_disable_compression
   sloked_compat_flags += sloked_compression_flags
   sloked_compat_deps += sloked_compression
-endif
-
-if not sloked_disable_scripting
-  sloked_compat_flags += sloked_scripting_flags
-  sloked_compat_deps += sloked_scripting
 endif
 
 if not sloked_disable_graphics

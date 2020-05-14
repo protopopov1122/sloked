@@ -31,6 +31,9 @@
 #include "sloked/text/fragment/Iterator.h"
 #include "sloked/text/fragment/TaggedText.h"
 #include "sloked/text/fragment/Updater.h"
+#ifdef SLOKED_FEATURE_SCRIPTING_LUA
+#include "sloked/script/lua/Lua.h"
+#endif
 
 namespace sloked {
 
@@ -496,10 +499,11 @@ namespace sloked {
             .Wait();
 
         // Scripting engine startup
+#ifdef SLOKED_FEATURE_SCRIPTING_LUA
         std::unique_ptr<SlokedScriptEngine> scriptEngine;
-        if (baseInterface.HasScripting() && mainConfig.Has("/script/init")) {
-            scriptEngine = baseInterface.NewScriptEngine(
-                manager, sharedState, mainConfig.Find("/script"));
+        if (mainConfig.Has("/script/init")) {
+            scriptEngine = std::make_unique<SlokedLuaEngine>(
+                manager, sharedState.GetScheduler(), sharedState.GetExecutor(), mainConfig.Find("/script"));
             if (scriptEngine) {
                 closeables.Attach(*scriptEngine);
                 scriptEngine->Start();
@@ -507,6 +511,7 @@ namespace sloked {
                     .UnwrapWait();
             }
         }
+#endif
         manager.GetTotalShutdown().WaitForShutdown();
         closeables.Close();
         return EXIT_SUCCESS;
