@@ -23,6 +23,7 @@
 
 #include <cassert>
 #include <set>
+#include <stdexcept>
 
 #include "sloked/core/String.h"
 #include "sloked/kgr/Path.h"

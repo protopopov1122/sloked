@@ -28,6 +28,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <limits>
 
 #include "sloked/core/Span.h"
 

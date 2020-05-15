@@ -20,6 +20,7 @@
 */
 
 #include "sloked/facade/Crypto.h"
+#include <limits>
 
 namespace sloked {
 

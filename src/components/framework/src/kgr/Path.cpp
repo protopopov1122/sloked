@@ -24,6 +24,8 @@
 #include "sloked/core/Error.h"
 #include "sloked/core/String.h"
 
+#include <stdexcept>
+
 namespace sloked {
 
     std::optional<KgrValue> KgrPath::Traverse(const KgrValue &root,

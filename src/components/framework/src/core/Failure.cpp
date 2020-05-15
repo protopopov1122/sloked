@@ -29,6 +29,7 @@
 #include <csignal>
 #include <cstdio>
 #include <exception>
+#include <cstdlib>
 
 namespace sloked {
     void PrintStack() {
