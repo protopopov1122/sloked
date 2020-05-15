@@ -77,8 +77,10 @@ namespace sloked {
             this->buffer.insert(data.begin(), data.end());
             while (this->buffer.size() >= 4) {
                 std::size_t length =
-                    this->buffer.at(0) | (this->buffer.at(1) << 8) |
-                    (this->buffer.at(2) << 16) | (this->buffer.at(3) << 24);
+                    static_cast<std::size_t>(this->buffer.at(0)) |
+                    (static_cast<std::size_t>(this->buffer.at(1)) << 8) |
+                    (static_cast<std::size_t>(this->buffer.at(2)) << 16) |
+                    (static_cast<std::size_t>(this->buffer.at(3)) << 24);
                 if (this->buffer.size() < length + 4) {
                     break;
                 }

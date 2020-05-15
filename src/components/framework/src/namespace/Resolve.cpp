@@ -23,27 +23,27 @@
 
 namespace sloked {
 
-    SlokedPathResolver::SlokedPathResolver(SlokedPath currentDir,
-                                           std::optional<SlokedPath> homeDir)
-        : currentDir(std::move(currentDir)), homeDir(std::move(homeDir)) {}
+    SlokedPathResolver::SlokedPathResolver(SlokedPath &&currentDir,
+                                           std::optional<SlokedPath> &&homeDir)
+        : currentDir(std::forward<SlokedPath>(currentDir)), homeDir(std::forward<std::optional<SlokedPath>>(homeDir)) {}
 
     const SlokedPath &SlokedPathResolver::GetCurrentDir() const {
         return this->currentDir;
     }
 
-    void SlokedPathResolver::ChangeDir(SlokedPath dir) {
-        this->currentDir = std::move(dir);
+    void SlokedPathResolver::ChangeDir(SlokedPath &&dir) {
+        this->currentDir = std::forward<SlokedPath>(dir);
     }
 
     const std::optional<SlokedPath> &SlokedPathResolver::GetHomeDir() const {
         return this->homeDir;
     }
 
-    void SlokedPathResolver::ChangeHomeDir(std::optional<SlokedPath> path) {
-        this->homeDir = std::move(path);
+    void SlokedPathResolver::ChangeHomeDir(std::optional<SlokedPath> &&path) {
+        this->homeDir = std::forward<std::optional<SlokedPath>>(path);
     }
 
-    SlokedPath SlokedPathResolver::Resolve(SlokedPath dir) {
+    SlokedPath SlokedPathResolver::Resolve(const SlokedPath &dir) {
         if (dir.IsAbsolute()) {
             if (this->homeDir.has_value() && !dir.Components().empty() &&
                 dir.Components().front() == dir.GetPreset().GetHomeDir() &&

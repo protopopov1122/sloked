@@ -196,7 +196,13 @@ namespace sloked {
         }
 
         ~SlokedRingBuffer() {
-            this->pop_front(this->size());
+            auto count = this->size();
+            while (count--) {
+                if constexpr (std::is_destructible_v<T>) {
+                    reinterpret_cast<T *>(&this->buffer[this->head])->T::~T();
+                }
+                this->head = this->shift_forward(this->head, 1);
+            }
             this->deallocate(this->buffer);
         }
 

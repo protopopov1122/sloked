@@ -48,7 +48,7 @@ TEST_CASE("Span correctly handles null pointers") {
 }
 
 TEST_CASE("Span correctly stores reference to memory") {
-    char Data[] = "Hello, world!";
+    char Data[] = "Hello, world!\0";
     const std::size_t Length = sizeof(Data) / sizeof(char);
 
     SlokedSpan<char> origin(Data, Length);
@@ -63,7 +63,7 @@ TEST_CASE("Span correctly stores reference to memory") {
         REQUIRE(span[i] == Data[i]);
     }
     REQUIRE(span.Front() == Data[0]);
-    REQUIRE(span.Back() == Data[Length]);
+    REQUIRE(span.Back() == Data[Length - 1]);
 
     constexpr std::size_t Offset = 7;
     auto subspan = span.Subspan(Offset, span.Size() - Offset);

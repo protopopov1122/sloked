@@ -20,6 +20,7 @@
 */
 
 #include "sloked/filesystem/posix/File.h"
+#include "sloked/core/Error.h"
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -119,31 +120,43 @@ namespace sloked {
 
     static int unlink_cb(const char *fpath, const struct stat *sb, int typeflag,
                          struct FTW *ftwbuf) {
-        int rv = remove(fpath);
-        return rv;
+        return remove(fpath);
     }
 
     void SlokedPosixFile::Delete() const {
         if (this->IsFile()) {
-            remove(this->path.c_str());
+            if (remove(this->path.c_str()) != 0) {
+                throw SlokedError("PosixFile: Error deleting file");
+            }
         } else {
-            nftw(this->path.c_str(), unlink_cb, 64, FTW_DEPTH | FTW_PHYS);
+            if (nftw(this->path.c_str(), unlink_cb, 64, FTW_DEPTH | FTW_PHYS) != 0) {
+                throw SlokedError("PosixFile: Error deleting directory");
+            }
         }
     }
 
     void SlokedPosixFile::Rename(const std::string &name) const {
-        rename(this->path.c_str(), name.c_str());
+        if (rename(this->path.c_str(), name.c_str()) != 0) {
+            throw SlokedError("PosixFile: Error renaming file");
+        }
     }
 
     void SlokedPosixFile::Create() const {
         if (!this->Exists()) {
-            close(creat(this->path.c_str(), MODE));
+            const auto res = creat(this->path.c_str(), MODE);
+            if (res > -1) {
+                close(res);
+            } else {
+                throw SlokedError("PosixFile: Error creating file");
+            }
         }
     }
 
     void SlokedPosixFile::Mkdir() const {
         if (!this->Exists()) {
-            mkdir(this->path.c_str(), MODE);
+            if (mkdir(this->path.c_str(), MODE) != 0) {
+                throw SlokedError("PosixFile: Error creating directory");
+            }
         }
     }
 

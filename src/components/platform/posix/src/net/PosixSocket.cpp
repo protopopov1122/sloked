@@ -41,7 +41,9 @@ namespace sloked {
     SlokedPosixSocket::SlokedPosixSocket(int fd) : socket(fd) {
 
         int one = 1;
-        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+        if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0) {
+            throw SlokedError("PosixSocket: Error setting socket options");
+        }
     }
 
     SlokedPosixSocket::SlokedPosixSocket(SlokedPosixSocket &&socket) {
@@ -374,7 +376,10 @@ namespace sloked {
                 "; socket opening error: " + std::to_string(errno));
         }
         const int Enable = 1;
-        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &Enable, sizeof(Enable));
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &Enable, sizeof(Enable)) != 0) {
+            close(fd);
+            throw SlokedError("PosixSocket: Error setting socket options");
+        }
         // Bind to the socket
         switch (result->ai_family) {
             case AF_INET: {

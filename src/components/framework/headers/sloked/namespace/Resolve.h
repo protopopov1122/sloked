@@ -30,12 +30,12 @@ namespace sloked {
 
     class SlokedPathResolver {
      public:
-        SlokedPathResolver(SlokedPath = {"/"}, std::optional<SlokedPath> = {});
+        SlokedPathResolver(SlokedPath && = {"/"}, std::optional<SlokedPath> && = {});
         const SlokedPath &GetCurrentDir() const;
-        void ChangeDir(SlokedPath);
+        void ChangeDir(SlokedPath &&);
         const std::optional<SlokedPath> &GetHomeDir() const;
-        void ChangeHomeDir(std::optional<SlokedPath> = {});
-        SlokedPath Resolve(SlokedPath);
+        void ChangeHomeDir(std::optional<SlokedPath> && = {});
+        SlokedPath Resolve(const SlokedPath &);
 
      private:
         SlokedPath currentDir;

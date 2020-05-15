@@ -265,7 +265,7 @@ namespace sloked {
         void ChDir(const std::string &method, const KgrValue &params,
                    Response &rsp) {
             SlokedPath path{params.AsString()};
-            this->rootNamespace.GetResolver().ChangeDir(path);
+            this->rootNamespace.GetResolver().ChangeDir(std::move(path));
             rsp.Result(true);
         }
 

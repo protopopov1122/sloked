@@ -20,6 +20,7 @@
 */
 
 #include "sloked/filesystem/posix/View.h"
+#include "sloked/core/Error.h"
 
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -28,7 +29,9 @@ namespace sloked {
 
     SlokedPosixFileView::SlokedPosixFileView(FILE *file) : file(file) {
         struct stat file_stats;
-        fstat(fileno(this->file), &file_stats);
+        if (fstat(fileno(this->file), &file_stats) != 0) {
+            throw SlokedError("PosixFileView: Error getting file stats");
+        }
         this->length = file_stats.st_size;
 #ifdef SLOKED_PLATFORM_OS_LINUX
         this->data = mmap(nullptr, this->length, PROT_READ,
