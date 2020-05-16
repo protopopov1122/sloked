@@ -56,7 +56,7 @@
             },
             "server": {
                 "netServer": {
-                    "host": "localhost",
+                    "host": "::1",
                     "port": 1234
                 },
                 "restrictAccess": {

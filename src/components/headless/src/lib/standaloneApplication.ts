@@ -20,34 +20,26 @@
 */
 
 import * as child_process from 'child_process'
-import { EventEmitter } from 'events'
-import { ConfigurationServer } from './configServer'
 import * as crypto from 'crypto'
+import { EventEmitter } from 'events'
+import { applicationStartupServer } from './startup'
 
 interface ApplicationOptions {
     bootstrap: string,
     applicationLibrary: string
 }
 
-export class SlokedApplication extends EventEmitter {
+export class SlokedStandaloneApplication extends EventEmitter {
     constructor(options: ApplicationOptions) {
         super()
         this._options = options
         this._process = null
-        this._configServer = new ConfigurationServer()
     }
 
     async start(config: any): Promise<void> {
         const ConfigurationHost = config.configurationServer.host
         const ConfigurationPort = config.configurationServer.port
         const ConfigurationKey = crypto.randomBytes(32).toString('base64')
-        this._configServer.attach(`${ConfigurationKey}:load`, () => JSON.stringify(config))
-        this._configServer.attach(`${ConfigurationKey}:ready`, () => {
-            this.emit('ready')
-            this._configServer.close()
-            return ''
-        })
-        await this._configServer.start(ConfigurationHost, ConfigurationPort)
 
         if (this._process !== null) {
             throw new Error('Application already started')
@@ -58,6 +50,13 @@ export class SlokedApplication extends EventEmitter {
         })
         this._process.on('exit', this._onExit.bind(this))
         this._process.on('error', this._onError.bind(this))
+        try {
+            await applicationStartupServer(ConfigurationHost, ConfigurationPort, ConfigurationKey, config)
+            this.emit('ready')
+        } catch (err) {
+            this.emit('error', err)
+            this.terminate()
+        }
     }
 
     terminate(): void {
@@ -79,5 +78,4 @@ export class SlokedApplication extends EventEmitter {
 
     private _options: ApplicationOptions
     private _process: child_process.ChildProcess | null
-    private _configServer: ConfigurationServer
 }

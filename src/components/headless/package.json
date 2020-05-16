@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsc && node dist/index.js"
+    "standalone": "tsc && node dist/standalone.js",
+    "detached": "tsc && node dist/detached.js"
   },
   "author": "Jevgenijs Protopopovs",
   "license": "LGPL-3.0",

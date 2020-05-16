@@ -1,28 +1,7 @@
-/*
-  SPDX-License-Identifier: LGPL-3.0
 
-  Copyright (c) 2019-2020 Jevgenijs Protopopovs
-
-  This file is part of Sloked project.
-
-  Sloked is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3 as
-  published by the Free Software Foundation.
-
-
-  Sloked is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public License
-  along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-import { SlokedApplication } from './lib/application'
-import { ScreenClient, ScreenSizeClient, ScreenSplitterDirection } from './lib/clients/screen'
-import { ScreenInputClient, KeyInputEvent, ControlKeyCode } from './lib/clients/screenInput'
-import { DocumentSetClient } from './lib/clients/documents'
+import { ScreenClient, ScreenSizeClient, ScreenSplitterDirection } from '../lib/clients/screen'
+import { ScreenInputClient, KeyInputEvent, ControlKeyCode } from '../lib/clients/screenInput'
+import { DocumentSetClient } from '../lib/clients/documents'
 import * as net from 'net'
 import { NetSlaveServer, AuthServer, BinarySerializer, EncryptedStream, Crypto,
     DefaultCrypto, EncryptedDuplexStream, ModifyableCredentialStorage,
@@ -30,31 +9,8 @@ import { NetSlaveServer, AuthServer, BinarySerializer, EncryptedStream, Crypto,
     Authenticator, SlaveAuthenticator } from 'sloked-nodejs'
 import { Duplex } from 'stream'
 import * as path from 'path'
-import { ShutdownClient } from './lib/clients/shutdown'
-import { TextPaneClient, TextGraphics, BackgroundGraphics } from './lib/clients/textPane'
-import Configuration from './config.json'
-
-const bootstrap = process.argv[2]
-const applicationLibrary = process.argv[3]
-
-function bootstrapEditor(): SlokedApplication {
-    const editor: SlokedApplication = new SlokedApplication({
-        bootstrap,
-        applicationLibrary
-    })
-
-    editor.on('error', err => console.log('Application error: ', err))
-
-    editor.on('exit', () => {
-        console.log('Application exiting')
-        process.exit(0)
-    })
-
-    process.on('SIGINT', function () {
-        editor.terminate()
-    })
-    return editor
-}
+import { ShutdownClient } from '../lib/clients/shutdown'
+import { TextPaneClient, TextGraphics, BackgroundGraphics } from '../lib/clients/textPane'
 
 async function initializeEditor(host: string, port: number): Promise<NetSlaveServer> {
     const socket = new net.Socket()
@@ -74,9 +30,9 @@ async function initializeEditor(host: string, port: number): Promise<NetSlaveSer
     return slave
 }
 
-async function initializeEditorScreen(editor: AuthServer<string>): Promise<void> {
+async function initializeEditorScreen(editor: AuthServer<string>, argv: string[]): Promise<void> {
     const documentSetClient = new DocumentSetClient(await editor.connect('/document/manager'))
-    const docId = await documentSetClient.open(path.resolve(process.argv[4]), 'system', 'system', 'default')
+    const docId = await documentSetClient.open(path.resolve(argv[0]), 'system', 'system', 'default')
     console.log(docId)
 
     const screenSizeClient = new ScreenSizeClient()
@@ -117,7 +73,7 @@ async function initializeEditorScreen(editor: AuthServer<string>): Promise<void>
     const screenInput = new ScreenInputClient(await editor.connect('/screen/component/input/notify'))
     await screenInput.on('input', async (evt: KeyInputEvent) => {
         if (evt.key === ControlKeyCode.Escape && !evt.alt) {
-            await documentSetClient.saveAs(path.resolve(process.argv[5]))
+            await documentSetClient.saveAs(path.resolve(argv[1]))
             const shutdown = new ShutdownClient(await editor.connect('/editor/shutdown'))
             await shutdown.requestShutdown()
         } else {
@@ -126,7 +82,8 @@ async function initializeEditorScreen(editor: AuthServer<string>): Promise<void>
     }).listenAll('/', true)
 }
 
-bootstrapEditor().once('ready', async () => {
-    const editor = await initializeEditor('::1', 1234)
-    initializeEditorScreen(editor)
-}).start(Configuration)
+export async function connectToEditor(host: string, port: number, argv: string[]) {
+    const editor = await initializeEditor(host, port)
+    await initializeEditorScreen(editor, argv)
+    return editor
+}
