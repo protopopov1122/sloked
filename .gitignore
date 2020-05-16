@@ -35,3 +35,4 @@
 bin
 .vscode
 third-party
+local_scripts
