@@ -28,7 +28,7 @@
 namespace sloked {
 
     JsonDefaultParser::JsonDefaultParser(JsonLexemStream &lexer)
-        : lexer(lexer), buffer_offset{0}, buffer_size{0} {
+        : lexer(lexer), lexem{}, buffer_offset{0}, buffer_size{0} {
         this->Shift();
     }
 
@@ -222,7 +222,7 @@ namespace sloked {
                 }
             }
         }
-        if (this->buffer_offset < this->buffer.size()) {
+        if (this->buffer_offset < this->buffer_size) {
             this->lexem.emplace(std::move(this->buffer[this->buffer_offset++]));
         } else {
             this->lexem.reset();
