@@ -43,18 +43,18 @@ namespace sloked {
     }
 
     template <typename T>
-    static constexpr bool BitEnabled(T integer, std::size_t offset) {
-        return ((integer >> offset) & 0b1) != 0;
+    static constexpr bool BitEnabled(T integer, T offset) {
+        return ((integer >> offset) & T{0b1}) != 0;
     }
 
     template <typename T>
-    static constexpr T EnableBit(T integer, std::size_t offset) {
-        return integer | (1ul << offset);
+    static constexpr T EnableBit(T integer, T offset) {
+        return integer | (T{1} << offset);
     }
 
     template <typename T>
-    static constexpr T DisableBit(T integer, std::size_t offset) {
-        return integer & ~(1 << offset);
+    static constexpr T DisableBit(T integer, T offset) {
+        return integer & ~(T{1} << offset);
     }
 
     template <typename T>
@@ -87,14 +87,14 @@ namespace sloked {
     void SlokedDynamicBitset::Set(std::size_t idx, bool value) {
         if (idx >= this->Count()) {
             this->bits.insert(this->bits.end(),
-                              (idx - this->Count()) / CHAR_BIT + 1, 0);
+                              (idx - this->Count()) / MinWidth + 1, 0);
         }
         auto [position, offset] = CalcPosition<Integer>(idx);
         auto integer = this->bits.at(position);
         if (value) {
-            this->bits[position] = EnableBit(integer, offset);
+            this->bits[position] = EnableBit<Integer>(integer, offset);
         } else {
-            this->bits[position] = DisableBit(integer, offset);
+            this->bits[position] = DisableBit<Integer>(integer, offset);
         }
     }
 
@@ -104,7 +104,7 @@ namespace sloked {
             auto integer = this->bits.at(position);
             auto offset = FindFree(integer);
             if (offset.has_value()) {
-                this->bits[position] = EnableBit(integer, offset.value());
+                this->bits[position] = EnableBit<Integer>(integer, offset.value());
                 return CalcBitOffset<Integer>(position, offset.value());
             }
         }
