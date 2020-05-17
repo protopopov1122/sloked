@@ -40,8 +40,10 @@ namespace sloked {
                 return std::get<0>(this->content).lines.size() - 1;
             case 1:
                 return std::get<1>(this->content)->GetLastLine();
+				
             default:
                 assert(false);
+				throw SlokedError("TextBlockHandle: Invalid content index");
         }
     }
 
@@ -53,6 +55,7 @@ namespace sloked {
                 return std::get<1>(this->content)->GetTotalLength();
             default:
                 assert(false);
+				throw SlokedError("TextBlockHandle: Invalid content index");
         }
     }
 
@@ -72,6 +75,7 @@ namespace sloked {
                 return std::get<1>(this->content)->GetLine(line);
             default:
                 assert(false);
+				throw SlokedError("TextBlockHandle: Invalid content index");
         }
     }
 
@@ -83,6 +87,7 @@ namespace sloked {
                 return std::get<1>(this->content)->Empty();
             default:
                 assert(false);
+				throw SlokedError("TextBlockHandle: Invalid content index");
         }
     }
 
@@ -106,6 +111,7 @@ namespace sloked {
                 break;
             default:
                 assert(false);
+				throw SlokedError("TextBlockHandle: Invalid content index");
         }
     }
 
@@ -139,6 +145,7 @@ namespace sloked {
                 return os << *std::get<1>(block.content);
             default:
                 assert(false);
+				throw SlokedError("TextBlockHandle: Invalid content index");
         }
     }
 

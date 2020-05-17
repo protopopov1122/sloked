@@ -75,7 +75,7 @@ namespace sloked {
 
             default:
                 assert(false);
-                break;
+                throw SlokedError("CLI: Invalid CLI value type");
         }
     }
 
