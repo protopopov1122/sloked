@@ -45,6 +45,30 @@ namespace sloked {
         return SlokedPosixNamespaceEnvironment::HomeDir();
     }
 }  // namespace sloked
+#elif defined(SLOKED_PLATFORM_WIN32)
+#include "sloked/core/Error.h"
+
+namespace sloked {
+
+    std::unique_ptr<SlokedFilesystemAdapter>
+        SlokedNamespaceCompat::NewFilesystem(const std::string &) {
+        throw SlokedError("Compat: Not supported yet!");
+    }
+
+    std::unique_ptr<SlokedFilesystemAdapter>
+        SlokedNamespaceCompat::NewRootFilesystem() {
+        throw SlokedError("Compat: Not supported yet!");
+    }
+
+    SlokedPath SlokedNamespaceCompat::GetWorkDir() {
+        throw SlokedError("Compat: Not supported yet!");
+    }
+
+    SlokedPath SlokedNamespaceCompat::GetHomeDir() {
+        throw SlokedError("Compat: Not supported yet!");
+    }
+}  // namespace sloked
+
 #else
 #error "Build system error: Platform not defined"
 #endif

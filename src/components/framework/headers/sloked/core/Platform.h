@@ -26,6 +26,8 @@
 #define SLOKED_PLATFORM_OS_LINUX
 #elif defined(__unix__)
 #define SLOKED_PLATFORM_OS_UNIX
+#elif defined(_WIN32)
+#define SLOKED_PLATFORM_OS_WINDOWS
 #else
 #error "Unsupported platform"
 #endif

@@ -30,6 +30,16 @@ namespace sloked {
         return std::make_unique<SlokedPosixAwaitablePoll>();
     }
 }  // namespace sloked
+
+#elif defined(SLOKED_PLATFORM_WIN32)
+#include "sloked/core/Error.h"
+
+namespace sloked {
+
+    std::unique_ptr<SlokedIOPoll> SlokedIOPollCompat::NewPoll() {
+        throw SlokedError("Compat: Not supported yet!");
+    }
+}  // namespace sloked
 #else
 #error "Build system error: Platform not defined"
 #endif

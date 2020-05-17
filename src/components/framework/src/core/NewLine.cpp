@@ -22,6 +22,7 @@
 #include "sloked/core/NewLine.h"
 
 #include <algorithm>
+#include <iostream>
 
 #include "sloked/core/Encoding.h"
 #include "sloked/core/Error.h"

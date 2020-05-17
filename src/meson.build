@@ -3,7 +3,9 @@ project('sloked', 'cpp', 'c', default_options : ['cpp_std=c++17', 'warning_level
 compiler_id = meson.get_compiler('cpp').get_id()
 if compiler_id == 'gcc' or compiler_id == 'clang'
   add_project_arguments('-Wno-unused-parameter', '-pedantic', language : 'cpp')
-  add_project_link_arguments('-rdynamic', language : 'cpp')
+  if build_machine.system() != 'windows'
+	add_project_link_arguments('-rdynamic', language : 'cpp')
+  endif
 elif compiler_id == 'pgi'
   add_project_arguments('-noswitcherror', language : 'cpp')
   add_project_link_arguments('-noswitcherror', '-rdynamic', language : 'cpp')
@@ -33,7 +35,6 @@ if get_option('compression') == 'zlib'
   sloked_compression_flags = sloked_zlib_compression_flags
   sloked_disable_compression = false
 endif
-subdir('components/platform/posix')
 if get_option('scripting_lua')
   subdir('components/script/lua')
   sloked_scripting = sloked_lua_bindings
@@ -51,9 +52,7 @@ if get_option('build_headless')
   subdir('components/headless/application-lib')
 endif
 
-
-sloked_platform = sloked_posix_platform
-sloked_platform_flags = sloked_posix_platform_flags
+subdir('components/platform/' + get_option('platform'))
 subdir('components/compat')
 
 subdir('components/frontend-cpp')

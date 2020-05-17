@@ -23,3 +23,6 @@ sloked_posix_platform_lib = static_library('sloked_posix_platform', posix_platfo
   dependencies : [ncurses, dl, atomic, sloked_framework])
 sloked_posix_platform = declare_dependency(link_with : sloked_posix_platform_lib,
   include_directories : include_directories('headers'))
+ 
+sloked_platform = sloked_posix_platform
+sloked_platform_flags = sloked_posix_platform_flags

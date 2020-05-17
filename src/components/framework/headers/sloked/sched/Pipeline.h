@@ -37,6 +37,23 @@ namespace sloked {
             return std::move(task);
         }
     };
+	
+	template <typename Result, typename Error>
+	struct SupplierSetResult {
+		template <typename Fn>
+		static void Apply(const TaskResultSupplier<Result, Error> &supplier, const Fn &generator) {
+			supplier.SetResult(generator());
+		}
+	};
+	
+	template <typename Error>
+	struct SupplierSetResult<void, Error> {
+		template <typename Fn>
+		static void Apply(const TaskResultSupplier<void, Error> &supplier, const Fn &generator) {
+			generator();
+			supplier.SetResult();
+		}
+	};
 
     template <typename Source>
     struct UnwrapTaskResult<Source,
@@ -58,14 +75,12 @@ namespace sloked {
                                 .Notify([supplier](const auto &result) {
                                     switch (result.State()) {
                                         case TaskResultStatus::Ready:
-                                            if constexpr (std::is_void_v<
-                                                              typename Type::
-                                                                  Result>) {
-                                                supplier.SetResult();
-                                            } else {
-                                                supplier.SetResult(std::move(
-                                                    result.GetResult()));
-                                            }
+											SupplierSetResult<typename Type::Result, typename Type::Error>::Apply(supplier, [&] {
+												if constexpr (!std::is_void_v<typename Type::Result>) {
+													return std::move(
+														result.GetResult());
+												}
+											});
                                             break;
 
                                         case TaskResultStatus::Error:
@@ -335,21 +350,13 @@ namespace sloked {
                         switch (result.State()) {
                             case TaskResultStatus::Ready:
                                 try {
-                                    if constexpr (std::is_void_v<
-                                                      TargetResult>) {
-                                        Transform<
-                                            TransformFn,
-                                            std::remove_reference_t<decltype(
-                                                result)>>::Make(transform,
-                                                                result);
-                                        supplier.SetResult();
-                                    } else {
-                                        supplier.SetResult(
-                                            Transform<TransformFn,
-                                                      std::remove_reference_t<
-                                                          decltype(result)>>::
-                                                Make(transform, result));
-                                    }
+									SupplierSetResult<TargetResult, Error>::Apply(supplier, [&] {
+										return Transform<
+												TransformFn,
+												std::remove_reference_t<decltype(
+													result)>>::Make(transform,
+																	result);
+									});
                                 } catch (const Cancel &) {
                                     supplier.Cancel();
                                 } catch (const Error &err) {
@@ -453,7 +460,7 @@ namespace sloked {
                     std::forward<Source>(src), std::move(lifetime));
             }
 
-         private:
+         private:			
             template <typename GenerateFn, typename Source>
             static auto Invoke(const GenerateFn &generate, Source &&src,
                                std::weak_ptr<SlokedLifetime> lifetime) {
@@ -464,12 +471,11 @@ namespace sloked {
                     [generate, supplier](const auto &result) {
                         switch (result.State()) {
                             case TaskResultStatus::Ready:
-                                if constexpr (std::is_void_v<Result>) {
-                                    supplier.SetResult();
-                                } else {
-                                    supplier.SetResult(
-                                        std::move(result.GetResult()));
-                                }
+								SupplierSetResult<Result, Error>::Apply(supplier, [&] {
+									if constexpr (!std::is_void_v<Result>) {
+										return std::move(result.GetResult());
+									}
+								});
                                 break;
 
                             case TaskResultStatus::Error:
@@ -478,12 +484,7 @@ namespace sloked {
 
                             case TaskResultStatus::Cancelled:
                                 try {
-                                    if constexpr (std::is_void_v<Result>) {
-                                        generate();
-                                        supplier.SetResult();
-                                    } else {
-                                        supplier.SetResult(generate());
-                                    }
+									SupplierSetResult<Result, Error>::Apply(supplier, generate);
                                 } catch (const Error &err) {
                                     supplier.SetError(err);
                                 }
@@ -644,23 +645,18 @@ namespace sloked {
                     [catcher, supplier](const auto &result) {
                         switch (result.State()) {
                             case TaskResultStatus::Ready:
-                                if constexpr (std::is_void_v<Result>) {
-                                    supplier.SetResult();
-                                } else {
-                                    supplier.SetResult(
-                                        std::move(result.GetResult()));
-                                }
+								SupplierSetResult<Result, Error>::Apply(supplier, [&] {
+									if constexpr (!std::is_void_v<Result>) {
+										return std::move(result.GetResult());
+									}
+								});
                                 break;
 
                             case TaskResultStatus::Error:
-                                try {
-                                    if constexpr (std::is_void_v<Result>) {
-                                        catcher(result.GetError());
-                                        supplier.SetResult();
-                                    } else {
-                                        supplier.SetResult(
-                                            catcher(result.GetError()));
-                                    }
+                                try {									
+									SupplierSetResult<Result, Error>::Apply(supplier, [&] {
+										return catcher(result.GetError());
+									});
                                 } catch (const Error &err) {
                                     supplier.SetError(err);
                                 }

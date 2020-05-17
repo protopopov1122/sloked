@@ -55,6 +55,8 @@ namespace sloked {
         const Encoding &encoding) {
 #if defined(SLOKED_PLATFORM_OS_LINUX) || defined(SLOKED_PLATFORM_OS_UNIX)
         return NewLine::LF(encoding);
+#elif defined(SLOKED_PLATFORM_OS_WINDOWS)
+        return NewLine::CRLF(encoding);
 #else
 #error "Internal error: Unknown platform"
 #endif

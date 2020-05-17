@@ -177,7 +177,7 @@ namespace sloked {
                 return JsonLexem{JsonLexem::Type::Boolean, false, position};
             } else if (starts_with(this->current_line, NullLiteral)) {
                 this->Shift(NullLiteral.size());
-                return JsonLexem{JsonLexem::Type::Null, 0l, position};
+                return JsonLexem{JsonLexem::Type::Null, int64_t{0}, position};
             } else {
                 return {};
             }

@@ -31,6 +31,16 @@ namespace sloked {
         return terminal;
     }
 }  // namespace sloked
+#elif defined(SLOKED_PLATFORM_WIN32)
+#include "sloked/core/Error.h"
+
+namespace sloked {
+
+    SlokedDuplexTerminal &SlokedTerminalCompat::GetSystemTerminal() {
+        throw SlokedError("Compat: Not supported yet!");
+    }
+}  // namespace sloked
+
 #else
 #error "Build system error: Platform not defined"
 #endif
