@@ -32,12 +32,12 @@ namespace sloked {
 }  // namespace sloked
 
 #elif defined(SLOKED_PLATFORM_WIN32)
-#include "sloked/core/Error.h"
+#include "sloked/core/awaitable/Win32.h"
 
 namespace sloked {
 
     std::unique_ptr<SlokedIOPoll> SlokedIOPollCompat::NewPoll() {
-        throw SlokedError("Compat: Not supported yet!");
+        return std::make_unique<SlokedWin32AwaitablePoll>();
     }
 }  // namespace sloked
 #else

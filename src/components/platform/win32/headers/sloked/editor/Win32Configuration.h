@@ -19,30 +19,17 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/compat/editor/configuration/Compat.h"
+#ifndef SLOKED_EDITOR_WIN32CONFIGURATION_H_
+#define SLOKED_EDITOR_WIN32CONFIGURATION_H_
 
-#ifdef SLOKED_PLATFORM_POSIX
-#include "sloked/editor/PosixConfiguration.h"
-
-namespace sloked {
-
-    SlokedConfigurationLoader &SlokedConfigurationLoaderCompat::GetLoader() {
-        static SlokedXdgConfigurationLoader loader;
-        return loader;
-    }
-}  // namespace sloked
-
-#elif defined(SLOKED_PLATFORM_WIN32)
-#include "sloked/editor/Win32Configuration.h"
+#include "sloked/editor/Configuration.h"
 
 namespace sloked {
 
-    SlokedConfigurationLoader &SlokedConfigurationLoaderCompat::GetLoader() {
-        static SlokedWin32ConfigurationLoader loader;
-        return loader;
-    }
+    class SlokedWin32ConfigurationLoader : public SlokedConfigurationLoader {
+     public:
+        KgrValue Load(const std::string &) const final;
+    };
 }  // namespace sloked
 
-#else
-#error "Build system error: Platform not defined"
 #endif

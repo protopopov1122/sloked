@@ -31,11 +31,12 @@ namespace sloked {
     }
 }  // namespace sloked
 #elif defined(SLOKED_PLATFORM_WIN32)
-#include "sloked/core/Error.h"
+#include "sloked/core/win32/Library.h"
 
 namespace sloked {
     const SlokedDynamicLibraryLoader &SlokedDynamicLibraryCompat::GetLoader() {
-        throw SlokedError("Compat: Not supported yet!");
+        static SlokedWin32DynamicLibraryLoader loader;
+        return loader;
     }
 }  // namespace sloked
 

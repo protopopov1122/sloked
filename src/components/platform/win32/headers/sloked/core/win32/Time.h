@@ -19,30 +19,32 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/compat/editor/configuration/Compat.h"
+#ifndef SLOKED_CORE_WIN32_TIME_H_
+#define SLOKED_CORE_WIN32_TIME_H_
 
-#ifdef SLOKED_PLATFORM_POSIX
-#include "sloked/editor/PosixConfiguration.h"
+#include <winsock2.h>
 
-namespace sloked {
+#include <chrono>
 
-    SlokedConfigurationLoader &SlokedConfigurationLoaderCompat::GetLoader() {
-        static SlokedXdgConfigurationLoader loader;
-        return loader;
-    }
-}  // namespace sloked
-
-#elif defined(SLOKED_PLATFORM_WIN32)
-#include "sloked/editor/Win32Configuration.h"
+#include "sloked/Base.h"
 
 namespace sloked {
 
-    SlokedConfigurationLoader &SlokedConfigurationLoaderCompat::GetLoader() {
-        static SlokedWin32ConfigurationLoader loader;
-        return loader;
+    template <typename T>
+    void DurationToTimeval(const T &src, struct timeval &tv) {
+        if (src > std::chrono::seconds(1)) {
+            tv.tv_sec =
+                std::chrono::duration_cast<std::chrono::seconds>(src).count();
+            tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(
+                             src - std::chrono::seconds(tv.tv_sec))
+                             .count();
+        } else {
+            tv.tv_sec = 0;
+            tv.tv_usec =
+                std::chrono::duration_cast<std::chrono::microseconds>(src)
+                    .count();
+        }
     }
 }  // namespace sloked
 
-#else
-#error "Build system error: Platform not defined"
 #endif

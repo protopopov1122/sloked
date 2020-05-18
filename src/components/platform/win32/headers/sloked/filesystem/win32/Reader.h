@@ -19,30 +19,25 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/compat/editor/configuration/Compat.h"
+#ifndef SLOKED_FILESYSTEM_WIN32_READER_H_
+#define SLOKED_FILESYSTEM_WIN32_READER_H_
 
-#ifdef SLOKED_PLATFORM_POSIX
-#include "sloked/editor/PosixConfiguration.h"
-
-namespace sloked {
-
-    SlokedConfigurationLoader &SlokedConfigurationLoaderCompat::GetLoader() {
-        static SlokedXdgConfigurationLoader loader;
-        return loader;
-    }
-}  // namespace sloked
-
-#elif defined(SLOKED_PLATFORM_WIN32)
-#include "sloked/editor/Win32Configuration.h"
+#include "sloked/filesystem/win32/FileIO.h"
 
 namespace sloked {
 
-    SlokedConfigurationLoader &SlokedConfigurationLoaderCompat::GetLoader() {
-        static SlokedWin32ConfigurationLoader loader;
-        return loader;
-    }
+    class SlokedWin32FileReader : public SlokedWin32FileIO,
+                                  public SlokedIOReader {
+     public:
+        SlokedWin32FileReader(FILE *);
+        SlokedWin32FileReader(SlokedWin32FileReader &&) = default;
+        SlokedWin32FileReader &operator=(SlokedWin32FileReader &&) = default;
+
+        std::string Read(std::size_t) override;
+        int Read() override;
+        bool Unread(int) override;
+        bool Eof() override;
+    };
 }  // namespace sloked
 
-#else
-#error "Build system error: Platform not defined"
 #endif
