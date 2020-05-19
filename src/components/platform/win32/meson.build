@@ -6,7 +6,8 @@ win32_platform_src = [
   'src/filesystem/win32/FileIO.cpp',
   'src/filesystem/win32/Reader.cpp',
   'src/filesystem/win32/Writer.cpp',
-  'src/filesystem/win32/View.cpp'
+  'src/filesystem/win32/View.cpp',
+  'src/namespace/win32/Filesystem.cpp'
 ]
 
 atomic = cpp.find_library('atomic', required : false)

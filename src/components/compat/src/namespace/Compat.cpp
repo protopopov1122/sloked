@@ -47,17 +47,18 @@ namespace sloked {
 }  // namespace sloked
 #elif defined(SLOKED_PLATFORM_WIN32)
 #include "sloked/core/Error.h"
+#include "sloked/namespace/win32/Filesystem.h"
 
 namespace sloked {
 
     std::unique_ptr<SlokedFilesystemAdapter>
-        SlokedNamespaceCompat::NewFilesystem(const std::string &) {
-        throw SlokedError("Compat: Not supported yet!");
+        SlokedNamespaceCompat::NewFilesystem(const std::string &path) {
+        return std::make_unique<SlokedWin32FilesystemAdapter>(path);
     }
 
     std::unique_ptr<SlokedFilesystemAdapter>
         SlokedNamespaceCompat::NewRootFilesystem() {
-        throw SlokedError("Compat: Not supported yet!");
+        return std::make_unique<SlokedWin32FilesystemAdapter>("\\");
     }
 
     SlokedPath SlokedNamespaceCompat::GetWorkDir() {

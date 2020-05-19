@@ -19,32 +19,42 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sloked/namespace/posix/Filesystem.h"
+#include "sloked/namespace/win32/Filesystem.h"
 
 #include "sloked/core/Error.h"
 #include "sloked/core/URI.h"
-#include "sloked/filesystem/posix/File.h"
+#include "sloked/filesystem/win32/File.h"
+#include <cstring>
 
 namespace sloked {
 
-    SlokedPosixFilesystemAdapter::SlokedPosixFilesystemAdapter(
-        std::string_view root)
-        : rootPath(root) {}
+    static const SlokedPath::Preset Win32Preset{"\\/", ".", "..", ""};
 
-    const SlokedPath::Preset &SlokedPosixFilesystemAdapter::GetPreset() {
-        static const SlokedPath::Preset PosixPreset{"/", ".", "..", "~"};
-        return PosixPreset;
+    static SlokedPath Win32Path(std::string_view path) {
+        if (path.size() >= 2 && std::isalpha(path[0]) && path[1] == ':') {
+            return SlokedPath(path.substr(0, 2), path.substr(2), Win32Preset);
+        } else {
+            return SlokedPath(path, Win32Preset);
+        }
     }
 
-    const SlokedPath &SlokedPosixFilesystemAdapter::GetRoot() const {
+    SlokedWin32FilesystemAdapter::SlokedWin32FilesystemAdapter(
+        std::string_view root)
+        : rootPath(Win32Path(root)) {}
+    
+    const SlokedPath::Preset &SlokedWin32FilesystemAdapter::GetPreset() {
+        return Win32Preset;
+    }
+
+    const SlokedPath &SlokedWin32FilesystemAdapter::GetRoot() const {
         return this->rootPath;
     }
 
-    std::unique_ptr<SlokedFile> SlokedPosixFilesystemAdapter::NewFile(
+    std::unique_ptr<SlokedFile> SlokedWin32FilesystemAdapter::NewFile(
         const SlokedPath &path) const {
         SlokedPath realPath = path.Root();
         if (path.IsAbsolute()) {
-            realPath = this->GetRoot().RelativeTo(path.RelativeTo(path.Root()));
+            realPath = this->GetRoot().RelativeTo(path.RelativeTo(path.Root().Migrate("")));
         } else {
             realPath = this->GetRoot().RelativeTo(path);
         }
@@ -52,24 +62,24 @@ namespace sloked {
             throw SlokedError(std::string{"Path out of root scope: "} +
                               path.ToString());
         } else {
-            return std::make_unique<SlokedPosixFile>(realPath.ToString());
+            return std::make_unique<SlokedWin32File>(realPath.ToString());
         }
     }
-    SlokedPath SlokedPosixFilesystemAdapter::ToPath(
+    SlokedPath SlokedWin32FilesystemAdapter::ToPath(
         const std::string &path) const {
-        return SlokedPath(path);
+        return Win32Path(path);
     }
 
-    std::string SlokedPosixFilesystemAdapter::ToURI(
+    std::string SlokedWin32FilesystemAdapter::ToURI(
         const SlokedPath &path) const {
         SlokedPath realPath =
             path.IsAbsolute() ? path.RelativeTo(path.Root()) : path;
-        return SlokedUri("file", realPath.RelativeTo(this->rootPath).ToString())
+        return SlokedUri("file", realPath.RelativeTo(this->rootPath).Migrate(SlokedPath::Preset{"/"}).ToString())
             .ToString();
     }
 
     std::unique_ptr<SlokedFilesystemAdapter>
-        SlokedPosixFilesystemAdapter::Rebase(std::string_view path) const {
-        return std::make_unique<SlokedPosixFilesystemAdapter>(path);
+        SlokedWin32FilesystemAdapter::Rebase(std::string_view path) const {
+        return std::make_unique<SlokedWin32FilesystemAdapter>(path);
     }
 }  // namespace sloked

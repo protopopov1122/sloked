@@ -152,21 +152,22 @@ namespace sloked {
             throw SlokedError("Path: Different presets");
         }
         if (!this->IsAbsolute()) {
-            if (this->prefix != root.prefix && !this->prefix.empty()) {
+            if (this->prefix != root.prefix && !this->prefix.empty() && !root.prefix.empty()) {
                 throw SlokedError("Path: Different prefixes");
             }
             SlokedPath path(root);
+            path.prefix = root.prefix.empty() ? this->prefix : "";
             path.path.insert(path.path.end(), this->path.begin(),
                              this->path.end());
             path.Normalize();
             return path;
         } else if (root.IsAbsolute()) {
-            if (this->prefix != root.prefix) {
+            if (this->prefix != root.prefix && !this->prefix.empty() && !root.prefix.empty()) {
                 throw SlokedError("Path: Different prefixes");
             }
             SlokedPath path(this->preset);
-            path.prefix = "";
-            path.path = {"."};
+            path.prefix = this->prefix.empty() != root.prefix.empty() ? this->prefix : "";
+            path.path = {path.preset.GetCurrentDir()};
             std::size_t i = 0;
             for (; i < std::min(root.path.size(), this->path.size()); i++) {
                 if (root.path[i] != this->path[i]) {
@@ -325,7 +326,7 @@ namespace sloked {
             this->literal = this->prefix;
             this->literal.push_back(this->preset.GetSeparators().at(0));
         } else {
-            this->literal = "";
+            this->literal = this->prefix;
         }
         for (std::size_t i = 0; i < this->path.size(); i++) {
             literal += this->path.at(i);
