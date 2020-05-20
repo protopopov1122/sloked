@@ -30,7 +30,6 @@ namespace sloked {
      public:
         SlokedWin32FilesystemAdapter(std::string_view);
 
-        const SlokedPath::Preset &GetPreset() override;
         const SlokedPath &GetRoot() const override;
         std::unique_ptr<SlokedFile> NewFile(const SlokedPath &) const override;
         SlokedPath ToPath(const std::string &) const override;

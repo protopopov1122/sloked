@@ -31,11 +31,6 @@ namespace sloked {
         std::string_view root)
         : rootPath(root) {}
 
-    const SlokedPath::Preset &SlokedPosixFilesystemAdapter::GetPreset() {
-        static const SlokedPath::Preset PosixPreset{"/", ".", "..", "~"};
-        return PosixPreset;
-    }
-
     const SlokedPath &SlokedPosixFilesystemAdapter::GetRoot() const {
         return this->rootPath;
     }

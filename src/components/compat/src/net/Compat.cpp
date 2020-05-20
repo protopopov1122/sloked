@@ -32,12 +32,21 @@ namespace sloked {
     }
 }  // namespace sloked
 #elif defined(SLOKED_PLATFORM_WIN32)
-#include "sloked/core/Error.h"
+#include "sloked/net/Win32Socket.h"
+#include "WinSock2.h"
 
 namespace sloked {
 
     SlokedSocketFactory &SlokedNetCompat::GetNetwork() {
-        throw SlokedError("Compat: Not supported yet!");
+        static bool Initialised = false;
+        if (!Initialised) {
+            const auto wVersionRequested = MAKEWORD(2, 2);
+            WSADATA wsaData;
+            WSAStartup(wVersionRequested, &wsaData);
+            Initialised = true;
+        }
+        static SlokedWin32SocketFactory factory;
+        return factory;
     }
 }  // namespace sloked
 

@@ -23,28 +23,54 @@
 
 #include "sloked/core/Error.h"
 #include "sloked/core/URI.h"
+#include "sloked/core/String.h"
+#include "sloked/namespace/win32/Path.h"
 #include "sloked/filesystem/win32/File.h"
 #include <cstring>
+#include <iostream>
 
 namespace sloked {
 
-    static const SlokedPath::Preset Win32Preset{"\\/", ".", "..", ""};
-
-    static SlokedPath Win32Path(std::string_view path) {
-        if (path.size() >= 2 && std::isalpha(path[0]) && path[1] == ':') {
-            return SlokedPath(path.substr(0, 2), path.substr(2), Win32Preset);
-        } else {
-            return SlokedPath(path, Win32Preset);
+    SlokedPath Win32Path(std::string_view rawpath) {
+        SlokedPath path{""};
+        std::string prefix{""};
+        if (rawpath.size() >= 2 && std::isalpha(rawpath[0]) && rawpath[1] == ':') {
+            prefix = rawpath.substr(0, 2);
+            rawpath.remove_prefix(2);
         }
+        std::string_view::size_type lastDelim{0};
+        for (auto it = rawpath.find("\\"); it != rawpath.npos; it = rawpath.find("\\", lastDelim)) {
+            if (it == 0) {
+                path = path.RelativeTo(path.Root());
+            }
+            if (it - lastDelim > 0) {
+                path = path.Child(rawpath.substr(lastDelim, it - lastDelim));
+            }
+            lastDelim = it + 1;
+        }
+        if (lastDelim < rawpath.size()) {
+            path = path.Child(rawpath.substr(lastDelim));
+        }
+        return path.Migrate(prefix);
+    }
+
+    std::string PathToWin32(const SlokedPath &path) {
+        std::string rawpath{path.GetPrefix()};
+        if (path.IsAbsolute()) {
+            rawpath.push_back('\\');
+        }
+        for (auto it = path.Components().begin(); it != path.Components().end(); ++it) {
+            rawpath.append(*it);
+            if (it + 1 != path.Components().end()) {
+                rawpath.push_back('\\');
+            }
+        }
+        return rawpath;
     }
 
     SlokedWin32FilesystemAdapter::SlokedWin32FilesystemAdapter(
         std::string_view root)
         : rootPath(Win32Path(root)) {}
-    
-    const SlokedPath::Preset &SlokedWin32FilesystemAdapter::GetPreset() {
-        return Win32Preset;
-    }
 
     const SlokedPath &SlokedWin32FilesystemAdapter::GetRoot() const {
         return this->rootPath;
@@ -54,7 +80,7 @@ namespace sloked {
         const SlokedPath &path) const {
         SlokedPath realPath = path.Root();
         if (path.IsAbsolute()) {
-            realPath = this->GetRoot().RelativeTo(path.RelativeTo(path.Root().Migrate("")));
+            realPath = this->GetRoot().RelativeTo(path.RelativeTo(path.Root()));
         } else {
             realPath = this->GetRoot().RelativeTo(path);
         }
@@ -62,7 +88,7 @@ namespace sloked {
             throw SlokedError(std::string{"Path out of root scope: "} +
                               path.ToString());
         } else {
-            return std::make_unique<SlokedWin32File>(realPath.ToString());
+            return std::make_unique<SlokedWin32File>(PathToWin32(realPath));
         }
     }
     SlokedPath SlokedWin32FilesystemAdapter::ToPath(
@@ -74,7 +100,7 @@ namespace sloked {
         const SlokedPath &path) const {
         SlokedPath realPath =
             path.IsAbsolute() ? path.RelativeTo(path.Root()) : path;
-        return SlokedUri("file", realPath.RelativeTo(this->rootPath).Migrate(SlokedPath::Preset{"/"}).ToString())
+        return SlokedUri("file", realPath.RelativeTo(this->rootPath).ToString())
             .ToString();
     }
 

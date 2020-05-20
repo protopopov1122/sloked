@@ -3,11 +3,7 @@ import { ScreenClient, ScreenSizeClient, ScreenSplitterDirection } from '../lib/
 import { ScreenInputClient, KeyInputEvent, ControlKeyCode } from '../lib/clients/screenInput'
 import { DocumentSetClient } from '../lib/clients/documents'
 import * as net from 'net'
-import { NetSlaveServer, AuthServer, BinarySerializer, EncryptedStream, Crypto,
-    DefaultCrypto, EncryptedDuplexStream, ModifyableCredentialStorage,
-    DefaultCredentialStorage, CompressedStream,
-    Authenticator, SlaveAuthenticator } from 'sloked-nodejs'
-import { Duplex } from 'stream'
+import { NetSlaveServer, AuthServer, BinarySerializer } from 'sloked-nodejs'
 import * as path from 'path'
 import { ShutdownClient } from '../lib/clients/shutdown'
 import { TextPaneClient, TextGraphics, BackgroundGraphics } from '../lib/clients/textPane'
@@ -17,16 +13,7 @@ async function initializeEditor(host: string, port: number): Promise<NetSlaveSer
     await new Promise<any>(resolve => {
         socket.connect(port, host, resolve)
     })
-
-    const crypto: Crypto = new DefaultCrypto()
-    const key: Buffer = await crypto.deriveKey('password', 'salt')
-    const cryptoStream: EncryptedDuplexStream = new EncryptedStream(socket, crypto, key)
-    const stream: Duplex = new CompressedStream(cryptoStream)
-    const credentials: ModifyableCredentialStorage = new DefaultCredentialStorage(crypto)
-    credentials.newAccount('user1', 'password1')
-    const authenticator: Authenticator = new SlaveAuthenticator(crypto, credentials, 'salt', cryptoStream.getEncryption())
-    const slave = new NetSlaveServer(stream, new BinarySerializer(), authenticator)
-    await slave.authorize('user1')
+    const slave = new NetSlaveServer(socket, new BinarySerializer())
     return slave
 }
 

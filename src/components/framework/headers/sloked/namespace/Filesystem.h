@@ -30,7 +30,6 @@ namespace sloked {
     class SlokedFilesystemAdapter {
      public:
         virtual ~SlokedFilesystemAdapter() = default;
-        virtual const SlokedPath::Preset &GetPreset() = 0;
         virtual const SlokedPath &GetRoot() const = 0;
         virtual std::unique_ptr<SlokedFile> NewFile(
             const SlokedPath &) const = 0;

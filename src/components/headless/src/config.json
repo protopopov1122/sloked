@@ -1,62 +1,17 @@
 {
     "configurationServer": {
-        "host": "::1",
+        "host": "127.0.0.1",
         "port": 4567
     },
     "containers": {
         "main": {
-            "crypto": {
-                "authentication": {
-                    "master": {
-                        "defaultUser": {
-                            "restrictAccess": {
-                                "content": [],
-                                "whitelist": true
-                            },
-                            "restrictModification": {
-                                "content": [],
-                                "whitelist": true
-                            }
-                        },
-                        "masterPassword": "password",
-                        "salt": "salt",
-                        "users": [
-                            {
-                                "id": "user1",
-                                "password": "password1",
-                                "restrictAccess": {
-                                    "content": [
-                                        "/document",
-                                        "/namespace",
-                                        "/screen",
-                                        "/editor",
-                                        "/plugins"
-                                    ],
-                                    "whitelist": true
-                                },
-                                "restrictModification": {
-                                    "content": [
-                                        "/screen",
-                                        "/plugins"
-                                    ],
-                                    "whitelist": true
-                                }
-                            }
-                        ]
-                    }
-                },
-                "defaultKey": {
-                    "password": "password"
-                },
-                "salt": "salt"
-            },
             "network": {
                 "buffering": 5,
                 "compression": true
             },
             "server": {
                 "netServer": {
-                    "host": "::1",
+                    "host": "127.0.0.1",
                     "port": 1234
                 },
                 "restrictAccess": {
@@ -95,37 +50,20 @@
             }
         },
         "secondary": {
-            "crypto": {
-                "authentication": {
-                    "slave": {
-                        "users": [
-                            {
-                                "id": "user1",
-                                "password": "password1"
-                            }
-                        ]
-                    }
-                },
-                "defaultKey": {
-                    "password": "password"
-                },
-                "salt": "salt"
-            },
             "network": {
                 "buffering": 5,
                 "compression": true
             },
             "server": {
                 "screen": {
-                    "uri": "graphics:///?fallback=terminal",
+                    "uri": "null:",
                     "tabWidth": 2
                 },
                 "slave": {
                     "address": {
                         "host": "localhost",
                         "port": 1234
-                    },
-                    "authorize": "user1"
+                    }
                 }
             }
         }

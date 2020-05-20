@@ -19,26 +19,17 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_NAMESPACE_POSIX_FILESYSTEM_H_
-#define SLOKED_NAMESPACE_POSIX_FILESYSTEM_H_
+#ifndef SLOKED_NAMESPACE_WIN32_ENVIRONMENT_H_
+#define SLOKED_NAMESPACE_WIN32_ENVIRONMENT_H_
 
-#include "sloked/namespace/Filesystem.h"
+#include "sloked/namespace/Path.h"
 
 namespace sloked {
 
-    class SlokedPosixFilesystemAdapter : public SlokedFilesystemAdapter {
+    class SlokedWin32NamespaceEnvironment {
      public:
-        SlokedPosixFilesystemAdapter(std::string_view);
-
-        const SlokedPath &GetRoot() const override;
-        std::unique_ptr<SlokedFile> NewFile(const SlokedPath &) const override;
-        SlokedPath ToPath(const std::string &) const override;
-        std::string ToURI(const SlokedPath &) const override;
-        std::unique_ptr<SlokedFilesystemAdapter> Rebase(
-            std::string_view) const override;
-
-     private:
-        SlokedPath rootPath;
+        static SlokedPath WorkDir();
+        static SlokedPath HomeDir();
     };
 }  // namespace sloked
 

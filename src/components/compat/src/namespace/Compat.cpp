@@ -46,8 +46,8 @@ namespace sloked {
     }
 }  // namespace sloked
 #elif defined(SLOKED_PLATFORM_WIN32)
-#include "sloked/core/Error.h"
 #include "sloked/namespace/win32/Filesystem.h"
+#include "sloked/namespace/win32/Environment.h"
 
 namespace sloked {
 
@@ -62,11 +62,11 @@ namespace sloked {
     }
 
     SlokedPath SlokedNamespaceCompat::GetWorkDir() {
-        throw SlokedError("Compat: Not supported yet!");
+        return SlokedWin32NamespaceEnvironment::WorkDir();
     }
 
     SlokedPath SlokedNamespaceCompat::GetHomeDir() {
-        throw SlokedError("Compat: Not supported yet!");
+        return SlokedWin32NamespaceEnvironment::HomeDir();
     }
 }  // namespace sloked
 
