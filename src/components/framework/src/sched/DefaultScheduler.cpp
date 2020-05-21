@@ -154,7 +154,7 @@ namespace sloked {
 
     bool SlokedDefaultScheduler::TimerTaskCompare::operator()(
         TimerTask *t1, TimerTask *t2) const {
-        return t1 != t2 && t1->GetTime() < t2->GetTime();
+        return t1->GetTime() < t2->GetTime() || (t1->GetTime() == t2->GetTime() && t1 < t2);
     }
 
     void SlokedDefaultScheduler::Run() {
