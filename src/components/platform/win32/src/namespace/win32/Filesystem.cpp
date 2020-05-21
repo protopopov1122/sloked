@@ -27,15 +27,13 @@
 #include "sloked/namespace/win32/Path.h"
 #include "sloked/filesystem/win32/File.h"
 #include <cstring>
-#include <iostream>
 
 namespace sloked {
 
     SlokedPath Win32Path(std::string_view rawpath) {
         SlokedPath path{""};
-        std::string prefix{""};
         if (rawpath.size() >= 2 && std::isalpha(rawpath[0]) && rawpath[1] == ':') {
-            prefix = rawpath.substr(0, 2);
+            path = {rawpath.substr(0, 2)};
             rawpath.remove_prefix(2);
         }
         std::string_view::size_type lastDelim{0};
@@ -51,18 +49,23 @@ namespace sloked {
         if (lastDelim < rawpath.size()) {
             path = path.Child(rawpath.substr(lastDelim));
         }
-        return path.Migrate(prefix);
+        return path;
     }
 
     std::string PathToWin32(const SlokedPath &path) {
-        std::string rawpath{path.GetPrefix()};
+        std::string rawpath{};
         if (path.IsAbsolute()) {
             rawpath.push_back('\\');
         }
         for (auto it = path.Components().begin(); it != path.Components().end(); ++it) {
-            rawpath.append(*it);
-            if (it + 1 != path.Components().end()) {
-                rawpath.push_back('\\');
+            if (it == path.Components().begin() &&
+                ends_with(*it, ":")) {
+                rawpath = *it + rawpath;
+            } else {
+                rawpath.append(*it);
+                if (it + 1 != path.Components().end()) {
+                    rawpath.push_back('\\');
+                }
             }
         }
         return rawpath;

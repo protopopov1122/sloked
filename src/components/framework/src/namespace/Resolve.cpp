@@ -49,8 +49,7 @@ namespace sloked {
                 dir.Components().front() == dir.GetPreset().GetHomeDir() &&
                 !dir.GetPreset().GetHomeDir().empty()) {
                 return dir
-                    .RelativeTo(SlokedPath(dir.GetPrefix(),
-                                           dir.GetPreset().GetHomeDir(),
+                    .RelativeTo(SlokedPath(dir.GetPreset().GetHomeDir(),
                                            dir.GetPreset()))
                     .RelativeTo(this->homeDir.value());
             } else {

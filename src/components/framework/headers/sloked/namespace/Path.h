@@ -63,9 +63,7 @@ namespace sloked {
             std::string_view value;
         };
 
-        SlokedPath(String);
-        SlokedPath(String, String, Preset = Preset{std::string{"/"}});
-        SlokedPath(String, Preset);
+        SlokedPath(String, Preset = Preset{std::string{"/"}});
         SlokedPath(const SlokedPath &) = default;
         SlokedPath(SlokedPath &&) = default;
         virtual ~SlokedPath() = default;
@@ -74,7 +72,6 @@ namespace sloked {
         SlokedPath &operator=(SlokedPath &&) = default;
 
         const Preset &GetPreset() const;
-        const std::string &GetPrefix() const;
         const std::vector<std::string> &Components() const;
         const std::string &ToString() const;
 
@@ -85,9 +82,7 @@ namespace sloked {
         SlokedPath Parent() const;
         SlokedPath Child(String) const;
         SlokedPath Tail(std::size_t = 1) const;
-        SlokedPath Migrate(String, const Preset &) const;
         SlokedPath Migrate(const Preset &) const;
-        SlokedPath Migrate(String) const;
         SlokedPath Root() const;
 
         operator const std::string &() const;
@@ -101,7 +96,6 @@ namespace sloked {
 
         Preset preset;
         bool absolute;
-        std::string prefix;
         std::vector<std::string> path;
         std::string literal;
     };

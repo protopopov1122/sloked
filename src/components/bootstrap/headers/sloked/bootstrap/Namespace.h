@@ -30,14 +30,13 @@ namespace sloked {
     class SlokedBootstrapRootNamespace : public SlokedRootNamespace {
      public:
         SlokedBootstrapRootNamespace();
-        SlokedPathResolver &GetResolver() final;
+        std::unique_ptr<SlokedPathResolver> NewResolver() final;
         SlokedMountableNamespace &GetRoot() final;
         SlokedNamespaceMounter &GetMounter() final;
 
      private:
         SlokedDefaultVirtualNamespace root;
         SlokedDefaultNamespaceMounter mounter;
-        SlokedPathResolver resolver;
     };
 
     class SlokedBootstrapRootNamespaceFactory

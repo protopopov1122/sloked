@@ -32,7 +32,7 @@ namespace sloked {
     class SlokedRootNamespace {
      public:
         virtual ~SlokedRootNamespace() = default;
-        virtual SlokedPathResolver &GetResolver() = 0;
+        virtual std::unique_ptr<SlokedPathResolver> NewResolver() = 0;
         virtual SlokedMountableNamespace &GetRoot() = 0;
         virtual SlokedNamespaceMounter &GetMounter() = 0;
     };

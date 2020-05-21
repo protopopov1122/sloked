@@ -28,12 +28,13 @@ namespace sloked {
 
     SlokedBootstrapRootNamespace::SlokedBootstrapRootNamespace()
         : root(std::make_unique<SlokedEmptyNamespace>()),
-          mounter(SlokedNamespaceCompat::NewRootFilesystem(), root),
-          resolver(SlokedNamespaceCompat::GetWorkDir(),
-                   SlokedNamespaceCompat::GetHomeDir()) {}
+          mounter(SlokedNamespaceCompat::NewRootFilesystem(), root) {}
 
-    SlokedPathResolver &SlokedBootstrapRootNamespace::GetResolver() {
-        return this->resolver;
+    std::unique_ptr<SlokedPathResolver>
+        SlokedBootstrapRootNamespace::NewResolver() {
+        return std::make_unique<SlokedPathResolver>(
+            SlokedNamespaceCompat::GetWorkDir(),
+            SlokedNamespaceCompat::GetHomeDir());
     }
 
     SlokedMountableNamespace &SlokedBootstrapRootNamespace::GetRoot() {

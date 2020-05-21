@@ -72,12 +72,8 @@ namespace sloked {
         return this->value;
     }
 
-    SlokedPath::SlokedPath(String pathValue)
-        : SlokedPath(pathValue, Preset{std::string{"/"}}) {}
-
-    SlokedPath::SlokedPath(String prefix, String pathValue, Preset preset)
+    SlokedPath::SlokedPath(String pathValue, Preset preset)
         : preset(std::move(preset)), absolute{false}, literal("") {
-        this->prefix = prefix;
         std::string_view path = pathValue;
         std::size_t offset, start = 0;
         while ((offset = path.find_first_of(this->preset.GetSeparators(),
@@ -105,15 +101,8 @@ namespace sloked {
         this->Normalize();
     }
 
-    SlokedPath::SlokedPath(String pathValue, Preset preset)
-        : SlokedPath("", pathValue, preset) {}
-
     const SlokedPath::Preset &SlokedPath::GetPreset() const {
         return this->preset;
-    }
-
-    const std::string &SlokedPath::GetPrefix() const {
-        return this->prefix;
     }
 
     const std::vector<std::string> &SlokedPath::Components() const {
@@ -152,21 +141,13 @@ namespace sloked {
             throw SlokedError("Path: Different presets");
         }
         if (!this->IsAbsolute()) {
-            if (this->prefix != root.prefix && !this->prefix.empty() && !root.prefix.empty()) {
-                throw SlokedError("Path: Different prefixes");
-            }
             SlokedPath path(root);
-            path.prefix = root.prefix.empty() ? this->prefix : "";
             path.path.insert(path.path.end(), this->path.begin(),
                              this->path.end());
             path.Normalize();
             return path;
         } else if (root.IsAbsolute()) {
-            if (this->prefix != root.prefix && !this->prefix.empty() && !root.prefix.empty()) {
-                throw SlokedError("Path: Different prefixes");
-            }
             SlokedPath path(this->preset);
-            path.prefix = this->prefix.empty() != root.prefix.empty() ? this->prefix : "";
             path.path = {path.preset.GetCurrentDir()};
             std::size_t i = 0;
             for (; i < std::min(root.path.size(), this->path.size()); i++) {
@@ -227,9 +208,8 @@ namespace sloked {
         }
     }
 
-    SlokedPath SlokedPath::Migrate(String prefix, const Preset &next) const {
+    SlokedPath SlokedPath::Migrate(const Preset &next) const {
         SlokedPath path(next);
-        path.prefix = prefix;
         path.absolute = this->absolute;
         for (const auto &component : this->path) {
             if (component == this->preset.GetCurrentDir() &&
@@ -249,17 +229,8 @@ namespace sloked {
         return path;
     }
 
-    SlokedPath SlokedPath::Migrate(String prefix) const {
-        return this->Migrate(prefix, this->preset);
-    }
-
-    SlokedPath SlokedPath::Migrate(const Preset &next) const {
-        return this->Migrate(this->prefix, next);
-    }
-
     SlokedPath SlokedPath::Root() const {
-        return SlokedPath(this->prefix,
-                          this->preset.GetSeparators().substr(0, 1),
+        return SlokedPath(this->preset.GetSeparators().substr(0, 1),
                           this->preset);
     }
 
@@ -319,14 +290,12 @@ namespace sloked {
         }
 
         // Update literal path
+        this->literal = "";
         if (this->IsAbsolute() &&
             (this->path.empty() ||
              this->path.front() != this->preset.GetHomeDir() ||
              this->preset.GetHomeDir().empty())) {
-            this->literal = this->prefix;
             this->literal.push_back(this->preset.GetSeparators().at(0));
-        } else {
-            this->literal = this->prefix;
         }
         for (std::size_t i = 0; i < this->path.size(); i++) {
             literal += this->path.at(i);

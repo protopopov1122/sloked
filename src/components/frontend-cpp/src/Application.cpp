@@ -385,12 +385,10 @@ namespace sloked {
         auto &secondaryServer = secondaryEditor.GetServer();
 
         auto &serviceProvider = mainEditor.GetServiceProvider();
-        SlokedPath inputPath =
-            serviceProvider.GetNamespace().GetResolver().Resolve(
-                SlokedPath{cli.Argument(0)});
-        SlokedPath outputPath =
-            serviceProvider.GetNamespace().GetResolver().Resolve(
-                SlokedPath{mainConfig.Find("/output").AsString()});
+        auto resolver = serviceProvider.GetNamespace().NewResolver();
+        SlokedPath inputPath = resolver->Resolve(SlokedPath{cli.Argument(0)});
+        SlokedPath outputPath = resolver->Resolve(
+            SlokedPath{mainConfig.Find("/output").AsString()});
 
         // Screen
         auto &screenServer = secondaryEditor.GetScreen();
@@ -503,7 +501,8 @@ namespace sloked {
         std::unique_ptr<SlokedScriptEngine> scriptEngine;
         if (mainConfig.Has("/script/init")) {
             scriptEngine = std::make_unique<SlokedLuaEngine>(
-                manager, sharedState.GetScheduler(), sharedState.GetExecutor(), mainConfig.Find("/script"));
+                manager, sharedState.GetScheduler(), sharedState.GetExecutor(),
+                mainConfig.Find("/script"));
             if (scriptEngine) {
                 closeables.Attach(*scriptEngine);
                 scriptEngine->Start();
