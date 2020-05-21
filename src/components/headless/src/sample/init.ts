@@ -7,6 +7,7 @@ import { NetSlaveServer, AuthServer, BinarySerializer } from 'sloked-nodejs'
 import * as path from 'path'
 import { ShutdownClient } from '../lib/clients/shutdown'
 import { TextPaneClient, TextGraphics, BackgroundGraphics } from '../lib/clients/textPane'
+import { NamespaceClient } from '../lib/clients/namespace'
 
 async function initializeEditor(host: string, port: number): Promise<NetSlaveServer> {
     const socket = new net.Socket()
@@ -18,8 +19,10 @@ async function initializeEditor(host: string, port: number): Promise<NetSlaveSer
 }
 
 async function initializeEditorScreen(editor: AuthServer<string>, argv: string[]): Promise<void> {
+    const namespaceClient = new NamespaceClient(await editor.connect('/namespace/root'))
+    const documentPath = await namespaceClient.fromNative(path.resolve(argv[0]))
     const documentSetClient = new DocumentSetClient(await editor.connect('/document/manager'))
-    const docId = await documentSetClient.open(path.resolve(argv[0]), 'system', 'system', 'default')
+    const docId = await documentSetClient.open(documentPath, 'system', 'system', 'default')
     console.log(docId)
 
     const screenSizeClient = new ScreenSizeClient()

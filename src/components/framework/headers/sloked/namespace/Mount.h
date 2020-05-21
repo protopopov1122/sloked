@@ -47,6 +47,7 @@ namespace sloked {
      public:
         SlokedDefaultNamespaceMounter(std::unique_ptr<SlokedFilesystemAdapter>,
                                       SlokedNamespace &);
+        SlokedFilesystemAdapter &GetFilesystemAdapter();
         std::unique_ptr<SlokedNamespace> Mount(const SlokedUri &) const final;
 
      private:

@@ -289,6 +289,13 @@ namespace sloked {
             }
         }
 
+        // Remove '.' and '..' from absolute path
+        if (this->IsAbsolute() &&  this->path.size() > 0 &&
+            (this->path.at(0) == this->preset.GetParentDir() ||
+            this->path.at(0) == this->preset.GetCurrentDir())) {
+            this->path.erase(this->path.begin());
+        }
+
         // Update literal path
         this->literal = "";
         if (this->IsAbsolute() &&

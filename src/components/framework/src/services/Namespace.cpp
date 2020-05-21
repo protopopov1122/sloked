@@ -54,6 +54,8 @@ namespace sloked {
                              &SlokedNamespaceServiceContext::Resolver);
             this->BindMethod("chdir", &SlokedNamespaceServiceContext::ChDir);
             this->BindMethod("chhome", &SlokedNamespaceServiceContext::ChHome);
+            this->BindMethod("fromNative", &SlokedNamespaceServiceContext::FromNative);
+            this->BindMethod("toNative", &SlokedNamespaceServiceContext::ToNative);
         }
 
      private:
@@ -272,6 +274,16 @@ namespace sloked {
             SlokedPath path{params.AsString()};
             this->resolver->ChangeHomeDir(path);
             rsp.Result(true);
+        }
+
+        void FromNative(const std::string &method, const KgrValue &params,
+                    Response &rsp) {
+            rsp.Result(this->rootNamespace.FromNativePath(params.AsString()).ToString());
+        }
+
+        void ToNative(const std::string &method, const KgrValue &params,
+                    Response &rsp) {
+            rsp.Result(this->rootNamespace.ToNativePath({params.AsString()}));
         }
 
         SlokedRootNamespace &rootNamespace;

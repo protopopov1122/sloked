@@ -34,6 +34,7 @@ namespace sloked {
         virtual std::unique_ptr<SlokedFile> NewFile(
             const SlokedPath &) const = 0;
         virtual SlokedPath ToPath(const std::string &) const = 0;
+        virtual std::string FromPath(const SlokedPath &) const = 0;
         virtual std::string ToURI(const SlokedPath &) const = 0;
         virtual std::unique_ptr<SlokedFilesystemAdapter> Rebase(
             std::string_view) const = 0;

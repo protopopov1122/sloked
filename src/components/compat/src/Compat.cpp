@@ -34,7 +34,7 @@
 namespace sloked {
 
     class SlokedCompatBaseInterface : public SlokedBaseInterface {
-	 public:		
+	 public:
         bool SupportsCompression() const final {
             return SlokedCompressionCompat::IsSupported();
         }

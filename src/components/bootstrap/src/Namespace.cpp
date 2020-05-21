@@ -44,6 +44,14 @@ namespace sloked {
     SlokedNamespaceMounter &SlokedBootstrapRootNamespace::GetMounter() {
         return this->mounter;
     }
+    
+    SlokedPath SlokedBootstrapRootNamespace::FromNativePath(const std::string &native) {
+        return this->mounter.GetFilesystemAdapter().ToPath(native);
+    }
+
+    std::string SlokedBootstrapRootNamespace::ToNativePath(const SlokedPath &path) {
+        return this->mounter.GetFilesystemAdapter().FromPath(path);
+    }
 
     std::unique_ptr<SlokedRootNamespace>
         SlokedBootstrapRootNamespaceFactory::Build() const {

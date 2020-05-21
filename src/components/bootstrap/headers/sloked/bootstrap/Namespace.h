@@ -33,6 +33,8 @@ namespace sloked {
         std::unique_ptr<SlokedPathResolver> NewResolver() final;
         SlokedMountableNamespace &GetRoot() final;
         SlokedNamespaceMounter &GetMounter() final;
+        SlokedPath FromNativePath(const std::string &) final;
+        std::string ToNativePath(const SlokedPath &) final;
 
      private:
         SlokedDefaultVirtualNamespace root;

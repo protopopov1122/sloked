@@ -33,7 +33,9 @@ namespace sloked {
     SlokedPath Win32Path(std::string_view rawpath) {
         SlokedPath path{""};
         if (rawpath.size() >= 2 && std::isalpha(rawpath[0]) && rawpath[1] == ':') {
-            path = {rawpath.substr(0, 2)};
+            std::string drive{"$Drive"};
+            drive += rawpath.substr(0, 1);
+            path = {drive};
             rawpath.remove_prefix(2);
         }
         std::string_view::size_type lastDelim{0};
@@ -59,8 +61,8 @@ namespace sloked {
         }
         for (auto it = path.Components().begin(); it != path.Components().end(); ++it) {
             if (it == path.Components().begin() &&
-                ends_with(*it, ":")) {
-                rawpath = *it + rawpath;
+                starts_with(*it, "$Drive")) {
+                rawpath = it->substr(6) + ":" + rawpath;
             } else {
                 rawpath.append(*it);
                 if (it + 1 != path.Components().end()) {
@@ -83,7 +85,8 @@ namespace sloked {
         const SlokedPath &path) const {
         SlokedPath realPath = path.Root();
         if (path.IsAbsolute()) {
-            realPath = this->GetRoot().RelativeTo(path.RelativeTo(path.Root()));
+            const auto relPath = path.RelativeTo(path.Root());
+            realPath = this->GetRoot().RelativeTo(relPath);
         } else {
             realPath = this->GetRoot().RelativeTo(path);
         }
@@ -97,6 +100,10 @@ namespace sloked {
     SlokedPath SlokedWin32FilesystemAdapter::ToPath(
         const std::string &path) const {
         return Win32Path(path);
+    }
+    
+    std::string SlokedWin32FilesystemAdapter::FromPath(const SlokedPath &path) const {
+        return PathToWin32(path);
     }
 
     std::string SlokedWin32FilesystemAdapter::ToURI(

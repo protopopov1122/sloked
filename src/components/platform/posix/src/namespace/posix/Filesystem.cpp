@@ -55,6 +55,10 @@ namespace sloked {
         return SlokedPath(path);
     }
 
+    std::string SlokedPosixFilesystemAdapter::FromPath(const SlokedPath &path) const {
+        return path.ToString();
+    }
+
     std::string SlokedPosixFilesystemAdapter::ToURI(
         const SlokedPath &path) const {
         SlokedPath realPath =
