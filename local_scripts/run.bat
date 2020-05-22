@@ -1,0 +1,1 @@
+ninja & ..\..\local_scripts\assemble.bat & cd build & sloked --load-application libsloked_headless_app.dll --configuration-host 127.0.0.1 --configuration-port 4567 --configuration-key none & cd ..

@@ -22,7 +22,7 @@ async function initializeEditorScreen(editor: AuthServer<string>, argv: string[]
     const namespaceClient = new NamespaceClient(await editor.connect('/namespace/root'))
     const documentPath = await namespaceClient.fromNative(path.resolve(argv[0]))
     const documentSetClient = new DocumentSetClient(await editor.connect('/document/manager'))
-    const docId = await documentSetClient.open(documentPath, 'system', 'system', 'default')
+    const docId = await documentSetClient.open(documentPath, 'system', 'lf', 'default')
     console.log(docId)
 
     const screenSizeClient = new ScreenSizeClient()
@@ -63,7 +63,8 @@ async function initializeEditorScreen(editor: AuthServer<string>, argv: string[]
     const screenInput = new ScreenInputClient(await editor.connect('/screen/component/input/notify'))
     await screenInput.on('input', async (evt: KeyInputEvent) => {
         if (evt.key === ControlKeyCode.Escape && !evt.alt) {
-            await documentSetClient.saveAs(path.resolve(argv[1]))
+            const targetPath = await namespaceClient.fromNative(path.resolve(argv[1]))
+            await documentSetClient.saveAs(targetPath)
             const shutdown = new ShutdownClient(await editor.connect('/editor/shutdown'))
             await shutdown.requestShutdown()
         } else {

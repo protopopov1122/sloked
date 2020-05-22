@@ -113,7 +113,7 @@ namespace sloked {
 
     void SlokedWin32File::Rename(const std::string &name) const {
         if (MoveFile(this->path.c_str(), name.c_str()) == 0) {
-            throw SlokedError("PosixFile: Error renaming file");
+            throw SlokedError("Win32File: Error renaming file");
         }
     }
 
@@ -130,7 +130,7 @@ namespace sloked {
             if (res != INVALID_HANDLE_VALUE) {
                 CloseHandle(res);
             } else {
-                throw SlokedError("PosixFile: Error creating file");
+                throw SlokedError("Win32File: Error creating file");
             }
         }
     }
@@ -138,7 +138,7 @@ namespace sloked {
     void SlokedWin32File::Mkdir() const {
         if (!this->Exists()) {
             if (CreateDirectoryA(this->path.c_str(), 0) != 0) {
-                throw SlokedError("PosixFile: Error creating directory");
+                throw SlokedError("Win32File: Error creating directory");
             }
         }
     }

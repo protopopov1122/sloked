@@ -32,12 +32,13 @@ namespace sloked {
     }
 }  // namespace sloked
 #elif defined(SLOKED_PLATFORM_WIN32)
-#include "sloked/core/Error.h"
+#include "sloked/screen/terminal/win32/Win32Terminal.h"
 
 namespace sloked {
 
     SlokedDuplexTerminal &SlokedTerminalCompat::GetSystemTerminal() {
-        throw SlokedError("Compat: Not supported yet!");
+        static Win32Terminal terminal;
+        return terminal;
     }
 }  // namespace sloked
 

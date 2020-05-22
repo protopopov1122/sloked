@@ -9,7 +9,8 @@ win32_platform_src = [
   'src/filesystem/win32/View.cpp',
   'src/namespace/win32/Environment.cpp',
   'src/namespace/win32/Filesystem.cpp',
-  'src/net/Win32Socket.cpp'
+  'src/net/Win32Socket.cpp',
+  'src/screen/terminal/win32/Win32Terminal.cpp'
 ]
 
 atomic = cpp.find_library('atomic', required : false)

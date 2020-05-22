@@ -56,7 +56,7 @@
             },
             "server": {
                 "screen": {
-                    "uri": "null:",
+                    "uri": "terminal:",
                     "tabWidth": 2
                 },
                 "slave": {

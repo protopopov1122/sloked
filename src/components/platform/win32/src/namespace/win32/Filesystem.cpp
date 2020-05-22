@@ -56,18 +56,20 @@ namespace sloked {
 
     std::string PathToWin32(const SlokedPath &path) {
         std::string rawpath{};
+        auto it = path.Components().begin();
+        if (it != path.Components().end()) {
+            if (starts_with(*it, "$Drive")) {
+                rawpath = it->substr(6) + ":" + rawpath;
+            }
+            ++it;
+        }
         if (path.IsAbsolute()) {
             rawpath.push_back('\\');
         }
-        for (auto it = path.Components().begin(); it != path.Components().end(); ++it) {
-            if (it == path.Components().begin() &&
-                starts_with(*it, "$Drive")) {
-                rawpath = it->substr(6) + ":" + rawpath;
-            } else {
-                rawpath.append(*it);
-                if (it + 1 != path.Components().end()) {
-                    rawpath.push_back('\\');
-                }
+        for (; it != path.Components().end(); ++it) {
+            rawpath.append(*it);
+            if (it + 1 != path.Components().end()) {
+                rawpath.push_back('\\');
             }
         }
         return rawpath;
