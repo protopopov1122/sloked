@@ -36,9 +36,13 @@ namespace sloked {
 
 namespace sloked {
 
-    SlokedDuplexTerminal &SlokedTerminalCompat::GetSystemTerminal() {
+    Win32Terminal &GetWin32Terminal() {
         static Win32Terminal terminal;
         return terminal;
+    }
+
+    SlokedDuplexTerminal &SlokedTerminalCompat::GetSystemTerminal() {
+        return GetWin32Terminal();
     }
 }  // namespace sloked
 

@@ -28,7 +28,7 @@
 #include <string>
 #include <windows.h>
 
-#include "sloked/Base.h"
+#include "sloked/core/Event.h"
 #include "sloked/screen/terminal/Terminal.h"
 
 namespace sloked {
@@ -64,11 +64,14 @@ namespace sloked {
         bool UpdateDimensions() override;
         void Flush(bool) override;
 
+        std::function<void()> OnResize(std::function<void()>);
+
      private:
         struct State;
 
         std::unique_ptr<State> state;
         bool disable_flush;
+        SlokedEventEmitter<void> resizeEmitter;
     };
 }  // namespace sloked
 

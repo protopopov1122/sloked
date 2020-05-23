@@ -59,6 +59,17 @@ namespace sloked {
         }
     }
 }  // namespace sloked
+#elif defined(SLOKED_PLATFORM_WIN32)
+#include "sloked/screen/terminal/win32/Win32Terminal.h"
+namespace sloked {
+
+    Win32Terminal &GetWin32Terminal(); // Defined in Compat.cpp
+
+    std::function<void()> SlokedTerminalResizeListener::Bind(
+        std::function<void()> listener) {
+        return GetWin32Terminal().OnResize(std::move(listener));
+    }
+}
 #else
 namespace sloked {
 

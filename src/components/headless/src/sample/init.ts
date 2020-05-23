@@ -22,7 +22,7 @@ async function initializeEditorScreen(editor: AuthServer<string>, argv: string[]
     const namespaceClient = new NamespaceClient(await editor.connect('/namespace/root'))
     const documentPath = await namespaceClient.fromNative(path.resolve(argv[0]))
     const documentSetClient = new DocumentSetClient(await editor.connect('/document/manager'))
-    const docId = await documentSetClient.open(documentPath, 'system', 'lf', 'default')
+    const docId = await documentSetClient.open(documentPath, 'system', 'system', 'default')
     console.log(docId)
 
     const screenSizeClient = new ScreenSizeClient()

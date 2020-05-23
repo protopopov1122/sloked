@@ -36,6 +36,8 @@ namespace sloked {
         UINT oldCodepage;
         UINT oldOutputCodepage;
         DWORD originalTextAttr;
+        TextPosition terminalSize{0, 0};
+        std::chrono::system_clock::time_point lastResize;
     };
 
     Win32Terminal::Win32Terminal()
@@ -99,6 +101,7 @@ namespace sloked {
         GetConsoleScreenBufferInfo(this->state->output, &info);
         DWORD nbWritten;
         FillConsoleOutputCharacterA(this->state->output, ' ', info.dwSize.X * info.dwSize.Y, {0, 0}, &nbWritten);
+        FillConsoleOutputAttribute(this->state->output, info.wAttributes, info.dwSize.X * info.dwSize.Y, {0, 0}, &nbWritten);
     }
 
     void Win32Terminal::ClearChars(Column col) {
@@ -106,18 +109,15 @@ namespace sloked {
         GetConsoleScreenBufferInfo(this->state->output, &info);
         DWORD nbWritten;
         FillConsoleOutputCharacterA(this->state->output, ' ', col, info.dwCursorPosition, &nbWritten);
+        FillConsoleOutputAttribute(this->state->output, info.wAttributes, col, info.dwCursorPosition, &nbWritten);
     }
 
     SlokedTerminal::Column Win32Terminal::GetWidth() {
-        CONSOLE_SCREEN_BUFFER_INFO csbi;
-        GetConsoleScreenBufferInfo(this->state->output, &csbi);
-        return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+        return this->state->terminalSize.column;
     }
 
     SlokedTerminal::Line Win32Terminal::GetHeight() {
-        CONSOLE_SCREEN_BUFFER_INFO csbi;
-        GetConsoleScreenBufferInfo(this->state->output, &csbi);
-        return csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+        return this->state->terminalSize.line;
     }
 
     void Win32Terminal::Write(std::string_view text) {
@@ -219,6 +219,16 @@ namespace sloked {
                     if (evt.has_value()) {
                         result.emplace_back(std::move(evt.value()));
                     }
+                } break;
+
+                case WINDOW_BUFFER_SIZE_EVENT: {
+                    this->state->lastResize = std::chrono::system_clock::now();
+                    SetConsoleTextAttribute(this->state->output, this->state->originalTextAttr);
+                    DWORD nbWritten;
+                    const DWORD count = events[i].Event.WindowBufferSizeEvent.dwSize.X * events[i].Event.WindowBufferSizeEvent.dwSize.Y;
+                    FillConsoleOutputCharacterA(this->state->output, ' ', count, {0, 0}, &nbWritten);
+                    FillConsoleOutputAttribute(this->state->output, this->state->originalTextAttr, count, {0, 0}, &nbWritten);
+                    this->resizeEmitter.Emit();
                 } break;
                 
                 default:
@@ -334,10 +344,24 @@ namespace sloked {
     }
 
     bool Win32Terminal::UpdateDimensions() {
-        return false;
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        GetConsoleScreenBufferInfo(this->state->output, &csbi);
+        TextPosition newSize {
+            static_cast<TextPosition::Line>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1),
+            static_cast<TextPosition::Column>(csbi.srWindow.Right - csbi.srWindow.Left + 1)
+        };
+        const bool updated = this->state->terminalSize != newSize;
+        this->state->terminalSize = newSize;
+        constexpr std::chrono::milliseconds LastUpdateTimeout{1000};
+        return updated || this->state->lastResize + LastUpdateTimeout >=
+               std::chrono::system_clock::now();
     }
 
     void Win32Terminal::Flush(bool flush) {
         this->disable_flush = flush;
+    }
+    
+    std::function<void()> Win32Terminal::OnResize(std::function<void()> listener) {
+        return this->resizeEmitter.Listen(std::move(listener));
     }
 }
