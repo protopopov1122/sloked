@@ -38,6 +38,7 @@ namespace sloked {
         DWORD originalTextAttr;
         TextPosition terminalSize{0, 0};
         std::chrono::system_clock::time_point lastResize;
+        std::vector<std::function<void()>> buffer;
     };
 
     Win32Terminal::Win32Terminal()
@@ -55,61 +56,117 @@ namespace sloked {
     }
 
     void Win32Terminal::SetPosition(Line line, Column column) {
-        COORD pos;
-        pos.X = column;
-        pos.Y = line;
-        SetConsoleCursorPosition(this->state->output, pos);
+        auto callback = [this, line, column] {
+            COORD pos;
+            pos.X = column;
+            pos.Y = line;
+            SetConsoleCursorPosition(this->state->output, pos);
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
+        }
     }
 
     void Win32Terminal::MoveUp(Line line) {
-        CONSOLE_SCREEN_BUFFER_INFO info;
-        GetConsoleScreenBufferInfo(this->state->output, &info);
-        info.dwCursorPosition.Y -= line;
-        SetConsoleCursorPosition(this->state->output, info.dwCursorPosition);
+        auto callback = [this, line] {
+            CONSOLE_SCREEN_BUFFER_INFO info;
+            GetConsoleScreenBufferInfo(this->state->output, &info);
+            info.dwCursorPosition.Y -= line;
+            SetConsoleCursorPosition(this->state->output, info.dwCursorPosition);
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
+        }
     }
 
     void Win32Terminal::MoveDown(Line line) {
-        CONSOLE_SCREEN_BUFFER_INFO info;
-        GetConsoleScreenBufferInfo(this->state->output, &info);
-        info.dwCursorPosition.Y += line;
-        SetConsoleCursorPosition(this->state->output, info.dwCursorPosition);
+        auto callback = [this, line] {
+            CONSOLE_SCREEN_BUFFER_INFO info;
+            GetConsoleScreenBufferInfo(this->state->output, &info);
+            info.dwCursorPosition.Y += line;
+            SetConsoleCursorPosition(this->state->output, info.dwCursorPosition);
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
+        }
     }
 
     void Win32Terminal::MoveBackward(Column col) {
-        CONSOLE_SCREEN_BUFFER_INFO info;
-        GetConsoleScreenBufferInfo(this->state->output, &info);
-        info.dwCursorPosition.X -= col;
-        SetConsoleCursorPosition(this->state->output, info.dwCursorPosition);
+        auto callback = [this, col] {
+            CONSOLE_SCREEN_BUFFER_INFO info;
+            GetConsoleScreenBufferInfo(this->state->output, &info);
+            info.dwCursorPosition.X -= col;
+            SetConsoleCursorPosition(this->state->output, info.dwCursorPosition);
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
+        }
     }
 
     void Win32Terminal::MoveForward(Column col) {
-        CONSOLE_SCREEN_BUFFER_INFO info;
-        GetConsoleScreenBufferInfo(this->state->output, &info);
-        info.dwCursorPosition.X += col;
-        SetConsoleCursorPosition(this->state->output, info.dwCursorPosition);
+        auto callback = [this, col] {
+            CONSOLE_SCREEN_BUFFER_INFO info;
+            GetConsoleScreenBufferInfo(this->state->output, &info);
+            info.dwCursorPosition.X += col;
+            SetConsoleCursorPosition(this->state->output, info.dwCursorPosition);
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
+        }
     }
 
     void Win32Terminal::ShowCursor(bool show) {
-        CONSOLE_CURSOR_INFO info;
-        GetConsoleCursorInfo(this->state->output, &info);
-        info.bVisible = show;
-        SetConsoleCursorInfo(this->state->output, &info);
+        auto callback = [this, show] {
+            CONSOLE_CURSOR_INFO info;
+            GetConsoleCursorInfo(this->state->output, &info);
+            info.bVisible = show;
+            SetConsoleCursorInfo(this->state->output, &info);
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
+        }
     }
 
     void Win32Terminal::ClearScreen() {
-        CONSOLE_SCREEN_BUFFER_INFO info;
-        GetConsoleScreenBufferInfo(this->state->output, &info);
-        DWORD nbWritten;
-        FillConsoleOutputCharacterA(this->state->output, ' ', info.dwSize.X * info.dwSize.Y, {0, 0}, &nbWritten);
-        FillConsoleOutputAttribute(this->state->output, info.wAttributes, info.dwSize.X * info.dwSize.Y, {0, 0}, &nbWritten);
+        auto callback = [this] {
+            CONSOLE_SCREEN_BUFFER_INFO info;
+            GetConsoleScreenBufferInfo(this->state->output, &info);
+            DWORD nbWritten;
+            FillConsoleOutputCharacterA(this->state->output, ' ', info.dwSize.X * info.dwSize.Y, {0, 0}, &nbWritten);
+            FillConsoleOutputAttribute(this->state->output, info.wAttributes, info.dwSize.X * info.dwSize.Y, {0, 0}, &nbWritten);
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
+        }
     }
 
     void Win32Terminal::ClearChars(Column col) {
-        CONSOLE_SCREEN_BUFFER_INFO info;
-        GetConsoleScreenBufferInfo(this->state->output, &info);
-        DWORD nbWritten;
-        FillConsoleOutputCharacterA(this->state->output, ' ', col, info.dwCursorPosition, &nbWritten);
-        FillConsoleOutputAttribute(this->state->output, info.wAttributes, col, info.dwCursorPosition, &nbWritten);
+        auto callback = [this, col] {
+            CONSOLE_SCREEN_BUFFER_INFO info;
+            GetConsoleScreenBufferInfo(this->state->output, &info);
+            DWORD nbWritten;
+            FillConsoleOutputCharacterA(this->state->output, ' ', col, info.dwCursorPosition, &nbWritten);
+            FillConsoleOutputAttribute(this->state->output, info.wAttributes, col, info.dwCursorPosition, &nbWritten);
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
+        }
     }
 
     SlokedTerminal::Column Win32Terminal::GetWidth() {
@@ -121,8 +178,15 @@ namespace sloked {
     }
 
     void Win32Terminal::Write(std::string_view text) {
-        DWORD nbWritten, reserved;
-        WriteConsoleA(this->state->output, text.data(), text.size(), &nbWritten, &reserved);
+        auto callback = [this, text = std::string{text}] {
+            DWORD nbWritten, reserved;
+            WriteConsoleA(this->state->output, text.data(), text.size(), &nbWritten, &reserved);
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
+        }
     }
 
     bool Win32Terminal::WaitInput(
@@ -240,107 +304,128 @@ namespace sloked {
     }
 
     void Win32Terminal::SetGraphicsMode(SlokedTextGraphics mode) {
-        CONSOLE_SCREEN_BUFFER_INFO csbi;
-        GetConsoleScreenBufferInfo(this->state->output, &csbi);
-        switch (mode) {
-            case SlokedTextGraphics::Off:
-                SetConsoleTextAttribute(this->state->output, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-                break;
+        auto callback = [this, mode] {
+            CONSOLE_SCREEN_BUFFER_INFO csbi;
+            GetConsoleScreenBufferInfo(this->state->output, &csbi);
+            switch (mode) {
+                case SlokedTextGraphics::Off:
+                    SetConsoleTextAttribute(this->state->output, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+                    break;
 
-            case SlokedTextGraphics::Bold:
-                SetConsoleTextAttribute(this->state->output, csbi.wAttributes | FOREGROUND_INTENSITY);
-                break;
+                case SlokedTextGraphics::Bold:
+                    SetConsoleTextAttribute(this->state->output, csbi.wAttributes | FOREGROUND_INTENSITY);
+                    break;
 
-            case SlokedTextGraphics::Reverse:
-                SetConsoleTextAttribute(this->state->output, csbi.wAttributes | COMMON_LVB_REVERSE_VIDEO);
-                break;
+                case SlokedTextGraphics::Reverse:
+                    SetConsoleTextAttribute(this->state->output, csbi.wAttributes | COMMON_LVB_REVERSE_VIDEO);
+                    break;
 
-            case SlokedTextGraphics::Underscore:
-                SetConsoleTextAttribute(this->state->output, csbi.wAttributes | COMMON_LVB_UNDERSCORE);
-                break;
+                case SlokedTextGraphics::Underscore:
+                    SetConsoleTextAttribute(this->state->output, csbi.wAttributes | COMMON_LVB_UNDERSCORE);
+                    break;
 
-            default:
-                // Not supported
-                break;
+                default:
+                    // Not supported
+                    break;
+            }
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
         }
     }
 
     void Win32Terminal::SetGraphicsMode(SlokedBackgroundGraphics mode) {
-        CONSOLE_SCREEN_BUFFER_INFO csbi;
-        GetConsoleScreenBufferInfo(this->state->output, &csbi);
-        DWORD attr = csbi.wAttributes & ~(BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE);
-        switch (mode) {
-            case SlokedBackgroundGraphics::Black:
-                break;
+        auto callback = [this, mode] {
+            CONSOLE_SCREEN_BUFFER_INFO csbi;
+            GetConsoleScreenBufferInfo(this->state->output, &csbi);
+            DWORD attr = csbi.wAttributes & ~(BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE);
+            switch (mode) {
+                case SlokedBackgroundGraphics::Black:
+                    break;
 
-            case SlokedBackgroundGraphics::Blue:
-                attr |= BACKGROUND_BLUE;
-                break;
+                case SlokedBackgroundGraphics::Blue:
+                    attr |= BACKGROUND_BLUE;
+                    break;
 
-            case SlokedBackgroundGraphics::Cyan:
-                attr |= BACKGROUND_BLUE | BACKGROUND_GREEN;
-                break;
+                case SlokedBackgroundGraphics::Cyan:
+                    attr |= BACKGROUND_BLUE | BACKGROUND_GREEN;
+                    break;
 
-            case SlokedBackgroundGraphics::Green:
-                attr |= BACKGROUND_GREEN;
-                break;
+                case SlokedBackgroundGraphics::Green:
+                    attr |= BACKGROUND_GREEN;
+                    break;
 
-            case SlokedBackgroundGraphics::Magenta:
-                attr |= BACKGROUND_RED | BACKGROUND_INTENSITY;
-                break;
+                case SlokedBackgroundGraphics::Magenta:
+                    attr |= BACKGROUND_RED | BACKGROUND_INTENSITY;
+                    break;
 
-            case SlokedBackgroundGraphics::Red:
-                attr |= BACKGROUND_RED;
-                break;
+                case SlokedBackgroundGraphics::Red:
+                    attr |= BACKGROUND_RED;
+                    break;
 
-            case SlokedBackgroundGraphics::White:
-                attr |= BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
-                break;
+                case SlokedBackgroundGraphics::White:
+                    attr |= BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+                    break;
 
-            case SlokedBackgroundGraphics::Yellow:
-                attr |= BACKGROUND_RED | BACKGROUND_GREEN;
-                break;
+                case SlokedBackgroundGraphics::Yellow:
+                    attr |= BACKGROUND_RED | BACKGROUND_GREEN;
+                    break;
+            }
+            SetConsoleTextAttribute(this->state->output, attr);
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
         }
-        SetConsoleTextAttribute(this->state->output, attr);
     }
 
     void Win32Terminal::SetGraphicsMode(SlokedForegroundGraphics mode) {
-        CONSOLE_SCREEN_BUFFER_INFO csbi;
-        GetConsoleScreenBufferInfo(this->state->output, &csbi);
-        DWORD attr = csbi.wAttributes & ~(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-        switch (mode) {
-            case SlokedForegroundGraphics::Black:
-                break;
+        auto callback = [this, mode] {
+            CONSOLE_SCREEN_BUFFER_INFO csbi;
+            GetConsoleScreenBufferInfo(this->state->output, &csbi);
+            DWORD attr = csbi.wAttributes & ~(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+            switch (mode) {
+                case SlokedForegroundGraphics::Black:
+                    break;
 
-            case SlokedForegroundGraphics::Blue:
-                attr |= FOREGROUND_BLUE;
-                break;
+                case SlokedForegroundGraphics::Blue:
+                    attr |= FOREGROUND_BLUE;
+                    break;
 
-            case SlokedForegroundGraphics::Cyan:
-                attr |= FOREGROUND_BLUE | FOREGROUND_GREEN;
-                break;
+                case SlokedForegroundGraphics::Cyan:
+                    attr |= FOREGROUND_BLUE | FOREGROUND_GREEN;
+                    break;
 
-            case SlokedForegroundGraphics::Green:
-                attr |= FOREGROUND_GREEN;
-                break;
+                case SlokedForegroundGraphics::Green:
+                    attr |= FOREGROUND_GREEN;
+                    break;
 
-            case SlokedForegroundGraphics::Magenta:
-                attr |= FOREGROUND_RED | FOREGROUND_INTENSITY;
-                break;
+                case SlokedForegroundGraphics::Magenta:
+                    attr |= FOREGROUND_RED | FOREGROUND_INTENSITY;
+                    break;
 
-            case SlokedForegroundGraphics::Red:
-                attr |= FOREGROUND_RED;
-                break;
+                case SlokedForegroundGraphics::Red:
+                    attr |= FOREGROUND_RED;
+                    break;
 
-            case SlokedForegroundGraphics::White:
-                attr |= FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
-                break;
+                case SlokedForegroundGraphics::White:
+                    attr |= FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+                    break;
 
-            case SlokedForegroundGraphics::Yellow:
-                attr |= FOREGROUND_RED | FOREGROUND_GREEN;
-                break;
+                case SlokedForegroundGraphics::Yellow:
+                    attr |= FOREGROUND_RED | FOREGROUND_GREEN;
+                    break;
+            }
+            SetConsoleTextAttribute(this->state->output, attr);
+        };
+        if (this->disable_flush) {
+            this->state->buffer.emplace_back(std::move(callback));
+        } else {
+            callback();
         }
-        SetConsoleTextAttribute(this->state->output, attr);
     }
 
     bool Win32Terminal::UpdateDimensions() {
@@ -359,6 +444,12 @@ namespace sloked {
 
     void Win32Terminal::Flush(bool flush) {
         this->disable_flush = flush;
+        if (flush) {
+            for (const auto &callback : this->state->buffer) {
+                callback();
+            }
+            this->state->buffer.clear();
+        }
     }
     
     std::function<void()> Win32Terminal::OnResize(std::function<void()> listener) {
