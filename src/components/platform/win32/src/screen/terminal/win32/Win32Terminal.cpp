@@ -14,6 +14,9 @@ namespace sloked {
             GetConsoleMode(this->input, &this->originalMode);
             this->oldCodepage = GetConsoleCP();
             this->oldOutputCodepage = GetConsoleOutputCP();
+            CONSOLE_SCREEN_BUFFER_INFO csbi;
+            GetConsoleScreenBufferInfo(this->output, &csbi);
+            this->originalTextAttr = csbi.wAttributes;
         }
 
         ~State() {
@@ -24,6 +27,7 @@ namespace sloked {
             SetConsoleMode(this->input, this->originalMode);
             SetConsoleCP(this->oldCodepage);
             SetConsoleOutputCP(this->oldOutputCodepage);
+            SetConsoleTextAttribute(this->output, this->originalTextAttr);
         }
 
         HANDLE output;
@@ -31,6 +35,7 @@ namespace sloked {
         DWORD originalMode;
         UINT oldCodepage;
         UINT oldOutputCodepage;
+        DWORD originalTextAttr;
     };
 
     Win32Terminal::Win32Terminal()
@@ -116,10 +121,8 @@ namespace sloked {
     }
 
     void Win32Terminal::Write(std::string_view text) {
-        CONSOLE_SCREEN_BUFFER_INFO info;
-        GetConsoleScreenBufferInfo(this->state->output, &info);
-        DWORD nbWritten;
-        WriteConsoleOutputCharacterA(this->state->output, text.data(), text.size(), info.dwCursorPosition, &nbWritten);
+        DWORD nbWritten, reserved;
+        WriteConsoleA(this->state->output, text.data(), text.size(), &nbWritten, &reserved);
     }
 
     bool Win32Terminal::WaitInput(
@@ -226,9 +229,109 @@ namespace sloked {
         return result;
     }
 
-    void Win32Terminal::SetGraphicsMode(SlokedTextGraphics) {}
-    void Win32Terminal::SetGraphicsMode(SlokedBackgroundGraphics) {}
-    void Win32Terminal::SetGraphicsMode(SlokedForegroundGraphics) {}
+    void Win32Terminal::SetGraphicsMode(SlokedTextGraphics mode) {
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        GetConsoleScreenBufferInfo(this->state->output, &csbi);
+        switch (mode) {
+            case SlokedTextGraphics::Off:
+                SetConsoleTextAttribute(this->state->output, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+                break;
+
+            case SlokedTextGraphics::Bold:
+                SetConsoleTextAttribute(this->state->output, csbi.wAttributes | FOREGROUND_INTENSITY);
+                break;
+
+            case SlokedTextGraphics::Reverse:
+                SetConsoleTextAttribute(this->state->output, csbi.wAttributes | COMMON_LVB_REVERSE_VIDEO);
+                break;
+
+            case SlokedTextGraphics::Underscore:
+                SetConsoleTextAttribute(this->state->output, csbi.wAttributes | COMMON_LVB_UNDERSCORE);
+                break;
+
+            default:
+                // Not supported
+                break;
+        }
+    }
+
+    void Win32Terminal::SetGraphicsMode(SlokedBackgroundGraphics mode) {
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        GetConsoleScreenBufferInfo(this->state->output, &csbi);
+        DWORD attr = csbi.wAttributes & ~(BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE);
+        switch (mode) {
+            case SlokedBackgroundGraphics::Black:
+                break;
+
+            case SlokedBackgroundGraphics::Blue:
+                attr |= BACKGROUND_BLUE;
+                break;
+
+            case SlokedBackgroundGraphics::Cyan:
+                attr |= BACKGROUND_BLUE | BACKGROUND_GREEN;
+                break;
+
+            case SlokedBackgroundGraphics::Green:
+                attr |= BACKGROUND_GREEN;
+                break;
+
+            case SlokedBackgroundGraphics::Magenta:
+                attr |= BACKGROUND_RED | BACKGROUND_INTENSITY;
+                break;
+
+            case SlokedBackgroundGraphics::Red:
+                attr |= BACKGROUND_RED;
+                break;
+
+            case SlokedBackgroundGraphics::White:
+                attr |= BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+                break;
+
+            case SlokedBackgroundGraphics::Yellow:
+                attr |= BACKGROUND_RED | BACKGROUND_GREEN;
+                break;
+        }
+        SetConsoleTextAttribute(this->state->output, attr);
+    }
+
+    void Win32Terminal::SetGraphicsMode(SlokedForegroundGraphics mode) {
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        GetConsoleScreenBufferInfo(this->state->output, &csbi);
+        DWORD attr = csbi.wAttributes & ~(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+        switch (mode) {
+            case SlokedForegroundGraphics::Black:
+                break;
+
+            case SlokedForegroundGraphics::Blue:
+                attr |= FOREGROUND_BLUE;
+                break;
+
+            case SlokedForegroundGraphics::Cyan:
+                attr |= FOREGROUND_BLUE | FOREGROUND_GREEN;
+                break;
+
+            case SlokedForegroundGraphics::Green:
+                attr |= FOREGROUND_GREEN;
+                break;
+
+            case SlokedForegroundGraphics::Magenta:
+                attr |= FOREGROUND_RED | FOREGROUND_INTENSITY;
+                break;
+
+            case SlokedForegroundGraphics::Red:
+                attr |= FOREGROUND_RED;
+                break;
+
+            case SlokedForegroundGraphics::White:
+                attr |= FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+                break;
+
+            case SlokedForegroundGraphics::Yellow:
+                attr |= FOREGROUND_RED | FOREGROUND_GREEN;
+                break;
+        }
+        SetConsoleTextAttribute(this->state->output, attr);
+    }
 
     bool Win32Terminal::UpdateDimensions() {
         return false;
