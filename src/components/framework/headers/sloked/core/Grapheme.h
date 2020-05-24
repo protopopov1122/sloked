@@ -24,6 +24,7 @@
 
 #include "sloked/core/Encoding.h"
 #include "sloked/core/Span.h"
+#include <vector>
 #include <optional>
 
 namespace sloked {

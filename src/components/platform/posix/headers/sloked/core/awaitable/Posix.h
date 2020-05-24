@@ -25,6 +25,7 @@
 #include <atomic>
 #include <map>
 #include <mutex>
+#include <sys/select.h>
 
 #include "sloked/core/awaitable/Awaitable.h"
 

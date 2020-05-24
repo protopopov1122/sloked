@@ -124,7 +124,7 @@ namespace sloked {
             } else {
                 char *data = this->buffer.data();
                 auto result = tgetstr(key.c_str(), &data);
-                cache.emplace(key, std::string{result});
+                cache.emplace(key, std::string{result != nullptr ? result : ""});
                 return result;
             }
         }
