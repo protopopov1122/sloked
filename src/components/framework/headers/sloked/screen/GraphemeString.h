@@ -40,17 +40,17 @@ namespace sloked {
                         const char32_t Space{U' '};
                         while (tabWidth-- > 0) {
                             *out++ = GraphemeBounds{
-                                column, codepointOffset,
+                                column, {codepointOffset,
                                 static_cast<TextPosition::Column>(
-                                    codepoints.Size()),
+                                    codepoints.Size())},
                                 fontProperties.GetWidth(SlokedSpan(&Space, 1))};
                             column++;
                         }
                     } else {
                         *out++ =
-                            GraphemeBounds{column, codepointOffset,
+                            GraphemeBounds{column, {codepointOffset,
                                            static_cast<TextPosition::Column>(
-                                               codepoints.Size()),
+                                               codepoints.Size())},
                                            fontProperties.GetWidth(codepoints)};
                         column++;
                     }

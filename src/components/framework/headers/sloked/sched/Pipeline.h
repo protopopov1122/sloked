@@ -24,6 +24,7 @@
 
 #include <tuple>
 #include <vector>
+#include <functional>
 
 #include "sloked/core/Meta.h"
 #include "sloked/sched/Task.h"
@@ -173,7 +174,7 @@ namespace sloked {
                 applier,
                 std::tuple_cat(
                     std::make_tuple(std::forward<Source>(task), lifetime),
-                    this->stages));
+                        std::tuple<Stage...>(this->stages)));
         }
 
         template <typename State, typename Source>
@@ -185,7 +186,7 @@ namespace sloked {
                 std::tuple_cat(
                     std::make_tuple(std::forward<State>(state),
                                     std::forward<Source>(task), lifetime),
-                    this->stages));
+                        std::tuple<Stage...>(this->stages)));
         }
 
      private:

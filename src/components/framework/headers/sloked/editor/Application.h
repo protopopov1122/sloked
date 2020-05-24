@@ -19,7 +19,7 @@
   along with Sloked.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SLOKED_EDITOR_APPLICATIONs_H_
+#ifndef SLOKED_EDITOR_APPLICATION_H_
 #define SLOKED_EDITOR_APPLICATION_H_
 
 #include "sloked/core/CLI.h"

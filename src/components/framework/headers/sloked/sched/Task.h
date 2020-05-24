@@ -27,6 +27,7 @@
 #include <exception>
 #include <future>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <type_traits>
 #include <vector>
@@ -127,7 +128,8 @@ namespace sloked {
                             }
                         }
                     });
-                return [id, impl_weak = std::weak_ptr(this->impl)] {
+                std::weak_ptr<Impl> impl_weak = this->impl;
+                return [id, impl_weak] {
                     if (auto impl = impl_weak.lock()) {
                         std::unique_lock lock(impl->mtx);
                         impl->listeners.erase(id);

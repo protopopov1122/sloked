@@ -11,6 +11,10 @@ elif compiler_id == 'pgi'
   add_project_link_arguments('-noswitcherror', '-rdynamic', language : 'cpp')
 endif
 
+if get_option('link_libatomic') != ''
+      add_project_link_arguments(get_option('link_libatomic'), language : 'cpp')
+endif
+
 sloked_disable_crypto = true
 sloked_disable_compression = true
 sloked_disable_scripting = true

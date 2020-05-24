@@ -56,7 +56,7 @@ namespace sloked {
         class Helpers;
         class RendererFrame;
         class RendererState;
-        friend struct RendererState;
+        friend class RendererState;
 
         struct DocumentState {
             DocumentState();

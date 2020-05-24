@@ -62,7 +62,7 @@ TEST_CASE("Listener manager invokes attached listeners") {
             results[1] = true;
         });
     auto listener3 =
-        std::make_shared<TestListener>([&results](const auto &value) {
+        std::make_shared<TestListener>([](const auto &value) {
             REQUIRE(false);  // Fail
         });
     manager.AddListener(listener1);
