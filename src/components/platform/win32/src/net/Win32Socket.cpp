@@ -147,7 +147,9 @@ namespace sloked {
         if (IsSocketValid(this->socket)) {
             std::vector<uint8_t> dest;
             std::unique_ptr<char[]> buffer(new char[count]);
-            auto res = recv(this->socket, buffer.get(), count, 0);
+            auto res = count > 0
+                ? recv(this->socket, buffer.get(), count, 0)
+                : 0;
             if (res != -1) {
                 dest.insert(dest.end(), buffer.get(), buffer.get() + res);
                 return dest;

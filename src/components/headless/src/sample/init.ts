@@ -51,7 +51,9 @@ async function initializeEditor(configuration: any): Promise<NetSlaveServer> {
 
     const [stream, authenticator] = await setupConnection(socket, configuration.containers.secondary)
     const slave = new NetSlaveServer(stream, new BinarySerializer(), authenticator)
-    await slave.authorize(configuration.containers.secondary.crypto.authentication.slave.users[0].id)
+    if (configuration.containers.secondary.crypto) {
+        await slave.authorize(configuration.containers.secondary.crypto.authentication.slave.users[0].id)
+    }
     return slave
 }
 

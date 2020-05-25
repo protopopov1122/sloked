@@ -52,11 +52,11 @@
             },
             "network": {
                 "buffering": 5,
-                "compression": true
+                "compression": false
             },
             "server": {
                 "netServer": {
-                    "host": "::1",
+                    "host": "localhost",
                     "port": 1234
                 },
                 "restrictAccess": {
@@ -113,7 +113,7 @@
             },
             "network": {
                 "buffering": 5,
-                "compression": true
+                "compression": false
             },
             "server": {
                 "screen": {
