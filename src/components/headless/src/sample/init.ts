@@ -3,18 +3,55 @@ import { ScreenClient, ScreenSizeClient, ScreenSplitterDirection } from '../lib/
 import { ScreenInputClient, KeyInputEvent, ControlKeyCode } from '../lib/clients/screenInput'
 import { DocumentSetClient } from '../lib/clients/documents'
 import * as net from 'net'
-import { NetSlaveServer, AuthServer, BinarySerializer } from 'sloked-nodejs'
+import { NetSlaveServer, AuthServer, BinarySerializer, EncryptedStream, Crypto,
+    DefaultCrypto, ModifyableCredentialStorage,
+    DefaultCredentialStorage, CompressedStream,
+    Authenticator, SlaveAuthenticator, StreamEncryption } from 'sloked-nodejs'
+import { Duplex } from 'stream'
 import * as path from 'path'
 import { ShutdownClient } from '../lib/clients/shutdown'
 import { TextPaneClient, TextGraphics, BackgroundGraphics } from '../lib/clients/textPane'
 import { NamespaceClient } from '../lib/clients/namespace'
 
-async function initializeEditor(host: string, port: number): Promise<NetSlaveServer> {
+function makeEncrypted(stream: Duplex, crypto: Crypto, key: Buffer): [Duplex, StreamEncryption] {
+    const encrypted = new EncryptedStream(stream, crypto, key)
+    return [encrypted, encrypted.getEncryption()]
+}
+
+function makeCompressed(stream: Duplex): Duplex {
+    return new CompressedStream(stream)
+}
+
+async function setupConnection(rawStream: Duplex, configuration: any): Promise<[Duplex, Authenticator?]> {
+    let stream: Duplex = rawStream
+    let authenticator: Authenticator | undefined = undefined
+    if (configuration.crypto) {
+        const salt: string = configuration.crypto.salt
+        const crypto: Crypto = new DefaultCrypto()
+        const key: Buffer = await crypto.deriveKey(configuration.crypto.defaultKey.password, salt)
+        const [cryptoStream, streamEncryption] = makeEncrypted(stream, crypto, key)
+        const credentials: ModifyableCredentialStorage = new DefaultCredentialStorage(crypto)
+        for (let user of configuration.crypto.authentication.slave.users) {
+            credentials.newAccount(user.id, user.password)
+        }
+        stream = cryptoStream
+        authenticator = new SlaveAuthenticator(crypto, credentials, salt, streamEncryption)
+    }
+    if (configuration.network.compression) {
+        stream = makeCompressed(stream)
+    }
+    return [stream, authenticator]
+}
+
+async function initializeEditor(configuration: any): Promise<NetSlaveServer> {
     const socket = new net.Socket()
     await new Promise<any>(resolve => {
-        socket.connect(port, host, resolve)
+        socket.connect(configuration.containers.main.server.netServer.port, configuration.containers.main.server.netServer.host, resolve)
     })
-    const slave = new NetSlaveServer(socket, new BinarySerializer())
+
+    const [stream, authenticator] = await setupConnection(socket, configuration.containers.secondary)
+    const slave = new NetSlaveServer(stream, new BinarySerializer(), authenticator)
+    await slave.authorize(configuration.containers.secondary.crypto.authentication.slave.users[0].id)
     return slave
 }
 
@@ -73,8 +110,8 @@ async function initializeEditorScreen(editor: AuthServer<string>, argv: string[]
     }).listenAll('/', true)
 }
 
-export async function connectToEditor(host: string, port: number, argv: string[]) {
-    const editor = await initializeEditor(host, port)
+export async function connectToEditor(configuration: any, argv: string[]) {
+    const editor = await initializeEditor(configuration)
     await initializeEditorScreen(editor, argv)
     return editor
 }

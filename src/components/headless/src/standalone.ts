@@ -48,5 +48,5 @@ function bootstrapEditor(): SlokedStandaloneApplication {
 
 
 bootstrapEditor().once('ready', async () => {
-    await connectToEditor(Configuration.containers.main.server.netServer.host, Configuration.containers.main.server.netServer.port, process.argv.slice(4))
+    await connectToEditor(Configuration, process.argv.slice(4))
 }).start(Configuration)
