@@ -52,7 +52,7 @@
             },
             "network": {
                 "buffering": 5,
-                "compression": false
+                "compression": true
             },
             "server": {
                 "netServer": {
@@ -113,7 +113,7 @@
             },
             "network": {
                 "buffering": 5,
-                "compression": false
+                "compression": true
             },
             "server": {
                 "screen": {
